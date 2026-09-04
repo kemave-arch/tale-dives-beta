@@ -149,7 +149,7 @@ export default function App() {
   const { edit: editLongText, dialog: longTextDialog } = useLongTextEditor()
   // Mounted here rather than in a screen so the soundtrack keeps playing
   // across navigation instead of restarting whenever a screen unmounts.
-  const { muted: musicMuted, toggleMute: toggleMusicMute, setMuted: setMusicMuted } = useBackgroundMusic()
+  const { muted: musicMuted, toggleMute: toggleMusicMute } = useBackgroundMusic()
 
   useEffect(() => { store.saveApiSettings(apiSettings) }, [apiSettings])
   useEffect(() => { store.saveUiPrefs(uiPrefs) }, [uiPrefs])
@@ -160,10 +160,7 @@ export default function App() {
   useEffect(() => { store.saveGlobalSlashCommands(globalSlashCommands) }, [globalSlashCommands])
   useEffect(() => {
     sessionStorage.setItem('td_active_screen', screen)
-    if (screen === 'title' && musicMuted) {
-      setMusicMuted(false)
-    }
-  }, [screen, musicMuted, setMusicMuted])
+  }, [screen])
 
   // The actively-played campaign is kept in `game` for the turn loop, and
   // mirrored into the `campaigns` library on every change.

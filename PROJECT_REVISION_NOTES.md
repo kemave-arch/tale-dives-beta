@@ -1081,12 +1081,39 @@ New entries below, most recent first.
   probe loop's starting index updated to match; still auto-discovered the same way
   (drop a new numbered file in, it joins the rotation, no further code change).
   Removed the now-orphaned `public/tracks/ost_1.mp3`/`ost_2.mp3` — the old pattern
-  the code no longer looks for. **This repo currently has zero audio tracks** until
-  the actual `.opus` files land in `public/tracks/` (expected via AI Studio, per
-  this project's usual split — this session only updated the discovery code, no
-  audio bytes were provided to it). `npm run build` clean. **Not verified live**:
-  no real `.opus` files exist in this repo yet to test playback/discovery against;
-  a future session (or the user) should confirm actual playback once the files are
-  in place, and note that Opus-in-a-bare-`.opus`-file `<audio>` support is solid in
-  Chrome/Firefox/Edge but has historically been spottier on Safari/iOS — worth a
-  real-device check there specifically if that audience matters for this project.
+  the code no longer looks for. `npm run build` clean.
+
+  **Follow-up, same day**: the user pushed the real 7 tracks directly (`aad4d71`,
+  "Add files via upload" — a GitHub web-upload commit, `tale_dives_ost-0.opus`
+  through `-6.opus`, ~2.7-3.2 MB each). Verified live against the real files this
+  time (headless Chromium, direct `<audio id="td-soundtrack">` inspection — the only
+  way to confirm actual playback, per this file's own established method):
+  discovery resolves `tale_dives_ost-0.opus` correctly (`readyState: 4`, fully
+  decoded), and after a manual unmute tap, `currentTime` advanced 3.11s → 4.12s
+  across two one-second-apart samples — real confirmed audible playback, not just
+  a loaded-but-silent element. Opus-in-a-bare-`.opus`-file `<audio>` support is
+  solid in Chrome/Firefox/Edge; still worth a real-device check on Safari/iOS
+  specifically if that audience matters here, since that combination has
+  historically been spottier and this session couldn't test it.
+
+- **2026-09-04** (Claude Code on the web) — Removed the "Audio Auto-Unmute on Title"
+  behavior (an `App.tsx` effect that force-called `setMusicMuted(false)` every time
+  `screen === 'title'`, added in an earlier AI Studio session) per explicit request
+  for the mute toggle to be fully manual. This was overriding the player's own mute
+  choice on every visit/return to Title — muting, navigating away, and coming back
+  would silently re-enable audio regardless. Now the toggle (Title and Main Menu,
+  both already wired to the same shared `toggleMusicMute`) is the only thing that
+  changes mute state; nothing auto-overrides it. `setMuted` dropped from `App.tsx`'s
+  destructuring of `useBackgroundMusic()` since nothing there calls it anymore (the
+  hook itself still exposes it, for whatever future consumer might need direct
+  control). **Deliberately left untouched**: the existing muted-autoplay pre-buffer
+  and the first-interaction-anywhere `retryOnGesture` listener in
+  `backgroundMusic.tsx` — genuinely audible autoplay with zero prior interaction is
+  not possible in any browser (a hard platform restriction, confirmed when asked,
+  not an app limitation), and this pre-buffering is unrelated to that removed
+  auto-unmute — it's what makes the player's *own* first manual unmute tap start
+  instantly instead of lagging, so it's still worth keeping. Verified live: muted →
+  navigated Title → Main Menu → back to Title → confirmed still muted (previously
+  this exact path silently re-enabled audio); the reverse (unmuted → navigate away →
+  back) also holds correctly since there's no longer any effect touching mute state
+  on screen change. `npm run build` clean.

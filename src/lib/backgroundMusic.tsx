@@ -1,15 +1,25 @@
 import { useEffect, useRef, useState } from 'react'
+import { TRACK_FILENAMES } from '../data/soundtrackManifest.ts'
 
-// Soundtrack lives in public/tracks/ as tale_dives_ost-0.opus,
-// tale_dives_ost-1.opus, ... — auto-discovered the same way the background
-// art is (see cyclingBackground.tsx), though 0-indexed rather than 1-indexed
-// like the art (matches how the files actually got named on conversion from
-// mp3 to opus — smaller files, same quality). Dropping tale_dives_ost-7.opus
-// into that folder is enough on its own to add it to the rotation; no code
-// change needed.
-const TRACK_PREFIX = 'tracks/tale_dives_ost-'
-const TRACK_EXT = '.opus'
-const MAX_TRACK_PROBE = 20 // sanity cap, not an expected real count
+// Soundtrack lives in public/tracks/, listed explicitly in
+// data/soundtrackManifest.ts rather than auto-discovered by probing a
+// sequential filename — browsers have no API to list a directory's contents,
+// and once track names stopped being sequential (renamed for the user's own
+// library management) there was no longer a pattern left to guess. Play
+// order comes from a `_ostNN` suffix on the filename itself
+// (`battle_theme_ost01.opus`, ...), parsed by ORDER_SUFFIX below; a name with
+// no such suffix falls back to the manifest's own array order rather than
+// being dropped. Existence is still verified the same way as before (see
+// probeTrackExists) — a name in the manifest with no matching file just
+// doesn't make it into the rotation.
+const ORDER_SUFFIX = /_ost0*(\d+)/i
+
+function parseOrder(filename: string): number | null {
+  const base = filename.replace(/\.[^.]+$/, '')
+  const match = base.match(ORDER_SUFFIX)
+  return match ? Number(match[1]) : null
+}
+
 const PROBE_TIMEOUT_MS = 5000
 const FADE_MS = 2500
 const FADE_STEP_MS = 50
@@ -51,13 +61,24 @@ function probeTrackExists(src: string): Promise<boolean> {
 }
 
 async function discoverTracks(base: string): Promise<string[]> {
-  const found: string[] = []
-  for (let i = 0; i <= MAX_TRACK_PROBE; i++) {
-    const src = `${base}${TRACK_PREFIX}${i}${TRACK_EXT}`
-    if (!(await probeTrackExists(src))) break
-    found.push(src)
-  }
-  return found
+  const candidates = TRACK_FILENAMES.map((filename, index) => ({
+    src: `${base}tracks/${filename}`,
+    order: parseOrder(filename),
+    index, // manifest position — the fallback sort key for an unsuffixed name
+  }))
+  // Checked in parallel, unlike the old scheme's one-at-a-time probing — that
+  // was inherent to detecting "the first gap" in a sequential guess, which no
+  // longer applies now that every candidate is named explicitly.
+  const checked = await Promise.all(candidates.map(async (c) => ({ ...c, exists: await probeTrackExists(c.src) })))
+  return checked
+    .filter((c) => c.exists)
+    .sort((a, b) => {
+      if (a.order !== null && b.order !== null) return a.order - b.order
+      if (a.order !== null) return -1
+      if (b.order !== null) return 1
+      return a.index - b.index
+    })
+    .map((c) => c.src)
 }
 
 /**

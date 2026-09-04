@@ -1155,3 +1155,47 @@ New entries below, most recent first.
   `tale_dives_ost-<N>.opus` (0-indexed) pattern from earlier today; whatever new
   files land there just need to follow that same naming to be picked up with no
   further code change.
+
+- **2026-09-04** (Claude Code on the web) — Soundtrack discovery replaced with an
+  explicit manifest, since the user renamed tracks to descriptive names for their
+  own library management, breaking the sequential-filename probing scheme entirely.
+  **The real constraint that forced this**: browsers have no API to list a
+  directory's contents — the old scheme only worked *because* names were guessable
+  one by one; there is no way around a manifest once names stop being sequential.
+  New `src/data/soundtrackManifest.ts` (`TRACK_FILENAMES: string[]`, matching this
+  project's existing hand-maintained `src/data/` convention) lists the actual
+  files; `backgroundMusic.tsx`'s `discoverTracks()` rewritten to map that list
+  instead of probing an incrementing counter, dropping the now-dead
+  `TRACK_PREFIX`/`TRACK_EXT`/`MAX_TRACK_PROBE` constants.
+
+  **Play order** comes from a `_ostNN` suffix on the filename itself (the user's
+  own idea, arrived at after first asking about embedded-audio-metadata parsing —
+  correctly talked down from that: reading a Vorbis comment tag out of an Ogg
+  container would have meant hand-rolling binary parsing or a new dependency for
+  one field, when the order can just as well live in the filename itself), parsed
+  by a small regex (`ORDER_SUFFIX = /_ost0*(\d+)/i`, applied to the filename minus
+  its extension). A name with no such suffix falls back to the manifest's own
+  array order rather than being dropped — the same forgiving-fallback spirit the
+  old scheme had, just far cheaper to reach now since there's no fetch/parse step
+  to fail. Existence is still verified through the *same* `probeTrackExists`
+  (`<audio>`-element decode probe) as before — unchanged, still the one piece of
+  the old scheme that was already correct.
+
+  The 7 uploaded tracks (`aad4d71`'s successor set — `Lionheart.opus`,
+  `NewTales.opus`, `RiseNFall.opus`, `RisingCore.opus`, `Stratosphere.opus`,
+  `TempestDive.opus`, `WhoAmI.opus`) landed with no `_ostNN` suffix yet; the user
+  then supplied the intended play order directly (a numbered title list, 0-6) and
+  asked for the files to be renamed to match, which this session did directly:
+  `RisingCore_ost00.opus` → `NewTales_ost01.opus` → `WhoAmI_ost02.opus` →
+  `TempestDive_ost03.opus` → `Lionheart_ost04.opus` → `Stratosphere_ost05.opus` →
+  `RiseNFall_ost06.opus`, manifest updated to match.
+
+  **Verified live**, real headless browser against the real uploaded/renamed
+  files (not a synthetic test, since the files were already in place by the time
+  this landed): ran the exact discovery+sort logic standalone in the page against
+  the live server, confirmed all 7 resolve and sort into exactly the intended
+  order; separately confirmed the actual running app's `<audio id="td-soundtrack">`
+  element loads `RisingCore_ost00.opus` first on a fresh load. Also unit-verified
+  `parseOrder`'s regex directly (`RisingCore_ost00.opus` → `0`,
+  `finale_ost12.opus` → `12`, a no-suffix name → `null`, correctly falling back).
+  `npm run typecheck`/`npm run build` both clean.

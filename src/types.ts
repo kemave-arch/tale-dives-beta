@@ -277,6 +277,7 @@ export interface LogEntry {
   turnState?: TurnState
   mood?: string
   defeated?: boolean
+  act?: string[]
   levelUp?: number // §5.1a — set when this turn triggered a Milestone Level-up
   chapterSummary?: string // §2 Phase E — a synthetic entry marking a chapter boundary
   chapterNumber?: number

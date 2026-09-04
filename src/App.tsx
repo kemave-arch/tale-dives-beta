@@ -102,6 +102,35 @@ export default function App() {
   const [history, setHistory] = useState<HistoryTurn[]>([]) // Gemini `contents` sliding window (§3.1)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [lastActionText, setLastActionText] = useState<string>('')
+
+  const handleRetry = () => {
+    if (lastActionText && game) {
+      sendAction(lastActionText)
+    }
+  }
+
+  const handleDismissError = () => {
+    setError(null)
+    if (game) {
+      setGame((g) => {
+        if (!g) return null
+        const updatedLog = [...g.log]
+        if (updatedLog.length > 0) {
+          const lastIndex = updatedLog.length - 1
+          updatedLog[lastIndex] = {
+            ...updatedLog[lastIndex],
+            turnState: 'PAUSE'
+          }
+        }
+        return {
+          ...g,
+          log: updatedLog,
+        }
+      })
+    }
+  }
+
   const [pendingRecall, setPendingRecall] = useState<string | null>(null) // §6.6 — a targeted/full !recall snapshot waiting to ride along on the next real turn
   const { confirm, dialog: confirmDialog } = useConfirm()
   // Mounted here rather than in a screen so the soundtrack keeps playing
@@ -251,6 +280,7 @@ export default function App() {
   }
 
   async function sendAction(actionText: string, forcePauseState?: boolean, overrideGame?: Campaign, overrideHistory?: HistoryTurn[]) {
+    setLastActionText(actionText)
     const current = overrideGame ?? game
     if (!current) return
     if (!apiSettings.apiKey) {
@@ -539,6 +569,7 @@ export default function App() {
             turnState,
             mood: turn.mood,
             defeated: playerDefeated,
+            act: turn.act,
             time: finalPlayer.time,
             locDisp: finalPlayer.locDisp,
             ...(leveled ? { levelUp: leveledPlayer.level } : {}),
@@ -1133,6 +1164,11 @@ export default function App() {
         bestiary={game.bestiary}
         skills={game.skills ?? {}}
         crafting={game.crafting}
+        apiSettings={apiSettings}
+        proseDepth={game.proseDepth}
+        lastActionText={lastActionText}
+        onRetry={handleRetry}
+        onDismissError={handleDismissError}
         onSend={sendAction}
         onBangCommand={handleBangCommand}
         slashCommands={[...Object.values(game.slashCommands ?? {}), ...Object.values(globalSlashCommands)]}

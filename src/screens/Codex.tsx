@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
   ChevronRight, Globe, BookOpen, Users, ShieldCheck, Map, ScrollText, Target, Skull, Backpack,
@@ -365,6 +365,360 @@ export default function Codex({
     return (Object.entries(player.equipped ?? {}) as [EquipSlot, string][]).find(([, id]) => id === itemId)?.[0]
   }
 
+  // Search & Filter State
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activeFilter1, setActiveFilter1] = useState('')
+  const [activeFilter2, setActiveFilter2] = useState('')
+
+  // Reset filters on category change
+  useEffect(() => {
+    setSearchQuery('')
+    setActiveFilter1('')
+    setActiveFilter2('')
+  }, [category])
+
+  // Unique collections for filter selectors
+  const npcStages = useMemo(() => {
+    const stages = new Set<string>()
+    Object.values(npcs).forEach((n) => {
+      if (n.stage) stages.add(n.stage)
+    })
+    return Array.from(stages)
+  }, [npcs])
+
+  const factionStandings = useMemo(() => {
+    const standings = new Set<string>()
+    Object.values(factions).forEach((f) => {
+      standings.add(repTierLabel(f.repTier))
+    })
+    return Array.from(standings)
+  }, [factions])
+
+  const dangerLevels = useMemo(() => {
+    const levels = new Set<string>()
+    Object.values(locations).forEach((l) => {
+      if (l.dangerLevel) levels.add(l.dangerLevel)
+    })
+    return Array.from(levels)
+  }, [locations])
+
+  const locationOwners = useMemo(() => {
+    const owners = new Set<string>()
+    Object.values(locations).forEach((l) => {
+      if (l.factionOwner) owners.add(l.factionOwner)
+    })
+    return Array.from(owners)
+  }, [locations])
+
+  const loreCategories = useMemo(() => {
+    const cats = new Set<string>()
+    Object.values(lore).forEach((l) => {
+      if (l.category) cats.add(l.category)
+    })
+    return Array.from(cats)
+  }, [lore])
+
+  const questStatuses = useMemo(() => {
+    const statuses = new Set<string>()
+    Object.values(quests).forEach((q) => {
+      if (q.status) statuses.add(q.status)
+    })
+    return Array.from(statuses)
+  }, [quests])
+
+  const threatTiers = useMemo(() => {
+    const tiers = new Set<string>()
+    Object.values(bestiary).forEach((b) => {
+      if (b.threatTier) tiers.add(b.threatTier)
+    })
+    return Array.from(tiers)
+  }, [bestiary])
+
+  const skillClasses = useMemo(() => {
+    const classes = new Set<string>()
+    Object.values(skills).forEach((s) => {
+      if (s.classId) classes.add(s.classId)
+    })
+    return Array.from(classes)
+  }, [skills])
+
+  // Filtered lists
+  const filteredNpcs = useMemo(() => {
+    return Object.entries(npcs).filter(([, n]) => {
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase()
+        const matchesName = n.name.toLowerCase().includes(q)
+        const matchesMem = n.memSummary?.toLowerCase().includes(q)
+        const matchesTeaser = n.discovery?.teaser?.toLowerCase().includes(q)
+        if (!matchesName && !matchesMem && !matchesTeaser) return false
+      }
+      if (activeFilter1 && n.stage !== activeFilter1) return false
+      return true
+    })
+  }, [npcs, searchQuery, activeFilter1])
+
+  const filteredFactions = useMemo(() => {
+    return Object.entries(factions).filter(([, f]) => {
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase()
+        const matchesName = f.name.toLowerCase().includes(q)
+        const matchesRival = f.rivalId?.toLowerCase().includes(q)
+        if (!matchesName && !matchesRival) return false
+      }
+      if (activeFilter1 && repTierLabel(f.repTier) !== activeFilter1) return false
+      return true
+    })
+  }, [factions, searchQuery, activeFilter1])
+
+  const filteredLocations = useMemo(() => {
+    return Object.entries(locations).filter(([, l]) => {
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase()
+        const matchesName = l.name.toLowerCase().includes(q)
+        const matchesRegion = l.region?.toLowerCase().includes(q)
+        const matchesDesc = l.description?.toLowerCase().includes(q)
+        if (!matchesName && !matchesRegion && !matchesDesc) return false
+      }
+      if (activeFilter1 && l.dangerLevel !== activeFilter1) return false
+      if (activeFilter2 && l.factionOwner !== activeFilter2) return false
+      return true
+    })
+  }, [locations, searchQuery, activeFilter1, activeFilter2])
+
+  const filteredLore = useMemo(() => {
+    return Object.entries(lore).filter(([, l]) => {
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase()
+        const matchesName = l.name.toLowerCase().includes(q)
+        const matchesCat = l.category?.toLowerCase().includes(q)
+        if (!matchesName && !matchesCat) return false
+      }
+      if (activeFilter1 && l.category !== activeFilter1) return false
+      return true
+    })
+  }, [lore, searchQuery, activeFilter1])
+
+  const filteredQuests = useMemo(() => {
+    return Object.entries(quests).filter(([, q_entry]) => {
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase()
+        const matchesName = q_entry.name.toLowerCase().includes(q)
+        const matchesNote = q_entry.note?.toLowerCase().includes(q)
+        const matchesStatus = q_entry.status?.toLowerCase().includes(q)
+        if (!matchesName && !matchesNote && !matchesStatus) return false
+      }
+      if (activeFilter1 && (q_entry.status ?? 'active') !== activeFilter1) return false
+      return true
+    })
+  }, [quests, searchQuery, activeFilter1])
+
+  const filteredBestiary = useMemo(() => {
+    return Object.entries(bestiary).filter(([, b]) => {
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase()
+        const matchesName = b.name.toLowerCase().includes(q)
+        const matchesTier = b.threatTier?.toLowerCase().includes(q)
+        if (!matchesName && !matchesTier) return false
+      }
+      if (activeFilter1 && b.threatTier !== activeFilter1) return false
+      return true
+    })
+  }, [bestiary, searchQuery, activeFilter1])
+
+  const filteredSkills = useMemo(() => {
+    return Object.entries(skills).filter(([, s]) => {
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase()
+        const matchesName = s.name.toLowerCase().includes(q)
+        const matchesDesc = s.description?.toLowerCase().includes(q)
+        if (!matchesName && !matchesDesc) return false
+      }
+      if (activeFilter1 && s.classId !== activeFilter1) return false
+      return true
+    })
+  }, [skills, searchQuery, activeFilter1])
+
+  const filteredItems = useMemo(() => {
+    return Object.entries(inventory).filter(([id]) => {
+      const item = items[id]
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase()
+        const matchesName = (item?.name ?? id.replace(/_/g, ' ')).toLowerCase().includes(q)
+        const matchesDesc = item?.description?.toLowerCase().includes(q)
+        if (!matchesName && !matchesDesc) return false
+      }
+      if (activeFilter1 && (item?.type ?? 'material') !== activeFilter1) return false
+      return true
+    })
+  }, [inventory, items, searchQuery, activeFilter1])
+
+  const searchFilterBar = useMemo(() => {
+    if (!category || entryId || editing) return null
+
+    let filter1Select = null
+    let filter2Select = null
+
+    if (category === 'npcs') {
+      filter1Select = (
+        <select
+          value={activeFilter1}
+          onChange={(e) => setActiveFilter1(e.target.value)}
+          className={`text-xs px-2.5 py-1.5 h-9 rounded-xl border border-[#e8ca8a]/20 bg-[#14101c]/80 text-[#ecdcb8] focus:border-[#f0ca65]/60 outline-none w-full sm:w-40 cursor-pointer`}
+        >
+          <option value="">All Stages</option>
+          {npcStages.map((stage) => (
+            <option key={stage} value={stage}>{stage}</option>
+          ))}
+        </select>
+      )
+    } else if (category === 'factions') {
+      filter1Select = (
+        <select
+          value={activeFilter1}
+          onChange={(e) => setActiveFilter1(e.target.value)}
+          className={`text-xs px-2.5 py-1.5 h-9 rounded-xl border border-[#e8ca8a]/20 bg-[#14101c]/80 text-[#ecdcb8] focus:border-[#f0ca65]/60 outline-none w-full sm:w-40 cursor-pointer`}
+        >
+          <option value="">All Standings</option>
+          {factionStandings.map((standing) => (
+            <option key={standing} value={standing}>{standing}</option>
+          ))}
+        </select>
+      )
+    } else if (category === 'locations') {
+      filter1Select = (
+        <select
+          value={activeFilter1}
+          onChange={(e) => setActiveFilter1(e.target.value)}
+          className={`text-xs px-2.5 py-1.5 h-9 rounded-xl border border-[#e8ca8a]/20 bg-[#14101c]/80 text-[#ecdcb8] focus:border-[#f0ca65]/60 outline-none w-full sm:w-40 cursor-pointer`}
+        >
+          <option value="">All Danger Levels</option>
+          {dangerLevels.map((lvl) => (
+            <option key={lvl} value={lvl}>{lvl}</option>
+          ))}
+        </select>
+      )
+      filter2Select = (
+        <select
+          value={activeFilter2}
+          onChange={(e) => setActiveFilter2(e.target.value)}
+          className={`text-xs px-2.5 py-1.5 h-9 rounded-xl border border-[#e8ca8a]/20 bg-[#14101c]/80 text-[#ecdcb8] focus:border-[#f0ca65]/60 outline-none w-full sm:w-40 cursor-pointer`}
+        >
+          <option value="">All Faction Owners</option>
+          {locationOwners.map((owner) => {
+            const factionName = factions[owner]?.name ?? owner
+            return (
+              <option key={owner} value={owner}>{factionName}</option>
+            )
+          })}
+        </select>
+      )
+    } else if (category === 'lore') {
+      filter1Select = (
+        <select
+          value={activeFilter1}
+          onChange={(e) => setActiveFilter1(e.target.value)}
+          className={`text-xs px-2.5 py-1.5 h-9 rounded-xl border border-[#e8ca8a]/20 bg-[#14101c]/80 text-[#ecdcb8] focus:border-[#f0ca65]/60 outline-none w-full sm:w-40 cursor-pointer`}
+        >
+          <option value="">All Categories</option>
+          {loreCategories.map((cat) => (
+            <option key={cat} value={cat}>{cat}</option>
+          ))}
+        </select>
+      )
+    } else if (category === 'quests') {
+      filter1Select = (
+        <select
+          value={activeFilter1}
+          onChange={(e) => setActiveFilter1(e.target.value)}
+          className={`text-xs px-2.5 py-1.5 h-9 rounded-xl border border-[#e8ca8a]/20 bg-[#14101c]/80 text-[#ecdcb8] focus:border-[#f0ca65]/60 outline-none w-full sm:w-40 cursor-pointer`}
+        >
+          <option value="">All Statuses</option>
+          <option value="active">Active/Advanced</option>
+          {questStatuses.map((status) => {
+            if (status === 'active' || status === 'advanced') return null
+            return (
+              <option key={status} value={status}>{status}</option>
+            )
+          })}
+        </select>
+      )
+    } else if (category === 'bestiary') {
+      filter1Select = (
+        <select
+          value={activeFilter1}
+          onChange={(e) => setActiveFilter1(e.target.value)}
+          className={`text-xs px-2.5 py-1.5 h-9 rounded-xl border border-[#e8ca8a]/20 bg-[#14101c]/80 text-[#ecdcb8] focus:border-[#f0ca65]/60 outline-none w-full sm:w-40 cursor-pointer`}
+        >
+          <option value="">All Threat Tiers</option>
+          {threatTiers.map((tier) => (
+            <option key={tier} value={tier}>{tier}</option>
+          ))}
+        </select>
+      )
+    } else if (category === 'skills') {
+      filter1Select = (
+        <select
+          value={activeFilter1}
+          onChange={(e) => setActiveFilter1(e.target.value)}
+          className={`text-xs px-2.5 py-1.5 h-9 rounded-xl border border-[#e8ca8a]/20 bg-[#14101c]/80 text-[#ecdcb8] focus:border-[#f0ca65]/60 outline-none w-full sm:w-40 cursor-pointer`}
+        >
+          <option value="">All Classes</option>
+          {skillClasses.map((clsId) => (
+            <option key={clsId} value={clsId}>{classNameFor(clsId) || clsId}</option>
+          ))}
+        </select>
+      )
+    } else if (category === 'items') {
+      filter1Select = (
+        <select
+          value={activeFilter1}
+          onChange={(e) => setActiveFilter1(e.target.value)}
+          className={`text-xs px-2.5 py-1.5 h-9 rounded-xl border border-[#e8ca8a]/20 bg-[#14101c]/80 text-[#ecdcb8] focus:border-[#f0ca65]/60 outline-none w-full sm:w-40 cursor-pointer`}
+        >
+          <option value="">All Types</option>
+          {ITEM_TYPES.map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
+      )
+    }
+
+    if (category === 'character' || category === 'realm' || category === 'crafting' || category === 'chapters') {
+      return null
+    }
+
+    return (
+      <div className="mb-4 flex flex-col gap-2 p-3 rounded-2xl border border-[#e8ca8a]/15 bg-[#e8ca8a]/[0.02]">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name, tags, description..."
+              className="w-full text-xs h-9 rounded-xl border border-[#e8ca8a]/20 bg-[#e8ca8a]/[0.04] px-3.5 py-1.5 text-ink placeholder:text-[#e8ca8a]/45 focus:border-[#f0ca65]/60 outline-none"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#e8ca8a]/50 hover:text-[#e8ca8a] text-xs cursor-pointer"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
+          {(filter1Select || filter2Select) && (
+            <div className="flex flex-row gap-2 shrink-0">
+              {filter1Select}
+              {filter2Select}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }, [category, entryId, editing, searchQuery, activeFilter1, activeFilter2, npcStages, factionStandings, dangerLevels, locationOwners, loreCategories, questStatuses, threatTiers, skillClasses, factions])
+
   const chapters = log.filter((e) => e.chapterSummary)
 
   // Ordered by how often a player actually opens each category during play —
@@ -553,6 +907,8 @@ export default function Codex({
     // would fight it.
     <GlassScreen ground="dark" className="px-4 pb-16">
       <GlassHeader title={title} onBack={back} className="!px-0 mb-5" />
+
+      {searchFilterBar}
 
       {/* Level 1 — Category List */}
       {!category && (
@@ -763,7 +1119,7 @@ export default function Codex({
       {category === 'npcs' && !entryId && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AddButton label="Add NPC" onClick={() => startCreate({ name: '', stage: 'Stranger', trust: 0, affection: 0, memSummary: '', deeds: '' })} />
-          {Object.entries(npcs).map(([id, n]) => (
+          {filteredNpcs.map(([id, n]) => (
             <EntryCard
               key={id}
               title={isHidden(n) ? '???' : n.name}
@@ -772,7 +1128,11 @@ export default function Codex({
               onClick={() => setEntryId(id)}
             />
           ))}
-          {Object.keys(npcs).length === 0 && <p className="font-narrative italic text-sm text-ink-muted col-span-full">No NPCs met yet.</p>}
+          {Object.keys(npcs).length === 0 ? (
+            <p className="font-narrative italic text-sm text-ink-muted col-span-full">No NPCs met yet.</p>
+          ) : filteredNpcs.length === 0 ? (
+            <p className="font-narrative italic text-sm text-ink-muted col-span-full">No NPCs match current filters.</p>
+          ) : null}
         </div>
       )}
       {category === 'npcs' && entryId && (editing || npcs[entryId]) && (
@@ -820,7 +1180,7 @@ export default function Codex({
       {category === 'factions' && !entryId && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AddButton label="Add Faction" onClick={() => startCreate({ name: '', repTier: 0 })} />
-          {Object.entries(factions).map(([id, f]) => (
+          {filteredFactions.map(([id, f]) => (
             <EntryCard
               key={id}
               title={isHidden(f) ? '???' : f.name}
@@ -829,7 +1189,11 @@ export default function Codex({
               onClick={() => setEntryId(id)}
             />
           ))}
-          {Object.keys(factions).length === 0 && <p className="font-narrative italic text-sm text-ink-muted col-span-full">No factions encountered yet.</p>}
+          {Object.keys(factions).length === 0 ? (
+            <p className="font-narrative italic text-sm text-ink-muted col-span-full">No factions encountered yet.</p>
+          ) : filteredFactions.length === 0 ? (
+            <p className="font-narrative italic text-sm text-ink-muted col-span-full">No factions match current filters.</p>
+          ) : null}
         </div>
       )}
       {category === 'factions' && entryId && (editing || factions[entryId]) && (
@@ -877,7 +1241,7 @@ export default function Codex({
       {category === 'locations' && !entryId && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AddButton label="Add Location" onClick={() => startCreate({ name: '', region: '', description: '', dangerLevel: '', factionOwner: '', standing: '' })} />
-          {Object.entries(locations).map(([id, l]) => (
+          {filteredLocations.map(([id, l]) => (
             <EntryCard
               key={id}
               title={isHidden(l) ? '???' : l.name}
@@ -886,7 +1250,11 @@ export default function Codex({
               onClick={() => setEntryId(id)}
             />
           ))}
-          {Object.keys(locations).length === 0 && <p className="font-narrative italic text-sm text-ink-muted col-span-full">No locations visited yet.</p>}
+          {Object.keys(locations).length === 0 ? (
+            <p className="font-narrative italic text-sm text-ink-muted col-span-full">No locations visited yet.</p>
+          ) : filteredLocations.length === 0 ? (
+            <p className="font-narrative italic text-sm text-ink-muted col-span-full">No locations match current filters.</p>
+          ) : null}
         </div>
       )}
       {category === 'locations' && entryId && (editing || locations[entryId]) && (
@@ -943,7 +1311,7 @@ export default function Codex({
       {category === 'lore' && !entryId && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AddButton label="Add Lore" onClick={() => startCreate({ name: '', category: '' })} />
-          {Object.entries(lore).map(([id, l]) => (
+          {filteredLore.map(([id, l]) => (
             <EntryCard
               key={id}
               title={isHidden(l) ? '???' : l.name}
@@ -952,7 +1320,11 @@ export default function Codex({
               onClick={() => setEntryId(id)}
             />
           ))}
-          {Object.keys(lore).length === 0 && <p className="font-narrative italic text-sm text-ink-muted col-span-full">No lore uncovered yet.</p>}
+          {Object.keys(lore).length === 0 ? (
+            <p className="font-narrative italic text-sm text-ink-muted col-span-full">No lore uncovered yet.</p>
+          ) : filteredLore.length === 0 ? (
+            <p className="font-narrative italic text-sm text-ink-muted col-span-full">No lore entries match current filters.</p>
+          ) : null}
         </div>
       )}
       {category === 'lore' && entryId && (editing || lore[entryId]) && (
@@ -980,7 +1352,7 @@ export default function Codex({
       {category === 'quests' && !entryId && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AddButton label="Add Quest" onClick={() => startCreate({ name: '', status: '', note: '' })} />
-          {Object.entries(quests).map(([id, q]) => (
+          {filteredQuests.map(([id, q]) => (
             <EntryCard
               key={id}
               title={isHidden(q) ? '???' : q.name}
@@ -989,7 +1361,11 @@ export default function Codex({
               onClick={() => setEntryId(id)}
             />
           ))}
-          {Object.keys(quests).length === 0 && <p className="font-narrative italic text-sm text-ink-muted col-span-full">No quests tracked yet.</p>}
+          {Object.keys(quests).length === 0 ? (
+            <p className="font-narrative italic text-sm text-ink-muted col-span-full">No quests tracked yet.</p>
+          ) : filteredQuests.length === 0 ? (
+            <p className="font-narrative italic text-sm text-ink-muted col-span-full">No quests match current filters.</p>
+          ) : null}
         </div>
       )}
       {category === 'quests' && entryId && (editing || quests[entryId]) && (
@@ -1019,7 +1395,7 @@ export default function Codex({
       {category === 'bestiary' && !entryId && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AddButton label="Add Adversary" onClick={() => startCreate({ name: '', threatTier: '', hpMax: '', dmgBase: '' })} />
-          {Object.entries(bestiary).map(([id, b]) => (
+          {filteredBestiary.map(([id, b]) => (
             <EntryCard
               key={id}
               title={isHidden(b) ? '???' : b.name}
@@ -1028,7 +1404,11 @@ export default function Codex({
               onClick={() => setEntryId(id)}
             />
           ))}
-          {Object.keys(bestiary).length === 0 && <p className="font-narrative italic text-sm text-ink-muted col-span-full">No adversaries encountered yet.</p>}
+          {Object.keys(bestiary).length === 0 ? (
+            <p className="font-narrative italic text-sm text-ink-muted col-span-full">No adversaries encountered yet.</p>
+          ) : filteredBestiary.length === 0 ? (
+            <p className="font-narrative italic text-sm text-ink-muted col-span-full">No adversaries match current filters.</p>
+          ) : null}
         </div>
       )}
       {category === 'bestiary' && entryId && (editing || bestiary[entryId]) && (
@@ -1071,7 +1451,7 @@ export default function Codex({
       {category === 'skills' && !entryId && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AddButton label="Add Skill" onClick={() => startCreate({ name: '', description: '', classId: '', mpCost: '', stCost: '' })} />
-          {Object.entries(skills).map(([id, s]) => (
+          {filteredSkills.map(([id, s]) => (
             <EntryCard
               key={id}
               title={isHidden(s) ? '???' : s.name}
@@ -1084,11 +1464,13 @@ export default function Codex({
               onClick={() => setEntryId(id)}
             />
           ))}
-          {Object.keys(skills).length === 0 && (
+          {Object.keys(skills).length === 0 ? (
             <p className="font-narrative italic text-sm text-ink-muted col-span-full">
               No skills learned yet. They register automatically as the Narrator names them, or add one by hand.
             </p>
-          )}
+          ) : filteredSkills.length === 0 ? (
+            <p className="font-narrative italic text-sm text-ink-muted col-span-full">No skills match current filters.</p>
+          ) : null}
         </div>
       )}
       {category === 'skills' && entryId && (editing || skills[entryId]) && (
@@ -1166,7 +1548,8 @@ export default function Codex({
       {category === 'items' && !entryId && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AddButton label="Add Item" onClick={() => startCreate({ name: '', type: 'material', qty: '1', description: '', statBonus: {} })} />
-          {Object.entries(inventory).map(([id, qty]) => {
+          {filteredItems.map(([id]) => {
+            const qty = inventory[id]
             const item = items[id]
             const slot = equippedSlotFor(id)
             return (
@@ -1179,7 +1562,11 @@ export default function Codex({
               />
             )
           })}
-          {Object.keys(inventory).length === 0 && <p className="font-narrative italic text-sm text-ink-muted col-span-full">Nothing carried yet.</p>}
+          {Object.keys(inventory).length === 0 ? (
+            <p className="font-narrative italic text-sm text-ink-muted col-span-full">Nothing carried yet.</p>
+          ) : filteredItems.length === 0 ? (
+            <p className="font-narrative italic text-sm text-ink-muted col-span-full">No items match current filters.</p>
+          ) : null}
         </div>
       )}
       {category === 'items' && entryId && (editing || inventory[entryId] !== undefined) && (

@@ -4,6 +4,7 @@ import {
   Menu, Settings as SettingsIcon, Send, Star, BookOpen, Library, Sparkle, X, ExternalLink,
   ChevronUp, ChevronDown, ChevronsDown, History, Pause, Users, Backpack, Map as MapIcon, ShieldCheck, Target, Skull, HelpCircle,
   Unlock, Lock, Repeat, Hammer, Ghost, Compass, ScrollText, User, Swords, Sparkles,
+  AlertTriangle, Copy, Check, RotateCcw,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { renderNarrative, type TapTermHandler } from '../lib/richText.tsx'
@@ -14,8 +15,8 @@ import { BANG_COMMANDS } from '../lib/bangCommands.ts'
 import { isHidden } from '../lib/discovery.ts'
 import type { CategoryId } from './Codex.tsx'
 import type {
-  BestiaryEntry, CombatState, CraftingJob, FactionEntry, GameTime, KeywordLink, LocationEntry, LogEntry, LoreEntry, NpcEntry, Player,
-  QuestEntry, SkillEntry, SlashCommand,
+  ApiSettings, BestiaryEntry, CombatState, CraftingJob, FactionEntry, GameTime, KeywordLink, LocationEntry, LogEntry, LoreEntry, NpcEntry, Player,
+  ProseDepthConfig, QuestEntry, SkillEntry, SlashCommand,
 } from '../types.ts'
 
 interface ChronicleProps {
@@ -34,6 +35,11 @@ interface ChronicleProps {
   bestiary: Record<string, BestiaryEntry>
   skills: Record<string, SkillEntry>
   crafting?: CraftingJob[]
+  apiSettings?: ApiSettings
+  proseDepth?: ProseDepthConfig
+  lastActionText?: string
+  onRetry?: () => void
+  onDismissError?: () => void
   onSend: (action: string, forcePause?: boolean) => void
   onBangCommand: (raw: string) => void
   slashCommands: SlashCommand[]
@@ -299,6 +305,152 @@ const TurnBlock = memo(function TurnBlock({ entry, globalIndex, onTapTerm, regis
   )
 })
 
+interface ApiErrorPanelProps {
+  error: string
+  apiSettings?: ApiSettings
+  proseDepth?: ProseDepthConfig
+  lastActionText?: string
+  onRetry?: () => void
+  onDismissError?: () => void
+  onOpenSettings: () => void
+  setInput: (val: string) => void
+}
+
+function ApiErrorPanel({
+  error,
+  apiSettings,
+  proseDepth,
+  lastActionText,
+  onRetry,
+  onDismissError,
+  onOpenSettings,
+  setInput,
+}: ApiErrorPanelProps) {
+  const [copied, setCopied] = useState(false)
+
+  const maskApiKey = (key: string): string => {
+    if (!key) return 'Not set'
+    if (key.length <= 8) return '••••' + key.slice(-2)
+    return key.slice(0, 3) + '••••' + key.slice(-4)
+  }
+
+  const handleCopyReport = () => {
+    const reportText = `### TALE DIVES DIAGNOSTIC REPORT
+- **Timestamp**: ${new Date().toISOString()}
+- **Provider**: ${apiSettings?.provider || 'Unknown'}
+- **Model**: ${apiSettings?.model || 'Unknown'}
+- **Temperature**: ${apiSettings?.temperature ?? 'Default'}
+- **Prose Depth**: ${proseDepth?.label || 'Unknown'} (Target: ${proseDepth?.targetTokens || 'Unknown'}, Max: ${proseDepth?.maxOutputTokens || 'Unknown'})
+- **API Key**: ${maskApiKey(apiSettings?.apiKey || '')}
+- **Error Description**: ${error}
+- **Failed Action**: ${lastActionText || 'None'}`
+
+    navigator.clipboard.writeText(reportText).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  const handleDismissAndPause = () => {
+    if (onDismissError) onDismissError()
+    setInput(lastActionText || '')
+  }
+
+  return (
+    <div className="my-4 p-4 rounded-xl border border-rose-500/40 bg-[#151724] text-white shadow-2xl space-y-4">
+      {/* Header */}
+      <div className="flex items-center gap-2 border-b border-white/10 pb-2.5">
+        <AlertTriangle className="text-rose-400 shrink-0" size={18} />
+        <h3 className="font-display text-sm font-bold tracking-wide text-rose-400 flex-1">
+          FATE THREAD FALTERED
+        </h3>
+        <button
+          onClick={handleDismissAndPause}
+          className="text-white/40 hover:text-white transition-colors"
+          title="Dismiss"
+        >
+          <X size={16} />
+        </button>
+      </div>
+
+      {/* Grid of details */}
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[11px] font-mono text-white/70">
+        <div>
+          <span className="text-white/40">Provider:</span>{' '}
+          <span className="text-gold-primary">{apiSettings?.provider || 'gemini'}</span>
+        </div>
+        <div>
+          <span className="text-white/40">Model:</span>{' '}
+          <span className="text-gold-primary">{apiSettings?.model || 'Unknown'}</span>
+        </div>
+        <div>
+          <span className="text-white/40">Temp:</span>{' '}
+          <span className="text-cyan-400">{apiSettings?.temperature ?? 0.7}</span>
+        </div>
+        <div>
+          <span className="text-white/40">Key:</span>{' '}
+          <span className="text-emerald-400">{maskApiKey(apiSettings?.apiKey || '')}</span>
+        </div>
+        <div className="col-span-2">
+          <span className="text-white/40">Depth:</span>{' '}
+          <span className="text-amber-400">
+            {proseDepth?.label || 'Standard'} (Max: {proseDepth?.maxOutputTokens || 800})
+          </span>
+        </div>
+      </div>
+
+      {/* Error Message Section */}
+      <div className="p-3 bg-black/40 rounded-lg border border-rose-950 text-xs font-mono text-rose-200 break-words whitespace-pre-wrap max-h-36 overflow-y-auto">
+        {error}
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex flex-col gap-2 pt-1">
+        <div className="flex gap-2">
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-rose-900/40 hover:bg-rose-900/60 border border-rose-500/40 py-2 font-display text-xs text-rose-200 transition-all active:scale-[0.98] cursor-pointer"
+            >
+              <RotateCcw size={13} /> Retry Now
+            </button>
+          )}
+          <button
+            onClick={onOpenSettings}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 py-2 font-display text-xs text-white/80 hover:text-white transition-all active:scale-[0.98] cursor-pointer"
+          >
+            <SettingsIcon size={13} /> Open Settings
+          </button>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={handleCopyReport}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 py-2 font-display text-xs text-white/80 hover:text-white transition-all cursor-pointer"
+          >
+            {copied ? (
+              <>
+                <Check size={13} className="text-emerald-400" /> Copied!
+              </>
+            ) : (
+              <>
+                <Copy size={13} /> Copy Diagnostic Report
+              </>
+            )}
+          </button>
+          <button
+            onClick={handleDismissAndPause}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 py-2 font-display text-xs text-white/80 hover:text-white transition-all cursor-pointer"
+            title="Dismiss error and let you edit text"
+          >
+            <Pause size={13} className="text-amber-400" /> Dismiss to PAUSE
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Blueprint §6.4C — v1 scaffold: no parchment pagination/quick-slots yet,
 // just enough surface to prove the turn loop (§2 Phase D) actually works.
 export default function Chronicle({
@@ -317,6 +469,11 @@ export default function Chronicle({
   bestiary,
   skills,
   crafting,
+  apiSettings,
+  proseDepth,
+  lastActionText,
+  onRetry,
+  onDismissError,
   onSend,
   onBangCommand,
   slashCommands,
@@ -341,6 +498,8 @@ export default function Chronicle({
   const [navDragPos, setNavDragPos] = useState<{ y: number } | null>(null)
   const [navDragging, setNavDragging] = useState(false)
   const [radialOpen, setRadialOpen] = useState(false)
+
+  const lastLogEntry = useMemo(() => log[log.length - 1], [log])
 
   // §6.5 Fantasy Radial Menu — Codex/Settings already have one-tap header
   // buttons, so the ring's value is fast shortcuts straight into the
@@ -657,7 +816,34 @@ export default function Chronicle({
           <TurnBlock key={windowStart + i} entry={entry} globalIndex={windowStart + i} onTapTerm={onTapTerm} registerRef={registerRef} />
         ))}
         {busy && <p className="font-narrative italic text-sm opacity-50">The thread of fate is being woven...</p>}
-        {error && <p className="font-mono text-xs text-rose">{error}</p>}
+        {lastLogEntry?.act && lastLogEntry.act.length > 0 && !busy && !error && (
+          <div className="flex flex-col gap-1.5 pt-2 border-t border-gold-accent/15">
+            <span className="text-[10px] font-mono tracking-wider text-gold-primary opacity-60 uppercase">Suggested Actions</span>
+            <div className="flex flex-wrap gap-1.5">
+              {lastLogEntry.act.map((suggestion, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setInput(suggestion)}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-gold-accent/10 hover:bg-gold-accent/20 border border-gold-accent/35 hover:border-gold-accent/60 px-3 py-1 font-narrative text-xs text-gold-primary transition-all cursor-pointer active:scale-[0.98]"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {error && (
+          <ApiErrorPanel
+            error={error}
+            apiSettings={apiSettings}
+            proseDepth={proseDepth}
+            lastActionText={lastActionText}
+            onRetry={onRetry}
+            onDismissError={onDismissError}
+            onOpenSettings={onOpenSettings}
+            setInput={setInput}
+          />
+        )}
       </div>
 
       {/* §9.2 Block Navigator — idle: nearly invisible; hover/focus: lights up

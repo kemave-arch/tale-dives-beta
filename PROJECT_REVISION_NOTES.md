@@ -1199,3 +1199,10 @@ New entries below, most recent first.
   `parseOrder`'s regex directly (`RisingCore_ost00.opus` → `0`,
   `finale_ost12.opus` → `12`, a no-suffix name → `null`, correctly falling back).
   `npm run typecheck`/`npm run build` both clean.
+
+- **2026-09-04** (Claude Code on the web) — `package-lock.json` added to
+  `.gitignore`. AI Studio had deleted it twice this session already — per the
+  user, its own environment genuinely needs it absent, not an accident — and this
+  repo's deploy workflow uses `npm install`, not `npm ci`, so there was never a
+  reproducibility reason to keep committing it either. Ignoring it stops the
+  recurring add/delete churn outright rather than leaving it to keep happening.

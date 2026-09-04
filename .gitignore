@@ -3,3 +3,8 @@ dist
 .env
 .env.local
 *.log
+
+# AI Studio's environment needs this absent; the deploy workflow uses
+# `npm install` (not `npm ci`), so it never needed to be committed for
+# reproducibility here either. Ignored rather than repeatedly deleted.
+package-lock.json

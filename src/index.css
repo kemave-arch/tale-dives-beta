@@ -85,6 +85,7 @@ body {
   background: var(--td-canvas);
   color: var(--td-ink);
   font-family: var(--font-narrative);
+  overscroll-behavior: none;
 }
 
 /* Standard glass surface — Blueprint §6.1a, now border-only to match the

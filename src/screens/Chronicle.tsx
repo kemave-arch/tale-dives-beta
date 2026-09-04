@@ -763,7 +763,7 @@ export default function Chronicle({
       | undefined)
 
   return (
-    <div className="min-h-screen text-ink relative bg-canvas">
+    <div className="fixed inset-0 overflow-hidden text-ink bg-canvas">
       {/* Full-bleed dark obsidian header — flat, no color-wash gradient; the
           gold accent lives only in the border. */}
       <header

@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { X, Plus, Pencil, Trash2, Save, Globe, ScrollText, Pause, Maximize2 } from 'lucide-react'
-import { DASHED_ROW_CLASS, FIELD_CLASS, GlassIconButton } from '../lib/glassChrome.tsx'
+import { X, Plus, Pencil, Trash2, Save, Globe, ScrollText, Pause } from 'lucide-react'
+import { DASHED_ROW_CLASS, FIELD_CLASS, GlassIconButton, GlassLongTextarea } from '../lib/glassChrome.tsx'
 import { newId } from '../lib/store.ts'
 import { useConfirm } from '../lib/useConfirm.tsx'
 import { useLongTextEditor } from '../lib/useLongTextEditor.tsx'
@@ -89,28 +89,16 @@ export default function SlashCommandManager({ campaignCommands, globalCommands, 
                 <span className="text-[10px] text-ink-muted">Invoked as /{draft.name.trim().replace(/\s+/g, '_').toLowerCase() || 'name'}</span>
               </label>
               <label className="block">
-                <span className="flex items-center gap-2">
-                  <span className="text-[11px] font-display uppercase tracking-[0.14em] text-[#f0d9a4]">Prompt</span>
-                  <button
-                    type="button"
-                    onClick={async (e) => {
-                      e.preventDefault() // sits inside a <label> — don't let it refocus/click through to the field
-                      const result = await editLongText('Prompt', draft.prompt)
-                      if (result !== null) setDraft((d) => d && { ...d, prompt: result })
-                    }}
-                    title="Expand"
-                    aria-label="Expand to edit"
-                    className="ml-auto text-[#e8ca8a]/60 hover:text-[#f5dfa0] transition-colors duration-150"
-                  >
-                    <Maximize2 size={13} />
-                  </button>
-                </span>
-                <textarea
-                  rows={4}
+                <span className="text-[11px] font-display uppercase tracking-[0.14em] text-[#f0d9a4]">Prompt</span>
+                <GlassLongTextarea
                   value={draft.prompt}
-                  onChange={(e) => setDraft((d) => d && { ...d, prompt: e.target.value })}
-                  placeholder="What should the AI do when this command is used?"
-                  className={`mt-1 ${FIELD_CLASS}`}
+                  onOpenModal={async () => {
+                    const result = await editLongText('Prompt', draft.prompt, 'What should the AI do when this command is used?', 'What should the AI do when this command is used?')
+                    if (result !== null) setDraft((d) => d && { ...d, prompt: result })
+                  }}
+                  placeholder="Tap to edit prompt in expanded view..."
+                  rows={3}
+                  className="mt-1"
                 />
               </label>
               <label className="flex items-center gap-2 text-xs text-ink-muted">

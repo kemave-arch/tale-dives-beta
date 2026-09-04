@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import Title from './screens/Title.tsx'
 import Settings, { type SettingsSavePayload } from './screens/Settings.tsx'
@@ -35,6 +35,7 @@ import { readJSONFile, saveJSON } from './lib/backup.ts'
 import { useConfirm } from './lib/useConfirm.tsx'
 import { useLongTextEditor } from './lib/useLongTextEditor.tsx'
 import { useBackgroundMusic } from './lib/backgroundMusic.tsx'
+import NowPlayingBanner from './components/NowPlayingBanner.tsx'
 import * as store from './lib/store.ts'
 import { CURRENT_SCHEMA_VERSION, EQUIPPABLE_TYPES } from './types.ts'
 import type {
@@ -86,6 +87,73 @@ export default function App() {
     return saved
   })
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [slashManagerOpen, setSlashManagerOpen] = useState(false)
+  const historyDepthRef = useRef(0)
+
+  // Navigate to screen and sync with browser history so mobile hardware back-key works
+  const navigateTo = (nextScreen: Screen, replace = false) => {
+    if (nextScreen === screen && !replace) return
+
+    if (replace) {
+      window.history.replaceState({ screen: nextScreen, depth: historyDepthRef.current }, '')
+    } else {
+      const nextDepth = historyDepthRef.current + 1
+      historyDepthRef.current = nextDepth
+      window.history.pushState({ screen: nextScreen, depth: nextDepth }, '')
+    }
+
+    setScreen(nextScreen)
+  }
+
+  // Back button helper: pops browser history if available so phone back-key & in-app back stay aligned
+  const goBack = (fallbackScreen: Screen) => {
+    if (historyDepthRef.current > 0) {
+      window.history.back()
+    } else {
+      navigateTo(fallbackScreen, true)
+    }
+  }
+
+  // Handle mobile hardware back button / browser popstate events
+  useEffect(() => {
+    if (!window.history.state || typeof window.history.state.depth !== 'number') {
+      window.history.replaceState({ screen, depth: 0 }, '')
+      historyDepthRef.current = 0
+    } else {
+      historyDepthRef.current = window.history.state.depth ?? 0
+    }
+
+    const handlePopState = (event: PopStateEvent) => {
+      // If the pop event is for an in-app modal (handled by modal listener), do not change screen
+      if (event.state?.modal) {
+        return
+      }
+
+      // Close settings overlay if open
+      if (settingsOpen) {
+        setSettingsOpen(false)
+        return
+      }
+
+      // Close slash command manager if open
+      if (slashManagerOpen) {
+        setSlashManagerOpen(false)
+        return
+      }
+
+      const nextScreen = event.state?.screen as Screen | undefined
+      if (nextScreen) {
+        historyDepthRef.current = event.state.depth ?? 0
+        setScreen(nextScreen)
+      } else {
+        historyDepthRef.current = 0
+        setScreen((curr) => curr || 'title')
+      }
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [settingsOpen, slashManagerOpen])
 
   const [apiSettings, setApiSettings] = useState(store.loadApiSettings)
   const [uiPrefs, setUiPrefs] = useState(store.loadUiPrefs)
@@ -110,7 +178,6 @@ export default function App() {
   const [newGameMode, setNewGameMode] = useState<CreationMode>('tale')
   const [newGameInitial, setNewGameInitial] = useState<ProtagonistData | null>(null)
   const [codexTarget, setCodexTarget] = useState<{ category: CategoryId; id?: string } | null>(null)
-  const [slashManagerOpen, setSlashManagerOpen] = useState(false)
 
   const [history, setHistory] = useState<HistoryTurn[]>([]) // Gemini `contents` sliding window (§3.1)
   const [busy, setBusy] = useState(false)
@@ -149,7 +216,21 @@ export default function App() {
   const { edit: editLongText, dialog: longTextDialog } = useLongTextEditor()
   // Mounted here rather than in a screen so the soundtrack keeps playing
   // across navigation instead of restarting whenever a screen unmounts.
-  const { muted: musicMuted, toggleMute: toggleMusicMute } = useBackgroundMusic()
+  const {
+    muted: musicMuted,
+    toggleMute: toggleMusicMute,
+    isPlaying: musicPlaying,
+    currentTime: musicCurrentTime,
+    duration: musicDuration,
+    currentTrack,
+    bannerVisible,
+    dismissBanner,
+    playTrack: onPlayTrack,
+    togglePlayPause: onTogglePlayPause,
+    nextTrack: onNextTrack,
+    prevTrack: onPrevTrack,
+    resumeSoundtrack: onResumeSoundtrack,
+  } = useBackgroundMusic()
 
   useEffect(() => { store.saveApiSettings(apiSettings) }, [apiSettings])
   useEffect(() => { store.saveUiPrefs(uiPrefs) }, [uiPrefs])
@@ -171,14 +252,25 @@ export default function App() {
 
   function upsertWorld(worldData: WorldData, existingId?: string | null): WorldData {
     const id = existingId ?? store.newId('world')
-    const entry: WorldData = { ...worldData, id, isDefault: worlds[id]?.isDefault ?? false }
+    const entry: WorldData = {
+      ...worldData,
+      id,
+      savedAt: worldData.savedAt ?? Date.now(),
+      isDefault: worlds[id]?.isDefault ?? false,
+    }
     setWorlds((w) => ({ ...w, [id]: entry }))
     return entry
   }
 
   function upsertProtagonist(pData: ProtagonistData, existingId: string | null | undefined, className: string): ProtagonistData {
     const id = existingId ?? store.newId('protagonist')
-    const entry: ProtagonistData = { ...pData, id, className, isDefault: protagonists[id]?.isDefault ?? false }
+    const entry: ProtagonistData = {
+      ...pData,
+      id,
+      className,
+      savedAt: pData.savedAt ?? Date.now(),
+      isDefault: protagonists[id]?.isDefault ?? false,
+    }
     setProtagonists((p) => ({ ...p, [id]: entry }))
     return entry
   }
@@ -187,7 +279,7 @@ export default function App() {
     setGame(campaigns[id])
     setActiveCampaignId(id)
     setHistory([])
-    setScreen('chronicle')
+    navigateTo('chronicle')
   }
 
   // Title's "Continue" shortcut and Main Menu's Tales tab both want the same
@@ -276,7 +368,7 @@ export default function App() {
     setHistory([])
     setError(null)
     setPendingWorld(null)
-    setScreen('chronicle')
+    navigateTo('chronicle')
 
     // §Phase B.4 — the Tale Dive Brief fires Turn 1, folding in the World
     // Background/Genre/Conflict/Power System/Era/Key Factions from Phase A so
@@ -971,10 +1063,28 @@ export default function App() {
     }
   }
 
-  // No return-to bookkeeping any more — the screen underneath never changed,
-  // so closing just dismisses the overlay.
   function openSettings() {
+    window.history.pushState({ modal: 'settings' }, '')
     setSettingsOpen(true)
+  }
+
+  function closeSettings() {
+    if (window.history.state?.modal === 'settings') {
+      window.history.back()
+    }
+    setSettingsOpen(false)
+  }
+
+  function openSlashManager() {
+    window.history.pushState({ modal: 'slash_manager' }, '')
+    setSlashManagerOpen(true)
+  }
+
+  function closeSlashManager() {
+    if (window.history.state?.modal === 'slash_manager') {
+      window.history.back()
+    }
+    setSlashManagerOpen(false)
   }
 
   function startNewStory(worldId?: string, protagonistId?: string) {
@@ -986,7 +1096,7 @@ export default function App() {
     setNewGameInitial(protagonist ?? null)
     setPendingWorld(null)
     setPendingProtagonist(null)
-    setScreen('storymode')
+    navigateTo('storymode')
   }
 
   // ---- Screens ----
@@ -996,7 +1106,7 @@ export default function App() {
   if (screen === 'title') {
     content = (
       <Title
-        onEnter={() => setScreen('mainmenu')}
+        onEnter={() => navigateTo('mainmenu')}
         onSettings={() => openSettings()}
         onContinue={mostRecentCampaignId() ? () => resumeCampaign(mostRecentCampaignId()!) : undefined}
         musicMuted={musicMuted}
@@ -1039,12 +1149,12 @@ export default function App() {
         onNewWorld={() => {
           setWorldSetupMode('library')
           setWorldSetupInitial(null)
-          setScreen('worldsetup')
+          navigateTo('worldsetup')
         }}
         onEditWorld={(id) => {
           setWorldSetupMode('library')
           setWorldSetupInitial(worlds[id] ?? null)
-          setScreen('worldsetup')
+          navigateTo('worldsetup')
         }}
         onSetDefaultWorld={(id) =>
           setWorlds((w) => Object.fromEntries(Object.entries(w).map(([k, v]) => [k, { ...v, isDefault: k === id }])))
@@ -1060,12 +1170,12 @@ export default function App() {
         onNewProtagonist={() => {
           setNewGameMode('library')
           setNewGameInitial(null)
-          setScreen('newgame')
+          navigateTo('newgame')
         }}
         onEditProtagonist={(id) => {
           setNewGameMode('library')
           setNewGameInitial(protagonists[id] ?? null)
-          setScreen('newgame')
+          navigateTo('newgame')
         }}
         onSetDefaultProtagonist={(id) =>
           setProtagonists((p) => Object.fromEntries(Object.entries(p).map(([k, v]) => [k, { ...v, isDefault: k === id }])))
@@ -1079,14 +1189,23 @@ export default function App() {
           })
         }}
         onOpenSettings={() => openSettings()}
-        onBackToTitle={() => setScreen('title')}
+        onBackToTitle={() => goBack('title')}
         musicMuted={musicMuted}
         onToggleMusicMute={toggleMusicMute}
+        musicPlaying={musicPlaying}
+        musicCurrentTrack={currentTrack}
+        musicCurrentTime={musicCurrentTime}
+        musicDuration={musicDuration}
+        onPlayTrack={onPlayTrack}
+        onTogglePlayPause={onTogglePlayPause}
+        onNextTrack={onNextTrack}
+        onPrevTrack={onPrevTrack}
+        onResumeSoundtrack={onResumeSoundtrack}
       />
     )
   } else if (screen === 'storymode') {
     content = (
-      <StoryMode onBack={() => setScreen('mainmenu')} onSelectOriginal={() => setScreen('worldsetup')} />
+      <StoryMode onBack={() => goBack('mainmenu')} onSelectOriginal={() => navigateTo('worldsetup')} />
     )
   } else if (screen === 'worldsetup') {
     content = (
@@ -1094,14 +1213,14 @@ export default function App() {
         worldTemplates={Object.values(worlds)}
         initial={worldSetupInitial}
         editLongText={editLongText}
-        onBack={() => setScreen(worldSetupMode === 'library' ? 'mainmenu' : 'storymode')}
+        onBack={() => goBack(worldSetupMode === 'library' ? 'mainmenu' : 'storymode')}
         onContinue={(worldData) => {
           if (worldSetupMode === 'library') {
             upsertWorld(worldData, worldData.id)
-            setScreen('mainmenu')
+            navigateTo('mainmenu')
           } else {
             setPendingWorld(worldData)
-            setScreen('newgame')
+            navigateTo('newgame')
           }
         }}
         onSavePreset={(worldData) => upsertWorld(worldData, worldData.id)}
@@ -1115,15 +1234,15 @@ export default function App() {
         initial={newGameInitial}
         editLongText={editLongText}
         showBriefField={newGameMode === 'library'}
-        onBack={() => setScreen(newGameMode === 'tale' ? 'worldsetup' : 'mainmenu')}
+        onBack={() => goBack(newGameMode === 'tale' ? 'worldsetup' : 'mainmenu')}
         onBegin={(protagonistData) => {
           if (newGameMode === 'library') {
             const cls = getClassById(protagonistData.classId)
             upsertProtagonist(protagonistData, protagonistData.id, cls.name)
-            setScreen('mainmenu')
+            navigateTo('mainmenu')
           } else {
             setPendingProtagonist(protagonistData)
-            setScreen('talebrief')
+            navigateTo('talebrief')
           }
         }}
         onSavePreset={(protagonistData) => upsertProtagonist(protagonistData, protagonistData.id, getClassById(protagonistData.classId).name)}
@@ -1137,7 +1256,7 @@ export default function App() {
         initialNarrationStyle={pendingWorld.narrationStyle}
         initialTemperature={apiSettings.temperature}
         editLongText={editLongText}
-        onBack={() => setScreen('newgame')}
+        onBack={() => goBack('newgame')}
         onBegin={({ opening, narrationStyle, temperature, combatMode }) => {
           setApiSettings((a) => ({ ...a, temperature }))
           beginCampaign({ ...pendingProtagonist, opening }, combatMode, { narrationStyle })
@@ -1178,7 +1297,7 @@ export default function App() {
         initialEntryId={codexTarget?.id}
         onBack={() => {
           setCodexTarget(null)
-          setScreen('chronicle')
+          goBack('chronicle')
         }}
       />
     )
@@ -1208,31 +1327,33 @@ export default function App() {
         onSend={sendAction}
         onBangCommand={handleBangCommand}
         slashCommands={[...Object.values(game.slashCommands ?? {}), ...Object.values(globalSlashCommands)]}
-        onOpenSlashManager={() => setSlashManagerOpen(true)}
+        onOpenSlashManager={() => openSlashManager()}
         onOpenSettings={() => openSettings()}
-        onOpenMenu={() => setScreen('mainmenu')}
+        onOpenMenu={() => navigateTo('mainmenu')}
         onOpenCodex={() => {
           setCodexTarget(null)
-          setScreen('codex')
+          navigateTo('codex')
         }}
         onOpenCodexEntry={(category, id) => {
           setCodexTarget({ category: KEYWORD_CATEGORY_TO_CODEX[category], id })
-          setScreen('codex')
+          navigateTo('codex')
         }}
         onOpenCodexCategory={(category) => {
           setCodexTarget({ category })
-          setScreen('codex')
+          navigateTo('codex')
         }}
       />
     )
   } else {
     content = (
       <Title
-        onEnter={() => setScreen('mainmenu')}
+        onEnter={() => navigateTo('mainmenu')}
         onSettings={() => openSettings()}
         onContinue={mostRecentCampaignId() ? () => resumeCampaign(mostRecentCampaignId()!) : undefined}
         musicMuted={musicMuted}
         onToggleMusicMute={toggleMusicMute}
+        debugMode={uiPrefs.debugMode}
+        introGazeDelay={uiPrefs.introGazeDelay}
       />
     )
   }
@@ -1252,6 +1373,14 @@ export default function App() {
         </motion.div>
       </AnimatePresence>
 
+      {/* Now Playing Playlist Banner on top of screen */}
+      <NowPlayingBanner
+        track={currentTrack}
+        visible={bannerVisible}
+        muted={musicMuted}
+        onDismiss={dismissBanner}
+      />
+
       {/* Overlay, not a screen — the screen underneath stays mounted and
           visible through the modal's glass. */}
       {settingsOpen && (
@@ -1259,14 +1388,16 @@ export default function App() {
           apiSettings={apiSettings}
           uiPrefs={uiPrefs}
           game={game}
-          onBack={() => setSettingsOpen(false)}
+          musicMuted={musicMuted}
+          onToggleMusicMute={toggleMusicMute}
+          onBack={closeSettings}
           onSave={({ apiSettings: nextApi, uiPrefs: nextUi, proseDepthKey, combatMode }: SettingsSavePayload) => {
             setApiSettings(nextApi)
             setUiPrefs(nextUi)
             if (game) {
               setGame((g) => g && { ...g, proseDepth: PROSE_DEPTHS[proseDepthKey], combatMode })
             }
-            setSettingsOpen(false)
+            closeSettings()
           }}
           onExportActive={() => game && saveJSON(`${game.title}.json`, game)}
           onBackupAll={() =>
@@ -1316,7 +1447,7 @@ export default function App() {
           globalCommands={globalSlashCommands}
           onSave={upsertSlashCommand}
           onDelete={deleteSlashCommand}
-          onClose={() => setSlashManagerOpen(false)}
+          onClose={closeSlashManager}
         />
       )}
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { TRACK_FILENAMES } from '../data/soundtrackManifest.ts'
+import { TRACK_FILENAMES, getTrackMetadata, type TrackMetadata } from '../data/soundtrackManifest.ts'
 
 // Soundtrack lives in public/tracks/, listed explicitly in
 // data/soundtrackManifest.ts rather than auto-discovered by probing a
@@ -23,6 +23,7 @@ function parseOrder(filename: string): number | null {
 const PROBE_TIMEOUT_MS = 5000
 const FADE_MS = 2500
 const FADE_STEP_MS = 50
+const BANNER_DURATION_MS = 5500
 
 // An <audio> probe rather than a fetch: a genuinely missing file still gets a
 // 200 serving index.html from the dev server's SPA fallback, so status codes
@@ -84,34 +85,47 @@ async function discoverTracks(base: string): Promise<string[]> {
 /**
  * Background soundtrack: plays the discovered tracks in order, fading each one
  * in at its start and out before its end, then wrapping back to the first.
- *
- * It *attempts* muted autoplay on load, but never assumes it succeeded. That
- * assumption was the original "no sound ever plays" bug: muted autoplay is
- * widely permitted but not universally — Safari, mobile browsers, and any
- * Chrome started with `--autoplay-policy=document-user-activation-required`
- * refuse it for a bare <audio> element. A refused play() rejects silently, so
- * the element would sit at `paused: true` (fully loaded, readyState 4) while
- * the toggle only ever flipped `.muted` — leaving nothing to unmute, no matter
- * how many times it was clicked.
- *
- * So playback is (re)started from two places that carry a real user gesture:
- * the mute toggle itself, and a first-interaction fallback for anyone who
- * never touches it. `.muted` is kept separate from the `.volume` ramps, so a
- * deliberate user toggle is immediate while track changes stay gradual.
  */
 export function useBackgroundMusic() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const fadeTimerRef = useRef<number | null>(null)
+  const bannerTimerRef = useRef<number | null>(null)
+  const tracksRef = useRef<string[]>([])
+  const indexRef = useRef<number>(0)
   // Set by the mount effect below; called from the `muted` effect, which
   // can't reach into that closure directly.
   const resumeRef = useRef<() => void>(() => {})
+  const playTrackRef = useRef<(filenameOrIndex: string | number) => void>(() => {})
+  const nextTrackRef = useRef<() => void>(() => {})
+  const prevTrackRef = useRef<() => void>(() => {})
   const [muted, setMuted] = useState(true)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [currentTrack, setCurrentTrack] = useState<TrackMetadata | null>(null)
+  const [bannerVisible, setBannerVisible] = useState(false)
+
+  const triggerBanner = () => {
+    if (bannerTimerRef.current !== null) {
+      clearTimeout(bannerTimerRef.current)
+    }
+    setBannerVisible(true)
+    bannerTimerRef.current = window.setTimeout(() => {
+      setBannerVisible(false)
+      bannerTimerRef.current = null
+    }, BANNER_DURATION_MS)
+  }
+
+  const dismissBanner = () => {
+    if (bannerTimerRef.current !== null) {
+      clearTimeout(bannerTimerRef.current)
+      bannerTimerRef.current = null
+    }
+    setBannerVisible(false)
+  }
 
   useEffect(() => {
     let cancelled = false
-    // Attached to the DOM rather than a bare `new Audio()` purely so the
-    // player is inspectable in devtools; it's hidden and control-less, so
-    // it behaves identically otherwise.
     const audio = document.createElement('audio')
     audio.id = 'td-soundtrack'
     audio.hidden = true
@@ -121,17 +135,8 @@ export function useBackgroundMusic() {
     document.body.appendChild(audio)
     audioRef.current = audio
 
-    let tracks: string[] = []
-    let index = 0
     let fadingOut = false
 
-    // Interval rather than requestAnimationFrame on purpose: rAF does not
-    // fire at all while the document is hidden, so a backgrounded tab would
-    // freeze a fade partway and leave the volume stranded (verified — the
-    // preview pane runs hidden and pinned the volume at 0). Timers are only
-    // throttled, not stopped, and since each tick recomputes progress from
-    // elapsed wall-clock time rather than counting steps, a throttled fade
-    // still lands exactly on target, just in fewer/coarser jumps.
     function fadeTo(target: number) {
       if (fadeTimerRef.current !== null) clearInterval(fadeTimerRef.current)
       const from = audio.volume
@@ -147,35 +152,64 @@ export function useBackgroundMusic() {
     }
 
     // Starts a track from the top, fading it in.
-    function playCurrent() {
-      if (cancelled || tracks.length === 0) return
+    function playCurrent(showBanner = true) {
+      if (cancelled || tracksRef.current.length === 0) return
       fadingOut = false
-      audio.src = tracks[index]
+      const trackSrc = tracksRef.current[indexRef.current]
+      audio.src = trackSrc
       audio.volume = 0
-      // Rejected play() is not an error worth surfacing — it just means
-      // autoplay was refused, which `resume()` below is there to recover from.
-      void audio.play().catch(() => {})
+
+      const meta = getTrackMetadata(trackSrc)
+      setCurrentTrack(meta)
+      if (showBanner) triggerBanner()
+
+      void audio.play().then(() => {
+        if (!cancelled) setIsPlaying(true)
+      }).catch(() => {})
       fadeTo(1)
     }
 
-    // Gets playback going again *without* rewinding: the recovery path for a
-    // refused autoplay. If discovery hasn't finished yet there's nothing to
-    // play, and that's fine — playCurrent() runs when it does, by which point
-    // the page has the user activation it was missing.
+    function playTrack(filenameOrIndex: string | number) {
+      if (cancelled || tracksRef.current.length === 0) return
+      let targetIdx = 0
+      if (typeof filenameOrIndex === 'number') {
+        targetIdx = ((filenameOrIndex % tracksRef.current.length) + tracksRef.current.length) % tracksRef.current.length
+      } else {
+        const needle = filenameOrIndex.toLowerCase()
+        const idx = tracksRef.current.findIndex((s) => s.toLowerCase().includes(needle))
+        targetIdx = idx >= 0 ? idx : 0
+      }
+      indexRef.current = targetIdx
+      playCurrent(true)
+    }
+    playTrackRef.current = playTrack
+
+    function nextTrack() {
+      if (tracksRef.current.length === 0) return
+      indexRef.current = (indexRef.current + 1) % tracksRef.current.length
+      playCurrent(true)
+    }
+    nextTrackRef.current = nextTrack
+
+    function prevTrack() {
+      if (tracksRef.current.length === 0) return
+      indexRef.current = (indexRef.current - 1 + tracksRef.current.length) % tracksRef.current.length
+      playCurrent(true)
+    }
+    prevTrackRef.current = prevTrack
+
     function resume() {
-      if (cancelled || tracks.length === 0) return
+      if (cancelled || tracksRef.current.length === 0) return
       if (!audio.src) {
-        playCurrent()
+        playCurrent(false)
         return
       }
-      void audio.play().catch(() => {})
+      void audio.play().then(() => {
+        if (!cancelled) setIsPlaying(true)
+      }).catch(() => {})
     }
     resumeRef.current = resume
 
-    // Fallback for a listener who never touches the mute toggle: retry on the
-    // first genuine interaction anywhere. The element is still muted at that
-    // point, so this is silent — it only means unmuting later is instant.
-    // Self-removing once playback is confirmed running.
     function retryOnGesture() {
       if (audio.paused) {
         resume()
@@ -187,17 +221,6 @@ export function useBackgroundMusic() {
     window.addEventListener('pointerdown', retryOnGesture)
     window.addEventListener('keydown', retryOnGesture)
 
-    // First genuine interaction with the page — not just enough to satisfy
-    // the browser's autoplay gate silently (retryOnGesture above already does
-    // that), but an actual real unmute, since the visitor is now demonstrably
-    // here and the gesture legitimately authorizes audible playback. Skips
-    // the mute toggle itself: that button already has its own onClick
-    // (toggleMute), and if this fired for it too it would double-handle the
-    // same tap — flip to unmuted here, then immediately flip again when the
-    // toggle's own handler runs, landing back on muted. Every OTHER first
-    // interaction (Dive In, Settings, tapping anywhere) is exactly what
-    // should trigger this. Self-removing after the one shot; if every
-    // interaction so far has been the toggle itself, it just keeps waiting.
     function isMusicToggleTarget(target: EventTarget | null): boolean {
       return target instanceof Element && !!target.closest('[aria-label="Mute music"], [aria-label="Unmute music"]')
     }
@@ -211,9 +234,11 @@ export function useBackgroundMusic() {
     window.addEventListener('keydown', unmuteOnFirstRealInteraction)
 
     function handleTimeUpdate() {
+      setCurrentTime(audio.currentTime)
+      if (Number.isFinite(audio.duration) && audio.duration > 0) {
+        setDuration(audio.duration)
+      }
       if (fadingOut || !Number.isFinite(audio.duration)) return
-      // Guard the fade window against a track shorter than the fade itself,
-      // which would otherwise start fading out the instant it began.
       const fadeOutAt = Math.max(audio.duration / 2, audio.duration - FADE_MS / 1000)
       if (audio.currentTime >= fadeOutAt) {
         fadingOut = true
@@ -221,19 +246,31 @@ export function useBackgroundMusic() {
       }
     }
 
+    function handlePlay() {
+      setIsPlaying(true)
+    }
+
+    function handlePause() {
+      setIsPlaying(false)
+    }
+
     function handleEnded() {
-      if (tracks.length === 0) return
-      index = (index + 1) % tracks.length
-      playCurrent()
+      if (tracksRef.current.length === 0) return
+      indexRef.current = (indexRef.current + 1) % tracksRef.current.length
+      playCurrent(true)
     }
 
     audio.addEventListener('timeupdate', handleTimeUpdate)
+    audio.addEventListener('play', handlePlay)
+    audio.addEventListener('pause', handlePause)
     audio.addEventListener('ended', handleEnded)
 
     void discoverTracks(import.meta.env.BASE_URL).then((found) => {
       if (cancelled) return
-      tracks = found
-      playCurrent()
+      tracksRef.current = found
+      if (found.length > 0) {
+        playCurrent(false)
+      }
     })
 
     return () => {
@@ -243,8 +280,11 @@ export function useBackgroundMusic() {
       window.removeEventListener('pointerdown', unmuteOnFirstRealInteraction)
       window.removeEventListener('keydown', unmuteOnFirstRealInteraction)
       audio.removeEventListener('timeupdate', handleTimeUpdate)
+      audio.removeEventListener('play', handlePlay)
+      audio.removeEventListener('pause', handlePause)
       audio.removeEventListener('ended', handleEnded)
       if (fadeTimerRef.current !== null) clearInterval(fadeTimerRef.current)
+      if (bannerTimerRef.current !== null) clearTimeout(bannerTimerRef.current)
       audio.pause()
       audio.src = ''
       audio.remove()
@@ -253,23 +293,70 @@ export function useBackgroundMusic() {
     }
   }, [])
 
-  // Sync declaratively rather than inside the setMuted updater — updater
-  // functions must stay pure, and React is free to call them more than once,
-  // which would toggle `.muted` twice and leave the element out of step with
-  // the icon.
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
     audio.muted = muted
-    // Unmuting is itself the user gesture browsers demand, so this is the one
-    // moment a previously-refused play() is certain to be allowed. Without
-    // this the toggle is inert whenever autoplay was blocked.
-    if (!muted) resumeRef.current()
+    if (!muted) {
+      resumeRef.current()
+      triggerBanner()
+    }
   }, [muted])
 
   function toggleMute() {
     setMuted((prev) => !prev)
   }
 
-  return { muted, toggleMute, setMuted }
+  function togglePlayPause() {
+    const audio = audioRef.current
+    if (!audio) return
+    if (audio.paused) {
+      if (muted) setMuted(false)
+      void audio.play()
+    } else {
+      audio.pause()
+    }
+  }
+
+  function playTrack(filenameOrIndex: string | number) {
+    if (muted) setMuted(false)
+    playTrackRef.current(filenameOrIndex)
+  }
+
+  function nextTrack() {
+    if (muted) setMuted(false)
+    nextTrackRef.current()
+  }
+
+  function prevTrack() {
+    if (muted) setMuted(false)
+    prevTrackRef.current()
+  }
+
+  function resumeSoundtrack() {
+    const audio = audioRef.current
+    if (!audio) return
+    if (audio.paused) {
+      void audio.play()
+    }
+  }
+
+  return {
+    muted,
+    toggleMute,
+    setMuted,
+    isPlaying,
+    currentTime,
+    duration,
+    currentTrack,
+    bannerVisible,
+    triggerBanner,
+    dismissBanner,
+    playTrack,
+    togglePlayPause,
+    nextTrack,
+    prevTrack,
+    resumeSoundtrack,
+  }
 }
+

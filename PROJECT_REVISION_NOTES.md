@@ -1,9 +1,6 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-04, Claude Code on the web — a reusable long-text expand-to-edit
-modal, wired into every long textarea in the app (see the new entry at the bottom of
-this file's log). Previous entry below is from a home-machine session (UI unification
-pass plus the Skills system).
+**Last updated:** 2026-09-04, AI Studio — Setup screens overhaul (horizontal subtabs, Load Preset compact table with search, auto-expanding long text fields, full-width forms).
 
 > ## 🎨 READ THIS BEFORE TOUCHING ANY SCREEN — the app now has ONE theme
 > The selectable parchment/obsidian **skins are gone** (`UiPrefs.skin`, the `Skin` type,
@@ -84,6 +81,98 @@ rule applies to music.
 > still unbuilt, but no longer blocked on "there's nothing to seed from."
 
 Recent shipped work, most recent first: 
+- **Vault OST Soundtrack Jukebox, Wallpaper Gaze 4s Initializing Delay & Debug Mode**: 2026-09-04 (AI Studio).
+  - **OST Tab in Vault (`VaultSoundtrackView.tsx`, `MainMenu.tsx`, `backgroundMusic.tsx`, `App.tsx`)**:
+    - Added an "OST" subtab in the Vault (after "Protagonist") featuring a full soundtrack player deck with an animated spinning vinyl disc, live track title, album ("Tale Dives OST"), and composer/artist ("Kem.Ave").
+    - Included full playback controls: Play/Pause, Previous Track, Next Track, Mute/Unmute, and a formatted elapsed/duration timeline bar.
+    - Rendered the complete list of all 7 original soundtrack opus tracks with active "Now Playing" indicators and quick preview capabilities.
+    - Implemented a "Fade In Soundtrack" CTA and smooth background music fade-in restoration via `resumeSoundtrack()` in `backgroundMusic.tsx`.
+  - **4-Second "Initializing..." Delay on "Dive In" (`Title.tsx`, `types.ts`, `store.ts`, `App.tsx`)**:
+    - Added a 4-second "Initializing..." delay with a golden loading spinner on the "Dive In" button on the Title screen to allow the user to gaze at the ambient wallpaper art.
+  - **Debug Mode Toggle in Settings (`Settings.tsx`, `types.ts`, `store.ts`)**:
+    - Added a "Debug Mode" toggle in the Gameplay tab of Settings that allows switching the 4-second initialization delay ON or OFF for instant navigation during development.
+  - **Track Metadata & Banner Styling Polish (`soundtrackManifest.ts`, `NowPlayingBanner.tsx`)**:
+    - Configured canonical Album ("Tale Dives OST") and Artist ("Kem.Ave") across all soundtrack tracks.
+    - Darkened and refined the Now Playing banner transparency (`bg-black/60 backdrop-blur-md border border-[#f0ca65]/35`).
+  - Verified with `compile_applet`.
+- **Now Playing Playlist Glassmorph Banner & Settings Quick Mute Button**: 2026-09-04 (AI Studio).
+  - **Now Playing Playlist Glassmorph Banner (`NowPlayingBanner.tsx`, `backgroundMusic.tsx`, `soundtrackManifest.ts`, `App.tsx`)**:
+    - Created `NowPlayingBanner.tsx` displaying the currently playing soundtrack track metadata (Song Title, Album, and Artist).
+    - Positioned at the top of the viewport aligned with the "Tale Dives" header text area, expanding up to before the right-side mute/settings controls with safe margins.
+    - Smoothly fades in and slides in from the left (`initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }}`) whenever a new track loads or when music is unmuted, staying visible for 5.5s before gently fading out.
+    - Styled with high-contrast dark-glassmorphism (`bg-[#0c0914]/90 backdrop-blur-xl border border-[#f0ca65]/40`), glowing gold sheen, and an animated spinning disc/note icon.
+    - Updated `soundtrackManifest.ts` with structured `TrackMetadata` mapping all 7 original soundtrack opus tracks to their canonical album and artist information with fallback support.
+  - **Quick Mute/Unmute in Settings Modal (`Settings.tsx`, `App.tsx`)**:
+    - Added an inline `GlassIconButton` mute toggle directly beside the Close (X) button in the Settings modal header.
+    - Synchronized with the global `useBackgroundMusic` hook state.
+  - Verified with `compile_applet`.
+- **Vault & Creation Deck Views, Cyan/Purple Theming, Tab Guides & Spark Effects**: 2026-09-04 (AI Studio).
+  - **Deck Views with Card Selection & Confirm & Load CTA (`WorldSetup.tsx`, `NewGame.tsx`)**:
+    - Replaced the table layout in the "Load Preset" tabs of both World Setup and Protagonist Setup with interactive, card-based **Deck Views**.
+    - Each deck card displays full context (title, tags, genre/class, setting/identity details, synopsis/drive, saved timestamp, and "Inspect" button to open `PresetDetailModal`).
+    - Implemented radio-style card selection (`selectedDeckId`) with highlighted borders, subtle glow shadows, and a sticky "Confirm & Load" CTA button at the bottom of the deck list.
+  - **Thematic Color Accents (Cyan for Worlds, Purple for Protagonists)**:
+    - Updated `GlassTabs` in `glassChrome.tsx` with an `accent` prop (`'gold' | 'cyan' | 'purple'`) providing tailored active indicator styles, borders, and text glows.
+    - Applied the **Cyan** palette (`#22d3ee` / `#083344` / `#0e7490`) to World cards, inspect buttons, and confirm CTA in World Setup and the Vault.
+    - Applied the **Purple** palette (`#c084fc` / `#190d29` / `#a855f7`) to Protagonist cards, inspect buttons, and confirm CTA in Protagonist Setup and the Vault.
+  - **Main Menu Header Guides & Subtab Renaming (`MainMenu.tsx`)**:
+    - Added clean descriptive guide text directly below the main navigation tabs introducing **Tales** (active chronicles) and **Vault** (forge and collection of realms and characters).
+    - Renamed the "Protagonist Presets" subtab to **Protagonist** (singular).
+  - **Ambient Spark Effects (`MainMenu.tsx`, `AmbientSparks.tsx`)**:
+    - Integrated `AmbientSparks` onto the Main Menu screen to provide subtle, atmospheric magical embers matching Title and Chronicle screens.
+  - Verified with `tsc --noEmit` and `npm run build`.
+- **Main Screen Primary Tabs (Tales & Vault) & Vault Subtabs**: 2026-09-04 (AI Studio).
+  - **Main Navigation Tabs (`MainMenu.tsx`, `glassChrome.tsx`)**:
+    - Restructured the top-level main menu navigation to 2 primary tabs: **Tales** (`BookOpen`) and **Vault** (`Archive`).
+    - Added a `size="lg"` variant to `GlassTabs` in `glassChrome.tsx` providing enlarged, prominent typography (`text-sm sm:text-base font-bold uppercase tracking-wider`) and comfortable padding across the full viewport width.
+    - Organized **Worlds** and **Protagonist Presets** as subtabs nested inside the **Vault** view with live count indicators (`Worlds (N)`, `Protagonist Presets (N)`).
+  - Verified with `tsc --noEmit` and `npm run build`.
+- **2-Column Compact Preset Tables & Fixed Mobile Modal Sizing**: 2026-09-04 (AI Studio).
+  - **2-Column Preset Tables (`WorldSetup.tsx`, `NewGame.tsx`)**:
+    - Overhauled saved preset tables into 2 combined, compact columns: `[Game Mode + saved timestamp]` and `[World + inspiration]` (and `[Class + saved timestamp]`, `[Protagonist + drive]` for Protagonists).
+    - Compacted table headers and styled badges with distinct original/inspired and class tags.
+    - Sorted presets from latest to oldest using `savedAt` timestamps (with fallback ID timestamp parsing).
+    - Added `savedAt` timestamp tracking in `types.ts` and `App.tsx` (`upsertWorld`, `upsertProtagonist`).
+  - **Detail Modal Mobile Frame & Scroll Behavior (`PresetDetailModal.tsx`)**:
+    - Standardized modal container sizing with fixed mobile viewport height (`h-[86dvh] sm:h-auto sm:max-h-[88vh]`) to prevent layout jumping between tabs.
+    - Modal body maintains smooth internal scrolling without visible scrollbars (`[scrollbar-width:none] [&::-webkit-scrollbar]:hidden`).
+  - Verified with `tsc --noEmit` and `npm run build`.
+- **Preset Detail Modal, World Depth Subtabs & Mobile Hardware Back-Button Support**: 2026-09-04 (AI Studio).
+  - **Preset Detail Modal (`PresetDetailModal.tsx`)**:
+    - Created a responsive, tabbed detail modal for inspecting saved World and Protagonist presets from the presets table.
+    - Features tab navigation (`Overview`, `Depth` for Worlds; `Overview`, `Identity`, `Opening` for Protagonists) on mobile, and a spacious multi-column layout on larger screens.
+    - Displays all structured fields with clear typography and dedicated "Cancel" and "Load Preset" actions.
+  - **World Depth Subtabs (`WorldDetailModal.tsx` & `PresetDetailModal.tsx`)**:
+    - Renamed "Lore" tab to "Depth" and organized deep worldbuilding data into subtabs (`All`, `Lore`, `Power`, `Factions`) with Lucide icons (`Layers`, `BookMarked`, `Zap`, `Users`).
+  - **Mobile Hardware & Browser Back-Button Integration**:
+    - Added history synchronization in `App.tsx` via `navigateTo` and `goBack` helpers using `window.history.pushState` and `window.history.replaceState`.
+    - Added a global `popstate` listener in `App.tsx` that tracks `historyDepthRef` to navigate back to the previous screen rather than leaving the web application.
+    - Modals (`Settings`, `SlashCommandManager`, `PresetDetailModal`, `WorldDetailModal`, `ProtagonistDetailModal`) push modal state to browser history when opened and intercept `popstate` to dismiss gracefully on mobile hardware back button press.
+  - Verified with `tsc --noEmit` and `npm run build`.
+- **MainMenu Header Truncation Fix & Readability / Contrast Overhaul**: 2026-09-04 (AI Studio).
+  - **Header Tagline Truncation Fix**: In `MainMenu.tsx`, removed `truncate` from the header tagline (`"Choose a tale, or begin a new one"`). Wrapped it in a flexible container with `font-narrative italic text-xs sm:text-sm text-[#fae5b5] leading-snug`, allowing natural wrapping on mobile screens without ugly ellipsis cutoffs (`...`).
+  - **Readability & Contrast Enhancement**:
+    - Upgraded `MainMenu` card surfaces (`tales`, `worlds`, `protagonists`) with deep dark-glass backings (`bg-[#120e1b]/80 border-[#e8ca8a]/30 hover:border-[#f0ca65]/50`), ensuring crystal-clear legibility over all cycling background artwork.
+    - Upgraded titles to radiant `#fae5b5`, body/synopsis prose to `#fbf4e2`, and metadata/timestamps to `#d8c49e`.
+    - Harmonized symbol colors with bright glowing gold accents (`text-[#f0ca65]` for Globe, UserCircle, Plus, and DashedCard icons). Added active `default` badges for default worlds and protagonists.
+    - Updated `GlassTabs` with `bg-[#120e1b]/80 border-[#e8ca8a]/30` and a distinct gold active tab highlight (`border-[#f0ca65]/80 bg-[#f0ca65]/15 text-[#fae5b5]`).
+    - Enhanced `DashedCard` and `DASHED_ROW_CLASS` with `bg-[#120e1b]/50` and gold icon/hover states.
+  - Verified with `tsc --noEmit` and `npm run build`.
+- **Title CTA Button Icon Removal**: 2026-09-04 (AI Studio).
+  - Removed `BookOpen` and `Play` icons from `GlassCTAButton` on `Title.tsx` ("Dive In" and "Continue"), matching the iconless symmetrical diamond (`◆ Label ◆`) presentation used across all other primary CTA buttons (`NewGame`, `WorldSetup`, `TaleBrief`).
+- **Presets Table Refactor, Bookmark Icons & Fourth Wing / Violet Sorrengail Placeholders**: 2026-09-04 (AI Studio).
+  - **Presets Table Refactor**: In `WorldSetup.tsx` and `NewGame.tsx`, removed the cluttered "Action" column from the saved presets tables to allow spacious, legible columns (`World` / `Protagonist`, `Genre & Tone` / `Class & Archetype`, `Setting & Conflict` / `Personality & Drive`).
+  - **Click-to-Preview Modal**: Replaced immediate row loading with a detail preview modal on row click. Clicking any world or protagonist entry displays full structured details with dedicated "Cancel" and "Load" buttons.
+  - **Bookmark Icon for Examples**: Updated the examples button in `GlassField` and modal header to use Lucide `Bookmark` icon with compact icon-only styling (removed "Example" text) for a cleaner field header footprint.
+  - **CTA Button Centering**: Ensured `GlassCTAButton` ("Continue", "Dive In") icons, decorative diamonds, and label text are centered and aligned across all screens.
+  - **Themed Placeholders**: Updated all form placeholders across `WorldSetup.tsx`, `NewGame.tsx`, and `TaleBrief.tsx` to reference *Fourth Wing* by Rebecca Yarros, featuring Navarre, Basgiath War College, dragon signet magic, and protagonist Violet Sorrengail (scribe turned rider, silver-tipped hair, hypermobility, poison daggers, Parapet opening).
+  - Verified with `tsc --noEmit` and `npm run build`.
+- **Form Readability, Font Harmonization, Examples Modal & Novel/Author Rows**: 2026-09-04 (AI Studio).
+  - **Readability & Contrast Overhaul**: Upgraded `FIELD_CLASS` with a deep translucent backing (`bg-[#120e1b]/80`) and high-contrast text and placeholders (`text-[#fbf4e2]`, `placeholder:text-[#d4be88]/70`) so form inputs remain crisp and legible across all cycling background artwork.
+  - **Harmonized Typography**: Standardized field labels to `LABEL_CLASS` (`font-display text-xs font-semibold uppercase tracking-[0.12em] text-[#fae5b5]`) and all hints to `font-narrative italic text-xs text-[#d8c49e]`, eliminating jarring font size differences across all forms.
+  - **Replaced Cluttered Suggestion Chips with Examples Modal**: Replaced space-consuming inline chips in `WorldSetup` and `NewGame` with a reusable `ExamplesHelpModal` triggered by a compact `✨ Examples` button in field headers. Added comprehensive presets covering Romance Fantasy, Comedy & Satirical, Adventure Fantasy, Future Tech, Warfare & Military, Real-like & Historical, Drama & Political Intrigue, Grimdark, Cozy Hearthside, Xianxia Cultivation, Gothic Horror, Urban Supernatural, Power Systems, Personalities, and Motivations (`src/data/formExamples.ts`).
+  - **Separated Novel & Author Rows**: In `WorldSetup.tsx`, separated "Adapted Novel / Work" and "Original Author" into distinct, full-width rows with clear hints and placeholders.
+  - Verified with `tsc --noEmit` and `vite build`.
 - **Richer World/Protagonist creation data + a two-tab layout**: 2026-09-04 (Claude Code
   on the web). See the full log entry at the bottom of this file — the short version:
   `WorldData` gained `powerSystem`/`eraTechLevel`/`keyFactions`, `ProtagonistData` and
@@ -1206,3 +1295,25 @@ New entries below, most recent first.
   repo's deploy workflow uses `npm install`, not `npm ci`, so there was never a
   reproducibility reason to keep committing it either. Ignoring it stops the
   recurring add/delete churn outright rather than leaving it to keep happening.
+
+- **2026-09-04** (AI Studio) — Setup screens overhaul (`WorldSetup.tsx` & `NewGame.tsx`):
+  1. Converted subtab navigation from vertical rail to compact horizontal tabs (`GlassTabs`) across both screens.
+  2. Repositioned all form controls to span full width, removing the empty indentation left by the removed vertical subtab rail.
+  3. Replaced the separate dropdown template selector with a dedicated "Load Preset" subtab containing a search bar and a compact table displaying saved presets, active indicators, and quick-load actions.
+  4. Created `GlassLongTextarea` in `src/lib/glassChrome.tsx` and updated `useLongTextEditor.tsx` (added placeholder support and live word count metrics). Long text fields now automatically open the expanded editing modal upon click/tap and keyboard focus (Enter/Space), eliminating the separate expand button (`Maximize2`) in `GlassField`, `WorldSetup`, `NewGame`, `TaleBrief`, and `Codex`.
+  5. Verified clean build (`compile_applet`) and type safety (`lint_applet`).
+
+- **2026-09-04** (AI Studio) — Preset Detail Views (`PresetDetailModal.tsx`, `MainMenu.tsx`, `WorldSetup.tsx`, `NewGame.tsx`):
+  1. Created `PresetDetailModal.tsx` hosting responsive `WorldDetailModal` and `ProtagonistDetailModal`.
+  2. Implemented responsive layout strategy:
+     - Mobile view (< 640px): uses compact horizontal tabs (`Overview`, `Depth`, `Style` / `Overview`, `Identity`, `Story`) with smooth transitions to ensure comfortable reading without overwhelming vertical scroll on small touchscreens.
+     - PC/Tablet view (>= 640px): multi-column responsive grid layout presenting metadata, lore, and long-form narrative fields with clear visual hierarchy and Lucide icons.
+  3. Integrated into `MainMenu.tsx`:
+     - Clicking any world or protagonist card in the list opens its comprehensive detail modal.
+     - Provides quick actions: "Use in Story", "Set as default", "Edit", and "Delete", with click propagation stopped on inline buttons.
+  4. Integrated into `WorldSetup.tsx` and `NewGame.tsx`:
+     - Clicking any row in the "Load Preset" table opens the full detail modal with "Load" and "Cancel" buttons.
+  5. Styling: Adheres to the single dark-glass design system (`GLASS_SURFACE`), high-contrast cream text (`#fae5b5`, `#fbf4e2`), gold accents (`#f0ca65`), and typography pairings.
+  6. Verified type safety with `lint_applet` and successful production build with `compile_applet`.
+
+

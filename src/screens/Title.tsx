@@ -1,4 +1,5 @@
-import { BookOpen, Play, Settings as SettingsIcon, Volume2, VolumeX } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Loader2, Settings as SettingsIcon, Volume2, VolumeX } from 'lucide-react'
 import { CyclingBackground } from '../lib/cyclingBackground.tsx'
 import { AmbientSparks, GlassCTAButton } from '../lib/glassChrome.tsx'
 
@@ -10,6 +11,8 @@ interface TitleProps {
   onContinue?: () => void
   musicMuted: boolean
   onToggleMusicMute: () => void
+  debugMode?: boolean
+  introGazeDelay?: boolean
 }
 
 // AmbientSparks now lives in lib/glassChrome.tsx so every ground="art" screen
@@ -26,7 +29,41 @@ const TOP_ICON_BUTTON =
 // ambient sparks, a bottom scrim, and the buttons that lead somewhere real.
 // No Worlds/Journal/Profile/Inventory/Achievements row — those aren't
 // separate screens yet, so a button for them would just be decoration.
-export default function Title({ onEnter, onSettings, onContinue, musicMuted, onToggleMusicMute }: TitleProps) {
+export default function Title({
+  onEnter,
+  onSettings,
+  onContinue,
+  musicMuted,
+  onToggleMusicMute,
+  debugMode = false,
+  introGazeDelay = true,
+}: TitleProps) {
+  const [isInitializing, setIsInitializing] = useState(false)
+  const timerRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current !== null) {
+        clearTimeout(timerRef.current)
+      }
+    }
+  }, [])
+
+  function handleDiveIn() {
+    if (isInitializing) return
+    // If Debug mode is active or gaze delay is explicitly turned off in settings, enter immediately
+    if (debugMode || introGazeDelay === false) {
+      onEnter()
+      return
+    }
+
+    // 4-second wallpaper gaze delay with Initializing state
+    setIsInitializing(true)
+    timerRef.current = window.setTimeout(() => {
+      onEnter()
+    }, 4000)
+  }
+
   return (
     <div
       className="h-dvh relative flex flex-col justify-end items-center text-center px-6 overflow-hidden bg-[#050308]"
@@ -61,12 +98,25 @@ export default function Title({ onEnter, onSettings, onContinue, musicMuted, onT
           either to the full container — which is what a fixed `max-w-xs` +
           `w-full` did, leaving a lone Dive In as a 320px slab across the
           artwork. `max-w-full` is the guard for a narrow phone. */}
-      <div className="relative z-10 w-fit max-w-full flex flex-col gap-3 mb-14">
-        <GlassCTAButton onClick={onEnter} icon={BookOpen}>
-          Dive In
+      <div className="relative z-10 w-fit max-w-full flex flex-col items-center gap-3 mb-14">
+        <GlassCTAButton
+          onClick={handleDiveIn}
+          disabled={isInitializing}
+          className={`w-full min-w-[180px] transition-all duration-300 ${
+            isInitializing ? 'opacity-90 border-[#f0ca65]/80 shadow-[0_0_25px_rgba(240,202,101,0.35)]' : ''
+          }`}
+        >
+          {isInitializing ? (
+            <span className="inline-flex items-center gap-2 text-[#fae5b5]">
+              <Loader2 size={16} className="animate-spin text-[#f0ca65]" />
+              <span>Initializing...</span>
+            </span>
+          ) : (
+            'Dive In'
+          )}
         </GlassCTAButton>
-        {onContinue && (
-          <GlassCTAButton onClick={onContinue} icon={Play}>
+        {onContinue && !isInitializing && (
+          <GlassCTAButton onClick={onContinue} className="w-full">
             Continue
           </GlassCTAButton>
         )}

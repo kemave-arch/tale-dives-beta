@@ -6,12 +6,80 @@
 // is always safe even before it's been given an explicit position. Add, remove, or
 // rename an entry here to match whatever's actually in public/tracks/ — unlike the
 // old sequential-filename scheme this replaced, that step is no longer optional.
-export const TRACK_FILENAMES = [
-  'RisingCore_ost00.opus',
-  'NewTales_ost01.opus',
-  'WhoAmI_ost02.opus',
-  'TempestDive_ost03.opus',
-  'Lionheart_ost04.opus',
-  'Stratosphere_ost05.opus',
-  'RiseNFall_ost06.opus',
+
+export interface TrackMetadata {
+  filename: string
+  title: string
+  album: string
+  artist: string
+  durationEstimate?: string
+}
+
+export const SOUNDTRACK_TRACKS: TrackMetadata[] = [
+  {
+    filename: 'RisingCore_ost00.opus',
+    title: 'Rising Core',
+    album: 'Tale Dives OST',
+    artist: 'Kem.Ave',
+  },
+  {
+    filename: 'NewTales_ost01.opus',
+    title: 'New Tales',
+    album: 'Tale Dives OST',
+    artist: 'Kem.Ave',
+  },
+  {
+    filename: 'WhoAmI_ost02.opus',
+    title: 'Who Am I',
+    album: 'Tale Dives OST',
+    artist: 'Kem.Ave',
+  },
+  {
+    filename: 'TempestDive_ost03.opus',
+    title: 'Tempest Dive',
+    album: 'Tale Dives OST',
+    artist: 'Kem.Ave',
+  },
+  {
+    filename: 'Lionheart_ost04.opus',
+    title: 'Lionheart',
+    album: 'Tale Dives OST',
+    artist: 'Kem.Ave',
+  },
+  {
+    filename: 'Stratosphere_ost05.opus',
+    title: 'Stratosphere',
+    album: 'Tale Dives OST',
+    artist: 'Kem.Ave',
+  },
+  {
+    filename: 'RiseNFall_ost06.opus',
+    title: 'Rise & Fall',
+    album: 'Tale Dives OST',
+    artist: 'Kem.Ave',
+  },
 ]
+
+export const TRACK_FILENAMES = SOUNDTRACK_TRACKS.map((t) => t.filename)
+
+export function getTrackMetadata(srcOrFilename: string): TrackMetadata {
+  const filename = srcOrFilename.split('/').pop() || srcOrFilename
+  const found = SOUNDTRACK_TRACKS.find((t) => t.filename.toLowerCase() === filename.toLowerCase())
+  if (found) return found
+
+  // Clean fallback if a new track is added
+  const cleanTitle = filename
+    .replace(/\.[^.]+$/, '')
+    .replace(/_ost\d+/i, '')
+    .replace(/([A-Z])/g, ' $1')
+    .trim()
+
+  return {
+    filename,
+    title: cleanTitle || 'Atmospheric Theme',
+    album: 'Tale Dives OST',
+    artist: 'Kem.Ave',
+  }
+}
+
+

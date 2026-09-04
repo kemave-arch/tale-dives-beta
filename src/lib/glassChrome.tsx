@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { ArrowLeft, Maximize2 } from 'lucide-react'
+import { ArrowLeft, Bookmark, X } from 'lucide-react'
 import { CyclingBackground } from './cyclingBackground.tsx'
 
 // Shared "border-only glassmorphism" chrome for screens that sit directly on
@@ -58,15 +58,17 @@ interface GlassCTAButtonProps {
   icon?: LucideIcon
   children: ReactNode
   className?: string
+  disabled?: boolean
 }
 
 // Primary call-to-action — tapered rectangle, gradient ring, glass interior
 // that's invisible at rest and blurs + glows on hover/press.
-export function GlassCTAButton({ onClick, icon: Icon, children, className = '' }: GlassCTAButtonProps) {
+export function GlassCTAButton({ onClick, icon: Icon, children, className = '', disabled = false }: GlassCTAButtonProps) {
   return (
     <button
       onClick={onClick}
-      className={`group relative inline-flex drop-shadow-[0_8px_14px_rgba(0,0,0,0.85)] transition-all duration-150 hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.98] active:brightness-125 ${className}`}
+      disabled={disabled}
+      className={`group relative inline-flex items-center justify-center drop-shadow-[0_8px_14px_rgba(0,0,0,0.85)] transition-all duration-150 disabled:opacity-85 disabled:pointer-events-none hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.98] active:brightness-125 ${className}`}
       style={{ clipPath: TAPER_CLIP }}
     >
       {/* Fill sits BELOW the ring so the frosted tint never dulls the gold
@@ -80,11 +82,12 @@ export function GlassCTAButton({ onClick, icon: Icon, children, className = '' }
         style={{ clipPath: TAPER_CLIP }}
       />
       <GradientRing tapered />
-      <span className="relative z-10 flex items-center justify-center gap-2 px-6 py-2.5 font-display text-sm uppercase tracking-[0.2em] text-[#f5dfa0]">
-        <span className="text-[#f0ca65]">◆</span>
-        {Icon && <Icon size={14} />}
-        {children}
-        <span className="text-[#f0ca65]">◆</span>
+      <span className="relative z-10 w-full flex items-center justify-center gap-2 px-6 py-2.5 font-display text-sm uppercase tracking-[0.2em] text-[#f5dfa0]">
+        <span className="text-[#f0ca65] shrink-0">◆</span>
+        {Icon && <Icon size={14} className="shrink-0" />}
+        <span className="text-center">{children}</span>
+        {Icon && <span className="w-3.5 shrink-0" aria-hidden="true" />}
+        <span className="text-[#f0ca65] shrink-0 -mr-[0.2em]">◆</span>
       </span>
     </button>
   )
@@ -131,7 +134,7 @@ const BUTTON_TONE_CLASS: Record<IconTone | 'positive', string> = {
 }
 
 interface GlassButtonProps {
-  onClick: () => void
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void
   children: ReactNode
   icon?: LucideIcon
   tone?: IconTone | 'positive'
@@ -263,7 +266,7 @@ export function GlassHeader({ title, subtitle, onBack, right, className = '' }: 
 }
 
 interface GlassTabsProps<T extends string> {
-  tabs: readonly { id: T; label: string; icon?: LucideIcon }[]
+  tabs: readonly { id: T; label: string; icon?: LucideIcon; accent?: 'gold' | 'cyan' | 'purple' }[]
   value: T
   onChange: (id: T) => void
   className?: string
@@ -272,26 +275,73 @@ interface GlassTabsProps<T extends string> {
   // equal-width row, same active/inactive classes either way so it's a new
   // arrangement, not a new visual language.
   orientation?: 'horizontal' | 'vertical'
+  size?: 'sm' | 'md' | 'lg'
+  accent?: 'gold' | 'cyan' | 'purple'
 }
 
 // The tab strip MainMenu introduced, extracted so Codex and Settings stop
 // each shipping their own slightly-different version.
-export function GlassTabs<T extends string>({ tabs, value, onChange, className = '', orientation = 'horizontal' }: GlassTabsProps<T>) {
+export function GlassTabs<T extends string>({
+  tabs,
+  value,
+  onChange,
+  className = '',
+  orientation = 'horizontal',
+  size = 'md',
+  accent: globalAccent = 'gold',
+}: GlassTabsProps<T>) {
   const vertical = orientation === 'vertical'
+  const isLg = size === 'lg'
+  const isSm = size === 'sm'
+
   return (
-    <nav className={`${GLASS_SURFACE} rounded-2xl p-1 flex gap-1 ${vertical ? 'flex-col' : ''} ${className}`}>
-      {tabs.map(({ id, label, icon: Icon }) => (
-        <button
-          key={id}
-          onClick={() => onChange(id)}
-          className={`flex items-center justify-center rounded-xl border font-display text-xs transition-colors duration-150 ${
-            vertical ? 'w-full flex-col gap-1 py-2.5 px-1 text-center leading-tight' : 'flex-1 gap-1.5 py-2 px-1'
-          } ${value === id ? 'border-[#f0ca65]/70 text-[#f5dfa0]' : 'border-transparent text-[#e8ca8a]/85 hover:text-[#f5dfa0]'}`}
-        >
-          {Icon && <Icon size={vertical ? 17 : 15} className="shrink-0" />}
-          <span className={vertical ? '' : 'truncate'}>{label}</span>
-        </button>
-      ))}
+    <nav
+      className={`${GLASS_SURFACE} bg-[#120e1b]/80 border-[#e8ca8a]/30 ${
+        isLg ? 'rounded-2xl p-1.5' : isSm ? 'rounded-xl p-1' : 'rounded-2xl p-1'
+      } flex gap-1 ${vertical ? 'flex-col' : ''} ${className}`}
+    >
+      {tabs.map(({ id, label, icon: Icon, accent: tabAccent }) => {
+        const itemAccent = tabAccent || globalAccent
+        const isSelected = value === id
+
+        let activeClasses = 'border-[#f0ca65]/80 bg-[#f0ca65]/15 text-[#fae5b5] font-semibold shadow-[0_0_14px_rgba(240,202,101,0.22)]'
+        let activeIconClass = 'text-[#f0ca65]'
+        if (itemAccent === 'cyan') {
+          activeClasses = 'border-[#38bdf8]/80 bg-[#38bdf8]/15 text-[#e0f2fe] font-semibold shadow-[0_0_14px_rgba(56,189,248,0.25)]'
+          activeIconClass = 'text-[#38bdf8]'
+        } else if (itemAccent === 'purple') {
+          activeClasses = 'border-[#c084fc]/80 bg-[#c084fc]/15 text-[#f3e8ff] font-semibold shadow-[0_0_14px_rgba(192,132,252,0.25)]'
+          activeIconClass = 'text-[#c084fc]'
+        }
+
+        return (
+          <button
+            key={id}
+            onClick={() => onChange(id)}
+            className={`flex items-center justify-center rounded-xl border font-display transition-all duration-150 ${
+              vertical
+                ? 'w-full flex-col gap-1 py-2.5 px-1 text-center leading-tight text-xs'
+                : isLg
+                  ? 'flex-1 gap-2 py-3 px-3 text-sm sm:text-base font-bold uppercase tracking-wider'
+                  : isSm
+                    ? 'flex-1 gap-1 py-1.5 px-2 text-xs font-medium'
+                    : 'flex-1 gap-1.5 py-2 px-1 text-xs'
+            } ${
+              isSelected
+                ? activeClasses
+                : 'border-transparent text-[#e8ca8a]/85 hover:text-[#fbf4e2] hover:bg-[#e8ca8a]/10'
+            }`}
+          >
+            {Icon && (
+              <Icon
+                size={vertical ? 17 : isLg ? 19 : isSm ? 13 : 15}
+                className={`shrink-0 ${isSelected ? activeIconClass : 'text-[#e8ca8a]/80'}`}
+              />
+            )}
+            <span className={vertical ? '' : 'truncate'}>{label}</span>
+          </button>
+        )
+      })}
     </nav>
   )
 }
@@ -300,17 +350,110 @@ export function GlassTabs<T extends string>({ tabs, value, onChange, className =
 // Form primitives
 // ---------------------------------------------------------------------------
 
-// Shared by input/textarea. Transparent at rest, warming slightly on focus —
-// same "invisible until you touch it" logic as GlassCTAButton's interior.
+// Shared by input/textarea. Has an opaque dark glass backing so text remains
+// crisp and legible regardless of which background artwork or scene is active.
 export const FIELD_CLASS =
-  'w-full rounded-xl border border-[#e8ca8a]/25 bg-[#e8ca8a]/[0.04] backdrop-blur-sm px-3 py-2 font-narrative text-sm text-ink placeholder:text-[#e8ca8a]/50 outline-none transition-colors duration-150 focus:border-[#f0ca65]/70 focus:bg-[#e8ca8a]/[0.08]'
+  'w-full rounded-xl border border-[#e8ca8a]/30 bg-[#120e1b]/80 backdrop-blur-sm px-3 py-2.5 font-narrative text-sm text-[#fbf4e2] placeholder:text-[#d4be88]/70 outline-none transition-colors duration-150 focus:border-[#f0ca65] focus:bg-[#181324]/90 focus:shadow-[0_0_12px_rgba(240,202,101,0.18)]'
 
 // A <select>'s dropdown list is painted by the OS, and it inherits the
 // element's own background — a near-transparent select gets an unreadable
 // near-white popup on Windows/Chrome. The option overrides are not optional.
-export const SELECT_CLASS = `${FIELD_CLASS} [&>option]:bg-[#14101c] [&>option]:text-[#ecdcb8]`
+export const SELECT_CLASS = `${FIELD_CLASS} [&>option]:bg-[#14101c] [&>option]:text-[#fbf4e2]`
 
-export const LABEL_CLASS = 'font-display text-[11px] uppercase tracking-[0.14em] text-[#f0d9a4]'
+export const LABEL_CLASS = 'font-display text-xs font-semibold uppercase tracking-[0.12em] text-[#fae5b5]'
+
+export interface ExampleOption {
+  name: string
+  description?: string
+  value?: string
+}
+
+export interface ExamplesHelpConfig {
+  title: string
+  subtitle?: string
+  items: ExampleOption[]
+}
+
+export function ExamplesHelpModal({
+  config,
+  onClose,
+  onSelect,
+}: {
+  config: ExamplesHelpConfig
+  onClose: () => void
+  onSelect?: (val: string) => void
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <div
+        className={`${GLASS_SURFACE} rounded-2xl w-full max-w-md max-h-[82vh] flex flex-col p-4 sm:p-5 shadow-2xl border border-[#f0ca65]/40 bg-[#120e1b]/95`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="shrink-0 flex items-start justify-between gap-3 pb-2.5 border-b border-[#e8ca8a]/20">
+          <div>
+            <div className="flex items-center gap-2">
+              <Bookmark size={15} className="text-[#f0ca65] shrink-0" />
+              <h3 className="font-display text-sm font-semibold uppercase tracking-[0.14em] text-[#fae5b5]">
+                {config.title}
+              </h3>
+            </div>
+            <p className="font-narrative italic text-xs text-[#d8c49e] mt-1">
+              {config.subtitle || (onSelect ? 'Tap an example to insert it, or use them as inspiration.' : 'Reference examples and inspiration.')}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="rounded-full p-1 text-[#e8ca8a]/70 hover:text-white hover:bg-white/10 transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="flex-1 min-h-0 overflow-y-auto py-3 pr-1 flex flex-col gap-2">
+          {config.items.map((item) => (
+            <div
+              key={item.name}
+              onClick={() => onSelect?.(item.value ?? item.name)}
+              className={`group flex items-start justify-between gap-3 p-3 rounded-xl border border-[#e8ca8a]/25 bg-[#181324]/60 transition-all duration-150 ${
+                onSelect
+                  ? 'cursor-pointer hover:border-[#f0ca65] hover:bg-[#201830] active:scale-[0.99]'
+                  : ''
+              }`}
+            >
+              <div className="flex-1 min-w-0">
+                <div className="font-display text-xs font-semibold text-[#fae5b5] group-hover:text-[#f5dfa0] flex items-center gap-1.5">
+                  <span className="text-[#f0ca65] text-[10px]">◆</span>
+                  <span>{item.name}</span>
+                </div>
+                {item.description && (
+                  <p className="font-narrative text-xs text-[#d8c49e] mt-1 leading-relaxed">
+                    {item.description}
+                  </p>
+                )}
+              </div>
+              {onSelect && (
+                <span className="shrink-0 font-display text-[11px] font-semibold text-[#f0ca65] opacity-80 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all self-center whitespace-nowrap pl-1">
+                  Use &rarr;
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="shrink-0 pt-3 border-t border-[#e8ca8a]/20 flex justify-end">
+          <GlassButton onClick={onClose} className="!py-1.5 !px-4 !text-xs">
+            Close
+          </GlassButton>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // The hint sits on the label's own line, not under the input — trailing it
 // below the field left it floating between one field and the next label, so it
@@ -318,53 +461,94 @@ export const LABEL_CLASS = 'font-display text-[11px] uppercase tracking-[0.14em]
 // on the label's baseline despite the two different fonts and sizes, and
 // `flex-wrap` lets a long hint drop to its own line on a narrow screen rather
 // than crushing the label beside it.
-// `onExpand`, when set, renders a small icon button that opens the field's
-// content in useLongTextEditor.tsx's large modal — for a textarea long
-// enough that its own fixed-height box makes reviewing or editing it
-// awkward. Left off for every short field; only set it on the ones that
-// actually need it.
 export function GlassField({
   label,
   hint,
-  onExpand,
+  examples,
+  onPickExample,
+  action,
   children,
 }: {
   label: string
   hint?: string
+  examples?: ExamplesHelpConfig
+  onPickExample?: (val: string) => void
+  action?: ReactNode
   onExpand?: () => void
   children: ReactNode
 }) {
+  const [showExamples, setShowExamples] = useState(false)
+
   return (
-    <label className="flex flex-col gap-1.5">
-      <span className="flex flex-wrap items-baseline gap-x-2">
-        <span className={LABEL_CLASS}>{label}</span>
-        {hint && <span className="font-narrative italic text-[11px] text-[#e8ca8a]/70">{hint}</span>}
-        {onExpand && (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
+        <span className="flex flex-wrap items-baseline gap-x-2">
+          <span className={LABEL_CLASS}>{label}</span>
+          {hint && <span className="font-narrative italic text-xs text-[#d8c49e]">{hint}</span>}
+        </span>
+        {examples && (
           <button
             type="button"
-            onClick={(e) => {
-              e.preventDefault() // this sits inside a <label> — don't let it refocus/click through to the field
-              onExpand()
-            }}
-            title="Expand"
-            aria-label="Expand to edit"
-            className="ml-auto text-[#e8ca8a]/60 hover:text-[#f5dfa0] transition-colors duration-150"
+            onClick={() => setShowExamples(true)}
+            className="inline-flex items-center justify-center rounded-full border border-[#e8ca8a]/35 bg-[#181324]/80 p-1 text-[#fae5b5] hover:border-[#f0ca65] hover:bg-[#f0ca65]/20 hover:text-white transition-colors duration-150 active:scale-95 shrink-0"
+            title={`View ${examples.title}`}
+            aria-label={`View ${examples.title}`}
           >
-            <Maximize2 size={13} />
+            <Bookmark size={12} className="text-[#f0ca65]" />
           </button>
         )}
-      </span>
+        {action}
+      </div>
       {children}
-    </label>
+
+      {showExamples && examples && (
+        <ExamplesHelpModal
+          config={examples}
+          onClose={() => setShowExamples(false)}
+          onSelect={(val) => {
+            onPickExample?.(val)
+            setShowExamples(false)
+          }}
+        />
+      )}
+    </div>
   )
 }
 
-// Tap-to-insert starter phrases for a free-text field likely to face a blank
-// page (Genre & Tone, Power System, Personality, Motivation). Sets the
-// field's value, never locks it in — the input/textarea stays fully
-// editable afterward, so a chip is a starting point, not a rigid choice.
-// Wraps rather than scrolling horizontally, since the option list is always
-// a small fixed set (~4-5), not user-generated data that could grow long.
+// Reusable clickable textarea for long-text fields that automatically triggers
+// the expanded editing modal (useLongTextEditor) on tap/click or keyboard activation,
+// avoiding keyboard thrashing or awkward cramped editing on mobile.
+export function GlassLongTextarea({
+  value,
+  onOpenModal,
+  placeholder,
+  rows = 3,
+  className = '',
+}: {
+  value: string
+  onOpenModal: () => void
+  placeholder?: string
+  rows?: number
+  className?: string
+}) {
+  return (
+    <textarea
+      readOnly
+      value={value}
+      onClick={onOpenModal}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onOpenModal()
+        }
+      }}
+      placeholder={placeholder || 'Tap to edit in expanded view...'}
+      rows={rows}
+      className={`${FIELD_CLASS} resize-none cursor-pointer transition-colors duration-150 hover:border-[#f0ca65]/60 hover:bg-[#181324]/90 ${className}`}
+    />
+  )
+}
+
 export function SuggestionChips({ options, onPick, className = '' }: { options: readonly string[]; onPick: (value: string) => void; className?: string }) {
   return (
     <div className={`flex flex-wrap gap-1.5 ${className}`}>
@@ -373,7 +557,7 @@ export function SuggestionChips({ options, onPick, className = '' }: { options: 
           key={opt}
           type="button"
           onClick={() => onPick(opt)}
-          className="rounded-full border border-[#e8ca8a]/25 px-3 py-1.5 text-[11px] font-display text-[#e8ca8a]/85 backdrop-blur-sm transition-colors duration-150 hover:border-[#e8ca8a]/60 hover:text-[#f5dfa0]"
+          className="rounded-full border border-[#e8ca8a]/35 bg-[#181324]/70 px-3 py-1.5 text-xs font-display text-[#fae5b5] backdrop-blur-sm transition-colors duration-150 hover:border-[#f0ca65] hover:text-white hover:bg-[#f0ca65]/20"
         >
           {opt}
         </button>
@@ -482,15 +666,15 @@ export function GlassSegmented<T extends string>({ options, value, onChange, cla
 // ---------------------------------------------------------------------------
 
 export const DASHED_ROW_CLASS =
-  'flex items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-[#e8ca8a]/35 text-[#e8ca8a]/80 py-2.5 font-display text-sm bg-transparent backdrop-blur-sm transition-colors duration-150 hover:border-[#e8ca8a] hover:text-[#f5dfa0]'
+  'flex items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-[#e8ca8a]/35 text-[#fae5b5] py-2.5 font-display text-sm bg-[#120e1b]/50 backdrop-blur-sm transition-colors duration-150 hover:border-[#f0ca65] hover:text-[#f5dfa0]'
 
 export function DashedCard({ icon: Icon, label, onClick, children }: { icon: LucideIcon; label: string; onClick: () => void; children?: ReactNode }) {
   return (
     <button
       onClick={onClick}
-      className="group flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#e8ca8a]/35 text-[#e8ca8a]/80 py-10 bg-transparent backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#e8ca8a] hover:text-[#f5dfa0] hover:shadow-[0_0_18px_2px_rgba(240,202,101,0.2)]"
+      className="group flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#e8ca8a]/35 text-[#fae5b5] py-10 bg-[#120e1b]/50 backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#f0ca65] hover:text-[#f5dfa0] hover:shadow-[0_0_18px_2px_rgba(240,202,101,0.2)]"
     >
-      <span className="w-12 h-12 rounded-full border border-[#e8ca8a]/50 flex items-center justify-center transition-all duration-200 group-hover:border-[#f0ca65] group-hover:scale-110">
+      <span className="w-12 h-12 rounded-full border border-[#e8ca8a]/50 flex items-center justify-center text-[#f0ca65] transition-all duration-200 group-hover:border-[#f0ca65] group-hover:scale-110">
         <Icon size={22} />
       </span>
       <span className="font-display text-sm">{label}</span>

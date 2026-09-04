@@ -1,19 +1,27 @@
 import { useRef, useState } from 'react'
 import {
   BookOpen, Globe, UserCircle, Plus, Upload, Download, Trash2, Play, Sparkles, Star, Settings as SettingsIcon, Pencil,
-  ArrowLeft, Volume2, VolumeX,
+  ArrowLeft, Volume2, VolumeX, Archive, Music2,
 } from 'lucide-react'
 import type { Campaign, Dict, ProtagonistData, WorldData } from '../types.ts'
+import type { TrackMetadata } from '../data/soundtrackManifest.ts'
 import { CyclingBackground } from '../lib/cyclingBackground.tsx'
 // DashedCard/DASHED_ROW_CLASS started here and now live in glassChrome, so
 // the Codex and Slash manager share the same add-affordance rather than each
 // growing a near-copy.
-import { DASHED_ROW_CLASS, DashedCard, GLASS_SURFACE, GlassIconButton, GlassTabs } from '../lib/glassChrome.tsx'
+import { AmbientSparks, DashedCard, GLASS_SURFACE, GlassIconButton, GlassTabs } from '../lib/glassChrome.tsx'
+import { ProtagonistDetailModal, WorldDetailModal } from '../components/PresetDetailModal.tsx'
+import VaultSoundtrackView from '../components/VaultSoundtrackView.tsx'
 
-const TABS = [
+const MAIN_TABS = [
   { id: 'tales', label: 'Tales', icon: BookOpen },
-  { id: 'worlds', label: 'Worlds', icon: Globe },
-  { id: 'protagonists', label: 'Protagonists', icon: UserCircle },
+  { id: 'vault', label: 'Vault', icon: Archive },
+] as const
+
+const VAULT_SUBTABS = [
+  { id: 'worlds', label: 'Worlds', icon: Globe, accent: 'cyan' as const },
+  { id: 'protagonists', label: 'Protagonist', icon: UserCircle, accent: 'purple' as const },
+  { id: 'ost', label: 'OST', icon: Music2, accent: 'gold' as const },
 ] as const
 
 interface MainMenuProps {
@@ -39,6 +47,15 @@ interface MainMenuProps {
   onBackToTitle: () => void
   musicMuted: boolean
   onToggleMusicMute: () => void
+  musicPlaying?: boolean
+  musicCurrentTrack?: TrackMetadata | null
+  musicCurrentTime?: number
+  musicDuration?: number
+  onPlayTrack?: (filenameOrIndex: string | number) => void
+  onTogglePlayPause?: () => void
+  onNextTrack?: () => void
+  onPrevTrack?: () => void
+  onResumeSoundtrack?: () => void
 }
 
 export default function MainMenu({
@@ -62,8 +79,20 @@ export default function MainMenu({
   onBackToTitle,
   musicMuted,
   onToggleMusicMute,
+  musicPlaying = false,
+  musicCurrentTrack = null,
+  musicCurrentTime = 0,
+  musicDuration = 0,
+  onPlayTrack = () => {},
+  onTogglePlayPause = () => {},
+  onNextTrack = () => {},
+  onPrevTrack = () => {},
+  onResumeSoundtrack = () => {},
 }: MainMenuProps) {
-  const [tab, setTab] = useState<(typeof TABS)[number]['id']>('tales')
+  const [tab, setTab] = useState<(typeof MAIN_TABS)[number]['id']>('tales')
+  const [vaultTab, setVaultTab] = useState<(typeof VAULT_SUBTABS)[number]['id']>('worlds')
+  const [selectedWorld, setSelectedWorld] = useState<WorldData | null>(null)
+  const [selectedProtagonist, setSelectedProtagonist] = useState<ProtagonistData | null>(null)
   const importRef = useRef<HTMLInputElement>(null)
 
   const taleList = Object.values(campaigns).sort((a, b) => (b.lastPlayed ?? 0) - (a.lastPlayed ?? 0))
@@ -79,20 +108,21 @@ export default function MainMenu({
           Title's bottom-only gradient) keeps the whole scrollable list
           legible, not just the last screenful. */}
       <div className="fixed inset-0 z-0 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(4,3,7,0.62), rgba(4,3,7,0.72) 30%, rgba(4,3,7,0.8))' }} />
+      {/* Ambient glowing spark effects */}
+      <AmbientSparks />
 
       <div
         className="relative z-10 px-4 pb-16"
         style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top))' }}
       >
-        {/* Back on the left, soundtrack + Settings on the right, all four
-            sharing GlassIconButton so they read as one row of controls. The
-            tagline takes the slack between them and truncates rather than
-            wraps, so the row stays a single line at phone widths. */}
-        <header className="flex items-center gap-3 mb-5">
+        {/* Back on the left, soundtrack + Settings on the right */}
+        <header className="flex items-center gap-3 mb-4">
           <GlassIconButton icon={ArrowLeft} label="Back to title" onClick={onBackToTitle} />
-          <p className="flex-1 min-w-0 truncate font-narrative italic text-sm text-[#e8ca8a]/80">
-            Choose a tale, or begin a new one
-          </p>
+          <div className="flex-1 min-w-0">
+            <h1 className="font-display font-bold text-sm sm:text-base text-[#fae5b5] tracking-wider uppercase">
+              Tale Dives
+            </h1>
+          </div>
           <div className="flex items-center gap-1 shrink-0">
             <GlassIconButton
               icon={musicMuted ? VolumeX : Volume2}
@@ -103,16 +133,30 @@ export default function MainMenu({
           </div>
         </header>
 
-        <GlassTabs tabs={TABS} value={tab} onChange={setTab} className="mb-5" />
+        {/* Primary Main Screen Tabs: Tales & Vault with enlarged font size */}
+        <GlassTabs tabs={MAIN_TABS} value={tab} onChange={setTab} size="lg" className="mb-3" />
+
+        {/* Informative Guide below Main Tabs */}
+        <div className="mb-5 px-3 py-2 rounded-xl bg-[#120e1b]/60 border border-[#e8ca8a]/20 backdrop-blur-sm text-center">
+          {tab === 'tales' ? (
+            <p className="font-narrative italic text-xs sm:text-sm text-[#fae5b5] leading-snug">
+              Choose a chronicled tale to resume, or begin an unwritten journey.
+            </p>
+          ) : (
+            <p className="font-narrative italic text-xs sm:text-sm text-[#fae5b5] leading-snug">
+              Forge and archive custom realms and protagonist archetypes for future adventures.
+            </p>
+          )}
+        </div>
 
         {tab === 'tales' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {taleList.map((tale) => (
-              <div key={tale.id} className={`${GLASS_SURFACE} rounded-2xl p-4 flex flex-col gap-2`}>
-                <h3 className="font-display font-bold text-base text-[#f0ca65]">{tale.title}</h3>
-                {tale.synopsis && <p className="font-narrative text-xs text-[#e8ca8a]/70 line-clamp-2">{tale.synopsis}</p>}
-                <div className="flex items-center justify-between mt-2">
-                  <span className="font-mono text-[10px] text-[#e8ca8a]/50">
+              <div key={tale.id} className={`${GLASS_SURFACE} bg-[#120e1b]/80 border-[#e8ca8a]/30 rounded-2xl p-4 flex flex-col gap-2.5 transition-colors hover:border-[#f0ca65]/50`}>
+                <h3 className="font-display font-bold text-base text-[#fae5b5] tracking-wide">{tale.title}</h3>
+                {tale.synopsis && <p className="font-narrative text-xs text-[#fbf4e2] line-clamp-2 leading-relaxed">{tale.synopsis}</p>}
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#e8ca8a]/15">
+                  <span className="font-mono text-[11px] text-[#d8c49e]">
                     {tale.lastPlayed ? new Date(tale.lastPlayed).toLocaleDateString() : ''}
                   </span>
                   <div className="flex gap-1">
@@ -127,7 +171,7 @@ export default function MainMenu({
 
             <DashedCard icon={Plus} label="New Story" onClick={() => onNewSession()} />
             <DashedCard icon={Upload} label="Import Tale" onClick={() => importRef.current?.click()}>
-              <span className="font-mono text-[10px] text-[#e8ca8a]/50">.json</span>
+              <span className="font-mono text-[11px] text-[#d8c49e]">.json</span>
             </DashedCard>
             <input
               ref={importRef}
@@ -143,62 +187,168 @@ export default function MainMenu({
           </div>
         )}
 
-        {tab === 'worlds' && (
-          <div className="flex flex-col gap-2">
-            {worldList.map((world) => (
-              <div key={world.id} className={`${GLASS_SURFACE} rounded-xl px-3 py-2 flex items-center gap-2.5`}>
-                <Globe size={16} className="text-[#e8ca8a]/70 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-display font-bold text-sm text-[#f0ca65] truncate">{world.name}</h3>
-                  {world.background && <p className="font-narrative text-xs text-[#e8ca8a]/70 truncate">{world.background}</p>}
-                </div>
-                <div className="flex items-center gap-0.5 shrink-0">
-                  <GlassIconButton
-                    compact
-                    icon={Star}
-                    label={world.isDefault ? 'Default world' : 'Set as default'}
-                    tone={world.isDefault ? 'action' : 'default'}
-                    onClick={() => onSetDefaultWorld(world.id!)}
-                  />
-                  <GlassIconButton compact icon={Pencil} label="Edit" onClick={() => onEditWorld(world.id!)} />
-                  <GlassIconButton compact icon={Trash2} label="Delete" tone="danger" onClick={() => onDeleteWorld(world.id!)} />
-                </div>
+        {tab === 'vault' && (
+          <div className="flex flex-col gap-4">
+            {/* Vault Subtabs */}
+            <div className="flex justify-center">
+              <div className="w-full max-w-md">
+                <GlassTabs
+                  tabs={VAULT_SUBTABS}
+                  value={vaultTab}
+                  onChange={setVaultTab}
+                  size="sm"
+                />
               </div>
-            ))}
-            <button onClick={onNewWorld} className={DASHED_ROW_CLASS}>
-              <Plus size={14} /> New World
-            </button>
-          </div>
-        )}
+            </div>
 
-        {tab === 'protagonists' && (
-          <div className="flex flex-col gap-2">
-            {protagonistList.map((p) => (
-              <div key={p.id} className={`${GLASS_SURFACE} rounded-xl px-3 py-2 flex items-center gap-2.5`}>
-                <UserCircle size={16} className="text-[#e8ca8a]/70 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-display font-bold text-sm text-[#f0ca65] truncate">{p.name}</h3>
-                  <p className="font-narrative text-xs text-[#e8ca8a]/70 truncate">{p.className}</p>
-                </div>
-                <div className="flex items-center gap-0.5 shrink-0">
-                  <GlassIconButton
-                    compact
-                    icon={Star}
-                    label={p.isDefault ? 'Default protagonist' : 'Set as default'}
-                    tone={p.isDefault ? 'action' : 'default'}
-                    onClick={() => onSetDefaultProtagonist(p.id!)}
-                  />
-                  <GlassIconButton compact icon={Pencil} label="Edit" onClick={() => onEditProtagonist(p.id!)} />
-                  <GlassIconButton compact icon={Trash2} label="Delete" tone="danger" onClick={() => onDeleteProtagonist(p.id!)} />
-                </div>
+            {vaultTab === 'worlds' && (
+              <div className="flex flex-col gap-2.5">
+                {worldList.map((world) => (
+                  <div
+                    key={world.id}
+                    onClick={() => setSelectedWorld(world)}
+                    className={`${GLASS_SURFACE} bg-[#091824]/80 border-[#38bdf8]/35 rounded-xl px-3.5 py-2.5 flex items-center gap-3 transition-colors hover:border-[#38bdf8]/80 hover:bg-[#0c2234]/95 cursor-pointer group`}
+                  >
+                    <Globe size={18} className="text-[#38bdf8] shrink-0 transition-transform group-hover:scale-110" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-display font-bold text-sm text-[#e0f2fe] group-hover:text-white truncate">{world.name}</h3>
+                        {world.isDefault && (
+                          <span className="rounded bg-[#38bdf8]/20 text-[#7dd3fc] border border-[#38bdf8]/30 px-1.5 py-0.2 text-[9px] font-mono shrink-0">
+                            default
+                          </span>
+                        )}
+                      </div>
+                      {world.background && <p className="font-narrative text-xs text-[#bae6fd]/90 truncate mt-0.5">{world.background}</p>}
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <GlassIconButton
+                        compact
+                        icon={Star}
+                        label={world.isDefault ? 'Default world' : 'Set as default'}
+                        tone={world.isDefault ? 'action' : 'default'}
+                        onClick={() => onSetDefaultWorld(world.id!)}
+                      />
+                      <GlassIconButton compact icon={Pencil} label="Edit" onClick={() => onEditWorld(world.id!)} />
+                      <GlassIconButton compact icon={Trash2} label="Delete" tone="danger" onClick={() => onDeleteWorld(world.id!)} />
+                    </div>
+                  </div>
+                ))}
+                <button
+                  onClick={onNewWorld}
+                  className="rounded-xl border border-dashed border-[#38bdf8]/40 hover:border-[#38bdf8]/80 bg-[#38bdf8]/5 hover:bg-[#38bdf8]/15 text-[#7dd3fc] font-display text-xs font-semibold py-3 px-4 flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                >
+                  <Plus size={15} className="text-[#38bdf8]" /> New World
+                </button>
               </div>
-            ))}
-            <button onClick={onNewProtagonist} className={DASHED_ROW_CLASS}>
-              <Plus size={14} /> New Protagonist
-            </button>
+            )}
+
+            {vaultTab === 'protagonists' && (
+              <div className="flex flex-col gap-2.5">
+                {protagonistList.map((p) => {
+                  const details = [p.className, p.gender, p.age !== undefined ? `Age ${p.age}` : null].filter(Boolean).join(' • ')
+                  return (
+                    <div
+                      key={p.id}
+                      onClick={() => setSelectedProtagonist(p)}
+                      className={`${GLASS_SURFACE} bg-[#190d29]/80 border-[#c084fc]/35 rounded-xl px-3.5 py-2.5 flex items-center gap-3 transition-colors hover:border-[#c084fc]/80 hover:bg-[#23123a]/95 cursor-pointer group`}
+                    >
+                      <UserCircle size={18} className="text-[#c084fc] shrink-0 transition-transform group-hover:scale-110" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-display font-bold text-sm text-[#f3e8ff] group-hover:text-white truncate">{p.name}</h3>
+                          {p.isDefault && (
+                            <span className="rounded bg-[#c084fc]/20 text-[#d8b4fe] border border-[#c084fc]/30 px-1.5 py-0.2 text-[9px] font-mono shrink-0">
+                              default
+                            </span>
+                          )}
+                        </div>
+                        {details && <p className="font-narrative text-xs text-[#e9d5ff]/90 truncate mt-0.5">{details}</p>}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <GlassIconButton
+                          compact
+                          icon={Star}
+                          label={p.isDefault ? 'Default protagonist' : 'Set as default'}
+                          tone={p.isDefault ? 'action' : 'default'}
+                          onClick={() => onSetDefaultProtagonist(p.id!)}
+                        />
+                        <GlassIconButton compact icon={Pencil} label="Edit" onClick={() => onEditProtagonist(p.id!)} />
+                        <GlassIconButton compact icon={Trash2} label="Delete" tone="danger" onClick={() => onDeleteProtagonist(p.id!)} />
+                      </div>
+                    </div>
+                  )
+                })}
+                <button
+                  onClick={onNewProtagonist}
+                  className="rounded-xl border border-dashed border-[#c084fc]/40 hover:border-[#c084fc]/80 bg-[#c084fc]/5 hover:bg-[#c084fc]/15 text-[#d8b4fe] font-display text-xs font-semibold py-3 px-4 flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                >
+                  <Plus size={15} className="text-[#c084fc]" /> New Protagonist
+                </button>
+              </div>
+            )}
+
+            {vaultTab === 'ost' && (
+              <VaultSoundtrackView
+                currentTrack={musicCurrentTrack}
+                isPlaying={musicPlaying}
+                muted={musicMuted}
+                currentTime={musicCurrentTime}
+                duration={musicDuration}
+                onPlayTrack={onPlayTrack}
+                onTogglePlayPause={onTogglePlayPause}
+                onNextTrack={onNextTrack}
+                onPrevTrack={onPrevTrack}
+                onToggleMute={onToggleMusicMute}
+                onResumeSoundtrack={onResumeSoundtrack}
+              />
+            )}
           </div>
         )}
       </div>
+
+      {/* Preset Detail Views */}
+      {selectedWorld && (
+        <WorldDetailModal
+          world={selectedWorld}
+          isDefault={selectedWorld.isDefault}
+          onClose={() => setSelectedWorld(null)}
+          onSetDefault={selectedWorld.id ? () => onSetDefaultWorld(selectedWorld.id!) : undefined}
+          onEdit={selectedWorld.id ? () => {
+            onEditWorld(selectedWorld.id!)
+            setSelectedWorld(null)
+          } : undefined}
+          onDelete={selectedWorld.id ? () => {
+            onDeleteWorld(selectedWorld.id!)
+            setSelectedWorld(null)
+          } : undefined}
+          onUseInStory={selectedWorld.id ? () => {
+            onNewSession(selectedWorld.id!)
+            setSelectedWorld(null)
+          } : undefined}
+        />
+      )}
+
+      {selectedProtagonist && (
+        <ProtagonistDetailModal
+          protagonist={selectedProtagonist}
+          isDefault={selectedProtagonist.isDefault}
+          onClose={() => setSelectedProtagonist(null)}
+          onSetDefault={selectedProtagonist.id ? () => onSetDefaultProtagonist(selectedProtagonist.id!) : undefined}
+          onEdit={selectedProtagonist.id ? () => {
+            onEditProtagonist(selectedProtagonist.id!)
+            setSelectedProtagonist(null)
+          } : undefined}
+          onDelete={selectedProtagonist.id ? () => {
+            onDeleteProtagonist(selectedProtagonist.id!)
+            setSelectedProtagonist(null)
+          } : undefined}
+          onUseInStory={selectedProtagonist.id ? () => {
+            onNewSession(undefined, selectedProtagonist.id!)
+            setSelectedProtagonist(null)
+          } : undefined}
+        />
+      )}
     </div>
   )
 }

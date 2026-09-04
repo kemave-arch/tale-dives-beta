@@ -2,7 +2,7 @@ import { createContext, useState, useMemo, useEffect, useContext } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
   ChevronRight, Globe, BookOpen, Users, ShieldCheck, Map, ScrollText, Target, Skull, Backpack,
-  Pencil, Save, X, Trash2, Plus, Lock, User, Hammer, Clock, Sparkles, Maximize2,
+  Pencil, Save, X, Trash2, Plus, Lock, User, Hammer, Clock, Sparkles,
 } from 'lucide-react'
 import { DASHED_ROW_CLASS, GlassHeader, GlassIconButton, GlassScreen, SELECT_CLASS } from '../lib/glassChrome.tsx'
 import { slugify } from '../lib/slug.ts'
@@ -252,24 +252,28 @@ function TextField({
     <label className="block">
       <span className="flex items-center gap-2">
         <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">{label}</span>
-        {textarea && editLongText && (
-          <button
-            type="button"
-            onClick={async (e) => {
-              e.preventDefault() // sits inside a <label> — don't let it refocus/click through to the field
-              const result = await editLongText(label, value)
-              if (result !== null) onChange(result)
-            }}
-            title="Expand"
-            aria-label="Expand to edit"
-            className="ml-auto text-[#e8ca8a]/60 hover:text-[#f5dfa0] transition-colors duration-150"
-          >
-            <Maximize2 size={13} />
-          </button>
-        )}
       </span>
       {textarea ? (
-        <textarea rows={3} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className={cls} />
+        <textarea
+          readOnly
+          rows={3}
+          value={value}
+          placeholder={placeholder || 'Tap to edit in expanded view...'}
+          onClick={async () => {
+            if (!editLongText) return
+            const result = await editLongText(label, value)
+            if (result !== null) onChange(result)
+          }}
+          onKeyDown={async (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              if (!editLongText) return
+              const result = await editLongText(label, value)
+              if (result !== null) onChange(result)
+            }
+          }}
+          className={`${cls} resize-none cursor-pointer transition-colors duration-150 hover:border-[#f0ca65]/60 hover:bg-[#e8ca8a]/[0.08]`}
+        />
       ) : (
         <input value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className={cls} />
       )}

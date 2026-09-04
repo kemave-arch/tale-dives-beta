@@ -252,6 +252,7 @@ export interface WorldData {
   sourceTitle?: string // Appendix A.1 "Title" — attribution only when adapted from existing work; never sent to the model
   sourceAuthor?: string // Appendix A.1 "Author" — same caveat as sourceTitle
   isDefault?: boolean
+  savedAt?: number // Timestamp when saved/updated in the library
 }
 
 // §Phase B Protagonist Creation — also the Protagonist Library's stored shape.
@@ -269,6 +270,7 @@ export interface ProtagonistData {
   secret?: string // something the narrator can quietly plant hooks around
   opening: string
   isDefault?: boolean
+  savedAt?: number // Timestamp when saved/updated in the library
 }
 
 // §6.6 Bang Commands — a client-side (0-token) quick-reference table or
@@ -367,6 +369,8 @@ export interface ApiSettings {
 // older saved prefs, and is simply ignored on load.
 export interface UiPrefs {
   chromeOpacity: number // §3.2 — 0.1-0.9, how opaque the Chronicle header/HUD/input glass is
+  debugMode?: boolean // Debug mode toggle in Settings — when ON, bypasses 4s Title delay & enables dev diagnostics
+  introGazeDelay?: boolean // When true (default), Dive In pauses for 4s showing "Initializing..." to admire wallpapers
 }
 
 // §7.3 JSON Schema — the shape of a single turn response from the model.

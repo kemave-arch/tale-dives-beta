@@ -5,6 +5,7 @@ interface EditorState {
   label: string
   hint?: string
   value: string
+  placeholder?: string
 }
 
 // A reusable "expand to edit" modal for any long-text field in the app —
@@ -20,8 +21,8 @@ export function useLongTextEditor() {
   const [draft, setDraft] = useState('')
   const resolveRef = useRef<((v: string | null) => void) | null>(null)
 
-  const edit = useCallback((label: string, value: string, hint?: string) => {
-    setState({ label, hint, value })
+  const edit = useCallback((label: string, value: string, hint?: string, placeholder?: string) => {
+    setState({ label, hint, value, placeholder })
     setDraft(value)
     return new Promise<string | null>((resolve) => {
       resolveRef.current = resolve
@@ -43,22 +44,28 @@ export function useLongTextEditor() {
       }}
     >
       <div
-        className={`${GLASS_SURFACE} rounded-2xl w-full max-w-lg h-[80vh] sm:h-[70vh] flex flex-col`}
+        className={`${GLASS_SURFACE} rounded-2xl w-full max-w-lg h-[80vh] sm:h-[70vh] flex flex-col p-4 shadow-2xl`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="shrink-0 px-4 pt-4 pb-2">
+        <div className="shrink-0 pb-2">
           <span className={LABEL_CLASS}>{state.label}</span>
           {state.hint && <span className="block font-narrative italic text-[11px] text-[#e8ca8a]/70 mt-0.5">{state.hint}</span>}
         </div>
         <textarea
           autoFocus
           value={draft}
+          placeholder={state.placeholder || 'Type here...'}
           onChange={(e) => setDraft(e.target.value)}
-          className={`flex-1 min-h-0 mx-4 mb-3 resize-none ${FIELD_CLASS}`}
+          className={`flex-1 min-h-0 mb-3 resize-none w-full ${FIELD_CLASS}`}
         />
-        <div className="shrink-0 flex justify-end gap-2 px-4 pb-4">
-          <GlassButton onClick={() => close(null)}>Cancel</GlassButton>
-          <GlassButton tone="action" onClick={() => close(draft)}>Save</GlassButton>
+        <div className="shrink-0 flex items-center justify-between gap-2 pt-1">
+          <span className="font-mono text-[11px] text-[#e8ca8a]/50">
+            {draft.trim() ? `${draft.trim().split(/\s+/).length} words` : '0 words'}
+          </span>
+          <div className="flex gap-2">
+            <GlassButton onClick={() => close(null)}>Cancel</GlassButton>
+            <GlassButton tone="action" onClick={() => close(draft)}>Save</GlassButton>
+          </div>
         </div>
       </div>
     </div>

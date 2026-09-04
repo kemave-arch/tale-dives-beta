@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Cpu, SlidersHorizontal, Database, Info, X, Save, Download, Upload, RotateCcw, FolderOpen, FolderX, Maximize, Minimize, Trash2 } from 'lucide-react'
+import { Cpu, SlidersHorizontal, Database, Info, X, Save, Download, Upload, RotateCcw, FolderOpen, FolderX, Maximize, Minimize, Trash2, Volume2, VolumeX } from 'lucide-react'
 import { PROSE_DEPTHS } from '../api/turnContract.ts'
 import { allProviders, getProvider } from '../api/providers/index.ts'
 import { forgetSaveFolder, loadSaveFolder, pickSaveFolder, supportsFileSystemAccess } from '../lib/fsAccess.ts'
@@ -111,6 +111,8 @@ interface SettingsProps {
   onImportJson: (file: File) => void
   onResetDefaults: () => void
   onClearCache: () => void
+  musicMuted?: boolean
+  onToggleMusicMute?: () => void
 }
 
 // Blueprint §6.4E — one drawer, reused pre-campaign and in-story. Gameplay
@@ -126,6 +128,8 @@ export default function Settings({
   onImportJson,
   onResetDefaults,
   onClearCache,
+  musicMuted = false,
+  onToggleMusicMute,
 }: SettingsProps) {
   const [tab, setTab] = useState<(typeof TABS)[number]['id']>('model')
   const [provider, setProvider] = useState(apiSettings.provider)
@@ -133,6 +137,8 @@ export default function Settings({
   const [apiKey, setApiKey] = useState(apiSettings.apiKey)
   const [temperature, setTemperature] = useState(apiSettings.temperature)
   const [chromeOpacity, setChromeOpacity] = useState(uiPrefs.chromeOpacity)
+  const [debugMode, setDebugMode] = useState<boolean>(uiPrefs.debugMode ?? false)
+  const [introGazeDelay, setIntroGazeDelay] = useState<boolean>(uiPrefs.introGazeDelay ?? true)
   const [proseDepthKey, setProseDepthKey] = useState<keyof typeof PROSE_DEPTHS>(
     (game?.proseDepth?.label as keyof typeof PROSE_DEPTHS) ?? 'BALANCED',
   )
@@ -180,7 +186,7 @@ export default function Settings({
   function save() {
     onSave({
       apiSettings: { provider, model, apiKey, temperature },
-      uiPrefs: { chromeOpacity },
+      uiPrefs: { chromeOpacity, debugMode, introGazeDelay },
       proseDepthKey,
       combatMode,
     })
@@ -205,7 +211,17 @@ export default function Settings({
       >
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-display font-bold text-lg text-gold-primary">App Settings</h2>
-          <GlassIconButton icon={X} label="Close" compact onClick={onBack} />
+          <div className="flex items-center gap-1.5">
+            {onToggleMusicMute && (
+              <GlassIconButton
+                icon={musicMuted ? VolumeX : Volume2}
+                label={musicMuted ? 'Unmute music' : 'Mute music'}
+                compact
+                onClick={onToggleMusicMute}
+              />
+            )}
+            <GlassIconButton icon={X} label="Close" compact onClick={onBack} />
+          </div>
         </div>
 
         {/* Icon-only tabs — the shared GlassTabs (MainMenu/Codex) labels each
@@ -276,9 +292,10 @@ export default function Settings({
             </GlassField>
 
             <div>
-              <p className={LABEL_CLASS}>
-                Creativity Randomness <span className="opacity-60 font-mono normal-case tracking-normal">{temperature.toFixed(1)}</span>
-              </p>
+              <div className="flex items-baseline justify-between">
+                <span className={LABEL_CLASS}>Creativity Randomness</span>
+                <span className="font-mono text-xs font-semibold text-[#fae5b5]">{temperature.toFixed(1)}</span>
+              </div>
               <input
                 type="range"
                 min="0"
@@ -286,10 +303,10 @@ export default function Settings({
                 step="0.1"
                 value={temperature}
                 onChange={(e) => setTemperature(Number(e.target.value))}
-                className="w-full mt-2 accent-gold-action"
+                className="w-full mt-2 accent-[#f0ca65] cursor-pointer"
               />
-              <p className="font-narrative text-[11px] text-ink-muted mt-1">
-                How unpredictable the prose gets. Low (0–0.5) keeps the Narrator steady and consistent; high (1.5–2)
+              <p className="font-narrative italic text-xs text-[#d8c49e] mt-1">
+                How unpredictable the prose gets. Low (0–0.5) keeps the Narrator steady; high (1.5–2)
                 adds more surprise and flourish but risks losing coherence.
               </p>
             </div>
@@ -325,13 +342,14 @@ export default function Settings({
                 value={combatMode}
                 onChange={setCombatMode}
               />
-              {!game && <p className="font-narrative text-[11px] text-ink-muted mt-1.5">Applies once a Tale is active.</p>}
+              {!game && <p className="font-narrative italic text-xs text-[#d8c49e] mt-1.5">Applies once a Tale is active.</p>}
             </div>
 
             <div>
-              <p className={LABEL_CLASS}>
-                HUD Opacity <span className="opacity-60 font-mono normal-case tracking-normal">{Math.round(chromeOpacity * 100)}%</span>
-              </p>
+              <div className="flex items-baseline justify-between">
+                <span className={LABEL_CLASS}>HUD Opacity</span>
+                <span className="font-mono text-xs font-semibold text-[#fae5b5]">{Math.round(chromeOpacity * 100)}%</span>
+              </div>
               <input
                 type="range"
                 min="0.1"
@@ -339,9 +357,9 @@ export default function Settings({
                 step="0.05"
                 value={chromeOpacity}
                 onChange={(e) => setChromeOpacity(Number(e.target.value))}
-                className="w-full mt-2 accent-gold-action"
+                className="w-full mt-2 accent-[#f0ca65] cursor-pointer"
               />
-              <p className="font-narrative text-[11px] text-ink-muted mt-1">
+              <p className="font-narrative italic text-xs text-[#d8c49e] mt-1">
                 How solid the header, HUD, and input bar glass look over the ambient background. Lower is more see-through; 100% is fully solid.
               </p>
             </div>
@@ -352,6 +370,34 @@ export default function Settings({
                 <GlassButton onClick={toggleFullscreen} icon={isFullscreen ? Minimize : Maximize} tone="default" className="w-full">
                   {isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
                 </GlassButton>
+              </div>
+            </div>
+
+            <div>
+              <p className={LABEL_CLASS}>Developer & Title Mode</p>
+              <div className="mt-2 flex flex-col gap-2.5 rounded-xl border border-gold-accent/25 bg-gold-accent/[0.04] p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-display font-bold text-gold-primary">Debug Mode</p>
+                    <p className="font-narrative italic text-[11px] text-[#d8c49e] leading-snug">
+                      When ON, turns off the 4-second "Initializing..." delay on Dive In for instant navigation.
+                    </p>
+                  </div>
+                  <GlassSegmented
+                    className="shrink-0"
+                    options={[
+                      { id: 'off', label: 'OFF' },
+                      { id: 'on', label: 'ON' },
+                    ]}
+                    value={debugMode ? 'on' : 'off'}
+                    onChange={(v) => {
+                      const isDbg = v === 'on'
+                      setDebugMode(isDbg)
+                      if (isDbg) setIntroGazeDelay(false)
+                      else setIntroGazeDelay(true)
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>

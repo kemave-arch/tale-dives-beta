@@ -123,6 +123,10 @@ export interface ItemEntry {
   type: ItemType
   description?: string
   statBonus?: StatBonus // only meaningful when type is weapon/armor/accessory
+  rarity?: string // freeform, e.g. "Common"/"Rare"/"Legendary" — flavor, not a game-mechanical gate
+  loreText?: string // an evocative line distinct from `description`'s mechanical summary
+  value?: number // freeform currency worth, player/CRUD-set only
+  tags?: string[]
 }
 
 // §5.12 Codex Discovery ("Fog of Lore") — an entry with no `discovery` field
@@ -148,6 +152,10 @@ export interface LocationEntry {
   dangerLevel: string
   factionOwner: string | null
   standing: string
+  locationType?: string // freeform, e.g. "City"/"Dungeon"/"Wilderness"/"Landmark"
+  notableFeatures?: string // freeform — what stands out about the place
+  inhabitants?: string // freeform — who/what lives or lurks here
+  tags?: string[]
   autoLogged?: boolean
   discovery?: Discovery
 }
@@ -163,6 +171,12 @@ export interface NpcEntry {
   deeds: string[]
   memSummary: string
   lastSeenLocId: string | null
+  role?: string // freeform, e.g. "Blacksmith"/"Rival Cadet"/"Court Advisor"
+  appearance?: string // freeform physical description
+  personality?: string // freeform trait summary
+  voiceNotes?: string // how they speak — a steering note for the player, not sent to the model
+  factionId?: string | null // affiliation, mirrors LocationEntry's factionOwner
+  tags?: string[]
   autoLogged?: boolean
   discovery?: Discovery
 }
@@ -171,13 +185,24 @@ export interface FactionEntry {
   name: string
   repTier: number
   rivalId?: string | null // §5.4 App-Side Rivalry — another faction's id; a rep change here mirrors an inverse change there, 0 tokens
+  description?: string // freeform — what they stand for or do
+  leader?: string // freeform NPC name/reference
+  territory?: string // freeform — home region/base
+  symbol?: string // freeform — a sigil/emblem description
+  tags?: string[]
   autoLogged?: boolean
   discovery?: Discovery
 }
 
+// A bare {{Term|lore}} mention only ever registers `name`/`category` — this
+// entry had NO body text field at all until 2026-09-04, so a lore stub was
+// permanently a title with nothing under it unless hand-authored via CRUD.
 export interface LoreEntry {
   name: string
   category: string
+  content?: string // the actual lore text — optional so older auto-registered stubs (name/category only) stay valid
+  era?: string // freeform, e.g. "Ancient"/"Present Day"
+  tags?: string[]
   autoLogged?: boolean
   discovery?: Discovery
 }
@@ -186,6 +211,10 @@ export interface QuestEntry {
   name: string
   status?: 'advanced' | 'completed' | 'failed'
   note?: string
+  description?: string // the quest's actual premise/objective, distinct from `note`'s short status update
+  questGiver?: string // freeform NPC name/reference
+  reward?: string // freeform
+  tags?: string[]
   autoLogged?: boolean
   discovery?: Discovery
 }
@@ -198,6 +227,11 @@ export interface BestiaryEntry {
   threatTier: string
   hpMax?: number
   dmgBase?: number
+  description?: string // freeform appearance/behavior
+  habitat?: string // freeform
+  weaknesses?: string // freeform
+  lootTable?: string // freeform, e.g. "Bone Dust, Cursed Fang"
+  tags?: string[]
   autoLogged?: boolean
   discovery?: Discovery
 }
@@ -214,6 +248,9 @@ export interface SkillEntry {
   classId?: string // owning class, a Preset Class Dictionary id (§6.4D card shows its icon)
   mpCost?: number
   stCost?: number
+  skillType?: string // freeform, e.g. "Offensive"/"Defensive"/"Utility"/"Passive"
+  tier?: string // freeform progression marker, e.g. "Novice"/"Adept"/"Master"
+  flavorText?: string // a short evocative line, distinct from `description`'s mechanical summary
   autoLogged?: boolean
   discovery?: Discovery
 }
@@ -302,6 +339,13 @@ export interface LogEntry {
   classEvolution?: { className: string; reason?: string } // §5.1b — the player's single class slot was just replaced
   craftReady?: { recipeName: string; outputId: string; outputQty: number }[] // §5.8 — crafting jobs that finished this turn
   minionsDissipated?: string[] // §5.3 — familiar-branch minions whose upkeep couldn't be paid this turn
+  // Debug payload — the exact context sent and the raw text the model
+  // returned for this turn, so a player can copy it out to report a bug
+  // (to a Claude session or AI Studio) without reconstructing it by hand.
+  // Absent on synthetic entries (bang/chapterSummary/classEvolution) and on
+  // turns logged before this field existed.
+  requestPayload?: string
+  rawPayload?: string
 }
 
 // §6.6 Slash Commands — an in-fiction shortcut: selecting one sends `prompt`

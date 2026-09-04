@@ -1,10 +1,10 @@
 import { createContext, useState, useMemo, useEffect, useContext } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
-  ChevronRight, Globe, BookOpen, Users, ShieldCheck, Map, ScrollText, Target, Skull, Backpack,
+  Globe, BookOpen, Users, ShieldCheck, Map, ScrollText, Target, Skull, Backpack,
   Pencil, Save, X, Trash2, Plus, Lock, User, Hammer, Clock, Sparkles,
 } from 'lucide-react'
-import { DASHED_ROW_CLASS, GlassHeader, GlassIconButton, GlassScreen, SELECT_CLASS } from '../lib/glassChrome.tsx'
+import { DASHED_ROW_CLASS, GLASS_SURFACE_LIST, GlassHeader, GlassIconButton, GlassScreen, SELECT_CLASS } from '../lib/glassChrome.tsx'
 import { slugify } from '../lib/slug.ts'
 import { isHidden } from '../lib/discovery.ts'
 import { checkAffordability } from '../lib/skills.ts'
@@ -200,21 +200,6 @@ function StatBar({ label, value }: { label: string; value: number }) {
   )
 }
 
-function EntryCard({ title, subtitle, badge, onClick }: { title: string; subtitle?: string; badge?: React.ReactNode; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="rounded-2xl p-4 text-left flex flex-col gap-1 w-full border border-[#e8ca8a]/25 bg-transparent backdrop-blur-sm"
-    >
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="font-display font-bold text-sm text-[#e8ca8a]">{title}</h3>
-        {badge}
-      </div>
-      {subtitle && <p className="font-narrative text-xs text-ink-muted line-clamp-2">{subtitle}</p>}
-    </button>
-  )
-}
-
 function DetailField({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
@@ -341,6 +326,254 @@ function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
     <button onClick={onClick} className={DASHED_ROW_CLASS}>
       <Plus size={14} /> {label}
     </button>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Modern-card redesign (2026-09-04) — one accent identity per real CRUD
+// category, following the same "hero card" recipe MainMenu's Vault grid and
+// PresetDetailModal.tsx already established for Worlds (cyan) and
+// Protagonists (purple): a dark hue-tinted card fill, a brighter border on
+// hover, an icon badge, and a soft directional glow. Every className string
+// below is written out in full rather than built from a shared hex variable
+// — Tailwind's build-time scanner only picks up literal class text in the
+// source, so a `` `border-[${accent.hex}]/35` `` built at runtime would
+// silently never get its CSS generated. This mirrors how MainMenu's own
+// cyan/purple cards are written (also full literal strings, not templated).
+type CoreCategoryId = 'npcs' | 'factions' | 'locations' | 'lore' | 'quests' | 'bestiary' | 'skills' | 'items'
+
+interface CategoryAccent {
+  icon: LucideIcon
+  card: string // full list-card className (border/fill/hover/glow)
+  iconBadge: string
+  kicker: string // small uppercase label under the title
+  badge: string // pill badge (default/auto-tagged/etc.)
+  sectionIcon: string // just the icon color, for section-card headers
+  tag: string // a single tag chip
+}
+
+const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
+  npcs: {
+    icon: Users,
+    card: `${GLASS_SURFACE_LIST} bg-[#24101a]/85 border-[#fb7185]/35 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#fb7185]/80 hover:bg-[#331624]/95 hover:shadow-[0_8px_24px_rgba(251,113,133,0.2)] cursor-pointer group`,
+    iconBadge: 'w-9 h-9 rounded-xl bg-[#fb7185]/15 border border-[#fb7185]/35 flex items-center justify-center text-[#fb7185] shrink-0 group-hover:scale-105 transition-transform',
+    kicker: 'font-mono text-[10px] text-[#fecdd3]/75 uppercase tracking-wider',
+    badge: 'rounded bg-[#fb7185]/20 text-[#fecdd3] border border-[#fb7185]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+    sectionIcon: 'text-[#fb7185]',
+    tag: 'rounded-full border border-[#fb7185]/35 bg-[#fb7185]/10 px-2 py-0.5 text-[10px] font-mono text-[#fecdd3]',
+  },
+  factions: {
+    icon: ShieldCheck,
+    card: `${GLASS_SURFACE_LIST} bg-[#241c0a]/85 border-[#fbbf24]/35 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#fbbf24]/80 hover:bg-[#33280e]/95 hover:shadow-[0_8px_24px_rgba(251,191,36,0.2)] cursor-pointer group`,
+    iconBadge: 'w-9 h-9 rounded-xl bg-[#fbbf24]/15 border border-[#fbbf24]/35 flex items-center justify-center text-[#fbbf24] shrink-0 group-hover:scale-105 transition-transform',
+    kicker: 'font-mono text-[10px] text-[#fde68a]/75 uppercase tracking-wider',
+    badge: 'rounded bg-[#fbbf24]/20 text-[#fde68a] border border-[#fbbf24]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+    sectionIcon: 'text-[#fbbf24]',
+    tag: 'rounded-full border border-[#fbbf24]/35 bg-[#fbbf24]/10 px-2 py-0.5 text-[10px] font-mono text-[#fde68a]',
+  },
+  locations: {
+    icon: Map,
+    card: `${GLASS_SURFACE_LIST} bg-[#091824]/85 border-[#38bdf8]/35 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#38bdf8]/80 hover:bg-[#0c2234]/95 hover:shadow-[0_8px_24px_rgba(56,189,248,0.2)] cursor-pointer group`,
+    iconBadge: 'w-9 h-9 rounded-xl bg-[#38bdf8]/15 border border-[#38bdf8]/30 flex items-center justify-center text-[#38bdf8] shrink-0 group-hover:scale-105 transition-transform',
+    kicker: 'font-mono text-[10px] text-[#7dd3fc]/75 uppercase tracking-wider',
+    badge: 'rounded bg-[#38bdf8]/20 text-[#7dd3fc] border border-[#38bdf8]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+    sectionIcon: 'text-[#38bdf8]',
+    tag: 'rounded-full border border-[#38bdf8]/35 bg-[#38bdf8]/10 px-2 py-0.5 text-[10px] font-mono text-[#7dd3fc]',
+  },
+  lore: {
+    icon: ScrollText,
+    card: `${GLASS_SURFACE_LIST} bg-[#190d29]/85 border-[#c084fc]/35 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#c084fc]/80 hover:bg-[#23123a]/95 hover:shadow-[0_8px_24px_rgba(192,132,252,0.2)] cursor-pointer group`,
+    iconBadge: 'w-9 h-9 rounded-xl bg-[#c084fc]/15 border border-[#c084fc]/30 flex items-center justify-center text-[#c084fc] shrink-0 group-hover:scale-105 transition-transform',
+    kicker: 'font-mono text-[10px] text-[#d8b4fe]/75 uppercase tracking-wider',
+    badge: 'rounded bg-[#c084fc]/20 text-[#d8b4fe] border border-[#c084fc]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+    sectionIcon: 'text-[#c084fc]',
+    tag: 'rounded-full border border-[#c084fc]/35 bg-[#c084fc]/10 px-2 py-0.5 text-[10px] font-mono text-[#d8b4fe]',
+  },
+  quests: {
+    icon: Target,
+    card: `${GLASS_SURFACE_LIST} bg-[#0a2118]/85 border-[#34d399]/35 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#34d399]/80 hover:bg-[#0e2e21]/95 hover:shadow-[0_8px_24px_rgba(52,211,153,0.2)] cursor-pointer group`,
+    iconBadge: 'w-9 h-9 rounded-xl bg-[#34d399]/15 border border-[#34d399]/30 flex items-center justify-center text-[#34d399] shrink-0 group-hover:scale-105 transition-transform',
+    kicker: 'font-mono text-[10px] text-[#6ee7b7]/75 uppercase tracking-wider',
+    badge: 'rounded bg-[#34d399]/20 text-[#6ee7b7] border border-[#34d399]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+    sectionIcon: 'text-[#34d399]',
+    tag: 'rounded-full border border-[#34d399]/35 bg-[#34d399]/10 px-2 py-0.5 text-[10px] font-mono text-[#6ee7b7]',
+  },
+  bestiary: {
+    icon: Skull,
+    card: `${GLASS_SURFACE_LIST} bg-[#240a0a]/85 border-[#ef4444]/35 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#ef4444]/80 hover:bg-[#331010]/95 hover:shadow-[0_8px_24px_rgba(239,68,68,0.2)] cursor-pointer group`,
+    iconBadge: 'w-9 h-9 rounded-xl bg-[#ef4444]/15 border border-[#ef4444]/30 flex items-center justify-center text-[#ef4444] shrink-0 group-hover:scale-105 transition-transform',
+    kicker: 'font-mono text-[10px] text-[#fca5a5]/75 uppercase tracking-wider',
+    badge: 'rounded bg-[#ef4444]/20 text-[#fca5a5] border border-[#ef4444]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+    sectionIcon: 'text-[#ef4444]',
+    tag: 'rounded-full border border-[#ef4444]/35 bg-[#ef4444]/10 px-2 py-0.5 text-[10px] font-mono text-[#fca5a5]',
+  },
+  skills: {
+    icon: Sparkles,
+    card: `${GLASS_SURFACE_LIST} bg-[#140f2a]/85 border-[#818cf8]/35 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#818cf8]/80 hover:bg-[#1c1640]/95 hover:shadow-[0_8px_24px_rgba(129,140,248,0.2)] cursor-pointer group`,
+    iconBadge: 'w-9 h-9 rounded-xl bg-[#818cf8]/15 border border-[#818cf8]/30 flex items-center justify-center text-[#818cf8] shrink-0 group-hover:scale-105 transition-transform',
+    kicker: 'font-mono text-[10px] text-[#c7d2fe]/75 uppercase tracking-wider',
+    badge: 'rounded bg-[#818cf8]/20 text-[#c7d2fe] border border-[#818cf8]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+    sectionIcon: 'text-[#818cf8]',
+    tag: 'rounded-full border border-[#818cf8]/35 bg-[#818cf8]/10 px-2 py-0.5 text-[10px] font-mono text-[#c7d2fe]',
+  },
+  items: {
+    icon: Backpack,
+    card: `${GLASS_SURFACE_LIST} bg-[#1f1710]/85 border-[#f0ca65]/35 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#f0ca65]/80 hover:bg-[#2a2016]/95 hover:shadow-[0_8px_24px_rgba(240,202,101,0.2)] cursor-pointer group`,
+    iconBadge: 'w-9 h-9 rounded-xl bg-[#f0ca65]/15 border border-[#f0ca65]/30 flex items-center justify-center text-[#f0ca65] shrink-0 group-hover:scale-105 transition-transform',
+    kicker: 'font-mono text-[10px] text-[#fae5b5]/75 uppercase tracking-wider',
+    badge: 'rounded bg-[#f0ca65]/20 text-[#fae5b5] border border-[#f0ca65]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+    sectionIcon: 'text-[#f0ca65]',
+    tag: 'rounded-full border border-[#f0ca65]/35 bg-[#f0ca65]/10 px-2 py-0.5 text-[10px] font-mono text-[#fae5b5]',
+  },
+}
+
+// For the 4 non-CRUD categories (Character/Realm/Crafting/Chapters) at the
+// top-level category grid — a single shared gold-neutral identity rather
+// than 4 more hues, since these aren't entry types with their own "kind."
+const NEUTRAL_ACCENT: CategoryAccent = {
+  icon: Globe,
+  card: `${GLASS_SURFACE_LIST} bg-[#171224]/80 border-[#e8ca8a]/30 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#f0ca65]/70 hover:bg-[#1c1730]/95 hover:shadow-[0_8px_24px_rgba(240,202,101,0.15)] cursor-pointer group`,
+  iconBadge: 'w-9 h-9 rounded-xl bg-[#e8ca8a]/15 border border-[#e8ca8a]/30 flex items-center justify-center text-[#e8ca8a] shrink-0 group-hover:scale-105 transition-transform',
+  kicker: 'font-mono text-[10px] text-[#fae5b5]/75 uppercase tracking-wider',
+  badge: 'rounded bg-[#e8ca8a]/20 text-[#fae5b5] border border-[#e8ca8a]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+  sectionIcon: 'text-[#e8ca8a]',
+  tag: 'rounded-full border border-[#e8ca8a]/35 bg-[#e8ca8a]/10 px-2 py-0.5 text-[10px] font-mono text-[#fae5b5]',
+}
+
+// The list-view "deck card" — replaces the old plain EntryCard for the 8
+// real CRUD categories. `kicker` is the short type/status line under the
+// title (e.g. a location's region, a quest's status); `tags` renders as up
+// to 4 small chips, matching a modern TCG/RPG card's keyword line.
+function DeckEntryCard({
+  accent, icon, title, kicker, subtitle, badge, tags, onClick,
+}: {
+  accent: CategoryAccent
+  icon?: LucideIcon
+  title: string
+  kicker?: string
+  subtitle?: string
+  badge?: React.ReactNode
+  tags?: string[]
+  onClick: () => void
+}) {
+  const Icon = icon ?? accent.icon
+  return (
+    <div onClick={onClick} className={accent.card}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className={accent.iconBadge}>
+            <Icon size={17} />
+          </div>
+          <div className="min-w-0">
+            <h3 className="font-display font-bold text-sm text-ink group-hover:text-white truncate">{title}</h3>
+            {kicker && <p className={accent.kicker}>{kicker}</p>}
+          </div>
+        </div>
+        {badge}
+      </div>
+      {subtitle && <p className="font-narrative text-xs text-ink-muted line-clamp-2 leading-relaxed">{subtitle}</p>}
+      {tags && tags.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {tags.slice(0, 4).map((t) => (
+            <span key={t} className={accent.tag}>{t}</span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// The detail-view "hero header" — an icon avatar + title + subtitle, same
+// depth recipe as PresetDetailModal.tsx's own header (bright accent border,
+// tinted fill), just inline in Codex's existing single-panel navigation
+// (category -> list -> detail, Back button in the shared GlassHeader) rather
+// than a separate modal.
+function EntryHeroHeader({
+  accent, title, subtitle, badges,
+}: {
+  accent: CategoryAccent
+  title: string
+  subtitle?: string
+  badges?: React.ReactNode
+}) {
+  const Icon = accent.icon
+  return (
+    <div className={`${accent.card.split(' cursor-pointer')[0]} !p-4 flex items-start gap-3 mb-3`}>
+      <div className={accent.iconBadge}>
+        <Icon size={18} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <h2 className="font-display font-bold text-base text-ink truncate">{title}</h2>
+          {badges}
+        </div>
+        {subtitle && <p className="font-narrative italic text-xs text-ink-muted mt-0.5 line-clamp-2">{subtitle}</p>}
+      </div>
+    </div>
+  )
+}
+
+// A resting content card inside the detail view — PresetDetailModal.tsx's
+// exact "section card" recipe (dark tinted fill, thin border, icon+label
+// header with a divider underneath), reused here so an entry's detail read
+// like the same polished info-sheet the World/Protagonist presets already
+// get, not the old bare label/value list.
+function SectionCard({
+  accent, icon, title, children,
+}: {
+  accent: CategoryAccent
+  icon: LucideIcon
+  title: string
+  children: React.ReactNode
+}) {
+  const Icon = icon
+  return (
+    <div className="bg-[#171224]/70 border border-[#e8ca8a]/25 rounded-xl p-4 flex flex-col gap-3">
+      <div className="flex items-center gap-2 pb-2 border-b border-[#e8ca8a]/15">
+        <Icon size={16} className={accent.sectionIcon} />
+        <span className="font-display text-xs font-semibold uppercase tracking-[0.12em] text-[#fae5b5]">{title}</span>
+      </div>
+      {children}
+    </div>
+  )
+}
+
+// Field label/value pair, matching PresetDetailModal.tsx's own recipe —
+// replaces the old plain DetailField wherever a SectionCard is used.
+function FieldRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div>
+      <span className="font-display text-[10px] uppercase tracking-wider text-[#e8ca8a]/70 font-semibold block">{label}</span>
+      <div className="font-narrative text-xs text-[#fbf4e2] mt-0.5 leading-relaxed">{value}</div>
+    </div>
+  )
+}
+
+function TagPills({ tags, accent }: { tags: string[] | undefined; accent: CategoryAccent }) {
+  if (!tags || tags.length === 0) return null
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {tags.map((t) => (
+        <span key={t} className={accent.tag}>{t}</span>
+      ))}
+    </div>
+  )
+}
+
+// Freeform comma-separated tags input — parses to/from string[] so the CRUD
+// draft state (a plain Record<string, any>) can keep storing the same shape
+// the rest of the app persists, without a dedicated multi-select widget.
+function TagsField({ value, onChange }: { value: string[] | undefined; onChange: (tags: string[]) => void }) {
+  return (
+    <label className="block">
+      <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Tags (comma-separated)</span>
+      <input
+        value={(value ?? []).join(', ')}
+        onChange={(e) => onChange(e.target.value.split(',').map((t) => t.trim()).filter(Boolean))}
+        placeholder="mentor, romance, hidden agenda"
+        className="mt-1 w-full rounded-lg border border-[#e8ca8a]/25 bg-[#e8ca8a]/[0.04] backdrop-blur-sm px-3 py-2 font-narrative text-sm text-ink placeholder:text-[#e8ca8a]/35"
+      />
+    </label>
   )
 }
 
@@ -809,6 +1042,12 @@ export default function Codex({
       affection: draft.affection,
       memSummary: draft.memSummary,
       deeds: typeof draft.deeds === 'string' ? draft.deeds.split(',').map((s: string) => s.trim()).filter(Boolean) : draft.deeds,
+      role: draft.role?.trim() || undefined,
+      appearance: draft.appearance?.trim() || undefined,
+      personality: draft.personality?.trim() || undefined,
+      voiceNotes: draft.voiceNotes?.trim() || undefined,
+      factionId: draft.factionId || null,
+      tags: draft.tags,
       discovery: validateDiscovery(draft.discovery, { locations, npcs, quests }),
     })
     setEntryId(id)
@@ -817,7 +1056,17 @@ export default function Codex({
 
   function saveFaction() {
     const id = entryId === NEW_ID ? genId(draft.name, factions) : entryId!
-    onUpdateFaction(id, { name: draft.name, repTier: draft.repTier, rivalId: draft.rivalId || null, discovery: validateDiscovery(draft.discovery, { locations, npcs, quests }) })
+    onUpdateFaction(id, {
+      name: draft.name,
+      repTier: draft.repTier,
+      rivalId: draft.rivalId || null,
+      description: draft.description?.trim() || undefined,
+      leader: draft.leader?.trim() || undefined,
+      territory: draft.territory?.trim() || undefined,
+      symbol: draft.symbol?.trim() || undefined,
+      tags: draft.tags,
+      discovery: validateDiscovery(draft.discovery, { locations, npcs, quests }),
+    })
     setEntryId(id)
     setEditing(false)
   }
@@ -831,6 +1080,10 @@ export default function Codex({
       dangerLevel: draft.dangerLevel,
       factionOwner: draft.factionOwner || null,
       standing: draft.standing,
+      locationType: draft.locationType?.trim() || undefined,
+      notableFeatures: draft.notableFeatures?.trim() || undefined,
+      inhabitants: draft.inhabitants?.trim() || undefined,
+      tags: draft.tags,
       discovery: validateDiscovery(draft.discovery, { locations, npcs, quests }),
     })
     setEntryId(id)
@@ -839,14 +1092,30 @@ export default function Codex({
 
   function saveLore() {
     const id = entryId === NEW_ID ? genId(draft.name, lore) : entryId!
-    onUpdateLore(id, { name: draft.name, category: draft.category, discovery: validateDiscovery(draft.discovery, { locations, npcs, quests }) })
+    onUpdateLore(id, {
+      name: draft.name,
+      category: draft.category,
+      content: draft.content?.trim() || undefined,
+      era: draft.era?.trim() || undefined,
+      tags: draft.tags,
+      discovery: validateDiscovery(draft.discovery, { locations, npcs, quests }),
+    })
     setEntryId(id)
     setEditing(false)
   }
 
   function saveQuest() {
     const id = entryId === NEW_ID ? genId(draft.name, quests) : entryId!
-    onUpdateQuest(id, { name: draft.name, status: draft.status || undefined, note: draft.note, discovery: validateDiscovery(draft.discovery, { locations, npcs, quests }) })
+    onUpdateQuest(id, {
+      name: draft.name,
+      status: draft.status || undefined,
+      note: draft.note,
+      description: draft.description?.trim() || undefined,
+      questGiver: draft.questGiver?.trim() || undefined,
+      reward: draft.reward?.trim() || undefined,
+      tags: draft.tags,
+      discovery: validateDiscovery(draft.discovery, { locations, npcs, quests }),
+    })
     setEntryId(id)
     setEditing(false)
   }
@@ -858,6 +1127,11 @@ export default function Codex({
       threatTier: draft.threatTier,
       hpMax: draft.hpMax === '' || draft.hpMax === undefined ? undefined : Number(draft.hpMax),
       dmgBase: draft.dmgBase === '' || draft.dmgBase === undefined ? undefined : Number(draft.dmgBase),
+      description: draft.description?.trim() || undefined,
+      habitat: draft.habitat?.trim() || undefined,
+      weaknesses: draft.weaknesses?.trim() || undefined,
+      lootTable: draft.lootTable?.trim() || undefined,
+      tags: draft.tags,
       discovery: validateDiscovery(draft.discovery, { locations, npcs, quests }),
     })
     setEntryId(id)
@@ -877,6 +1151,9 @@ export default function Codex({
       // in the UI but only the latter skips the §3.2 affordability note.
       mpCost: draft.mpCost === '' || draft.mpCost === undefined ? undefined : Number(draft.mpCost),
       stCost: draft.stCost === '' || draft.stCost === undefined ? undefined : Number(draft.stCost),
+      skillType: draft.skillType?.trim() || undefined,
+      tier: draft.tier?.trim() || undefined,
+      flavorText: draft.flavorText?.trim() || undefined,
       discovery: validateDiscovery(draft.discovery, { locations, npcs, quests }),
     })
     setEntryId(id)
@@ -918,7 +1195,16 @@ export default function Codex({
       EQUIPPABLE_TYPES.includes(type) && draft.statBonus && STAT_BONUS_KEYS.some((k) => draft.statBonus[k])
         ? Object.fromEntries(STAT_BONUS_KEYS.filter((k) => draft.statBonus[k]).map((k) => [k, Number(draft.statBonus[k])]))
         : undefined
-    onUpdateItem(id, qty, { name, type, description: draft.description?.trim() || undefined, statBonus })
+    onUpdateItem(id, qty, {
+      name,
+      type,
+      description: draft.description?.trim() || undefined,
+      statBonus,
+      rarity: draft.rarity?.trim() || undefined,
+      loreText: draft.loreText?.trim() || undefined,
+      value: draft.value === '' || draft.value === undefined ? undefined : Number(draft.value),
+      tags: draft.tags,
+    })
     setEntryId(id)
     setEditing(false)
   }
@@ -952,32 +1238,29 @@ export default function Codex({
 
       {searchFilterBar}
 
-      {/* Level 1 — Category List */}
+      {/* Level 1 — Category List, one accent identity per category (see
+          CATEGORY_ACCENTS above) so this reads as a deck of distinct card
+          kinds rather than a flat settings-style list. */}
       {!category && (
-        <div className="flex flex-col gap-3">
-          {categories.map(({ id, label, description, icon: Icon, count }) => (
-            <button
-              key={id}
-              onClick={() => setCategory(id)}
-              className="rounded-xl px-4 py-3 flex items-center gap-3 text-left border border-[#e8ca8a]/25 bg-transparent backdrop-blur-sm hover:border-[#e8ca8a]/50 transition-colors"
-            >
-              <span className="w-10 h-10 shrink-0 rounded-full bg-[#e8ca8a]/10 inline-flex items-center justify-center text-[#e8ca8a]">
-                <Icon size={18} />
-              </span>
-              <span className="flex-1 min-w-0">
-                <span className="block font-display font-bold text-sm text-ink">{label}</span>
-                <span className="block font-narrative text-xs text-ink-muted truncate">{description}</span>
-              </span>
-              <span
-                className={`font-mono text-xs font-semibold px-2 py-0.5 rounded-md shrink-0 ${
-                  count > 0 ? 'bg-[#e8ca8a]/20 text-[#e8ca8a]' : 'bg-[#e8ca8a]/10 text-ink-muted/60'
-                }`}
-              >
-                {count}
-              </span>
-              <ChevronRight size={16} className="text-[#e8ca8a]/60 shrink-0" />
-            </button>
-          ))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {categories.map(({ id, label, description, icon: Icon, count }) => {
+            const accent = (CATEGORY_ACCENTS as Record<string, CategoryAccent>)[id] ?? NEUTRAL_ACCENT
+            return (
+              <DeckEntryCard
+                key={id}
+                accent={accent}
+                icon={Icon}
+                title={label}
+                subtitle={description}
+                badge={
+                  <span className={count > 0 ? accent.badge : `${accent.badge} opacity-60`}>
+                    {count}
+                  </span>
+                }
+                onClick={() => setCategory(id)}
+              />
+            )
+          })}
         </div>
       )}
 
@@ -1186,11 +1469,14 @@ export default function Codex({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AddButton label="Add NPC" onClick={() => startCreate({ name: '', stage: 'Stranger', trust: 0, affection: 0, memSummary: '', deeds: '' })} />
           {filteredNpcs.map(([id, n]) => (
-            <EntryCard
+            <DeckEntryCard
               key={id}
+              accent={CATEGORY_ACCENTS.npcs}
               title={isHidden(n) ? '???' : n.name}
-              subtitle={isHidden(n) ? (n.discovery?.teaser || 'Not yet discovered.') : `${n.stage} · Trust ${n.trust}`}
+              kicker={isHidden(n) ? undefined : n.role || n.stage}
+              subtitle={isHidden(n) ? (n.discovery?.teaser || 'Not yet discovered.') : n.personality || n.appearance || `Trust ${n.trust} · Affection ${n.affection}`}
               badge={isHidden(n) ? <LockBadge /> : <AutoBadge shown={n.autoLogged} />}
+              tags={isHidden(n) ? undefined : n.tags}
               onClick={() => setEntryId(id)}
             />
           ))}
@@ -1204,40 +1490,81 @@ export default function Codex({
       {category === 'npcs' && entryId && (editing || npcs[entryId]) && (
         <>
           <div className="flex justify-end mb-3">
-            <CrudToolbar editing={editing} canDelete={entryId !== NEW_ID} onEdit={() => startEdit(entryId, npcs[entryId])} onSave={saveNpc} onCancel={cancelEdit} onDelete={() => deleteEntry('npcs')} />
+            <CrudToolbar editing={editing} canDelete={entryId !== NEW_ID} onEdit={() => startEdit(entryId, { ...npcs[entryId], factionId: npcs[entryId].factionId ?? '' })} onSave={saveNpc} onCancel={cancelEdit} onDelete={() => deleteEntry('npcs')} />
           </div>
           {editing ? (
             <DetailPanel>
               <TextField label="Name" value={draft.name ?? ''} onChange={(v) => setDraft((d) => ({ ...d, name: v }))} />
+              <TextField label="Role" value={draft.role ?? ''} onChange={(v) => setDraft((d) => ({ ...d, role: v }))} placeholder="Blacksmith, Rival Cadet, Court Advisor…" />
               <TextField label="Gender" value={draft.gender ?? ''} onChange={(v) => setDraft((d) => ({ ...d, gender: v }))} placeholder="she/her (optional)" />
               <TextField label="Age" value={draft.age !== undefined ? String(draft.age) : ''} onChange={(v) => setDraft((d) => ({ ...d, age: v }))} placeholder="Optional" />
               <TextField label="Stage" value={draft.stage ?? ''} onChange={(v) => setDraft((d) => ({ ...d, stage: v }))} placeholder="Stranger, Acquaintance, Friend…" />
               <NumberField label="Trust" value={draft.trust ?? 0} onChange={(v) => setDraft((d) => ({ ...d, trust: v }))} />
               <NumberField label="Affection" value={draft.affection ?? 0} onChange={(v) => setDraft((d) => ({ ...d, affection: v }))} />
+              <label className="block">
+                <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Faction</span>
+                <select
+                  value={draft.factionId ?? ''}
+                  onChange={(e) => setDraft((d) => ({ ...d, factionId: e.target.value || null }))}
+                  className={SELECT_CLASS}
+                >
+                  <option value="">None</option>
+                  {Object.entries(factions).map(([id, f]) => (
+                    <option key={id} value={id}>{f.name}</option>
+                  ))}
+                </select>
+              </label>
+              <TextField label="Appearance" value={draft.appearance ?? ''} onChange={(v) => setDraft((d) => ({ ...d, appearance: v }))} textarea placeholder="Physical description…" />
+              <TextField label="Personality" value={draft.personality ?? ''} onChange={(v) => setDraft((d) => ({ ...d, personality: v }))} textarea placeholder="Brief trait summary…" />
+              <TextField label="Voice Notes" value={draft.voiceNotes ?? ''} onChange={(v) => setDraft((d) => ({ ...d, voiceNotes: v }))} textarea placeholder="How they speak — a steering note for your own reference." />
               <TextField label="Memory" value={draft.memSummary ?? ''} onChange={(v) => setDraft((d) => ({ ...d, memSummary: v }))} textarea />
               <TextField
                 label="Deeds (comma-separated)"
                 value={Array.isArray(draft.deeds) ? draft.deeds.join(', ') : (draft.deeds ?? '')}
                 onChange={(v) => setDraft((d) => ({ ...d, deeds: v }))}
               />
+              <TagsField value={draft.tags} onChange={(tags) => setDraft((d) => ({ ...d, tags }))} />
               <DiscoveryEditor discovery={draft.discovery} onChange={(disc) => setDraft((d) => ({ ...d, discovery: disc }))} />
             </DetailPanel>
           ) : isHidden(npcs[entryId]) ? (
             <MaskedDetail teaser={npcs[entryId].discovery?.teaser} />
           ) : (
-            <DetailPanel>
-              {(npcs[entryId].gender || npcs[entryId].age !== undefined) && (
-                <DetailField
-                  label="Identity"
-                  value={[npcs[entryId].gender, npcs[entryId].age !== undefined && `Age ${npcs[entryId].age}`].filter(Boolean).join(' · ')}
-                />
+            <div className="flex flex-col gap-3">
+              <EntryHeroHeader
+                accent={CATEGORY_ACCENTS.npcs}
+                title={npcs[entryId].name}
+                subtitle={npcs[entryId].role || npcs[entryId].stage}
+                badges={<AutoBadge shown={npcs[entryId].autoLogged} />}
+              />
+              <SectionCard accent={CATEGORY_ACCENTS.npcs} icon={Users} title="Overview">
+                {(npcs[entryId].gender || npcs[entryId].age !== undefined) && (
+                  <FieldRow
+                    label="Identity"
+                    value={[npcs[entryId].gender, npcs[entryId].age !== undefined && `Age ${npcs[entryId].age}`].filter(Boolean).join(' · ')}
+                  />
+                )}
+                <FieldRow label="Stage" value={npcs[entryId].stage} />
+                {npcs[entryId].factionId && factions[npcs[entryId].factionId!] && (
+                  <FieldRow label="Faction" value={factions[npcs[entryId].factionId!].name} />
+                )}
+                <div className="flex flex-col gap-1.5">
+                  <StatBar label="Trust" value={npcs[entryId].trust} />
+                  <StatBar label="Affection" value={npcs[entryId].affection} />
+                </div>
+              </SectionCard>
+              {(npcs[entryId].appearance || npcs[entryId].personality || npcs[entryId].voiceNotes) && (
+                <SectionCard accent={CATEGORY_ACCENTS.npcs} icon={ScrollText} title="Persona">
+                  {npcs[entryId].appearance && <FieldRow label="Appearance" value={npcs[entryId].appearance} />}
+                  {npcs[entryId].personality && <FieldRow label="Personality" value={npcs[entryId].personality} />}
+                  {npcs[entryId].voiceNotes && <FieldRow label="Voice Notes" value={npcs[entryId].voiceNotes} />}
+                </SectionCard>
               )}
-              <DetailField label="Stage" value={npcs[entryId].stage} />
-              <StatBar label="Trust" value={npcs[entryId].trust} />
-              <StatBar label="Affection" value={npcs[entryId].affection} />
-              <DetailField label="Memory" value={npcs[entryId].memSummary || '—'} />
-              {npcs[entryId].deeds.length > 0 && <DetailField label="Deeds" value={npcs[entryId].deeds.join(', ')} />}
-            </DetailPanel>
+              <SectionCard accent={CATEGORY_ACCENTS.npcs} icon={Clock} title="History">
+                <FieldRow label="Memory" value={npcs[entryId].memSummary || '—'} />
+                {npcs[entryId].deeds.length > 0 && <FieldRow label="Deeds" value={npcs[entryId].deeds.join(', ')} />}
+              </SectionCard>
+              <TagPills tags={npcs[entryId].tags} accent={CATEGORY_ACCENTS.npcs} />
+            </div>
           )}
         </>
       )}
@@ -1247,11 +1574,14 @@ export default function Codex({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AddButton label="Add Faction" onClick={() => startCreate({ name: '', repTier: 0 })} />
           {filteredFactions.map(([id, f]) => (
-            <EntryCard
+            <DeckEntryCard
               key={id}
+              accent={CATEGORY_ACCENTS.factions}
               title={isHidden(f) ? '???' : f.name}
-              subtitle={isHidden(f) ? (f.discovery?.teaser || 'Not yet discovered.') : `${repTierLabel(f.repTier)} (${f.repTier > 0 ? '+' : ''}${f.repTier})`}
+              kicker={isHidden(f) ? undefined : `${repTierLabel(f.repTier)} (${f.repTier > 0 ? '+' : ''}${f.repTier})`}
+              subtitle={isHidden(f) ? (f.discovery?.teaser || 'Not yet discovered.') : f.description}
               badge={isHidden(f) ? <LockBadge /> : <AutoBadge shown={f.autoLogged} />}
+              tags={isHidden(f) ? undefined : f.tags}
               onClick={() => setEntryId(id)}
             />
           ))}
@@ -1276,7 +1606,7 @@ export default function Codex({
                 <select
                   value={draft.rivalId ?? ''}
                   onChange={(e) => setDraft((d) => ({ ...d, rivalId: e.target.value || null }))}
-                  className="mt-1 w-full rounded-lg border border-[#e8ca8a]/25 bg-[#e8ca8a]/[0.04] backdrop-blur-sm px-3 py-2 font-mono text-sm text-ink"
+                  className={SELECT_CLASS}
                 >
                   <option value="">None</option>
                   {Object.entries(factions).filter(([id]) => id !== entryId).map(([id, f]) => (
@@ -1285,20 +1615,41 @@ export default function Codex({
                 </select>
                 <span className="text-[10px] text-ink-muted/70">A rep change here mirrors an inverse change on the rival, automatically.</span>
               </label>
+              <TextField label="Description" value={draft.description ?? ''} onChange={(v) => setDraft((d) => ({ ...d, description: v }))} textarea placeholder="What do they stand for, or do?" />
+              <TextField label="Leader" value={draft.leader ?? ''} onChange={(v) => setDraft((d) => ({ ...d, leader: v }))} placeholder="A named NPC, if any" />
+              <TextField label="Territory" value={draft.territory ?? ''} onChange={(v) => setDraft((d) => ({ ...d, territory: v }))} placeholder="Home region or base" />
+              <TextField label="Symbol" value={draft.symbol ?? ''} onChange={(v) => setDraft((d) => ({ ...d, symbol: v }))} placeholder="A sigil or emblem" />
+              <TagsField value={draft.tags} onChange={(tags) => setDraft((d) => ({ ...d, tags }))} />
               <DiscoveryEditor discovery={draft.discovery} onChange={(disc) => setDraft((d) => ({ ...d, discovery: disc }))} />
             </DetailPanel>
           ) : isHidden(factions[entryId]) ? (
             <MaskedDetail teaser={factions[entryId].discovery?.teaser} />
           ) : (
-            <DetailPanel>
-              <DetailField
-                label="Reputation Tier"
-                value={`${repTierLabel(factions[entryId].repTier)} (${factions[entryId].repTier > 0 ? '+' : ''}${factions[entryId].repTier} of -2 to +2)`}
+            <div className="flex flex-col gap-3">
+              <EntryHeroHeader
+                accent={CATEGORY_ACCENTS.factions}
+                title={factions[entryId].name}
+                subtitle={factions[entryId].description}
+                badges={<AutoBadge shown={factions[entryId].autoLogged} />}
               />
-              {factions[entryId].rivalId && factions[factions[entryId].rivalId!] && (
-                <DetailField label="Rival Faction" value={factions[factions[entryId].rivalId!].name} />
+              <SectionCard accent={CATEGORY_ACCENTS.factions} icon={ShieldCheck} title="Standing">
+                <FieldRow
+                  label="Reputation Tier"
+                  value={`${repTierLabel(factions[entryId].repTier)} (${factions[entryId].repTier > 0 ? '+' : ''}${factions[entryId].repTier} of -2 to +2)`}
+                />
+                {factions[entryId].rivalId && factions[factions[entryId].rivalId!] && (
+                  <FieldRow label="Rival Faction" value={factions[factions[entryId].rivalId!].name} />
+                )}
+              </SectionCard>
+              {(factions[entryId].leader || factions[entryId].territory || factions[entryId].symbol) && (
+                <SectionCard accent={CATEGORY_ACCENTS.factions} icon={ScrollText} title="Identity">
+                  {factions[entryId].leader && <FieldRow label="Leader" value={factions[entryId].leader} />}
+                  {factions[entryId].territory && <FieldRow label="Territory" value={factions[entryId].territory} />}
+                  {factions[entryId].symbol && <FieldRow label="Symbol" value={factions[entryId].symbol} />}
+                </SectionCard>
               )}
-            </DetailPanel>
+              <TagPills tags={factions[entryId].tags} accent={CATEGORY_ACCENTS.factions} />
+            </div>
           )}
         </>
       )}
@@ -1308,11 +1659,14 @@ export default function Codex({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AddButton label="Add Location" onClick={() => startCreate({ name: '', region: '', description: '', dangerLevel: '', factionOwner: '', standing: '' })} />
           {filteredLocations.map(([id, l]) => (
-            <EntryCard
+            <DeckEntryCard
               key={id}
+              accent={CATEGORY_ACCENTS.locations}
               title={isHidden(l) ? '???' : l.name}
+              kicker={isHidden(l) ? undefined : l.locationType || l.region}
               subtitle={isHidden(l) ? (l.discovery?.teaser || 'Not yet discovered.') : `${l.region} · Danger: ${l.dangerLevel}`}
               badge={isHidden(l) ? <LockBadge /> : <AutoBadge shown={l.autoLogged} />}
+              tags={isHidden(l) ? undefined : l.tags}
               onClick={() => setEntryId(id)}
             />
           ))}
@@ -1331,6 +1685,7 @@ export default function Codex({
           {editing ? (
             <DetailPanel>
               <TextField label="Name" value={draft.name ?? ''} onChange={(v) => setDraft((d) => ({ ...d, name: v }))} />
+              <TextField label="Location Type" value={draft.locationType ?? ''} onChange={(v) => setDraft((d) => ({ ...d, locationType: v }))} placeholder="City, Dungeon, Wilderness, Landmark…" />
               <TextField label="Region" value={draft.region ?? ''} onChange={(v) => setDraft((d) => ({ ...d, region: v }))} />
               <TextField label="Danger Level" value={draft.dangerLevel ?? ''} onChange={(v) => setDraft((d) => ({ ...d, dangerLevel: v }))} />
               <label className="block">
@@ -1338,7 +1693,7 @@ export default function Codex({
                 <select
                   value={draft.factionOwner ?? ''}
                   onChange={(e) => setDraft((d) => ({ ...d, factionOwner: e.target.value || null }))}
-                  className="mt-1 w-full rounded-lg border border-[#e8ca8a]/25 bg-[#e8ca8a]/[0.04] backdrop-blur-sm px-3 py-2 font-mono text-sm text-ink"
+                  className={SELECT_CLASS}
                 >
                   <option value="">None (independent territory)</option>
                   {Object.entries(factions).map(([id, f]) => (
@@ -1355,20 +1710,38 @@ export default function Codex({
                 <TextField label="Standing" value={draft.standing ?? ''} onChange={(v) => setDraft((d) => ({ ...d, standing: v }))} />
               )}
               <TextField label="Description" value={draft.description ?? ''} onChange={(v) => setDraft((d) => ({ ...d, description: v }))} textarea />
+              <TextField label="Notable Features" value={draft.notableFeatures ?? ''} onChange={(v) => setDraft((d) => ({ ...d, notableFeatures: v }))} textarea placeholder="What stands out about the place…" />
+              <TextField label="Inhabitants" value={draft.inhabitants ?? ''} onChange={(v) => setDraft((d) => ({ ...d, inhabitants: v }))} textarea placeholder="Who or what lives or lurks here…" />
+              <TagsField value={draft.tags} onChange={(tags) => setDraft((d) => ({ ...d, tags }))} />
               <DiscoveryEditor discovery={draft.discovery} onChange={(disc) => setDraft((d) => ({ ...d, discovery: disc }))} />
             </DetailPanel>
           ) : isHidden(locations[entryId]) ? (
             <MaskedDetail teaser={locations[entryId].discovery?.teaser} />
           ) : (
-            <DetailPanel>
-              <DetailField label="Region" value={locations[entryId].region} />
-              <DetailField label="Danger Level" value={locations[entryId].dangerLevel} />
-              <DetailField label="Standing" value={effectiveStanding(locations[entryId], factions)} />
-              {locations[entryId].factionOwner && (
-                <DetailField label="Faction Owner" value={factions[locations[entryId].factionOwner!]?.name ?? locations[entryId].factionOwner!} />
+            <div className="flex flex-col gap-3">
+              <EntryHeroHeader
+                accent={CATEGORY_ACCENTS.locations}
+                title={locations[entryId].name}
+                subtitle={locations[entryId].locationType ? `${locations[entryId].locationType} · ${locations[entryId].region}` : locations[entryId].region}
+                badges={<AutoBadge shown={locations[entryId].autoLogged} />}
+              />
+              <SectionCard accent={CATEGORY_ACCENTS.locations} icon={Map} title="Overview">
+                <FieldRow label="Region" value={locations[entryId].region} />
+                <FieldRow label="Danger Level" value={locations[entryId].dangerLevel} />
+                <FieldRow label="Standing" value={effectiveStanding(locations[entryId], factions)} />
+                {locations[entryId].factionOwner && (
+                  <FieldRow label="Faction Owner" value={factions[locations[entryId].factionOwner!]?.name ?? locations[entryId].factionOwner!} />
+                )}
+                <FieldRow label="Description" value={locations[entryId].description} />
+              </SectionCard>
+              {(locations[entryId].notableFeatures || locations[entryId].inhabitants) && (
+                <SectionCard accent={CATEGORY_ACCENTS.locations} icon={ScrollText} title="Depth">
+                  {locations[entryId].notableFeatures && <FieldRow label="Notable Features" value={locations[entryId].notableFeatures} />}
+                  {locations[entryId].inhabitants && <FieldRow label="Inhabitants" value={locations[entryId].inhabitants} />}
+                </SectionCard>
               )}
-              <DetailField label="Description" value={locations[entryId].description} />
-            </DetailPanel>
+              <TagPills tags={locations[entryId].tags} accent={CATEGORY_ACCENTS.locations} />
+            </div>
           )}
         </>
       )}
@@ -1378,11 +1751,14 @@ export default function Codex({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AddButton label="Add Lore" onClick={() => startCreate({ name: '', category: '' })} />
           {filteredLore.map(([id, l]) => (
-            <EntryCard
+            <DeckEntryCard
               key={id}
+              accent={CATEGORY_ACCENTS.lore}
               title={isHidden(l) ? '???' : l.name}
-              subtitle={isHidden(l) ? (l.discovery?.teaser || 'Not yet discovered.') : l.category}
+              kicker={isHidden(l) ? undefined : [l.category, l.era].filter(Boolean).join(' · ')}
+              subtitle={isHidden(l) ? (l.discovery?.teaser || 'Not yet discovered.') : l.content}
               badge={isHidden(l) ? <LockBadge /> : <AutoBadge shown={l.autoLogged} />}
+              tags={isHidden(l) ? undefined : l.tags}
               onClick={() => setEntryId(id)}
             />
           ))}
@@ -1402,14 +1778,26 @@ export default function Codex({
             <DetailPanel>
               <TextField label="Name" value={draft.name ?? ''} onChange={(v) => setDraft((d) => ({ ...d, name: v }))} />
               <TextField label="Category" value={draft.category ?? ''} onChange={(v) => setDraft((d) => ({ ...d, category: v }))} placeholder="Cosmology, Magic, History…" />
+              <TextField label="Era" value={draft.era ?? ''} onChange={(v) => setDraft((d) => ({ ...d, era: v }))} placeholder="Ancient, Present Day…" />
+              <TextField label="Lore Text" value={draft.content ?? ''} onChange={(v) => setDraft((d) => ({ ...d, content: v }))} textarea placeholder="The actual legend, myth, or secret…" />
+              <TagsField value={draft.tags} onChange={(tags) => setDraft((d) => ({ ...d, tags }))} />
               <DiscoveryEditor discovery={draft.discovery} onChange={(disc) => setDraft((d) => ({ ...d, discovery: disc }))} />
             </DetailPanel>
           ) : isHidden(lore[entryId]) ? (
             <MaskedDetail teaser={lore[entryId].discovery?.teaser} />
           ) : (
-            <DetailPanel>
-              <DetailField label="Category" value={lore[entryId].category} />
-            </DetailPanel>
+            <div className="flex flex-col gap-3">
+              <EntryHeroHeader
+                accent={CATEGORY_ACCENTS.lore}
+                title={lore[entryId].name}
+                subtitle={[lore[entryId].category, lore[entryId].era].filter(Boolean).join(' · ')}
+                badges={<AutoBadge shown={lore[entryId].autoLogged} />}
+              />
+              <SectionCard accent={CATEGORY_ACCENTS.lore} icon={ScrollText} title="Lore">
+                <FieldRow label="Lore Text" value={lore[entryId].content || 'No lore recorded yet — edit this entry to write it in.'} />
+              </SectionCard>
+              <TagPills tags={lore[entryId].tags} accent={CATEGORY_ACCENTS.lore} />
+            </div>
           )}
         </>
       )}
@@ -1419,11 +1807,14 @@ export default function Codex({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AddButton label="Add Quest" onClick={() => startCreate({ name: '', status: '', note: '' })} />
           {filteredQuests.map(([id, q]) => (
-            <EntryCard
+            <DeckEntryCard
               key={id}
+              accent={CATEGORY_ACCENTS.quests}
               title={isHidden(q) ? '???' : q.name}
-              subtitle={isHidden(q) ? (q.discovery?.teaser || 'Not yet discovered.') : (q.status ?? 'active')}
+              kicker={isHidden(q) ? undefined : (q.status ?? 'active')}
+              subtitle={isHidden(q) ? (q.discovery?.teaser || 'Not yet discovered.') : (q.description || q.note)}
               badge={isHidden(q) ? <LockBadge /> : <AutoBadge shown={q.autoLogged} />}
+              tags={isHidden(q) ? undefined : q.tags}
               onClick={() => setEntryId(id)}
             />
           ))}
@@ -1443,16 +1834,32 @@ export default function Codex({
             <DetailPanel>
               <TextField label="Name" value={draft.name ?? ''} onChange={(v) => setDraft((d) => ({ ...d, name: v }))} />
               <TextField label="Status" value={draft.status ?? ''} onChange={(v) => setDraft((d) => ({ ...d, status: v }))} placeholder="advanced, completed, failed" />
-              <TextField label="Note" value={draft.note ?? ''} onChange={(v) => setDraft((d) => ({ ...d, note: v }))} textarea />
+              <TextField label="Description" value={draft.description ?? ''} onChange={(v) => setDraft((d) => ({ ...d, description: v }))} textarea placeholder="The quest's actual premise/objective…" />
+              <TextField label="Quest Giver" value={draft.questGiver ?? ''} onChange={(v) => setDraft((d) => ({ ...d, questGiver: v }))} placeholder="A named NPC, if any" />
+              <TextField label="Reward" value={draft.reward ?? ''} onChange={(v) => setDraft((d) => ({ ...d, reward: v }))} />
+              <TextField label="Note" value={draft.note ?? ''} onChange={(v) => setDraft((d) => ({ ...d, note: v }))} textarea placeholder="A short status update, distinct from the description above." />
+              <TagsField value={draft.tags} onChange={(tags) => setDraft((d) => ({ ...d, tags }))} />
               <DiscoveryEditor discovery={draft.discovery} onChange={(disc) => setDraft((d) => ({ ...d, discovery: disc }))} />
             </DetailPanel>
           ) : isHidden(quests[entryId]) ? (
             <MaskedDetail teaser={quests[entryId].discovery?.teaser} />
           ) : (
-            <DetailPanel>
-              <DetailField label="Status" value={quests[entryId].status ?? 'active'} />
-              {quests[entryId].note && <DetailField label="Note" value={quests[entryId].note!} />}
-            </DetailPanel>
+            <div className="flex flex-col gap-3">
+              <EntryHeroHeader
+                accent={CATEGORY_ACCENTS.quests}
+                title={quests[entryId].name}
+                subtitle={quests[entryId].status ?? 'active'}
+                badges={<AutoBadge shown={quests[entryId].autoLogged} />}
+              />
+              <SectionCard accent={CATEGORY_ACCENTS.quests} icon={Target} title="Objective">
+                <FieldRow label="Status" value={quests[entryId].status ?? 'active'} />
+                {quests[entryId].description && <FieldRow label="Description" value={quests[entryId].description} />}
+                {quests[entryId].questGiver && <FieldRow label="Quest Giver" value={quests[entryId].questGiver} />}
+                {quests[entryId].reward && <FieldRow label="Reward" value={quests[entryId].reward} />}
+                {quests[entryId].note && <FieldRow label="Note" value={quests[entryId].note!} />}
+              </SectionCard>
+              <TagPills tags={quests[entryId].tags} accent={CATEGORY_ACCENTS.quests} />
+            </div>
           )}
         </>
       )}
@@ -1462,11 +1869,14 @@ export default function Codex({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AddButton label="Add Adversary" onClick={() => startCreate({ name: '', threatTier: '', hpMax: '', dmgBase: '' })} />
           {filteredBestiary.map(([id, b]) => (
-            <EntryCard
+            <DeckEntryCard
               key={id}
+              accent={CATEGORY_ACCENTS.bestiary}
               title={isHidden(b) ? '???' : b.name}
-              subtitle={isHidden(b) ? (b.discovery?.teaser || 'Not yet discovered.') : b.threatTier}
+              kicker={isHidden(b) ? undefined : b.threatTier}
+              subtitle={isHidden(b) ? (b.discovery?.teaser || 'Not yet discovered.') : b.description}
               badge={isHidden(b) ? <LockBadge /> : <AutoBadge shown={b.autoLogged} />}
+              tags={isHidden(b) ? undefined : b.tags}
               onClick={() => setEntryId(id)}
             />
           ))}
@@ -1495,16 +1905,38 @@ export default function Codex({
               <TextField label="Threat Tier" value={draft.threatTier ?? ''} onChange={(v) => setDraft((d) => ({ ...d, threatTier: v }))} />
               <NumberField label="HP" value={draft.hpMax === '' ? 0 : (draft.hpMax ?? 0)} onChange={(v) => setDraft((d) => ({ ...d, hpMax: v }))} />
               <NumberField label="Base Damage" value={draft.dmgBase === '' ? 0 : (draft.dmgBase ?? 0)} onChange={(v) => setDraft((d) => ({ ...d, dmgBase: v }))} />
+              <TextField label="Description" value={draft.description ?? ''} onChange={(v) => setDraft((d) => ({ ...d, description: v }))} textarea placeholder="Appearance and behavior…" />
+              <TextField label="Habitat" value={draft.habitat ?? ''} onChange={(v) => setDraft((d) => ({ ...d, habitat: v }))} />
+              <TextField label="Weaknesses" value={draft.weaknesses ?? ''} onChange={(v) => setDraft((d) => ({ ...d, weaknesses: v }))} />
+              <TextField label="Loot Table" value={draft.lootTable ?? ''} onChange={(v) => setDraft((d) => ({ ...d, lootTable: v }))} placeholder="Bone Dust, Cursed Fang…" />
+              <TagsField value={draft.tags} onChange={(tags) => setDraft((d) => ({ ...d, tags }))} />
               <DiscoveryEditor discovery={draft.discovery} onChange={(disc) => setDraft((d) => ({ ...d, discovery: disc }))} />
             </DetailPanel>
           ) : isHidden(bestiary[entryId]) ? (
             <MaskedDetail teaser={bestiary[entryId].discovery?.teaser} />
           ) : (
-            <DetailPanel>
-              <DetailField label="Threat Tier" value={bestiary[entryId].threatTier} />
-              {bestiary[entryId].hpMax !== undefined && <DetailField label="HP" value={String(bestiary[entryId].hpMax)} />}
-              {bestiary[entryId].dmgBase !== undefined && <DetailField label="Base Damage" value={String(bestiary[entryId].dmgBase)} />}
-            </DetailPanel>
+            <div className="flex flex-col gap-3">
+              <EntryHeroHeader
+                accent={CATEGORY_ACCENTS.bestiary}
+                title={bestiary[entryId].name}
+                subtitle={bestiary[entryId].threatTier}
+                badges={<AutoBadge shown={bestiary[entryId].autoLogged} />}
+              />
+              <SectionCard accent={CATEGORY_ACCENTS.bestiary} icon={Skull} title="Combat Profile">
+                <FieldRow label="Threat Tier" value={bestiary[entryId].threatTier} />
+                {bestiary[entryId].hpMax !== undefined && <FieldRow label="HP" value={String(bestiary[entryId].hpMax)} />}
+                {bestiary[entryId].dmgBase !== undefined && <FieldRow label="Base Damage" value={String(bestiary[entryId].dmgBase)} />}
+              </SectionCard>
+              {(bestiary[entryId].description || bestiary[entryId].habitat || bestiary[entryId].weaknesses || bestiary[entryId].lootTable) && (
+                <SectionCard accent={CATEGORY_ACCENTS.bestiary} icon={ScrollText} title="Bestiary Notes">
+                  {bestiary[entryId].description && <FieldRow label="Description" value={bestiary[entryId].description} />}
+                  {bestiary[entryId].habitat && <FieldRow label="Habitat" value={bestiary[entryId].habitat} />}
+                  {bestiary[entryId].weaknesses && <FieldRow label="Weaknesses" value={bestiary[entryId].weaknesses} />}
+                  {bestiary[entryId].lootTable && <FieldRow label="Loot Table" value={bestiary[entryId].lootTable} />}
+                </SectionCard>
+              )}
+              <TagPills tags={bestiary[entryId].tags} accent={CATEGORY_ACCENTS.bestiary} />
+            </div>
           )}
         </>
       )}
@@ -1518,13 +1950,15 @@ export default function Codex({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AddButton label="Add Skill" onClick={() => startCreate({ name: '', description: '', classId: '', mpCost: '', stCost: '' })} />
           {filteredSkills.map(([id, s]) => (
-            <EntryCard
+            <DeckEntryCard
               key={id}
+              accent={CATEGORY_ACCENTS.skills}
               title={isHidden(s) ? '???' : s.name}
+              kicker={isHidden(s) ? undefined : [s.skillType, classNameFor(s.classId)].filter(Boolean).join(' · ')}
               subtitle={
                 isHidden(s)
                   ? s.discovery?.teaser || 'Not yet discovered.'
-                  : s.description || classNameFor(s.classId) || 'No description yet.'
+                  : s.flavorText || s.description || 'No description yet.'
               }
               badge={isHidden(s) ? <LockBadge /> : <SkillCostBadge skill={s} />}
               onClick={() => setEntryId(id)}
@@ -1562,6 +1996,9 @@ export default function Codex({
             <DetailPanel>
               <TextField label="Name" value={draft.name ?? ''} onChange={(v) => setDraft((d) => ({ ...d, name: v }))} />
               <TextField label="Description" value={draft.description ?? ''} onChange={(v) => setDraft((d) => ({ ...d, description: v }))} />
+              <TextField label="Flavor Text" value={draft.flavorText ?? ''} onChange={(v) => setDraft((d) => ({ ...d, flavorText: v }))} placeholder="A short evocative line, distinct from the mechanical description." />
+              <TextField label="Skill Type" value={draft.skillType ?? ''} onChange={(v) => setDraft((d) => ({ ...d, skillType: v }))} placeholder="Offensive, Defensive, Utility, Passive…" />
+              <TextField label="Tier" value={draft.tier ?? ''} onChange={(v) => setDraft((d) => ({ ...d, tier: v }))} placeholder="Novice, Adept, Master…" />
               <label className="block">
                 <span className="text-[11px] font-display uppercase tracking-[0.14em] text-[#f0d9a4]">Owning Class</span>
                 <select
@@ -1584,24 +2021,32 @@ export default function Codex({
           ) : isHidden(skills[entryId]) ? (
             <MaskedDetail teaser={skills[entryId].discovery?.teaser} />
           ) : (
-            <DetailPanel>
-              {skills[entryId].description && <DetailField label="Description" value={skills[entryId].description!} />}
-              {classNameFor(skills[entryId].classId) && <DetailField label="Owning Class" value={classNameFor(skills[entryId].classId)!} />}
-              {skills[entryId].mpCost !== undefined && <DetailField label="MP Cost" value={String(skills[entryId].mpCost)} />}
-              {skills[entryId].stCost !== undefined && <DetailField label="ST Cost" value={String(skills[entryId].stCost)} />}
-              {/* §3.2 — affordability is surfaced, never enforced: the check
-                  tells the narrator whether to describe a clean cast or an
-                  exhaustion penalty, it does not block the player. */}
-              {(() => {
-                const { affordable, missing } = checkAffordability(skills[entryId], player)
-                if (affordable) return null
-                return (
-                  <p className="font-narrative text-xs text-rose">
-                    Not enough reserves right now — short {missing}.
-                  </p>
-                )
-              })()}
-            </DetailPanel>
+            <div className="flex flex-col gap-3">
+              <EntryHeroHeader
+                accent={CATEGORY_ACCENTS.skills}
+                title={skills[entryId].name}
+                subtitle={skills[entryId].flavorText || [skills[entryId].skillType, skills[entryId].tier].filter(Boolean).join(' · ')}
+                badges={<SkillCostBadge skill={skills[entryId]} />}
+              />
+              <SectionCard accent={CATEGORY_ACCENTS.skills} icon={Sparkles} title="Ability">
+                {skills[entryId].description && <FieldRow label="Description" value={skills[entryId].description!} />}
+                {classNameFor(skills[entryId].classId) && <FieldRow label="Owning Class" value={classNameFor(skills[entryId].classId)!} />}
+                {skills[entryId].mpCost !== undefined && <FieldRow label="MP Cost" value={String(skills[entryId].mpCost)} />}
+                {skills[entryId].stCost !== undefined && <FieldRow label="ST Cost" value={String(skills[entryId].stCost)} />}
+                {/* §3.2 — affordability is surfaced, never enforced: the check
+                    tells the narrator whether to describe a clean cast or an
+                    exhaustion penalty, it does not block the player. */}
+                {(() => {
+                  const { affordable, missing } = checkAffordability(skills[entryId], player)
+                  if (affordable) return null
+                  return (
+                    <p className="font-narrative text-xs text-rose">
+                      Not enough reserves right now — short {missing}.
+                    </p>
+                  )
+                })()}
+              </SectionCard>
+            </div>
           )}
         </>
       )}
@@ -1619,11 +2064,14 @@ export default function Codex({
             const item = items[id]
             const slot = equippedSlotFor(id)
             return (
-              <EntryCard
+              <DeckEntryCard
                 key={id}
+                accent={CATEGORY_ACCENTS.items}
                 title={item?.name ?? id.replace(/_/g, ' ')}
-                subtitle={`${item?.type ?? 'unknown'} · ×${qty}${statBonusText(item?.statBonus) ? ` · ${statBonusText(item?.statBonus)}` : ''}`}
-                badge={slot ? <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#e8ca8a]/15 text-[#e8ca8a]/80">equipped</span> : undefined}
+                kicker={[item?.type ?? 'unknown', item?.rarity].filter(Boolean).join(' · ')}
+                subtitle={`×${qty}${statBonusText(item?.statBonus) ? ` · ${statBonusText(item?.statBonus)}` : ''}${item?.loreText ? ` — ${item.loreText}` : ''}`}
+                badge={slot ? <span className={CATEGORY_ACCENTS.items.badge}>equipped</span> : undefined}
+                tags={item?.tags}
                 onClick={() => setEntryId(id)}
               />
             )
@@ -1648,6 +2096,10 @@ export default function Codex({
                   qty: String(inventory[entryId] ?? 1),
                   description: items[entryId]?.description ?? '',
                   statBonus: items[entryId]?.statBonus ?? {},
+                  rarity: items[entryId]?.rarity ?? '',
+                  loreText: items[entryId]?.loreText ?? '',
+                  value: items[entryId]?.value ?? '',
+                  tags: items[entryId]?.tags,
                 })
               }
               onSave={saveItem}
@@ -1693,30 +2145,45 @@ export default function Codex({
                   </div>
                 </div>
               )}
+              <TextField label="Rarity" value={draft.rarity ?? ''} onChange={(v) => setDraft((d) => ({ ...d, rarity: v }))} placeholder="Common, Rare, Legendary…" />
+              <TextField label="Lore Text" value={draft.loreText ?? ''} onChange={(v) => setDraft((d) => ({ ...d, loreText: v }))} textarea placeholder="An evocative line, distinct from the mechanical description above." />
+              <NumberField label="Value" value={draft.value === '' ? 0 : (draft.value ?? 0)} onChange={(v) => setDraft((d) => ({ ...d, value: v }))} />
+              <TagsField value={draft.tags} onChange={(tags) => setDraft((d) => ({ ...d, tags }))} />
             </DetailPanel>
           ) : (
-            <DetailPanel>
-              <DetailField label="Type" value={items[entryId]?.type ?? 'unknown'} />
-              <DetailField label="Quantity" value={String(inventory[entryId] ?? 0)} />
-              {items[entryId]?.description && <DetailField label="Description" value={items[entryId]!.description!} />}
-              {statBonusText(items[entryId]?.statBonus) && <DetailField label="Stat Bonus" value={statBonusText(items[entryId]?.statBonus)!} />}
-              {items[entryId] && EQUIPPABLE_TYPES.includes(items[entryId]!.type) && (
-                <div className="mt-1">
-                  {equippedSlotFor(entryId) ? (
-                    <button
-                      onClick={() => onUnequipSlot(equippedSlotFor(entryId)!)}
-                      className="rounded-full px-4 py-1.5 font-display text-xs font-semibold bg-rose-500/20 text-rose-300"
-                    >
-                      Unequip
-                    </button>
-                  ) : (
-                    <button onClick={() => onEquipItem(entryId)} className="rounded-full px-4 py-1.5 font-display text-xs font-semibold bg-[#e8ca8a] text-[#0e1017]">
-                      Equip
-                    </button>
-                  )}
-                </div>
-              )}
-            </DetailPanel>
+            <div className="flex flex-col gap-3">
+              <EntryHeroHeader
+                accent={CATEGORY_ACCENTS.items}
+                title={items[entryId]?.name ?? entryId.replace(/_/g, ' ')}
+                subtitle={[items[entryId]?.type ?? 'unknown', items[entryId]?.rarity].filter(Boolean).join(' · ')}
+                badges={equippedSlotFor(entryId) ? <span className={CATEGORY_ACCENTS.items.badge}>equipped</span> : undefined}
+              />
+              <SectionCard accent={CATEGORY_ACCENTS.items} icon={Backpack} title="Item">
+                <FieldRow label="Type" value={items[entryId]?.type ?? 'unknown'} />
+                <FieldRow label="Quantity" value={String(inventory[entryId] ?? 0)} />
+                {items[entryId]?.value !== undefined && <FieldRow label="Value" value={String(items[entryId]!.value)} />}
+                {items[entryId]?.description && <FieldRow label="Description" value={items[entryId]!.description!} />}
+                {items[entryId]?.loreText && <FieldRow label="Lore Text" value={items[entryId]!.loreText!} />}
+                {statBonusText(items[entryId]?.statBonus) && <FieldRow label="Stat Bonus" value={statBonusText(items[entryId]?.statBonus)!} />}
+                {items[entryId] && EQUIPPABLE_TYPES.includes(items[entryId]!.type) && (
+                  <div className="mt-1">
+                    {equippedSlotFor(entryId) ? (
+                      <button
+                        onClick={() => onUnequipSlot(equippedSlotFor(entryId)!)}
+                        className="rounded-full px-4 py-1.5 font-display text-xs font-semibold bg-rose-500/20 text-rose-300"
+                      >
+                        Unequip
+                      </button>
+                    ) : (
+                      <button onClick={() => onEquipItem(entryId)} className="rounded-full px-4 py-1.5 font-display text-xs font-semibold bg-[#e8ca8a] text-[#0e1017]">
+                        Equip
+                      </button>
+                    )}
+                  </div>
+                )}
+              </SectionCard>
+              <TagPills tags={items[entryId]?.tags} accent={CATEGORY_ACCENTS.items} />
+            </div>
           )}
         </>
       )}

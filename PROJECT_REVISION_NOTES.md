@@ -1,13 +1,21 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-04, Claude Code on the web — fixed a real regression from
-this file's previous entry (saved-Tale card backgrounds went transparent) that turned
-out to be a much older, previously-undiagnosed bug: `bg-transparent` in `GLASS_SURFACE`
-was silently winning the cascade over every caller's own background color, everywhere,
-propped up only by `backdrop-blur-sm` blurring the art behind it. Also fixed the
-Chronicle parchment surface's Tailwind color utilities (`text-gold-primary`,
-`text-skill`, etc.) never actually re-pointing to their light-paper values — same class
-of bug, different mechanism (see the log entry below). Also: the player's own action
+**Last updated:** 2026-09-04, Claude Code on the web — the Codex overhaul: every entry
+type (NPCs, Factions, Locations, Lore, Quests, Bestiary, Skills, Items) gained real
+depth fields (Lore in particular had *no body text field at all* before this), and the
+whole screen moved from a plain flat list/label-value UI to a per-category
+accent-colored "modern fantasy RPG card" treatment matching MainMenu's Vault grid and
+PresetDetailModal's hero-card recipe. Also added a debug-payload button on each
+Chronicle turn (view + copy the exact request/response, for reporting bugs here or in
+AI Studio). See the log entry below for the full field list and verification. Earlier
+today: fixed a real regression from the prior entry (saved-Tale card backgrounds went
+transparent) that turned out to be a much older, previously-undiagnosed bug:
+`bg-transparent` in `GLASS_SURFACE` was silently winning the cascade over every
+caller's own background color, everywhere, propped up only by `backdrop-blur-sm`
+blurring the art behind it. Also fixed the Chronicle parchment surface's Tailwind
+color utilities (`text-gold-primary`, `text-skill`, etc.) never actually re-pointing
+to their light-paper values — same class of bug, different mechanism. Also: the
+player's own action
 echo now reads as novel-style italic prose instead of a `font-mono "> "` console line,
 and the 9 turn-state accent colors got parchment-safe variants.
 
@@ -90,6 +98,57 @@ rule applies to music.
 > still unbuilt, but no longer blocked on "there's nothing to seed from."
 
 Recent shipped work, most recent first: 
+- **Codex overhaul: real entry data + modern-card UI, per-turn debug payload
+  (`types.ts`, `Codex.tsx`, `App.tsx`, `Chronicle.tsx`)**: 2026-09-04 (Claude Code on
+  the web). The user asked for "extensive work in the Codex" — most entries were "too
+  basic," wanted "a proper light database for each entry type," and the UI looked
+  "too old" next to "modern fantasy RPG decks/lists/cards." Also asked for a debug
+  button on each Chronicle turn to view/copy the exact API payload for reporting bugs.
+  - **Data model** (`types.ts`): every one of the 8 real CRUD Codex categories gained
+    new optional fields, none sent to the model (CRUD/player-authored depth only, zero
+    added per-turn token cost) — `NpcEntry`: `role`/`appearance`/`personality`/
+    `voiceNotes`/`factionId`/`tags`. `FactionEntry`: `description`/`leader`/
+    `territory`/`symbol`/`tags`. `LocationEntry`: `locationType`/`notableFeatures`/
+    `inhabitants`/`tags`. `LoreEntry`: **`content`** — this entry had *no body text
+    field at all* before today (just `name`/`category`), so a lore stub was
+    permanently a title with nothing under it unless the old bare
+    `DetailField`/`TextField` UI happened to expose a field that didn't exist; also
+    `era`/`tags`. `QuestEntry`: `description`/`questGiver`/`reward`/`tags`.
+    `BestiaryEntry`: `description`/`habitat`/`weaknesses`/`lootTable`/`tags`.
+    `SkillEntry`: `skillType`/`tier`/`flavorText`. `ItemEntry`: `rarity`/`loreText`/
+    `value`/`tags`. All optional, so existing saved entries and the auto-registration
+    paths (`keywordLinks.ts`, a bare `{{Term|category}}` mention) needed no changes.
+  - **UI** (`Codex.tsx`): every category now has its own accent identity — a `hex`
+    color, dark tinted card fill, icon badge, and hover glow, following the exact same
+    "hero card" recipe `MainMenu.tsx`'s Vault grid and `PresetDetailModal.tsx` already
+    use for Worlds (cyan) and Protagonists (purple): NPCs rose, Factions amber,
+    Locations cyan, Lore violet, Quests emerald, Bestiary red, Skills indigo, Items
+    gold. New shared components — `DeckEntryCard` (the list-view card: icon badge,
+    title, kicker line, subtitle, up to 4 tag chips), `EntryHeroHeader` +
+    `SectionCard` + `FieldRow` (the detail-view "info sheet," replacing the old bare
+    label/value `DetailPanel`/`DetailField` stack), `TagPills`/`TagsField` (a
+    comma-separated input parsed to `string[]`). The top-level category list is now
+    the same accent grid instead of a flat settings-style row list. Edit forms kept
+    the existing `DetailPanel`/`TextField`/`NumberField` mechanics (a working, already
+    campaign-cost-free CRUD pipeline) — only the *read* detail view and the list
+    cards got the full visual redesign, so this was a scoped UI/data change, not a
+    rearchitecture of how entries are created or saved. Every category's own
+    `save*`/`startCreate`/`startEdit` call sites were updated to read/write the new
+    fields.
+  - **Debug payload** (`types.ts`, `App.tsx`, `Chronicle.tsx`): `LogEntry` gained
+    `requestPayload`/`rawPayload` (the exact context sent and the model's raw response
+    text), set in `sendAction`'s success *and* fallback branches. A new
+    `DebugPayloadButton` in `TurnBlock` — collapsed by default, only rendered when
+    `rawPayload` is present (real narrated turns only, never bang/chapter-recap
+    synthetic entries) — expands to a monospace panel with both, plus a one-click
+    copy (mirrors `ApiErrorPanel`'s existing copy-diagnostic-report pattern).
+  - **Verified live**, not just by reading: seeded a synthetic campaign directly into
+    `localStorage` (`td_campaigns`/`td_active_campaign`) with real data across all 8
+    categories including the new fields, then drove headless Chromium through every
+    category's list card, detail view, and edit form, plus the Chronicle debug
+    button's expand/copy — all confirmed rendering correctly by screenshot (accent
+    colors, icon badges, tag pills, section cards, pre-filled edit fields). `npm run
+    typecheck`/`npm run build` clean throughout.
 - **Two real "colors invisible on light backgrounds" bugs, plus novel-style player-
   action text (`glassChrome.tsx`, `index.css`, `lib/turnStates.ts`, `Chronicle.tsx`)**:
   2026-09-04 (Claude Code on the web). The user reported the previous entry's card-blur

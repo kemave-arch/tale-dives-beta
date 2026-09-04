@@ -4,7 +4,7 @@ import {
   Menu, Settings as SettingsIcon, Send, Star, BookOpen, Library, Sparkle, X, ExternalLink,
   ChevronUp, ChevronDown, ChevronsDown, History, Pause, Users, Backpack, Map as MapIcon, ShieldCheck, Target, Skull, HelpCircle,
   Unlock, Lock, Repeat, Hammer, Ghost, Compass, ScrollText, User, Swords, Sparkles,
-  AlertTriangle, Copy, Check, RotateCcw,
+  AlertTriangle, Copy, Check, RotateCcw, Bug,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { renderNarrative, type TapTermHandler } from '../lib/richText.tsx'
@@ -134,6 +134,62 @@ interface TurnBlockProps {
   globalIndex: number
   onTapTerm: TapTermHandler
   registerRef: (index: number, el: HTMLDivElement | null) => void
+}
+
+// Debugging tool — a turn's exact request context and the model's raw
+// response text, collapsed by default so it doesn't compete with the prose,
+// with a one-click copy so a player can paste a broken turn to a Claude
+// session or AI Studio without reconstructing it by hand. Only turns that
+// actually hit the API carry `rawPayload` (App.tsx's sendAction) — bang
+// commands, chapter recaps, and other synthetic entries never render this.
+function DebugPayloadButton({ entry }: { entry: LogEntry }) {
+  const [open, setOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
+  if (!entry.rawPayload) return null
+
+  const payloadText = `### REQUEST (context sent)\n${entry.requestPayload ?? '(not recorded)'}\n\n### RESPONSE (raw model output)\n${entry.rawPayload}`
+
+  function handleCopy() {
+    navigator.clipboard.writeText(payloadText).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1 text-[10px] font-mono text-ink-muted/70 hover:text-ink-muted uppercase tracking-wide"
+      >
+        <Bug size={11} /> {open ? 'Hide Payload' : 'View Payload'}
+      </button>
+      {open && (
+        <div className="mt-1.5 rounded-lg border border-ink-muted/25 bg-black/[0.04] overflow-hidden">
+          <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-ink-muted/20">
+            <span className="text-[10px] font-mono uppercase tracking-wide text-ink-muted">Debug Payload</span>
+            <button
+              onClick={handleCopy}
+              className="inline-flex items-center gap-1 text-[10px] font-mono text-ink-muted hover:text-ink"
+            >
+              {copied ? (
+                <>
+                  <Check size={11} className="text-emerald" /> Copied
+                </>
+              ) : (
+                <>
+                  <Copy size={11} /> Copy
+                </>
+              )}
+            </button>
+          </div>
+          <pre className="max-h-64 overflow-auto p-2.5 text-[10px] font-mono leading-snug text-ink-muted whitespace-pre-wrap break-words">
+            {payloadText}
+          </pre>
+        </div>
+      )}
+    </div>
+  )
 }
 
 // Isolated from `input` state (§9.2 perf fix) — memoized so a keystroke in the
@@ -310,6 +366,7 @@ const TurnBlock = memo(function TurnBlock({ entry, globalIndex, onTapTerm, regis
           ))}
         </div>
       )}
+      <DebugPayloadButton entry={entry} />
     </div>
   )
 })

@@ -159,9 +159,21 @@ export function GlassButton({ onClick, children, icon: Icon, tone = 'default', d
 }
 
 // Plain rounded-corner glass surface for cards/rows/panels — no gradient
-// ring, just a thin solid border, transparent fill, blur. className string
-// (not a component) so it composes freely with layout classes per call site.
-export const GLASS_SURFACE = 'border border-[#e8ca8a]/25 bg-transparent backdrop-blur-sm'
+// ring, just a thin solid border, blur. className string (not a component)
+// so it composes freely with layout classes per call site — every real
+// caller appends its own `bg-[...]` color after this string.
+//
+// Deliberately carries NO `bg-transparent` of its own (removed 2026-09-04):
+// Tailwind v4's generated stylesheet orders `.bg-transparent` AFTER
+// arbitrary-value color utilities like `.bg-[#120e1b]/80`, so with both
+// classes present on one element, `bg-transparent` won the cascade — every
+// caller's own background color was being silently discarded, and the
+// panel's only real legibility came from `backdrop-blur-sm` dimming the
+// artwork behind it. Confirmed directly in the built CSS: `.bg-transparent`
+// sits after every `.bg-\[...\]` rule. A caller that truly wants no
+// background gets one anyway — `background-color`'s initial value is
+// already transparent, so omitting this utility changes nothing for it.
+export const GLASS_SURFACE = 'border border-[#e8ca8a]/25 backdrop-blur-sm'
 export const GLASS_SURFACE_HOVER = 'transition-colors duration-150 hover:border-[#e8ca8a]/60'
 // Same border, no backdrop-filter — for a card repeated many times in a
 // scrollable list/grid (Tales, Worlds, Protagonists, the OST playlist, the
@@ -172,7 +184,7 @@ export const GLASS_SURFACE_HOVER = 'transition-colors duration-150 hover:border-
 // are on screen and scrolling. Reserve GLASS_SURFACE itself for single
 // panels sitting directly over the moving artwork, where the blur is doing
 // real, visible work.
-export const GLASS_SURFACE_LIST = 'border border-[#e8ca8a]/25 bg-transparent'
+export const GLASS_SURFACE_LIST = 'border border-[#e8ca8a]/25'
 
 // ---------------------------------------------------------------------------
 // Screen-level shell

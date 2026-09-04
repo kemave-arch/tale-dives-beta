@@ -54,6 +54,25 @@
   --td-parchment: #f8f1de;
   --td-parchment-header: #e0d3ba;
   --td-glow: 0 0 24px rgba(240, 202, 101, 0.12), 0 8px 28px rgba(0, 0, 0, 0.55);
+
+  /* §4.3 9-Tier Turn State Matrix accents (lib/turnStates.ts) — tokenized
+     here rather than left as raw hex in that file so they follow the same
+     dark-chrome/light-parchment split as --td-ink and friends above. These
+     were previously plain hex baked straight into TURN_STATE_META, tuned
+     for the dark glass chrome only; the Chronicle log renders the turn-state
+     badge and left-accent border on the parchment reading surface, where
+     several of them (light gold, light purple, cyan) had poor contrast
+     against cream paper. Light-tuned equivalents are declared in
+     .parchment-surface below. */
+  --td-state-peace: #fcd34d;
+  --td-state-combat: #991b1b;
+  --td-state-stealth: #a78bfa;
+  --td-state-despair: #4f46e5;
+  --td-state-explore: #10b981;
+  --td-state-insight: #06b6d4;
+  --td-state-social: #f43f5e;
+  --td-state-intimacy: #ec4899;
+  --td-state-pause: #78716c;
 }
 
 /* The Story Viewer's reading surface stays warm light paper while everything
@@ -65,7 +84,25 @@
    `text-gold-primary` / `text-skill` inside it (TurnBlock's badges, richText's
    skill and item spans, the dossier rows) to on-paper values through the
    normal cascade, with no per-class changes anywhere in the subtree.
-   Anything added inside the reading surface inherits this automatically. */
+   Anything added inside the reading surface inherits this automatically.
+
+   IMPORTANT — this only works for things that read `--td-*` directly (like
+   this rule's own `color: var(--td-ink)` below, or the turn-state accents in
+   turnStates.ts). Every Tailwind color utility (`.text-gold-primary`,
+   `.text-skill`, `.text-ink`, `.bg-emerald-bg`, ...) instead reads a
+   `--color-*` variable from `@theme` above (`--color-skill: var(--td-skill)`),
+   declared exactly once on `:root`. CSS custom properties resolve nested
+   `var()` references relative to where the OUTER property is declared, not
+   where it's used — since `--color-skill` itself is never redeclared inside
+   `.parchment-surface`, it inherits `:root`'s already-substituted dark-theme
+   value verbatim, frozen, regardless of `--td-skill` being overridden here.
+   Confirmed live: `getComputedStyle` on a `.text-skill` span inside this
+   surface reported the dark-theme blue, not this block's navy, until these
+   `--color-*` overrides were added directly (2026-09-04) — every explicit
+   Tailwind text/bg color class in the Chronicle log was silently rendering
+   its dark-chrome color on the cream page, some (light gold, light blue)
+   with real contrast problems, until this fix. Add a `--color-*` line here
+   too, not just `--td-*`, for any future token this surface needs to flip. */
 .parchment-surface {
   --td-ink: #2a241e;
   --td-ink-muted: #6b6152;
@@ -77,6 +114,31 @@
   --td-rose-bg: #fce7ea;
   --td-skill: #31456e;
   --td-skill-bg: #e8eefb;
+  --color-ink: var(--td-ink);
+  --color-ink-muted: var(--td-ink-muted);
+  --color-gold-primary: var(--td-gold-primary);
+  --color-gold-accent: var(--td-gold-accent);
+  --color-emerald: var(--td-emerald);
+  --color-emerald-bg: var(--td-emerald-bg);
+  --color-rose: var(--td-rose);
+  --color-rose-bg: var(--td-rose-bg);
+  --color-skill: var(--td-skill);
+  --color-skill-bg: var(--td-skill-bg);
+  /* Same darkened/deepened treatment as the tokens above, for the turn-state
+     badge and left-accent border TurnBlock renders inline (Chronicle.tsx) —
+     kept visually distinct per state, just legible on #f8f1de cream instead
+     of tuned for dark glass. Explore/Social intentionally reuse
+     --td-emerald/--td-rose above rather than a near-duplicate hex, since
+     those states are the same semantic color family. */
+  --td-state-peace: #92720f;
+  --td-state-combat: #7a1414;
+  --td-state-stealth: #4c3382;
+  --td-state-despair: #33299e;
+  --td-state-explore: var(--td-emerald);
+  --td-state-insight: #0b6577;
+  --td-state-social: var(--td-rose);
+  --td-state-intimacy: #97205f;
+  --td-state-pause: #55504a;
   color: var(--td-ink);
 }
 

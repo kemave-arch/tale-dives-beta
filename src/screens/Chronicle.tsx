@@ -234,14 +234,23 @@ const TurnBlock = memo(function TurnBlock({ entry, globalIndex, onTapTerm, regis
   const StateIcon = stateMeta?.icon
 
   return (
-    <div ref={setRef} className="space-y-1 border-l-2 pl-3" style={{ borderColor: stateMeta ? `${stateMeta.accent}55` : 'transparent' }}>
+    <div
+      ref={setRef}
+      className="space-y-1 border-l-2 pl-3"
+      style={{ borderColor: stateMeta ? `color-mix(in srgb, ${stateMeta.accent} 33%, transparent)` : 'transparent' }}
+    >
       {entry.time && entry.locDisp && (
         <p className="font-mono text-[10px] font-semibold uppercase tracking-wide text-gold-primary">
           {formatTimestamp(entry.time, entry.locDisp)}
         </p>
       )}
       <div className="flex items-center gap-2 flex-wrap">
-        {entry.action && <p className="font-mono text-xs text-gold-primary">&gt; {entry.action}</p>}
+        {/* The player's own typed action — same narrative serif and italic
+            treatment as everything else on the page (dropped the old
+            font-mono "> " console-prompt prefix, which read like a terminal
+            echo rather than part of the story); gold-primary is what still
+            marks it as a different voice from the narration beneath it. */}
+        {entry.action && <p className="font-narrative italic text-sm text-gold-primary">{entry.action}</p>}
         {StateIcon && stateMeta && (
           <span className="inline-flex items-center gap-1 text-[10px] font-display" style={{ color: stateMeta.accent }}>
             <StateIcon size={11} /> {stateMeta.label}

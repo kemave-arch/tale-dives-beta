@@ -1,12 +1,15 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-04, Claude Code on the web — mobile FPS-drop investigation
-across Title/Main Menu/the creation flow, ending in two real fixes: `CyclingBackground`
-was always mounting every discovered background slot's full-viewport 36px-blur layer
-at once (now mounts at most two, only during an actual crossfade), and every
-repeated-card list (Tales, Worlds, Protagonists, OST playlist, Art gallery) was paying
-for a `backdrop-blur-sm` that its own ~80%+ opaque card background made nearly
-invisible. See the log entry below for the full audit and what was left alone.
+**Last updated:** 2026-09-04, Claude Code on the web — fixed a real regression from
+this file's previous entry (saved-Tale card backgrounds went transparent) that turned
+out to be a much older, previously-undiagnosed bug: `bg-transparent` in `GLASS_SURFACE`
+was silently winning the cascade over every caller's own background color, everywhere,
+propped up only by `backdrop-blur-sm` blurring the art behind it. Also fixed the
+Chronicle parchment surface's Tailwind color utilities (`text-gold-primary`,
+`text-skill`, etc.) never actually re-pointing to their light-paper values — same class
+of bug, different mechanism (see the log entry below). Also: the player's own action
+echo now reads as novel-style italic prose instead of a `font-mono "> "` console line,
+and the 9 turn-state accent colors got parchment-safe variants.
 
 > ## 🎨 READ THIS BEFORE TOUCHING ANY SCREEN — the app now has ONE theme
 > The selectable parchment/obsidian **skins are gone** (`UiPrefs.skin`, the `Skin` type,
@@ -87,6 +90,80 @@ rule applies to music.
 > still unbuilt, but no longer blocked on "there's nothing to seed from."
 
 Recent shipped work, most recent first: 
+- **Two real "colors invisible on light backgrounds" bugs, plus novel-style player-
+  action text (`glassChrome.tsx`, `index.css`, `lib/turnStates.ts`, `Chronicle.tsx`)**:
+  2026-09-04 (Claude Code on the web). The user reported the previous entry's card-blur
+  fix made saved-Tale cards on Main Menu unreadable (background gone), and separately
+  that some non-LLM Chronicle text was hard to read on the parchment, and asked for the
+  player's own action to read like the LLM's novel-style prose instead of a raw command
+  echo. Investigated all three:
+  - **Bug 1 (the regression) — `GLASS_SURFACE`'s `bg-transparent` was silently winning
+    over every caller's own background color, and always had been.** Every card that
+    uses `GLASS_SURFACE`/`GLASS_SURFACE_LIST` appends its own `bg-[#xxxxxx]/NN` class
+    after it (`${GLASS_SURFACE} bg-[#120e1b]/80 ...`), expecting that color to show.
+    Checked the actual compiled CSS: `.bg-transparent{background-color:#0000}` is
+    generated *after* every `.bg-\[...\]` rule in Tailwind v4's output, so at equal
+    specificity `bg-transparent` won regardless of source order in the className
+    string — every card's real background was silently `transparent`, all along, and
+    legibility only ever came from `backdrop-blur-sm` dimming the art underneath. The
+    previous entry's fix removed that blur from the repeated-list cards without
+    knowing the color underneath was fake, exposing raw artwork through the cards
+    outright. Fixed at the root: `GLASS_SURFACE`/`GLASS_SURFACE_LIST` no longer
+    include `bg-transparent` at all (every real caller already supplies its own
+    color, and `background-color`'s initial value is transparent anyway, so the one
+    caller that doesn't — Settings.tsx's nav pill — is unaffected). Verified live:
+    Vault > Worlds now shows the seeded "Fourth Wing" card with its real dark-navy
+    background and legible text, screenshotted via headless Chromium.
+  - **Bug 2 (the parchment text complaint) — Tailwind's `--color-*` utility variables
+    never actually re-pointed inside `.parchment-surface`, only the `--td-*` variables
+    underneath them did.** `.parchment-surface` (Chronicle's reading pane) redeclares
+    `--td-ink`/`--td-gold-primary`/`--td-skill`/etc. for on-paper legibility, and
+    plain inherited `color` (e.g. the narration `<p>` itself, which sets no explicit
+    color class) picks that up correctly. But every *explicit* Tailwind color utility
+    (`text-gold-primary`, `text-skill`, `text-ink`, ...) instead reads a `--color-*`
+    variable declared once in `@theme` on `:root` as `--color-skill: var(--td-skill)`
+    — and CSS resolves that nested `var()` relative to where `--color-skill` itself
+    is declared (`:root`), not where it's used, so its computed value is frozen to
+    the dark-theme hex before `.parchment-surface` ever gets a chance to override
+    `--td-skill`. Confirmed directly: `getComputedStyle` on a `.text-skill` span
+    inside the parchment surface reported the dark-chrome blue (`#a9c1f5`), not the
+    surface's own navy (`#31456e`), until the fix. This meant *every* explicit
+    color-utility span in the Chronicle log — the timestamp line, the player-action
+    line, turn-state/level-up/discovery/craft-ready pills, "Suggested Actions",
+    "Load Earlier Turns", richText's Skill/Item spans, the bang-command dossier rows
+    — was rendering its dark-theme color on cream paper the whole time, some with
+    real contrast problems (light gold, light blue). Fixed by also redeclaring the
+    `--color-*` variables directly inside `.parchment-surface` (not just `--td-*`),
+    for every token that block already overrides. Verified by rendering the actual
+    compiled CSS against representative markup in headless Chromium and reading
+    `getComputedStyle` before/after: `--color-skill` on the surface went from
+    `#a9c1f5` to the correct `#31456e`, `--color-gold-primary` from `#f0ca65` to
+    `#8a6a24`, matching the surface's own palette exactly.
+  - **Turn-state accent colors (`lib/turnStates.ts`) also got a parchment-safe
+    variant**, following the same pattern as bug 2's fix rather than being swept into
+    it: `TURN_STATE_META`'s 9 states carried raw hex tuned for dark chrome only
+    (light gold, light purple, cyan, ...) applied as inline `style={{ color:
+    stateMeta.accent }}` in Chronicle's TurnBlock — a raw hex string, not a Tailwind
+    class, so bug 2's fix doesn't touch it. Each state's `accent` is now a
+    `var(--td-state-x)` reference; `index.css` declares the original dark-tuned hex
+    on `:root` and a hand-picked darker/more-saturated equivalent per state inside
+    `.parchment-surface` (Explore/Social deliberately reuse the existing
+    `--td-emerald`/`--td-rose` rather than a near-duplicate hex, since those are the
+    same semantic color family). The one other consumer, the left-accent border,
+    used to build its alpha via string-concatenating `${accent}55` onto a hex
+    literal — doesn't work with a `var()` reference, so switched to
+    `color-mix(in srgb, ${accent} 33%, transparent)`. Verified the same way as bug 2
+    (rendered against the real compiled CSS, computed styles read back).
+  - **Player's own action, novel-style**: the `> {action}` line was `font-mono text-xs`
+    — a literal console-prompt echo sitting inside otherwise-serif narration. Now
+    `font-narrative italic text-sm` (same serif family as the prose), no `>` prefix;
+    still `text-gold-primary` so it stays visually distinct from the narration below
+    it, just no longer styled like a terminal.
+  - `npm run typecheck`/`npm run build` clean throughout. All three fixes were
+    verified by rendering the actual compiled `dist/` CSS against representative
+    markup in headless Chromium and reading back `getComputedStyle`/screenshots —
+    not by reasoning about Tailwind/CSS-cascade behavior alone, since that reasoning
+    is exactly what missed both bugs the first time.
 - **Mobile FPS-drop audit: Title/Main Menu/creation flow (`cyclingBackground.tsx`,
   `glassChrome.tsx`, `MainMenu.tsx`, `WorldSetup.tsx`, `NewGame.tsx`,
   `VaultSoundtrackView.tsx`, `VaultArtGalleryView.tsx`)**: 2026-09-04 (Claude Code on

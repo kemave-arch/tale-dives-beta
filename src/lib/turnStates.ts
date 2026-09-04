@@ -3,19 +3,23 @@ import type { LucideIcon } from 'lucide-react'
 import type { TurnState } from '../types.ts'
 
 // §4.3 9-Tier Turn State Matrix — icon mapping per §6.1b. `accent` is used
-// both as the per-entry left-accent/icon color in the Chronicle log AND,
-// per the user's explicit request, as a live retint of the surrounding
-// chrome (header, input bar, window frame, ambient motes) in Chronicle.tsx —
-// the parchment reading surface itself is deliberately left alone so mood
-// lighting never competes with prose readability.
+// as the per-entry left-accent/icon color in the Chronicle log, which renders
+// on the parchment reading surface. A CSS custom property reference, not raw
+// hex — TurnBlock (Chronicle.tsx) applies it as an inline style, so it needs
+// to resolve differently on the dark chrome vs. the light parchment paper the
+// same way --td-ink/--td-gold-primary/etc. already do (see index.css's
+// .parchment-surface): the dark-tuned original hex values (light gold, light
+// purple, cyan, ...) had poor contrast once actually read against cream
+// paper. Each --td-state-* custom property is declared once for dark chrome
+// (index.css's :root) and once, darkened, for parchment (.parchment-surface).
 export const TURN_STATE_META: Record<TurnState, { icon: LucideIcon; label: string; accent: string }> = {
-  PEACE: { icon: Sun, label: 'Peace', accent: '#fcd34d' }, // light gold
-  COMBAT: { icon: Swords, label: 'Combat', accent: '#991b1b' }, // dark red
-  STEALTH: { icon: Moon, label: 'Stealth', accent: '#a78bfa' }, // light purple
-  DESPAIR: { icon: CloudFog, label: 'Despair', accent: '#4f46e5' }, // indigo
-  EXPLORE: { icon: Compass, label: 'Explore', accent: '#10b981' }, // emerald
-  INSIGHT: { icon: Eye, label: 'Insight', accent: '#06b6d4' }, // cyan
-  SOCIAL: { icon: MessageCircle, label: 'Social', accent: '#f43f5e' }, // rose pink
-  INTIMACY: { icon: Heart, label: 'Intimacy', accent: '#ec4899' }, // pink
-  PAUSE: { icon: Pause, label: 'Paused', accent: '#78716c' }, // grey
+  PEACE: { icon: Sun, label: 'Peace', accent: 'var(--td-state-peace)' },
+  COMBAT: { icon: Swords, label: 'Combat', accent: 'var(--td-state-combat)' },
+  STEALTH: { icon: Moon, label: 'Stealth', accent: 'var(--td-state-stealth)' },
+  DESPAIR: { icon: CloudFog, label: 'Despair', accent: 'var(--td-state-despair)' },
+  EXPLORE: { icon: Compass, label: 'Explore', accent: 'var(--td-state-explore)' },
+  INSIGHT: { icon: Eye, label: 'Insight', accent: 'var(--td-state-insight)' },
+  SOCIAL: { icon: MessageCircle, label: 'Social', accent: 'var(--td-state-social)' },
+  INTIMACY: { icon: Heart, label: 'Intimacy', accent: 'var(--td-state-intimacy)' },
+  PAUSE: { icon: Pause, label: 'Paused', accent: 'var(--td-state-pause)' },
 }

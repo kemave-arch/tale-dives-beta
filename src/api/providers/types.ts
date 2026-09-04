@@ -30,6 +30,7 @@ export interface RunSummaryParams {
   apiKey: string
   model: string
   temperature: number
+  maxOutputTokens: number
   history: HistoryTurn[]
 }
 

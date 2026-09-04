@@ -30,7 +30,7 @@ import { applyLevelUps, isChapterBoundary, CHAPTER_TURN_INTERVAL } from './lib/l
 import { parseKeywordLinks } from './lib/keywordLinks.ts'
 import { slugify } from './lib/slug.ts'
 import { getProvider } from './api/providers/index.ts'
-import { PROSE_DEPTHS, DEFAULT_NARRATION_STYLE } from './api/turnContract.ts'
+import { PROSE_DEPTHS, DEFAULT_NARRATION_STYLE, MAX_OUTPUT_TOKENS_CEILING } from './api/turnContract.ts'
 import { readJSONFile, saveJSON } from './lib/backup.ts'
 import { useConfirm } from './lib/useConfirm.tsx'
 import { useLongTextEditor } from './lib/useLongTextEditor.tsx'
@@ -467,12 +467,18 @@ export default function App() {
     if (pendingRecall) setPendingRecall(null)
     const newHistory: HistoryTurn[] = [...baseHistory, { role: 'user', parts: [{ text: userTurnText }] }]
 
+    // World seeding — the campaign's very first turn, establishing the
+    // opening scene — always gets the API's own output ceiling rather than
+    // the campaign's chosen Prose Depth: beginCampaign's firstAction call is
+    // the only sendAction call site that passes an empty overrideHistory, so
+    // that's a reliable signal it's this call rather than an ordinary turn.
+    const isWorldSeedingTurn = overrideHistory !== undefined && overrideHistory.length === 0
     try {
       const result = await getProvider(apiSettings.provider).runTurn({
         apiKey: apiSettings.apiKey,
         model: apiSettings.model,
         temperature: apiSettings.temperature,
-        maxOutputTokens: current.proseDepth.maxOutputTokens,
+        maxOutputTokens: isWorldSeedingTurn ? MAX_OUTPUT_TOKENS_CEILING : current.proseDepth.maxOutputTokens,
         history: newHistory,
       })
 
@@ -790,6 +796,7 @@ export default function App() {
         apiKey: apiSettings.apiKey,
         model: apiSettings.model,
         temperature: apiSettings.temperature,
+        maxOutputTokens: MAX_OUTPUT_TOKENS_CEILING,
         history: historyForSummary,
       })
 

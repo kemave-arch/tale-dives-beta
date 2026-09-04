@@ -1,8 +1,9 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-04, Claude Code on the web — re-verified soundtrack pathing
-after a large AI Studio batch (OST jukebox, navigation history); no bug found, see the
-log entry below for the live proof.
+**Last updated:** 2026-09-04, Claude Code on the web — Turn 1 and chapter recaps now
+always use the API's own max output-token ceiling instead of the campaign's chosen
+Prose Depth, after the user hit a mid-sentence cutoff on a fresh campaign's very first
+turn.
 
 > ## 🎨 READ THIS BEFORE TOUCHING ANY SCREEN — the app now has ONE theme
 > The selectable parchment/obsidian **skins are gone** (`UiPrefs.skin`, the `Skin` type,
@@ -83,6 +84,29 @@ rule applies to music.
 > still unbuilt, but no longer blocked on "there's nothing to seed from."
 
 Recent shipped work, most recent first: 
+- **Max output-token ceiling for world seeding (Turn 1) and chapter recaps
+  (`turnContract.ts`, `App.tsx`, `api/providers/{types,gemini}.ts`)**: 2026-09-04
+  (Claude Code on the web). The user hit a fresh campaign's Turn 1 getting cut off
+  mid-sentence even under the IMMERSIVE Prose Depth default (6144 max tokens) and
+  asked to set the ceiling to max specifically for world seeding and chapter recaps —
+  everyday turns should stay governed by the campaign's chosen Prose Depth (cost scales
+  with every turn), but these two calls are rare (once per campaign, once every
+  `CHAPTER_TURN_INTERVAL` turns) and high-value enough that the tradeoff doesn't apply.
+  New `MAX_OUTPUT_TOKENS_CEILING` (`turnContract.ts`, `65536` — the documented ceiling
+  for current-generation Gemini flash/pro models; flag if a real call ever errors on it,
+  since a future model in the roster could sit lower). `App.tsx`'s `sendAction` now
+  detects the world-seeding call via its own existing signal — `beginCampaign`'s
+  `firstAction` is the only call site that passes an empty `overrideHistory` array — and
+  substitutes the ceiling for `current.proseDepth.maxOutputTokens` only on that call.
+  `runSummary` (the chapter-recap call, `gemini.ts`) had a hardcoded `maxOutputTokens:
+  3072` baked into its request body; that's now a required parameter on
+  `RunSummaryParams`/`SummaryParams`, and `recapChapter` passes the same ceiling.
+  "World seeding" as the user means it here is Turn 1's opening-scene call, not the
+  blueprint's unbuilt grounded campaign-seeding feature (`runSeed`/`SEED_SCHEMA`, §4
+  item 7 below) — that still doesn't exist. `npm run typecheck`/`npm run build` clean;
+  not yet exercised against a real API call (would spend the configured key's quota) —
+  a human should confirm Turn 1 no longer truncates on the next real playthrough, and
+  flag it here if this specific model ever rejects a 65536 ceiling outright.
 - **Re-verified soundtrack pathing after the OST jukebox/navigation-history batch**:
   2026-09-04 (Claude Code on the web). The user asked to "fix again the Vite pathing
   for soundtracks" after merging AI Studio's `cd955f0`/`4bdd1e7`/`a7c8729` (OST jukebox

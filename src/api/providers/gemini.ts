@@ -125,6 +125,7 @@ interface SummaryParams {
   apiKey: string
   model: string
   temperature: number
+  maxOutputTokens: number
   history: HistoryTurn[]
 }
 
@@ -135,10 +136,13 @@ interface SummaryParams {
 // chapter summary is prose that only exists once every ~15 turns — it isn't
 // worth carrying on every single turn's schema).
 // Widened from a terse 2-sentence/200-token cap to a full narrated recap
-// (2026-09-04, alongside the IMMERSIVE prose-depth increase) so chapter
-// breaks read like a real novel's "previously..." passage instead of a
-// mechanical plot-point list.
-export async function runSummary({ apiKey, model, temperature, history }: SummaryParams): Promise<string> {
+// (2026-09-04, alongside the IMMERSIVE prose-depth increase), then handed
+// the caller's own ceiling (2026-09-04, MAX_OUTPUT_TOKENS_CEILING from
+// turnContract.ts — a recap happens rarely enough that the cost tradeoff
+// IMMERSIVE was tuned for doesn't apply) so chapter breaks read like a real
+// novel's "previously..." passage instead of a mechanical plot-point list,
+// without getting cut off mid-paragraph.
+export async function runSummary({ apiKey, model, temperature, maxOutputTokens, history }: SummaryParams): Promise<string> {
   const url = `${BASE_URL}/${encodeURIComponent(model)}:generateContent`
 
   const body = {
@@ -153,7 +157,7 @@ export async function runSummary({ apiKey, model, temperature, history }: Summar
         ],
       },
     ],
-    generationConfig: { temperature, maxOutputTokens: 3072 },
+    generationConfig: { temperature, maxOutputTokens },
   }
 
   const res = await fetch(url, {

@@ -223,5 +223,15 @@ export const PROSE_DEPTHS: Record<'CONCISE' | 'BALANCED' | 'IMMERSIVE', ProseDep
   IMMERSIVE: { label: 'IMMERSIVE', targetTokens: '~2,800-4,000 tokens', maxOutputTokens: 6144 },
 }
 
+// The two calls that ignore the campaign's chosen Prose Depth entirely and
+// always get the API's own output ceiling instead: Turn 1 (the world/opening
+// gets established once per campaign — App.tsx's beginCampaign/firstAction
+// call) and a chapter recap (runSummary, ~once every CHAPTER_TURN_INTERVAL
+// turns). Both are rare and high-value enough that cost isn't the
+// constraint IMMERSIVE's 6144 was tuned for — getting cut off mid-sentence
+// on the very first page, or on the "previously..." recap, is worse than
+// spending more tokens on the calls that happen least often.
+export const MAX_OUTPUT_TOKENS_CEILING = 65536
+
 export const DEFAULT_NARRATION_STYLE =
   'Third-person limited, past tense. Long, sensory sentences that build atmosphere through concrete physical detail — weight, temperature, texture, sound — periodically broken by short, blunt sentences at moments of violence or shock, so pacing itself carries tension. Occasional spare narratorial asides on cost, memory, or fate, never more than a line. Dialogue is economical and purposeful; characters are shown through action, restraint, and what they don\'t say rather than through exposition.'

@@ -166,8 +166,8 @@ export default function MainMenu({
           {tab === 'tales' && (
             <div className="flex-1 min-h-0 overflow-y-auto pr-1">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4">
-                {taleList.map((tale) => (
-                  <div key={tale.id} className={`${GLASS_SURFACE_LIST} bg-[#120e1b]/80 border-[#e8ca8a]/30 rounded-2xl p-4 flex flex-col gap-2.5 transition-colors hover:border-[#f0ca65]/50`}>
+                {taleList.map((tale, index) => (
+                  <div key={tale.id} className={`${GLASS_SURFACE_LIST} ${index === 0 || index === 1 ? 'bg-[#120e1b]/95' : 'bg-[#120e1b]/80'} border-[#e8ca8a]/30 rounded-2xl p-4 flex flex-col gap-2.5 transition-colors hover:border-[#f0ca65]/50`}>
                     <h3 className="font-display font-bold text-base text-[#fae5b5] tracking-wide">{tale.title}</h3>
                     {tale.synopsis && <p className="font-narrative text-xs text-[#fbf4e2] line-clamp-2 leading-relaxed">{tale.synopsis}</p>}
                     <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#e8ca8a]/15">
@@ -221,11 +221,11 @@ export default function MainMenu({
               {vaultTab === 'worlds' && (
                 <div className="flex-1 min-h-0 overflow-y-auto pr-1">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 pb-4">
-                    {worldList.map((world) => (
+                    {worldList.map((world, index) => (
                       <div
                         key={world.id}
                         onClick={() => setSelectedWorld(world)}
-                        className={`${GLASS_SURFACE_LIST} bg-[#091824]/85 border-[#38bdf8]/35 rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between gap-3 transition-all duration-200 hover:border-[#38bdf8]/80 hover:bg-[#0c2234]/95 hover:shadow-[0_8px_24px_rgba(56,189,248,0.2)] cursor-pointer group`}
+                        className={`${GLASS_SURFACE_LIST} ${index === 0 || index === 1 ? 'bg-[#091824]/95' : 'bg-[#091824]/85'} border-[#38bdf8]/35 rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between gap-3 transition-all duration-200 hover:border-[#38bdf8]/80 hover:bg-[#0c2234]/95 hover:shadow-[0_8px_24px_rgba(56,189,248,0.2)] cursor-pointer group`}
                       >
                         <div className="flex flex-col gap-2">
                           <div className="flex items-start justify-between gap-2">
@@ -295,13 +295,13 @@ export default function MainMenu({
               {vaultTab === 'protagonists' && (
                 <div className="flex-1 min-h-0 overflow-y-auto pr-1">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 pb-4">
-                    {protagonistList.map((p) => {
+                    {protagonistList.map((p, index) => {
                       const details = [p.className, p.gender, p.age !== undefined ? `Age ${p.age}` : null].filter(Boolean).join(' • ')
                       return (
                         <div
                           key={p.id}
                           onClick={() => setSelectedProtagonist(p)}
-                          className={`${GLASS_SURFACE_LIST} bg-[#190d29]/85 border-[#c084fc]/35 rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between gap-3 transition-all duration-200 hover:border-[#c084fc]/80 hover:bg-[#23123a]/95 hover:shadow-[0_8px_24px_rgba(192,132,252,0.2)] cursor-pointer group`}
+                          className={`${GLASS_SURFACE_LIST} ${index === 0 || index === 1 ? 'bg-[#190d29]/95' : 'bg-[#190d29]/85'} border-[#c084fc]/35 rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between gap-3 transition-all duration-200 hover:border-[#c084fc]/80 hover:bg-[#23123a]/95 hover:shadow-[0_8px_24px_rgba(192,132,252,0.2)] cursor-pointer group`}
                         >
                           <div className="flex flex-col gap-2">
                             <div className="flex items-start justify-between gap-2">

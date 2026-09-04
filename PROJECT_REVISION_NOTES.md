@@ -62,10 +62,7 @@ rule applies to music.
 
 > ## ⏭️ PICK UP HERE — pending work, in the user's own priority order
 > Full detail for each is in **§4's item 8**; this is the at-a-glance version.
-> 1. ~~**Skills**~~ — **done** 2026-09-04, commit `d4616a5`. The **Quick-Slot Tray half
->    is still open** and was explicitly deprioritized by the user ("Skill quick slot is
->    not a priority"), so do not start it without asking. See §3's Skills entry for what
->    shipped and the two deliberate omissions.
+> 1. ~~**Skills**~~ — **done**. The **Quick-Slot Tray** feature has been explicitly and permanently **scrapped/cut** by the user ("forget about Quick-skill lots in the blueprint"). Do not implement it or ask about it.
 > 2. ~~**API Failure Diagnostics Panel**~~ (§3.5) — **done**. Masked key, one-click "Copy
 >    Diagnostic Report," Retry / Open Settings / Dismiss-into-PAUSE. Styled in glassmorphism.
 > 3. ~~**Action Suggestion Pills**~~ (§6.4C) — **done**. The `act` schema field is now rendered
@@ -77,7 +74,9 @@ rule applies to music.
 > prologue beat, and streaming turn rendering (§4 item 7), and **Inspired Mode** (§4 item 5,
 > deferred on a quota block with evidence — read that entry before re-attempting).
 
-Recent shipped work, most recent first: a **glass-button pass** on the shared
+Recent shipped work, most recent first: 
+- **"Clear Local Data" button & no-scroll viewport**: 2026-09-04. Fixed a logic bug in Settings where "Reset Defaults" was wiping the database instead of the display preferences, separated them correctly, and added `overscroll-behavior: none` + a fixed container to `Chronicle` so the outer glass canvas locks in place like a game viewport rather than panning/rubber-banding.
+- **Glass-button pass** on the shared
 `GlassCTAButton` (frosted hover tint, a properly uniform tapered border, ring-above-fill
 layering, focus-visible parity) plus the **hover trap** discovery now documented in §0 —
 read that before ever debugging a `hover:` style here. Before that: a punch list from the

@@ -173,17 +173,25 @@ function BackgroundLayer({ stem, active }: { stem: string; active: boolean }) {
   )
 }
 
-// Crossfades through `stems`: every layer sits stacked (inset-0), only the
-// active one is opacity-100, and both the outgoing and incoming layers
-// animate on the same `transition`, which is what makes it read as one
-// dissolve rather than a fade-to-black-then-in. A no-op with a single slot
-// — the interval never starts, so there's just one static, correctly-picked
-// background. `fixed` pins the art to the viewport regardless of the page's
-// own scroll (for a scrollable screen like MainMenu); Title, which never
-// scrolls, uses the cheaper `absolute`.
+// Crossfades through `stems`, but only ever mounts the active slot plus —
+// for the ~7s BG_FADE_MS window while a crossfade is actually in flight —
+// the one it's fading out from, not every discovered slot at once. Each
+// BackgroundLayer carries its own full-viewport `filter: blur(36px)` copy
+// (see below), which is real, sustained GPU/compositor cost on a phone;
+// with N slots always mounted that cost scaled with N even though at most
+// two are ever visible mid-dissolve and only one is ever visible at rest.
+// A no-op with a single slot — the interval never starts, so there's just
+// one static, correctly-picked background, one layer, nothing to crossfade.
+// `fixed` pins the art to the viewport regardless of the page's own scroll
+// (for a scrollable screen like MainMenu); Title, which never scrolls, uses
+// the cheaper `absolute`.
 export function CyclingBackground({ fixed = false }: { fixed?: boolean }) {
   const stems = useDiscoveredSlots()
   const [active, setActive] = useState(0)
+  // Indices currently mounted — just `[active]` at rest; briefly gains the
+  // previous index for exactly one BG_FADE_MS window whenever `active`
+  // changes, then drops back to one.
+  const [mounted, setMounted] = useState<number[]>([0])
 
   useEffect(() => {
     if (stems.length < 2) return
@@ -192,7 +200,13 @@ export function CyclingBackground({ fixed = false }: { fixed?: boolean }) {
     return () => clearInterval(id)
   }, [stems.length])
 
-  const layers = stems.map((stem, i) => <BackgroundLayer key={stem} stem={stem} active={i === active} />)
+  useEffect(() => {
+    setMounted((prev) => (prev.includes(active) ? prev : [...prev, active]))
+    const timer = window.setTimeout(() => setMounted([active]), BG_FADE_MS)
+    return () => clearTimeout(timer)
+  }, [active])
+
+  const layers = mounted.map((i) => <BackgroundLayer key={stems[i]} stem={stems[i]} active={i === active} />)
 
   // `display: contents` (used for the non-fixed case, so Title's own
   // `position: relative` root stays the containing block for these

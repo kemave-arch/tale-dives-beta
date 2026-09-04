@@ -163,6 +163,16 @@ export function GlassButton({ onClick, children, icon: Icon, tone = 'default', d
 // (not a component) so it composes freely with layout classes per call site.
 export const GLASS_SURFACE = 'border border-[#e8ca8a]/25 bg-transparent backdrop-blur-sm'
 export const GLASS_SURFACE_HOVER = 'transition-colors duration-150 hover:border-[#e8ca8a]/60'
+// Same border, no backdrop-filter — for a card repeated many times in a
+// scrollable list/grid (Tales, Worlds, Protagonists, the OST playlist, the
+// Art gallery) rather than a one-off panel. Every such card already paints
+// its own ~80%+ opaque background color on top, so `backdrop-blur-sm`
+// underneath it was doing almost nothing visually while still costing a
+// real compositor layer per card — measurable on a phone GPU once a dozen+
+// are on screen and scrolling. Reserve GLASS_SURFACE itself for single
+// panels sitting directly over the moving artwork, where the blur is doing
+// real, visible work.
+export const GLASS_SURFACE_LIST = 'border border-[#e8ca8a]/25 bg-transparent'
 
 // ---------------------------------------------------------------------------
 // Screen-level shell

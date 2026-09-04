@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Bookmark, Check, CheckCircle2, Eye, Fingerprint, Plus, Save, Search, UserCircle, X } from 'lucide-react'
 import { PRESET_CLASSES } from '../data/classes.ts'
 import {
-  FIELD_CLASS, GLASS_SURFACE, GlassButton, GlassCTAButton, GlassField, GlassHeader, GlassLongTextarea, GlassScreen, GlassTabs,
+  FIELD_CLASS, GLASS_SURFACE, GLASS_SURFACE_LIST, GlassButton, GlassCTAButton, GlassField, GlassHeader, GlassLongTextarea, GlassScreen, GlassTabs,
   SELECT_CLASS,
 } from '../lib/glassChrome.tsx'
 import { PERSONALITY_EXAMPLES, MOTIVATION_EXAMPLES } from '../data/formExamples.ts'
@@ -185,7 +185,7 @@ export default function NewGame({
                         <div
                           key={t.id ?? t.name}
                           onClick={() => setSelectedDeckId(t.id ?? null)}
-                          className={`${GLASS_SURFACE} rounded-xl p-3.5 flex flex-col gap-2 transition-all duration-150 cursor-pointer ${
+                          className={`${GLASS_SURFACE_LIST} rounded-xl p-3.5 flex flex-col gap-2 transition-all duration-150 cursor-pointer ${
                             isSelected
                               ? 'bg-[#23123a]/95 border-[#c084fc] shadow-[0_0_16px_rgba(192,132,252,0.25)] ring-1 ring-[#c084fc]/60'
                               : isCurrent

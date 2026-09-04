@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useDiscoveredSlots } from '../lib/cyclingBackground.tsx'
-import { GLASS_SURFACE, GlassIconButton } from '../lib/glassChrome.tsx'
+import { GLASS_SURFACE, GLASS_SURFACE_LIST, GlassIconButton } from '../lib/glassChrome.tsx'
 
 const WALLPAPER_METADATA: Record<string, { title: string; subtitle: string; description: string }> = {
   'title-bg1': {
@@ -175,7 +175,7 @@ export default function VaultArtGalleryView() {
                 setSelectedSlotIndex(index)
                 setViewVariant('pc')
               }}
-              className={`${GLASS_SURFACE} bg-[#100b1a]/85 border-[#e8ca8a]/25 hover:border-[#f0ca65]/60 hover:bg-[#160f24]/95 rounded-2xl overflow-hidden cursor-pointer group transition-all duration-200 shadow-[0_6px_24px_rgba(0,0,0,0.45)] hover:shadow-[0_10px_32px_rgba(240,202,101,0.2)] flex flex-col`}
+              className={`${GLASS_SURFACE_LIST} bg-[#100b1a]/85 border-[#e8ca8a]/25 hover:border-[#f0ca65]/60 hover:bg-[#160f24]/95 rounded-2xl overflow-hidden cursor-pointer group transition-all duration-200 shadow-[0_6px_24px_rgba(0,0,0,0.45)] hover:shadow-[0_10px_32px_rgba(240,202,101,0.2)] flex flex-col`}
             >
               {/* Image Preview Container */}
               <div className="relative aspect-video w-full overflow-hidden bg-black/70">

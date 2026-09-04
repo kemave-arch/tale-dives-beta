@@ -1,9 +1,12 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-04, Claude Code on the web — Skill/Item mentions in the
-Chronicle's narration no longer render as rounded UI chips; they're bold/italic
-colored text now, like a novel's own typography, after the user flagged the chips as
-breaking immersion on the parchment.
+**Last updated:** 2026-09-04, Claude Code on the web — mobile FPS-drop investigation
+across Title/Main Menu/the creation flow, ending in two real fixes: `CyclingBackground`
+was always mounting every discovered background slot's full-viewport 36px-blur layer
+at once (now mounts at most two, only during an actual crossfade), and every
+repeated-card list (Tales, Worlds, Protagonists, OST playlist, Art gallery) was paying
+for a `backdrop-blur-sm` that its own ~80%+ opaque card background made nearly
+invisible. See the log entry below for the full audit and what was left alone.
 
 > ## 🎨 READ THIS BEFORE TOUCHING ANY SCREEN — the app now has ONE theme
 > The selectable parchment/obsidian **skins are gone** (`UiPrefs.skin`, the `Skin` type,
@@ -84,6 +87,58 @@ rule applies to music.
 > still unbuilt, but no longer blocked on "there's nothing to seed from."
 
 Recent shipped work, most recent first: 
+- **Mobile FPS-drop audit: Title/Main Menu/creation flow (`cyclingBackground.tsx`,
+  `glassChrome.tsx`, `MainMenu.tsx`, `WorldSetup.tsx`, `NewGame.tsx`,
+  `VaultSoundtrackView.tsx`, `VaultArtGalleryView.tsx`)**: 2026-09-04 (Claude Code on
+  the web). The user noticed FPS drop on phone across Title/Main Menu/Tales creation and
+  asked what's performance-heavy there. Found two real, fixable costs — both are the
+  classic mobile-GPU killers (CSS `filter`/`backdrop-filter`), not JS logic:
+  - **`CyclingBackground` was mounting every discovered background slot at once,
+    always** — each `BackgroundLayer` carries its own full-viewport `filter: blur(36px)
+    brightness(0.4) saturate(0.85)` copy (the letterbox-fill layer), and the old code
+    `stems.map(...)`'d *all* of them every render, toggling only `opacity` to pick the
+    active one. With 3 real slots today that's 3 always-live full-viewport 36px blurs
+    (6 layers total counting each slot's sharp copy too) on **every** `ground="art"`
+    screen — Title, Main Menu, Story Mode, World Setup, Protagonist Setup, Tale Brief —
+    i.e. exactly the screens the user named. Rewrote it to track which slot indices are
+    actually `mounted` (a `useState<number[]>`) instead of mapping the full `stems`
+    array: at rest only the active slot mounts, and the previous one is added back in
+    for exactly one `BG_FADE_MS` (~7s) window when a crossfade starts, then dropped —
+    so it's 1 blurred layer at rest, briefly 2 mid-dissolve, never 3+. Verified live via
+    headless Chromium sampling `getComputedStyle(...).filter` counts every 2s across a
+    full ~30s cycle: 1 → 1 → ... → 2 (during the crossfade window) → back to 1, matching
+    intent exactly; a Title/Main Menu screenshot after the change still renders
+    correctly.
+  - **Every repeated card list was paying for a `backdrop-blur-sm` its own background
+    already made pointless**: `GLASS_SURFACE` (the shared card-chrome class) bakes in
+    `backdrop-blur-sm`, and it was being used per-item inside `.map()`s — Main Menu's
+    Tales/Worlds/Protagonists grids, World Setup's/Protagonist Setup's Load-Preset deck
+    lists, the OST playlist, the Art gallery grid — each card already painting its own
+    ~75-95%-opaque background color on top (checked every branch, including
+    selected/hover states, before touching anything). A near-opaque backdrop makes
+    `backdrop-filter` sample almost nothing new, so the visual contribution was close to
+    zero while the compositor cost (a real backdrop-sampling layer per card) scaled with
+    however many saved Tales/Worlds/Protagonists a player has — worse over time, not
+    better, and worst exactly while scrolling that list. New `GLASS_SURFACE_LIST`
+    export in `glassChrome.tsx` (identical border/fill, no `backdrop-blur-sm`), swapped
+    into those 7 repeated-card call sites only. **Left untouched on purpose**:
+    `GLASS_SURFACE`'s single-instance panel uses (headers, footers, the Vault OST/Art
+    tab banners) where the backing color is genuinely translucent (e.g. World
+    Setup's/Protagonist Setup's footer at `bg-[#07050c]/50` — 50% opacity, over the
+    still-scrolling artwork) — there the blur is doing real, visible work and there's
+    only ever one instance on screen, so the cost is negligible.
+  - **Also reviewed, no change made**: `AmbientSparks` (22 CSS-animated spans, but only
+    `transform`/`opacity` — compositor-only, confirmed via `index.css`'s keyframes, not
+    layout-triggering); `VaultArtGalleryView`'s framer-motion pinch-zoom/pan and its
+    `backdrop-blur-xl` lightbox (only active while that modal/zoom is actually open, not
+    a background cost on Main Menu itself); `backgroundMusic.tsx`'s fade `setInterval`
+    (a `50ms` tick only while a track fade is in flight, trivial JS, no layout/paint).
+  - `npm run typecheck`/`npm run build` clean. **Verification gap**: the repeated-card
+    opacity change was reasoned from source (every branch's background color checked)
+    and built clean, but not spot-checked live against a real saved Tale/World/
+    Protagonist list (this session's local storage was empty) — a human should glance
+    at the Vault grids on a real device to confirm nothing reads as too transparent now
+    that `backdrop-blur-sm` is gone from those cards.
 - **Skill/Item narration markup: chips → novel-style bold/italic text
   (`richText.tsx`)**: 2026-09-04 (Claude Code on the web). The user flagged that
   `[Skill]` and `>Item<` mentions in Chronicle's narration rendered as rounded pill/

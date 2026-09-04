@@ -1,6 +1,6 @@
 import { Disc3, FastForward, Music, Pause, Play, Rewind, Volume2, VolumeX } from 'lucide-react'
 import { SOUNDTRACK_TRACKS, type TrackMetadata } from '../data/soundtrackManifest.ts'
-import { GLASS_SURFACE, GlassButton, GlassIconButton } from '../lib/glassChrome.tsx'
+import { GLASS_SURFACE, GLASS_SURFACE_LIST, GlassButton, GlassIconButton } from '../lib/glassChrome.tsx'
 
 interface VaultSoundtrackViewProps {
   currentTrack: TrackMetadata | null
@@ -242,7 +242,7 @@ export default function VaultSoundtrackView({
             <div
               key={track.filename}
               onClick={() => onPlayTrack(track.filename)}
-              className={`${GLASS_SURFACE} ${
+              className={`${GLASS_SURFACE_LIST} ${
                 isThisActive
                   ? 'bg-[#1e1533]/90 border-[#f0ca65]/80 shadow-[0_0_16px_rgba(240,202,101,0.2)] ring-1 ring-[#f0ca65]/50'
                   : 'bg-[#100b1a]/75 border-[#e8ca8a]/25 hover:border-[#f0ca65]/50 hover:bg-[#160f24]/90'

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Info, Layers, Bookmark, Save, Plus, Search, X, Globe, Eye, Check, CheckCircle2 } from 'lucide-react'
 import { DEFAULT_NARRATION_STYLE } from '../api/turnContract.ts'
 import {
-  FIELD_CLASS, GLASS_SURFACE, GlassButton, GlassCTAButton, GlassField, GlassHeader, GlassLongTextarea, GlassScreen, GlassTabs,
+  FIELD_CLASS, GLASS_SURFACE, GLASS_SURFACE_LIST, GlassButton, GlassCTAButton, GlassField, GlassHeader, GlassLongTextarea, GlassScreen, GlassTabs,
 } from '../lib/glassChrome.tsx'
 import { GENRE_TONE_EXAMPLES, POWER_SYSTEM_EXAMPLES } from '../data/formExamples.ts'
 import type { WorldData } from '../types.ts'
@@ -187,7 +187,7 @@ export default function WorldSetup({
                         <div
                           key={t.id ?? t.name}
                           onClick={() => setSelectedDeckId(t.id ?? null)}
-                          className={`${GLASS_SURFACE} rounded-xl p-3.5 flex flex-col gap-2 transition-all duration-150 cursor-pointer ${
+                          className={`${GLASS_SURFACE_LIST} rounded-xl p-3.5 flex flex-col gap-2 transition-all duration-150 cursor-pointer ${
                             isSelected
                               ? 'bg-[#0c2234]/95 border-[#38bdf8] shadow-[0_0_16px_rgba(56,189,248,0.25)] ring-1 ring-[#38bdf8]/60'
                               : isCurrent

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Cpu, SlidersHorizontal, Database, Info, X, Save, Download, Upload, RotateCcw, FolderOpen, FolderX, Maximize, Minimize, Trash2, Volume2, VolumeX } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Cpu, SlidersHorizontal, Database, X, Save, Download, Upload, RotateCcw, FolderOpen, FolderX, Maximize, Minimize, Trash2, Volume2, VolumeX } from 'lucide-react'
 import { PROSE_DEPTHS } from '../api/turnContract.ts'
 import { allProviders, getProvider } from '../api/providers/index.ts'
 import { forgetSaveFolder, loadSaveFolder, pickSaveFolder, supportsFileSystemAccess } from '../lib/fsAccess.ts'
@@ -12,86 +12,9 @@ const TABS = [
   { id: 'model', label: 'AI Model', icon: Cpu },
   { id: 'gameplay', label: 'Gameplay', icon: SlidersHorizontal },
   { id: 'backup', label: 'Backup', icon: Database },
-  { id: 'about', label: 'About', icon: Info },
 ] as const
 
-const CONFETTI_COLORS = ['#f0ca65', '#f5dfa0', '#a9c1f5', '#f2a3c4', '#94e3bd', '#e8ca8a']
 
-function Confetti({ count = 26 }: { count?: number }) {
-  const bits = useMemo(
-    () =>
-      Array.from({ length: count }, () => ({
-        left: `${Math.random() * 100}%`,
-        color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
-        width: `${5 + Math.random() * 4}px`,
-        height: `${8 + Math.random() * 6}px`,
-        duration: `${3.6 + Math.random() * 3.4}s`,
-        // Negative delays so the fall is already in progress on open, rather
-        // than every piece starting from the ceiling in one wave.
-        delay: `${-(Math.random() * 7)}s`,
-      })),
-    [count],
-  )
-  return (
-    <div className="bday-confetti" aria-hidden="true">
-      {bits.map((b, i) => (
-        <span
-          key={i}
-          style={{ left: b.left, background: b.color, width: b.width, height: b.height, animationDuration: b.duration, animationDelay: b.delay }}
-        />
-      ))}
-    </div>
-  )
-}
-
-function Gift({ box, ribbon, delay, size }: { box: string; ribbon: string; delay: string; size: number }) {
-  return (
-    <svg className="bday-gift" width={size} height={size} viewBox="0 0 64 64" style={{ animationDelay: delay }} aria-hidden="true">
-      <rect x="10" y="27" width="44" height="29" rx="3" fill={box} />
-      <rect x="7" y="19" width="50" height="10" rx="3" fill={box} />
-      <rect x="7" y="19" width="50" height="10" rx="3" fill="#ffffff" opacity="0.12" />
-      <rect x="28" y="19" width="8" height="37" fill={ribbon} />
-      <path d="M32 19c-6-1.5-13-6-9.5-10.5C26 4.5 31 11 32 19Z" fill={ribbon} />
-      <path d="M32 19c6-1.5 13-6 9.5-10.5C38 4.5 33 11 32 19Z" fill={ribbon} />
-      <circle cx="32" cy="18.5" r="3.2" fill={ribbon} />
-      <circle cx="32" cy="18.5" r="1.4" fill={box} opacity="0.55" />
-    </svg>
-  )
-}
-
-// The dedication this whole app was built around, so it gets the room and the
-// occasion rather than a one-line credit at the bottom of a settings tab.
-function AboutPanel() {
-  return (
-    <div className="relative overflow-hidden rounded-2xl border border-[#e8ca8a]/25 bg-[#e8ca8a]/[0.05] px-5 py-7 text-center">
-      <Confetti />
-      <div className="relative">
-        <p className="font-display text-[10px] uppercase tracking-[0.3em] text-[#e8ca8a]/70">Tale Dives is dedicated to</p>
-        <h3 className="bday-title font-display font-bold text-3xl sm:text-4xl mt-3 leading-tight">Happy Birthday</h3>
-        <p className="font-display font-bold text-xl text-[#f5dfa0] mt-2">Elisah Mirelle R. King</p>
-        <p className="font-narrative italic text-sm text-[#e8ca8a]/85 mt-1">My Avid Bookworm</p>
-
-        <div className="flex items-end justify-center gap-4 mt-6">
-          <Gift box="#7c3f5d" ribbon="#f5dfa0" delay="0s" size={46} />
-          <Gift box="#2f4a7c" ribbon="#f0ca65" delay="-0.9s" size={64} />
-          <Gift box="#3f6b4f" ribbon="#f5dfa0" delay="-1.8s" size={42} />
-        </div>
-
-        <p className="font-narrative text-sm text-ink mt-6 max-w-sm mx-auto leading-relaxed">
-          Every world in here was built so you'd always have one more story to fall into.
-        </p>
-
-        <div className="mt-7 pt-4 border-t border-[#e8ca8a]/15">
-          <p className="font-display font-bold text-sm text-gold-primary tracking-[0.22em]">TALE DIVES</p>
-          <p className="font-narrative text-xs text-ink-muted mt-1.5">App Developer: Kemuel Avenido</p>
-          <p className="font-narrative text-xs text-ink-muted mt-0.5">
-            An AI text-based fantasy RPG diving engine — local-first, provider-agnostic.
-          </p>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 export interface SettingsSavePayload {
   apiSettings: ApiSettings
@@ -204,9 +127,7 @@ export default function Settings({
       onClick={onBack}
     >
       <div
-        className={`rounded-3xl w-full p-5 border border-[#e8ca8a]/30 bg-[#0d0a14]/85 backdrop-blur-xl shadow-[0_24px_60px_-12px_rgba(0,0,0,0.8)] transition-[max-width] duration-300 ${
-          tab === 'about' ? 'max-w-xl' : 'max-w-md'
-        }`}
+        className="rounded-3xl w-full p-5 border border-[#e8ca8a]/30 bg-[#0d0a14]/85 backdrop-blur-xl shadow-[0_24px_60px_-12px_rgba(0,0,0,0.8)] transition-[max-width] duration-300 max-w-md"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
@@ -465,8 +386,6 @@ export default function Settings({
             </div>
           </div>
         )}
-
-        {tab === 'about' && <AboutPanel />}
 
         <div className="flex justify-end gap-2 mt-6">
           <GlassIconButton icon={X} label="Cancel" onClick={onBack} />

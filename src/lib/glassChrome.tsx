@@ -96,9 +96,9 @@ export function GlassCTAButton({ onClick, icon: Icon, children, className = '', 
 type IconTone = 'default' | 'action' | 'danger'
 
 const ICON_TONE_CLASS: Record<IconTone, string> = {
-  default: 'border-[#e8ca8a]/35 text-[#e8ca8a]/85 hover:border-[#e8ca8a] hover:text-[#f5dfa0]',
-  action: 'border-[#f0ca65] text-[#f5dfa0] hover:shadow-[0_0_12px_1px_rgba(240,202,101,0.5)]',
-  danger: 'border-rose-400/40 text-rose-300/85 hover:border-rose-400 hover:text-rose-200',
+  default: 'border-[#e8ca8a]/40 text-[#e8ca8a]/90 bg-[#120e1b]/50 hover:border-[#e8ca8a] hover:text-[#f5dfa0] hover:bg-[#181324]/80',
+  action: 'border-[#f0ca65] text-[#f5dfa0] bg-[#120e1b]/50 hover:bg-[#181324]/80 hover:shadow-[0_0_12px_1px_rgba(240,202,101,0.5)]',
+  danger: 'border-rose-400/40 text-rose-300/85 bg-[#120e1b]/50 hover:bg-rose-950/30 hover:border-rose-400 hover:text-rose-200',
 }
 
 interface GlassIconButtonProps {

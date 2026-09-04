@@ -81,6 +81,46 @@ rule applies to music.
 > still unbuilt, but no longer blocked on "there's nothing to seed from."
 
 Recent shipped work, most recent first: 
+- **Hidden About Screen in Settings (`Settings.tsx`)**: 2026-09-04 (AI Studio).
+  - Temporarily removed the "About" tab and `AboutPanel` from the Settings modal as requested.
+  - Verified with `compile_applet`.
+- **Fade-Only Transition & Compressed Vertical Size for OST Banner (`NowPlayingBanner.tsx`)**: 2026-09-04 (AI Studio).
+  - Replaced spring movement animation with pure smooth fade-in and fade-out (`opacity: 0` to `1`).
+  - Compressed vertical padding (`py-1 sm:py-1.5`) for a sleek, low-profile banner footprint.
+  - Verified with `compile_applet`.
+- **Fixed GlassIconButton Hover Border Rendering (`glassChrome.tsx`)**: 2026-09-04 (AI Studio).
+  - Added a solid dark glass backing (`bg-[#120e1b]/50` and `hover:bg-[#181324]/80`) to `GlassIconButton` tones so backdrop filters don't clip or drop top/bottom borders on hover.
+  - Verified with `compile_applet`.
+- **Centered & Wide PC OST Now Playing Banner (`NowPlayingBanner.tsx`)**: 2026-09-04 (AI Studio).
+  - Re-positioned the OST banner from top-right to horizontally centered across the top of the screen (`inset-x-0 mx-auto flex justify-center`).
+  - Expanded its width (`max-w-md sm:max-w-lg md:max-w-xl w-full`) and enhanced its glassmorphic depth for a prominent, centered desktop experience.
+  - Verified with `compile_applet`.
+- **Lighter Background Scrim for Tales Tab (`MainMenu.tsx`)**: 2026-09-04 (AI Studio).
+  - Adjusted the background scrim gradient dynamically when the "Tales" Main Tab is selected (`rgba(4,3,7,0.32)` to `0.52`) so the cycling fantasy wallpaper artwork shines through much more clearly.
+  - Verified with `compile_applet`.
+- **Extended Zoom-Out Range Down to 40% Scale (`VaultArtGalleryView.tsx`)**: 2026-09-04 (AI Studio).
+  - Lowered minimum scale limit from `1.0` to `0.4` (40% of original size) so users can freely zoom out smaller than full-screen via mouse scroll or 2-finger pinch.
+  - Verified with `compile_applet`.
+- **Mouse Wheel Zoom & Touch Pinch-to-Zoom Support (`VaultArtGalleryView.tsx`)**: 2026-09-04 (AI Studio).
+  - Added `onWheel` scroll listener to dynamically zoom in/out with the mouse wheel on desktop/PC.
+  - Added multi-touch `onTouchStart`, `onTouchMove`, and `onTouchEnd` handlers to support 2-finger pinch-to-zoom gestures on tablets and mobile devices.
+  - Verified with `compile_applet`.
+- **Unrestricted Panning & "Press to Go Back" Label (`VaultArtGalleryView.tsx`)**: 2026-09-04 (AI Studio).
+  - Removed container drag constraints (`dragConstraints={false}`) to allow unrestricted free panning across the entire zoomed artwork.
+  - Renamed the header guidance pill text from "Zoom Active (Drag to Pan)" to "Press to Go Back".
+  - Verified with `compile_applet`.
+- **Prominent Glowing Close Zoom Button (`VaultArtGalleryView.tsx`)**: 2026-09-04 (AI Studio).
+  - Enhanced the "Close Zoom" overlay header with a glowing gold border (`border-[#f0ca65]/50`), atmospheric drop shadow (`shadow-[0_0_20px_rgba(240,202,101,0.3)]`), action tone styling (`tone="action"`), and a clear "Zoom Active (Drag to Pan)" guidance badge.
+  - Verified with `compile_applet`.
+- **Art Gallery Click-to-Zoom & Drag Interaction (`VaultArtGalleryView.tsx`)**: 2026-09-04 (AI Studio).
+  - Added `onClick` listener with `cursor-zoom-in` and hover highlight directly onto the preview photo inside the Art Gallery Lightbox modal.
+  - Clicking the image now triggers the exact same physics-based draggable fullscreen zoom overlay as the dedicated "Zoom In" button.
+  - Verified with `compile_applet`.
+- **Art Gallery Framer Motion Zoom & Drag (`VaultArtGalleryView.tsx`)**: 2026-09-04 (AI Studio).
+  - Added a "Zoom In" button (using Lucide's `Maximize` icon) to the Art Gallery lightbox header.
+  - Implemented a fullscreen interactive overlay using Framer Motion (`AnimatePresence`, `motion.div`, `motion.img`).
+  - Enabled physics-based drag-to-pan on the zoomed image (`drag`, `dragConstraints`, `dragElastic={0.2}`) for touch and mouse panning.
+  - *Note: Development was interrupted by a Gemini API token quota exhaustion error right as this feature was completed.*
 - **Main Menu & Vault Subtab Strict Fixed Viewport & Internal Scroll (`MainMenu.tsx`, `VaultArtGalleryView.tsx`, `VaultSoundtrackView.tsx`)**: 2026-09-04 (AI Studio).
   - Configured the Main Menu root container to a strict `h-dvh max-h-dvh flex flex-col overflow-hidden` to prevent whole-page scrolling and maintain a fixed game-like viewport.
   - Set up `flex-1 min-h-0` structural wrappers on the main tab content area and deeply nested Vault sub-tabs (OST and Art).

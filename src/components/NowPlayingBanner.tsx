@@ -15,22 +15,22 @@ export default function NowPlayingBanner({ track, visible, muted, onDismiss }: N
   return (
     <aside
       aria-label="Now Playing"
-      className="fixed top-0 right-0 z-50 pointer-events-none"
+      className="fixed top-0 inset-x-0 z-50 pointer-events-none flex justify-center"
       style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
     >
-      <div className="px-4 sm:px-6 w-full flex items-center justify-end">
+      <div className="px-4 sm:px-6 w-full max-w-xl flex items-center justify-center">
         <AnimatePresence>
           {visible && (
             <motion.div
               id="td-now-playing-banner"
               key={track.filename}
-              initial={{ opacity: 0, y: -24, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -18, scale: 0.96, transition: { duration: 0.22 } }}
-              transition={{ type: 'spring', stiffness: 340, damping: 26 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
               onClick={onDismiss}
               title={`${track.title} - ${track.album} (${track.artist})`}
-              className="pointer-events-auto cursor-pointer group relative flex items-center gap-2.5 px-3.5 sm:px-4 py-1.5 sm:py-2 mr-[84px] sm:mr-[96px] rounded-full border border-[#e8ca8a]/25 bg-black/40 backdrop-blur-md shadow-[0_8px_24px_rgba(0,0,0,0.5)] w-auto max-w-[calc(100vw-130px)] sm:max-w-md md:max-w-lg lg:max-w-xl select-none transition-all hover:bg-black/60 hover:border-[#f0ca65]/50 active:scale-[0.98]"
+              className="pointer-events-auto cursor-pointer group relative flex items-center gap-2.5 px-4 sm:px-5 py-1 sm:py-1.5 rounded-full border border-[#e8ca8a]/30 bg-black/50 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.6)] w-full max-w-md sm:max-w-lg md:max-w-xl select-none transition-all hover:bg-black/70 hover:border-[#f0ca65]/60 active:scale-[0.98]"
             >
               {/* Subtle top-edge sheen */}
               <div

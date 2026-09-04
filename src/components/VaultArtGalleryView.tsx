@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -8,7 +8,10 @@ import {
   Smartphone,
   X,
   Sparkles,
+  Maximize,
+  Minimize
 } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useDiscoveredSlots } from '../lib/cyclingBackground.tsx'
 import { GLASS_SURFACE, GlassIconButton } from '../lib/glassChrome.tsx'
 
@@ -34,6 +37,47 @@ export default function VaultArtGalleryView() {
   const slots = useDiscoveredSlots()
   const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null)
   const [viewVariant, setViewVariant] = useState<'pc' | 'm'>('pc')
+  const [isZoomed, setIsZoomed] = useState(false)
+  const [scale, setScale] = useState(1.6)
+  const initialTouchDistanceRef = useRef<number | null>(null)
+  const initialScaleRef = useRef<number>(1.6)
+  const dragConstraintsRef = useRef<HTMLDivElement>(null)
+
+  // Reset zoom on slot change
+  useEffect(() => {
+    setIsZoomed(false)
+    setScale(1.6)
+  }, [selectedSlotIndex, viewVariant])
+
+  const handleWheel = (e: React.WheelEvent) => {
+    const delta = e.deltaY < 0 ? 0.15 : -0.15
+    setScale((prev) => Math.min(Math.max(0.4, prev + delta), 4))
+  }
+
+  const getTouchDistance = (touches: React.TouchList) => {
+    const dx = touches[0].clientX - touches[1].clientX
+    const dy = touches[0].clientY - touches[1].clientY
+    return Math.sqrt(dx * dx + dy * dy)
+  }
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      initialTouchDistanceRef.current = getTouchDistance(e.touches)
+      initialScaleRef.current = scale
+    }
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && initialTouchDistanceRef.current !== null) {
+      const currentDistance = getTouchDistance(e.touches)
+      const factor = currentDistance / initialTouchDistanceRef.current
+      setScale(Math.min(Math.max(0.4, initialScaleRef.current * factor), 4))
+    }
+  }
+
+  const handleTouchEnd = () => {
+    initialTouchDistanceRef.current = null
+  }
 
   const baseUrl = import.meta.env.BASE_URL
 
@@ -250,6 +294,13 @@ export default function VaultArtGalleryView() {
                 </div>
 
                 <GlassIconButton
+                  icon={Maximize}
+                  label="Zoom In"
+                  compact
+                  onClick={() => setIsZoomed(true)}
+                />
+
+                <GlassIconButton
                   icon={X}
                   label="Close"
                   compact
@@ -264,7 +315,8 @@ export default function VaultArtGalleryView() {
                 key={`${activeStem}-${viewVariant}`}
                 src={activeImageSrc}
                 alt={activeMeta.title}
-                className={`max-h-[60dvh] w-auto max-w-full object-contain rounded-lg shadow-2xl transition-all ${
+                onClick={() => setIsZoomed(true)}
+                className={`max-h-[60dvh] w-auto max-w-full object-contain rounded-lg shadow-2xl transition-all cursor-zoom-in hover:brightness-110 ${
                   viewVariant === 'm' ? 'aspect-[2/3]' : 'aspect-video'
                 }`}
               />
@@ -303,6 +355,47 @@ export default function VaultArtGalleryView() {
           </div>
         </div>
       )}
+
+      {/* Fullscreen Zoom Overlay */}
+      <AnimatePresence>
+        {isZoomed && activeImageSrc && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center overflow-hidden touch-none"
+            ref={dragConstraintsRef}
+            onWheel={handleWheel}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
+            <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-[110] flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-[#f0ca65]/50 shadow-[0_0_20px_rgba(240,202,101,0.3)]">
+              <span className="font-mono text-xs text-[#fae5b5] font-bold">Press to Go Back</span>
+              <GlassIconButton
+                icon={Minimize}
+                label="Close Zoom"
+                tone="action"
+                onClick={() => setIsZoomed(false)}
+              />
+            </div>
+
+            <motion.img
+              src={activeImageSrc}
+              alt={activeMeta?.title || 'Zoomed Image'}
+              drag
+              dragConstraints={false}
+              dragElastic={0.1}
+              style={{ scale }}
+              initial={{ x: 0, y: 0 }}
+              animate={{ x: 0, y: 0 }}
+              transition={{ type: 'spring', bounce: 0.1, duration: 0.2 }}
+              className="max-w-none w-full h-full object-contain cursor-grab active:cursor-grabbing select-none"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

@@ -108,8 +108,16 @@ export default function MainMenu({
           screen's chrome is just the tab nav, lists, and a Settings icon —
           no repeated "TALE DIVES" heading. A uniform scrim (rather than
           Title's bottom-only gradient) keeps the whole scrollable list
-          legible, not just the last screenful. */}
-      <div className="fixed inset-0 z-0 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(4,3,7,0.62), rgba(4,3,7,0.72) 30%, rgba(4,3,7,0.8))' }} />
+          legible, not just the last screenful. Lighter when Tales is active so background art shines more. */}
+      <div
+        className="fixed inset-0 z-0 pointer-events-none transition-all duration-300"
+        style={{
+          background:
+            tab === 'tales'
+              ? 'linear-gradient(180deg, rgba(4,3,7,0.32), rgba(4,3,7,0.42) 30%, rgba(4,3,7,0.52))'
+              : 'linear-gradient(180deg, rgba(4,3,7,0.62), rgba(4,3,7,0.72) 30%, rgba(4,3,7,0.8))',
+        }}
+      />
       {/* Ambient glowing spark effects */}
       <AmbientSparks />
 

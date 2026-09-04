@@ -1,9 +1,9 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-04, Claude Code on the web — Turn 1 and chapter recaps now
-always use the API's own max output-token ceiling instead of the campaign's chosen
-Prose Depth, after the user hit a mid-sentence cutoff on a fresh campaign's very first
-turn.
+**Last updated:** 2026-09-04, Claude Code on the web — Skill/Item mentions in the
+Chronicle's narration no longer render as rounded UI chips; they're bold/italic
+colored text now, like a novel's own typography, after the user flagged the chips as
+breaking immersion on the parchment.
 
 > ## 🎨 READ THIS BEFORE TOUCHING ANY SCREEN — the app now has ONE theme
 > The selectable parchment/obsidian **skins are gone** (`UiPrefs.skin`, the `Skin` type,
@@ -84,6 +84,24 @@ rule applies to music.
 > still unbuilt, but no longer blocked on "there's nothing to seed from."
 
 Recent shipped work, most recent first: 
+- **Skill/Item narration markup: chips → novel-style bold/italic text
+  (`richText.tsx`)**: 2026-09-04 (Claude Code on the web). The user flagged that
+  `[Skill]` and `>Item<` mentions in Chronicle's narration rendered as rounded pill/
+  badge spans (`rounded-full border ... bg-...`, padding, a smaller font-size) sitting
+  on the parchment reading surface — reads as app UI, not a printed page, and broke
+  immersion. Both now render as plain inline text using the same color tokens as
+  before (`text-skill`, `text-gold-primary` — both already re-declared for the
+  parchment subtree, see the box at the top of this file) but no border/background/
+  padding: Skill mentions are bold (`font-semibold`), Item mentions are bold italic —
+  distinct from the existing thought/dialogue italic (`text-ink-muted`, unchanged)
+  by color, not by a second badge style. `{{Term|category}}` Codex keyword links were
+  left untouched — their existing dotted-underline treatment (`renderTags`) isn't a
+  chip and already reads as a fairly standard "linked glossary term" convention on
+  webnovel-hosting sites, so it wasn't part of what the user flagged. `npm run
+  typecheck`/`npm run build` clean. **Verification gap**: not checked against a real
+  live turn in the Chronicle (would need a real campaign in progress with a fresh
+  Gemini call that actually invokes a `[Skill]`/`>Item<` tag) — a human should glance
+  at the next turn that uses either marker to confirm it reads as intended.
 - **Max output-token ceiling for world seeding (Turn 1) and chapter recaps
   (`turnContract.ts`, `App.tsx`, `api/providers/{types,gemini}.ts`)**: 2026-09-04
   (Claude Code on the web). The user hit a fresh campaign's Turn 1 getting cut off

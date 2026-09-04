@@ -129,22 +129,22 @@ export function renderNarrative(rawText: string | undefined, onTapTerm?: TapTerm
 
     const [full, skill, item, thought] = match
     if (skill !== undefined) {
+      // Bold + the skill token color, like a webnovel's inline ability name —
+      // not a rounded UI badge, which read as an app chip sitting on the
+      // parchment rather than part of the printed page.
       nodes.push(
-        <span
-          key={`s${key}`}
-          className="inline-block rounded-full border border-skill/40 bg-skill-bg px-2 py-0.5 text-[0.85em] text-skill"
-        >
+        <strong key={`s${key}`} className="font-semibold text-skill">
           {renderTags(skill, `s${key}`, onTapTerm)}
-        </span>,
+        </strong>,
       )
     } else if (item !== undefined) {
+      // Italic + the gold ink color, the same "named proper noun" treatment
+      // fantasy prose gives artifacts and titles — distinct from the
+      // thought/dialogue italic below by color, not by another badge.
       nodes.push(
-        <span
-          key={`i${key}`}
-          className="inline-block rounded-full border border-gold-accent/40 bg-gold-accent/15 px-2 py-0.5 text-[0.85em] text-gold-primary"
-        >
+        <em key={`i${key}`} className="font-semibold italic text-gold-primary">
           {renderTags(item, `i${key}`, onTapTerm)}
-        </span>,
+        </em>,
       )
     } else if (thought !== undefined) {
       nodes.push(

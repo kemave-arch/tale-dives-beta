@@ -1146,3 +1146,12 @@ New entries below, most recent first.
   correctly unmuted and playing from that single tap, and a second tap correctly
   re-mutes, proving the toggle behaves completely normally afterward. `npm run
   build` clean.
+
+- **2026-09-04** (Claude Code on the web) — Removed all 7 `tale_dives_ost-*.opus`
+  tracks from `public/tracks/` at the user's request — they're uploading a
+  replacement set. `public/tracks/` is now empty; **the app has zero audio tracks
+  until the new set lands.** No code change needed either way —
+  `backgroundMusic.tsx`'s discovery is still the same auto-probing
+  `tale_dives_ost-<N>.opus` (0-indexed) pattern from earlier today; whatever new
+  files land there just need to follow that same naming to be picked up with no
+  further code change.

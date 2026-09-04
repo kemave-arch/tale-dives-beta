@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { ArrowLeft } from 'lucide-react'
 import { CyclingBackground } from './cyclingBackground.tsx'
@@ -267,23 +267,29 @@ interface GlassTabsProps<T extends string> {
   value: T
   onChange: (id: T) => void
   className?: string
+  // 'vertical' is the World/Protagonist Setup left-rail case — a narrow
+  // fixed-width column of icon-on-top/label-below buttons rather than an
+  // equal-width row, same active/inactive classes either way so it's a new
+  // arrangement, not a new visual language.
+  orientation?: 'horizontal' | 'vertical'
 }
 
 // The tab strip MainMenu introduced, extracted so Codex and Settings stop
 // each shipping their own slightly-different version.
-export function GlassTabs<T extends string>({ tabs, value, onChange, className = '' }: GlassTabsProps<T>) {
+export function GlassTabs<T extends string>({ tabs, value, onChange, className = '', orientation = 'horizontal' }: GlassTabsProps<T>) {
+  const vertical = orientation === 'vertical'
   return (
-    <nav className={`${GLASS_SURFACE} rounded-2xl p-1 flex gap-1 ${className}`}>
+    <nav className={`${GLASS_SURFACE} rounded-2xl p-1 flex gap-1 ${vertical ? 'flex-col' : ''} ${className}`}>
       {tabs.map(({ id, label, icon: Icon }) => (
         <button
           key={id}
           onClick={() => onChange(id)}
-          className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 px-1 border font-display text-xs transition-colors duration-150 ${
-            value === id ? 'border-[#f0ca65]/70 text-[#f5dfa0]' : 'border-transparent text-[#e8ca8a]/85 hover:text-[#f5dfa0]'
-          }`}
+          className={`flex items-center justify-center rounded-xl border font-display text-xs transition-colors duration-150 ${
+            vertical ? 'w-full flex-col gap-1 py-2.5 px-1 text-center leading-tight' : 'flex-1 gap-1.5 py-2 px-1'
+          } ${value === id ? 'border-[#f0ca65]/70 text-[#f5dfa0]' : 'border-transparent text-[#e8ca8a]/85 hover:text-[#f5dfa0]'}`}
         >
-          {Icon && <Icon size={15} className="shrink-0" />}
-          <span className="truncate">{label}</span>
+          {Icon && <Icon size={vertical ? 17 : 15} className="shrink-0" />}
+          <span className={vertical ? '' : 'truncate'}>{label}</span>
         </button>
       ))}
     </nav>
@@ -321,6 +327,94 @@ export function GlassField({ label, hint, children }: { label: string; hint?: st
       </span>
       {children}
     </label>
+  )
+}
+
+// Tap-to-insert starter phrases for a free-text field likely to face a blank
+// page (Genre & Tone, Power System, Personality, Motivation). Sets the
+// field's value, never locks it in — the input/textarea stays fully
+// editable afterward, so a chip is a starting point, not a rigid choice.
+// Wraps rather than scrolling horizontally, since the option list is always
+// a small fixed set (~4-5), not user-generated data that could grow long.
+export function SuggestionChips({ options, onPick, className = '' }: { options: readonly string[]; onPick: (value: string) => void; className?: string }) {
+  return (
+    <div className={`flex flex-wrap gap-1.5 ${className}`}>
+      {options.map((opt) => (
+        <button
+          key={opt}
+          type="button"
+          onClick={() => onPick(opt)}
+          className="rounded-full border border-[#e8ca8a]/25 px-3 py-1.5 text-[11px] font-display text-[#e8ca8a]/85 backdrop-blur-sm transition-colors duration-150 hover:border-[#e8ca8a]/60 hover:text-[#f5dfa0]"
+        >
+          {opt}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// Search-filtered replacement for a flat "start from a saved X" chip row —
+// a chip row breaks down once a player has saved more than a handful of
+// Worlds/Protagonists (a scrolling row of same-looking pills with no way to
+// filter). Shows the full list on focus (so it works fine with only 1-2
+// saved templates too, no separate "few items" mode), filters live by name
+// as the player types. `T` is `WorldData`/`ProtagonistData` — anything with
+// an `id`/`name` is enough to list and pick.
+export function TemplateSearchDropdown<T extends { id?: string | null; name: string }>({
+  templates,
+  onSelect,
+  placeholder,
+}: {
+  templates: T[]
+  onSelect: (template: T) => void
+  placeholder: string
+}) {
+  const [query, setQuery] = useState('')
+  const [open, setOpen] = useState(false)
+
+  if (templates.length === 0) return null
+
+  const q = query.trim().toLowerCase()
+  const filtered = q ? templates.filter((t) => t.name.toLowerCase().includes(q)) : templates
+
+  function pick(t: T) {
+    onSelect(t)
+    setQuery('')
+    setOpen(false)
+  }
+
+  return (
+    <div className="relative">
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        placeholder={placeholder}
+        className={FIELD_CLASS}
+      />
+      {open && (
+        <div className="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto rounded-xl border border-[#e8ca8a]/25 bg-[#14101c]/95 backdrop-blur-md shadow-lg">
+          {filtered.length === 0 ? (
+            <p className="px-3 py-2 font-narrative italic text-xs text-[#e8ca8a]/60">No matches.</p>
+          ) : (
+            filtered.map((t) => (
+              <button
+                key={t.id ?? t.name}
+                type="button"
+                // Keeps the input focused through the click so `onBlur` above
+                // doesn't close the dropdown before `onClick` below fires.
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => pick(t)}
+                className="block w-full text-left px-3 py-2 font-narrative text-sm text-ink transition-colors duration-150 hover:bg-[#e8ca8a]/10"
+              >
+                {t.name}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 

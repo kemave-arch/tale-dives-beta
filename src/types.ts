@@ -72,6 +72,11 @@ export interface Player {
   name: string
   gender?: string // free-short-text (e.g. "she/her", "male"), 0 context cost when unset
   age?: number
+  background?: string // origin/family history — copied from ProtagonistData at creation so it survives history-window flushes (jitContext.ts), not just told once on Turn 1
+  personality?: string // demeanor/traits, e.g. "Stubborn, quietly ambitious"
+  motivation?: string // core drive/want, e.g. "Prove she belongs, no matter the cost"
+  physicalTrait?: string // a distinguishing feature or flaw
+  secret?: string // something the narrator can quietly plant hooks around
   classId: string
   className: string
   level: number
@@ -241,6 +246,9 @@ export interface WorldData {
   conflict: string
   background: string
   narrationStyle: string
+  powerSystem?: string // how power works here at all — magic, cultivation/cores, tech, or pure skill; deliberately not magic-only
+  eraTechLevel?: string // free-form, e.g. "Medieval high fantasy", "Magitech steampunk"
+  keyFactions?: string // 1-2 named factions/nations up front — context only, not yet auto-seeded into the Faction Codex
   sourceTitle?: string // Appendix A.1 "Title" — attribution only when adapted from existing work; never sent to the model
   sourceAuthor?: string // Appendix A.1 "Author" — same caveat as sourceTitle
   isDefault?: boolean
@@ -255,6 +263,10 @@ export interface ProtagonistData {
   classId: string
   className?: string
   background?: string // Appendix A.2 "Background" — origin/family history, distinct from `opening`'s Turn-1 scene brief
+  personality?: string // demeanor/traits
+  motivation?: string // core drive/want
+  physicalTrait?: string // a distinguishing feature or flaw
+  secret?: string // something the narrator can quietly plant hooks around
   opening: string
   isDefault?: boolean
 }

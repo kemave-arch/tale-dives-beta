@@ -206,6 +206,11 @@ export default function App() {
       name: protagonistData.name,
       gender: protagonistData.gender,
       age: protagonistData.age,
+      background: protagonistData.background,
+      personality: protagonistData.personality,
+      motivation: protagonistData.motivation,
+      physicalTrait: protagonistData.physicalTrait,
+      secret: protagonistData.secret,
       classId: cls.id,
       className: cls.name,
       level: 1,
@@ -275,21 +280,32 @@ export default function App() {
     setScreen('chronicle')
 
     // §Phase B.4 — the Tale Dive Brief fires Turn 1, folding in the World
-    // Background/Genre/Conflict from Phase A so the opening is actually
-    // grounded in what was set up rather than fabricated from nothing.
+    // Background/Genre/Conflict/Power System/Era/Key Factions from Phase A so
+    // the opening is actually grounded in what was set up rather than
+    // fabricated from nothing.
     const worldLines = [
       world.background?.trim() && `World Background: ${world.background.trim()}`,
       world.genreTone?.trim() && `Genre & Tone: ${world.genreTone.trim()}`,
       world.conflict?.trim() && `Core Regional Conflict: ${world.conflict.trim()}`,
+      world.powerSystem?.trim() && `Power System: ${world.powerSystem.trim()}`,
+      world.eraTechLevel?.trim() && `Era / Tech Level: ${world.eraTechLevel.trim()}`,
+      world.keyFactions?.trim() && `Key Factions: ${world.keyFactions.trim()}`,
     ].filter(Boolean) as string[]
 
     const backgroundLine = protagonistData.background?.trim() && `Protagonist Background: ${protagonistData.background.trim()}`
+
+    const identityLines = [
+      protagonistData.personality?.trim() && `Personality: ${protagonistData.personality.trim()}`,
+      protagonistData.motivation?.trim() && `Motivation: ${protagonistData.motivation.trim()}`,
+      protagonistData.physicalTrait?.trim() && `Physical Trait: ${protagonistData.physicalTrait.trim()}`,
+      protagonistData.secret?.trim() && `Secret: ${protagonistData.secret.trim()}`,
+    ].filter(Boolean) as string[]
 
     const briefLine = protagonistData.opening?.trim()
       ? `Tale Dive Brief — open Turn 1 here: ${protagonistData.opening.trim()}`
       : 'No Tale Dive Brief given — invent a fitting, evocative opening scene consistent with the world above.'
 
-    const firstAction = [...worldLines, backgroundLine, briefLine].filter(Boolean).join('\n')
+    const firstAction = [...worldLines, backgroundLine, ...identityLines, briefLine].filter(Boolean).join('\n')
 
     // Pass campaign + a fresh history directly — setGame/setHistory above
     // haven't flushed into this closure yet, so sendAction needs both handed

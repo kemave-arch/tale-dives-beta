@@ -1,6 +1,8 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-04, home machine — a UI unification pass plus the Skills system.
+**Last updated:** 2026-09-04, Claude Code on the web — richer World/Protagonist creation
+data (see the new entry at the bottom of this file's log). Previous entry below is from
+a home-machine session (UI unification pass plus the Skills system).
 
 > ## 🎨 READ THIS BEFORE TOUCHING ANY SCREEN — the app now has ONE theme
 > The selectable parchment/obsidian **skins are gone** (`UiPrefs.skin`, the `Skin` type,
@@ -73,8 +75,21 @@ rule applies to music.
 > Also still open from earlier, unrelated to the list above: campaign seeding, the
 > prologue beat, and streaming turn rendering (§4 item 7), and **Inspired Mode** (§4 item 5,
 > deferred on a quota block with evidence — read that entry before re-attempting).
+>
+> **Campaign seeding's prerequisite is now met** (2026-09-04 web session, see this file's
+> bottom log entry): `WorldData`/`ProtagonistData`/`Player` carry real worldbuilding and
+> identity fields (Power System, Era/Tech Level, Key Factions, Personality, Motivation,
+> Physical Trait, Secret) for seeding to actually draw from — campaign seeding itself is
+> still unbuilt, but no longer blocked on "there's nothing to seed from."
 
 Recent shipped work, most recent first: 
+- **Richer World/Protagonist creation data + a two-tab layout**: 2026-09-04 (Claude Code
+  on the web). See the full log entry at the bottom of this file — the short version:
+  `WorldData` gained `powerSystem`/`eraTechLevel`/`keyFactions`, `ProtagonistData` and
+  `Player` gained `personality`/`motivation`/`physicalTrait`/`secret` (and `Player`
+  finally gained `background`, fixing a real bug — see below), both creation screens
+  split into a vertical two-tab layout, and the "start from a saved X" chip row was
+  replaced with a search dropdown.
 - **"Clear Local Data" button & no-scroll viewport**: 2026-09-04. Fixed a logic bug in Settings where "Reset Defaults" was wiping the database instead of the display preferences, separated them correctly, and added `overscroll-behavior: none` + a fixed container to `Chronicle` so the outer glass canvas locks in place like a game viewport rather than panning/rubber-banding.
 - **Glass-button pass** on the shared
 `GlassCTAButton` (frosted hover tint, a properly uniform tapered border, ring-above-fill
@@ -927,3 +942,82 @@ sections above give — for resuming work, everything above this line is what ac
 matters.
 
 New entries below, most recent first.
+
+- **2026-09-04** (Claude Code on the web) — Richer World/Protagonist creation data, plus
+  a UX pass on both creation screens driven directly by the user + AI Studio's own UX
+  critique of the flow. Full design reasoning lives in the plan file this session wrote
+  before implementing (not committed to the repo — see this entry for the durable
+  record). What shipped:
+  - **New fields**: `WorldData` gained `powerSystem` (deliberately generalized past
+    "magic" — covers cultivation/cores, tech, modern/future warfare, or pure skill too,
+    since a sci-fi or wuxia-style world shouldn't be steered toward assuming magic
+    exists), `eraTechLevel`, `keyFactions`. `ProtagonistData` gained `personality`,
+    `motivation`, `physicalTrait`, `secret`. Considered and dropped a separate
+    `toneRating` select — the existing `genreTone` free-text field already conveys grit
+    level in practice, and the system prompt's mature-content boundary is explicitly
+    fixed regardless of tone, so a second field would've duplicated what `genreTone`
+    already says without changing any model behavior. Shipped as tap-to-insert tone
+    chips on `genreTone` instead.
+  - **A real bug fixed, not just new fields**: `ProtagonistData.background` was only
+    ever told to the model once, in Turn 1's opening message — never copied onto
+    `Player`, so it vanished the moment the chapter-recap system flushed the sliding
+    history window (§2 Phase E, every ~15 turns). `WorldData.genreTone`/`conflict` had
+    the exact same bug (only ever sent via `beginCampaign`'s `firstAction`, never part
+    of `jitContext.ts`'s always-on `World Premise` line). All three fixed alongside the
+    four new fields, which follow the already-correct `gender`/`age` pattern from the
+    start (copied onto `Player`, re-sent every turn).
+  - **Two-tab layout, both screens**: World Setup splits into Overview (Name, Adapted
+    From, Genre & Tone) / Depth (Conflict, Power System, Era/Tech Level, Key Factions,
+    Background, Narration Style); Protagonist Setup splits into Basics (Name,
+    Gender/Age, Class) / Identity (Background, Personality, Motivation, Physical Trait,
+    Secret). Driven by a new `orientation?: 'horizontal' | 'vertical'` prop on the
+    shared `GlassTabs` (default `'horizontal'`, so MainMenu/Codex/Settings' existing
+    usage is untouched) — the new rail sits vertically on the left, icon-on-top/
+    label-below buttons, same active/inactive classes as the horizontal form, just a
+    new arrangement.
+  - **Template picker rebuilt**: the old "start from a saved World/Protagonist" chip
+    row breaks down once a player has saved more than a handful of presets — a
+    scrolling row of same-looking pills with no filtering. Replaced with a new
+    `TemplateSearchDropdown` (`glassChrome.tsx`) — shows the full list on focus (still
+    works fine with only 1-2 saved templates), filters live by name as you type. Picking
+    a result also resets the active tab back to the first one, so applying a template
+    while sitting on the second tab doesn't read as a no-op.
+  - **Suggestion chips**: a new `SuggestionChips` helper (`glassChrome.tsx`) puts
+    tap-to-insert starter phrases above Genre & Tone, Power System, Personality, and
+    Motivation — sets the field, never locks it, so it's a starting point not a rigid
+    choice. Addresses a UX critique AI Studio raised independently ("a lot of
+    open-ended essay writing... all in one screen") about blank-page friction on these
+    screens.
+  - **Placeholders regrounded**: every new field's placeholder (and two existing ones —
+    Protagonist Name, Adapted From Title/Author — that had drifted to an unrelated
+    example) now draws from the same Fourth Wing/Violet Sorrengail continuity already
+    shipped in `starterTemplates.ts`, backfilled with real values for every new field.
+  - **Prompt wiring**: `App.tsx`'s `beginCampaign` extends `firstAction` with all seven
+    new fields; `jitContext.ts`'s `buildContextSlice` gained a `Protagonist Identity`
+    line and an extended `World Premise` block so everything persists turn to turn, not
+    just on Turn 1; `turnContract.ts`'s `SYSTEM_INSTRUCTIONS` gained a new sub-rule
+    (1e, next to 1d's NPC Behavior rule) telling the model how to use Protagonist
+    Identity — shape how the world reacts, never write the player's own thoughts/words/
+    decisions (rule 3 already forbids that; this doesn't relax it).
+  - **Codex connection**: the `realm` and `character` categories (`Codex.tsx`) already
+    existed as the live mid-campaign edit surface for `campaign.world`/`player` — both
+    extended with the new fields (`realm` fully editable, `character` read-only for the
+    identity fields, matching how `background` was already read-only there).
+  - **Verified live**: `npm run typecheck`/`npm run build` both clean. Drove the actual
+    dev server with a real headless browser (Playwright, `chromium-1194` — this
+    environment has no `chromium-cli`, so this session used the run skill's documented
+    Playwright fallback pattern) at both desktop (1280×900) and the 390px mobile
+    viewport: applied the Fourth Wing/Violet Sorrengail templates via the new search
+    dropdown (both the full-list-on-focus and filtered-by-typing states), confirmed
+    every new field populates correctly on both tabs at both viewport widths, zero
+    console errors beyond an expected Google Fonts network failure specific to this
+    sandboxed dev environment. **Not verified live**: the actual outgoing Turn-1 Gemini
+    request/context slice — no API key is configured in this environment. The
+    `firstAction`/context-slice code follows the exact same pattern as the pre-existing,
+    already-working `worldLines`/`backgroundLine` code it extends, but a future session
+    with a real key should confirm a real Turn 1 reads the new fields correctly at
+    least once.
+  - Also fixed in passing: `TextField`/search-dropdown a11y basics (proper `<button
+    type="button">` on every chip/result so nothing accidentally submits a form), and
+    confirmed via `git diff` that no unrelated formatting churn rode along in any of the
+    nine touched files.

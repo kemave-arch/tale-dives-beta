@@ -851,7 +851,15 @@ export default function Codex({
   }
 
   function saveWorld() {
-    onUpdateWorld({ name: draft.name, genreTone: draft.genreTone, conflict: draft.conflict, background: draft.background })
+    onUpdateWorld({
+      name: draft.name,
+      genreTone: draft.genreTone,
+      conflict: draft.conflict,
+      background: draft.background,
+      powerSystem: draft.powerSystem,
+      eraTechLevel: draft.eraTechLevel,
+      keyFactions: draft.keyFactions,
+    })
     setEditing(false)
   }
 
@@ -992,6 +1000,14 @@ export default function Codex({
                 value={`STR ${Math.round(player.attrs.STR)} · INT ${Math.round(player.attrs.INT)} · AGI ${Math.round(player.attrs.AGI)}`}
               />
               <DetailField label="Pools" value={`HP ${player.hpMax} · MP ${player.mpMax} · ST ${player.stMax}`} />
+              {/* Set at creation only (WorldSetup/NewGame) — not editable here,
+                  same as Background always was, so the reader can see their
+                  own established identity at a glance without a second form. */}
+              {player.background && <DetailField label="Background" value={<span className="text-xs text-ink-muted">{player.background}</span>} />}
+              {player.personality && <DetailField label="Personality" value={player.personality} />}
+              {player.motivation && <DetailField label="Motivation" value={player.motivation} />}
+              {player.physicalTrait && <DetailField label="Physical Trait" value={player.physicalTrait} />}
+              {player.secret && <DetailField label="Secret" value={player.secret} />}
             </DetailPanel>
           )}
         </>
@@ -1063,7 +1079,17 @@ export default function Codex({
             <CrudToolbar
               editing={editing}
               canDelete={false}
-              onEdit={() => startEdit('__world__', { name: world.name, genreTone: world.genreTone, conflict: world.conflict, background: world.background })}
+              onEdit={() =>
+                startEdit('__world__', {
+                  name: world.name,
+                  genreTone: world.genreTone,
+                  conflict: world.conflict,
+                  background: world.background,
+                  powerSystem: world.powerSystem,
+                  eraTechLevel: world.eraTechLevel,
+                  keyFactions: world.keyFactions,
+                })
+              }
               onSave={saveWorld}
               onCancel={cancelEdit}
               onDelete={() => {}}
@@ -1074,6 +1100,9 @@ export default function Codex({
               <TextField label="World Name" value={draft.name ?? ''} onChange={(v) => setDraft((d) => ({ ...d, name: v }))} />
               <TextField label="Genre & Tone" value={draft.genreTone ?? ''} onChange={(v) => setDraft((d) => ({ ...d, genreTone: v }))} textarea />
               <TextField label="Core Regional Conflict" value={draft.conflict ?? ''} onChange={(v) => setDraft((d) => ({ ...d, conflict: v }))} textarea />
+              <TextField label="Power System" value={draft.powerSystem ?? ''} onChange={(v) => setDraft((d) => ({ ...d, powerSystem: v }))} textarea />
+              <TextField label="Era / Tech Level" value={draft.eraTechLevel ?? ''} onChange={(v) => setDraft((d) => ({ ...d, eraTechLevel: v }))} />
+              <TextField label="Key Factions" value={draft.keyFactions ?? ''} onChange={(v) => setDraft((d) => ({ ...d, keyFactions: v }))} />
               <TextField label="World Background" value={draft.background ?? ''} onChange={(v) => setDraft((d) => ({ ...d, background: v }))} textarea />
             </DetailPanel>
           ) : (
@@ -1081,6 +1110,9 @@ export default function Codex({
               <DetailField label="World" value={world.name} />
               {world.genreTone && <DetailField label="Genre & Tone" value={world.genreTone} />}
               {world.conflict && <DetailField label="Core Regional Conflict" value={world.conflict} />}
+              {world.powerSystem && <DetailField label="Power System" value={world.powerSystem} />}
+              {world.eraTechLevel && <DetailField label="Era / Tech Level" value={world.eraTechLevel} />}
+              {world.keyFactions && <DetailField label="Key Factions" value={world.keyFactions} />}
               {world.background && <DetailField label="World Background" value={world.background} />}
               <DetailField label="Narration Style" value={<span className="text-xs text-ink-muted">{world.narrationStyle}</span>} />
               {flags.length > 0 && (

@@ -61,6 +61,24 @@ export function buildContextSlice(state: Campaign, combatResultLine?: string | n
     `Location Node: ${player.locId} | Time: Day ${player.time.d} ${player.time.h}`,
   ]
 
+  // Protagonist Identity — personality/motivation/physicalTrait/secret and
+  // background, all copied onto Player at campaign creation (App.tsx's
+  // beginCampaign) specifically so they survive chapter-recap history
+  // flushes instead of being told only once on Turn 1 the way `background`
+  // alone used to be. Its own line, not folded into `playerIdentity` above —
+  // these can run to a full sentence each, unlike the compact "Gender: X"
+  // pairs that line is built for.
+  const identityLine = [
+    player.background?.trim() && `Background: ${player.background.trim()}`,
+    player.personality?.trim() && `Personality: ${player.personality.trim()}`,
+    player.motivation?.trim() && `Motivation: ${player.motivation.trim()}`,
+    player.physicalTrait?.trim() && `Physical Trait: ${player.physicalTrait.trim()}`,
+    player.secret?.trim() && `Secret: ${player.secret.trim()}`,
+  ]
+    .filter(Boolean)
+    .join(' | ')
+  if (identityLine) lines.push(`Protagonist Identity: ${identityLine}`)
+
   // §5.9 — always-on, not gated behind a bang command: an equipped weapon
   // only actually shapes how combat/description reads if the narrator is
   // reminded of it every turn, not just when the player asks. 0 tokens with
@@ -121,8 +139,24 @@ export function buildContextSlice(state: Campaign, combatResultLine?: string | n
     lines.push(`Known Entities (already exist — do not reintroduce under a new name) — ${knownSegments.join(' | ')}`)
   }
 
-  if (world?.background?.trim()) {
-    lines.push(`World Premise: ${world.background.trim()}`)
+  // World Premise — background plus genreTone/conflict/powerSystem/
+  // eraTechLevel/keyFactions, all bundled here so they persist past chapter-
+  // recap flushes. genreTone/conflict previously had the exact same
+  // Turn-1-only bug `player.background` had before the Protagonist Identity
+  // line above fixed it — they were only ever sent in beginCampaign's
+  // firstAction, never re-told after the first history flush.
+  const worldPremise = [
+    world?.background?.trim(),
+    world?.genreTone?.trim() && `Genre & Tone: ${world.genreTone.trim()}`,
+    world?.conflict?.trim() && `Core Regional Conflict: ${world.conflict.trim()}`,
+    world?.powerSystem?.trim() && `Power System: ${world.powerSystem.trim()}`,
+    world?.eraTechLevel?.trim() && `Era/Tech Level: ${world.eraTechLevel.trim()}`,
+    world?.keyFactions?.trim() && `Key Factions: ${world.keyFactions.trim()}`,
+  ]
+    .filter(Boolean)
+    .join(' | ')
+  if (worldPremise) {
+    lines.push(`World Premise: ${worldPremise}`)
   }
 
   const recentChapters = (log ?? []).filter((e) => e.chapterSummary).slice(-RECENT_CHAPTER_DIGEST_COUNT)

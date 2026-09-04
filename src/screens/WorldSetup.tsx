@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Globe, Save, Plus } from 'lucide-react'
+import { Info, Layers, Save, Plus } from 'lucide-react'
 import { DEFAULT_NARRATION_STYLE } from '../api/turnContract.ts'
 import {
-  FIELD_CLASS, GLASS_SURFACE, GlassButton, GlassCTAButton, GlassField, GlassHeader, GlassScreen, LABEL_CLASS,
+  FIELD_CLASS, GLASS_SURFACE, GlassButton, GlassCTAButton, GlassField, GlassHeader, GlassScreen, GlassTabs,
+  SuggestionChips, TemplateSearchDropdown,
 } from '../lib/glassChrome.tsx'
 import type { WorldData } from '../types.ts'
 
@@ -14,6 +15,14 @@ interface WorldSetupProps {
   onSavePreset?: (world: WorldData) => void
   onSaveAsNewPreset?: (world: WorldData) => void
 }
+
+const TABS = [
+  { id: 'overview' as const, label: 'Overview', icon: Info },
+  { id: 'depth' as const, label: 'Depth', icon: Layers },
+]
+
+const TONE_CHIPS = ['Grimdark', 'Noblebright', 'Lighthearted', 'Wholesome', 'Graphic & Visceral']
+const POWER_SYSTEM_CHIPS = ['Hard magic, costly', 'Soft magic, mysterious', 'Cultivation & cores', 'Tech-augmented', 'No powers — pure skill']
 
 // Blueprint §Phase A.1 — Original Mode world setup, now also usable as the
 // World Library's create/edit form (§6.4B) since both need the same fields.
@@ -31,6 +40,7 @@ export default function WorldSetup({
   onSavePreset,
   onSaveAsNewPreset,
 }: WorldSetupProps) {
+  const [tab, setTab] = useState<(typeof TABS)[number]['id']>('overview')
   const [templateId, setTemplateId] = useState<string | null | undefined>(initial?.id ?? null)
   const [mode, setMode] = useState(initial?.mode ?? 'original')
   const [name, setName] = useState(initial?.name ?? '')
@@ -40,8 +50,12 @@ export default function WorldSetup({
   const [conflict, setConflict] = useState(initial?.conflict ?? '')
   const [background, setBackground] = useState(initial?.background ?? '')
   const [narrationStyle, setNarrationStyle] = useState(initial?.narrationStyle ?? DEFAULT_NARRATION_STYLE)
+  const [powerSystem, setPowerSystem] = useState(initial?.powerSystem ?? '')
+  const [eraTechLevel, setEraTechLevel] = useState(initial?.eraTechLevel ?? '')
+  const [keyFactions, setKeyFactions] = useState(initial?.keyFactions ?? '')
 
   function applyTemplate(t: WorldData) {
+    setTab('overview')
     setTemplateId(t.id)
     setMode(t.mode ?? 'original')
     setName(t.name)
@@ -51,6 +65,9 @@ export default function WorldSetup({
     setConflict(t.conflict ?? '')
     setBackground(t.background ?? '')
     setNarrationStyle(t.narrationStyle ?? DEFAULT_NARRATION_STYLE)
+    setPowerSystem(t.powerSystem ?? '')
+    setEraTechLevel(t.eraTechLevel ?? '')
+    setKeyFactions(t.keyFactions ?? '')
   }
 
   function currentData(): WorldData {
@@ -64,6 +81,9 @@ export default function WorldSetup({
       conflict,
       background,
       narrationStyle,
+      powerSystem: powerSystem.trim() || undefined,
+      eraTechLevel: eraTechLevel.trim() || undefined,
+      keyFactions: keyFactions.trim() || undefined,
     }
   }
 
@@ -73,100 +93,133 @@ export default function WorldSetup({
 
       <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
         <div className="max-w-md mx-auto flex flex-col gap-4">
-          {worldTemplates.length > 0 && (
-            <div>
-              <p className={`${LABEL_CLASS} mb-2`}>Start from a saved World</p>
-              <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
-                {worldTemplates.map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => applyTemplate(t)}
-                    className={`shrink-0 flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-display backdrop-blur-sm transition-colors duration-150 ${
-                      templateId === t.id
-                        ? 'border-[#f0ca65]/70 bg-[#e8ca8a]/12 text-[#f5dfa0]'
-                        : 'border-[#e8ca8a]/25 text-[#e8ca8a]/90 hover:border-[#e8ca8a]/60 hover:text-[#f5dfa0]'
-                    }`}
-                  >
-                    <Globe size={13} />
-                    {t.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          <TemplateSearchDropdown templates={worldTemplates} onSelect={applyTemplate} placeholder="Search saved Worlds..." />
 
-          <GlassField label="World Name">
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Navarre" className={FIELD_CLASS} />
-          </GlassField>
+          <div className="flex gap-3 items-start">
+            <GlassTabs tabs={TABS} value={tab} onChange={setTab} orientation="vertical" className="w-20 shrink-0" />
 
-          <GlassField label="Adapted From" hint="Optional — attribution only, never sent to the Narrator.">
-            <div className="flex gap-2">
-              <input
-                value={sourceTitle}
-                onChange={(e) => setSourceTitle(e.target.value)}
-                placeholder="Novel/Series title"
-                className={FIELD_CLASS}
-              />
-              <input
-                value={sourceAuthor}
-                onChange={(e) => setSourceAuthor(e.target.value)}
-                placeholder="Author"
-                className={FIELD_CLASS}
-              />
-            </div>
-          </GlassField>
+            <div className="flex-1 min-w-0 flex flex-col gap-4">
+              {tab === 'overview' && (
+                <>
+                  <GlassField label="World Name">
+                    <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Navarre" className={FIELD_CLASS} />
+                  </GlassField>
 
-          <GlassField label="Genre & Tone" hint="Optional.">
-            <input
-              value={genreTone}
-              onChange={(e) => setGenreTone(e.target.value)}
-              placeholder="Dark fantasy, morally grey"
-              className={FIELD_CLASS}
-            />
-          </GlassField>
+                  <GlassField label="Adapted From" hint="Optional — attribution only, never sent to the Narrator.">
+                    <div className="flex gap-2">
+                      <input
+                        value={sourceTitle}
+                        onChange={(e) => setSourceTitle(e.target.value)}
+                        placeholder="Fourth Wing"
+                        className={FIELD_CLASS}
+                      />
+                      <input
+                        value={sourceAuthor}
+                        onChange={(e) => setSourceAuthor(e.target.value)}
+                        placeholder="Rebecca Yarros"
+                        className={FIELD_CLASS}
+                      />
+                    </div>
+                  </GlassField>
 
-          <GlassField label="Core Regional Conflict" hint="Optional.">
-            <input
-              value={conflict}
-              onChange={(e) => setConflict(e.target.value)}
-              placeholder="A border war between two rival holds"
-              className={FIELD_CLASS}
-            />
-          </GlassField>
-
-          <GlassField label="World Background">
-            <textarea
-              value={background}
-              onChange={(e) => setBackground(e.target.value)}
-              placeholder="The setting's key backdrop, e.g. the continent of Navarre"
-              rows={3}
-              className={FIELD_CLASS}
-            />
-          </GlassField>
-
-          <GlassField label="Narration Style">
-            <textarea
-              value={narrationStyle}
-              onChange={(e) => setNarrationStyle(e.target.value)}
-              rows={4}
-              className={`${FIELD_CLASS} text-xs`}
-            />
-          </GlassField>
-
-          {(onSavePreset || onSaveAsNewPreset) && (
-            <div className="flex gap-2">
-              {templateId && onSavePreset && (
-                <GlassButton onClick={() => onSavePreset(currentData())} icon={Save} className="flex-1">
-                  Save Preset
-                </GlassButton>
+                  <GlassField label="Genre & Tone" hint="Optional.">
+                    <div className="flex flex-col gap-2">
+                      <SuggestionChips options={TONE_CHIPS} onPick={setGenreTone} />
+                      <input
+                        value={genreTone}
+                        onChange={(e) => setGenreTone(e.target.value)}
+                        placeholder="Dark fantasy, morally grey"
+                        className={FIELD_CLASS}
+                      />
+                    </div>
+                  </GlassField>
+                </>
               )}
-              {onSaveAsNewPreset && (
-                <GlassButton onClick={() => onSaveAsNewPreset({ ...currentData(), id: null })} icon={Plus} className="flex-1">
-                  Save as New Preset
-                </GlassButton>
+
+              {tab === 'depth' && (
+                <>
+                  <GlassField label="Core Regional Conflict" hint="Optional.">
+                    <input
+                      value={conflict}
+                      onChange={(e) => setConflict(e.target.value)}
+                      placeholder="A border war between two rival holds"
+                      className={FIELD_CLASS}
+                    />
+                  </GlassField>
+
+                  <GlassField label="Power System" hint="Magic, cultivation, tech, or pure skill — however power works here. Optional.">
+                    <div className="flex flex-col gap-2">
+                      <SuggestionChips options={POWER_SYSTEM_CHIPS} onPick={setPowerSystem} />
+                      <textarea
+                        value={powerSystem}
+                        onChange={(e) => setPowerSystem(e.target.value)}
+                        placeholder="Signet magic — granted only after bonding a dragon, drains mental and physical reserves fast."
+                        rows={3}
+                        className={FIELD_CLASS}
+                      />
+                    </div>
+                  </GlassField>
+
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <GlassField label="Era / Tech Level" hint="Optional.">
+                        <input
+                          value={eraTechLevel}
+                          onChange={(e) => setEraTechLevel(e.target.value)}
+                          placeholder="Medieval high fantasy war-college"
+                          className={FIELD_CLASS}
+                        />
+                      </GlassField>
+                    </div>
+                    <div className="flex-1">
+                      <GlassField label="Key Factions" hint="Named factions only — the Core Conflict field above already covers the why.">
+                        <input
+                          value={keyFactions}
+                          onChange={(e) => setKeyFactions(e.target.value)}
+                          placeholder="Navarre vs. Poromiel"
+                          className={FIELD_CLASS}
+                        />
+                      </GlassField>
+                    </div>
+                  </div>
+
+                  <GlassField label="World Background">
+                    <textarea
+                      value={background}
+                      onChange={(e) => setBackground(e.target.value)}
+                      placeholder="The setting's key backdrop, e.g. the continent of Navarre"
+                      rows={3}
+                      className={FIELD_CLASS}
+                    />
+                  </GlassField>
+
+                  <GlassField label="Narration Style">
+                    <textarea
+                      value={narrationStyle}
+                      onChange={(e) => setNarrationStyle(e.target.value)}
+                      rows={4}
+                      className={`${FIELD_CLASS} text-xs`}
+                    />
+                  </GlassField>
+                </>
+              )}
+
+              {(onSavePreset || onSaveAsNewPreset) && (
+                <div className="flex gap-2">
+                  {templateId && onSavePreset && (
+                    <GlassButton onClick={() => onSavePreset(currentData())} icon={Save} className="flex-1">
+                      Save Preset
+                    </GlassButton>
+                  )}
+                  {onSaveAsNewPreset && (
+                    <GlassButton onClick={() => onSaveAsNewPreset({ ...currentData(), id: null })} icon={Plus} className="flex-1">
+                      Save as New Preset
+                    </GlassButton>
+                  )}
+                </div>
               )}
             </div>
-          )}
+          </div>
         </div>
       </div>
 

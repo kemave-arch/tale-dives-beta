@@ -31,7 +31,7 @@ function probeImageExists(src: string): Promise<boolean> {
 // the right one to probe). Starts from ['title-bg1'] so something renders
 // immediately rather than waiting on the probe round-trip; updates once
 // discovery finishes if there turn out to be more.
-function useDiscoveredSlots(): string[] {
+export function useDiscoveredSlots(): string[] {
   const [slots, setSlots] = useState<string[]>(['title-bg1'])
 
   useEffect(() => {

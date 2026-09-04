@@ -277,6 +277,7 @@ interface GlassTabsProps<T extends string> {
   orientation?: 'horizontal' | 'vertical'
   size?: 'sm' | 'md' | 'lg'
   accent?: 'gold' | 'cyan' | 'purple'
+  responsiveScale?: boolean
 }
 
 // The tab strip MainMenu introduced, extracted so Codex and Settings stop
@@ -289,6 +290,7 @@ export function GlassTabs<T extends string>({
   orientation = 'horizontal',
   size = 'md',
   accent: globalAccent = 'gold',
+  responsiveScale = false,
 }: GlassTabsProps<T>) {
   const vertical = orientation === 'vertical'
   const isLg = size === 'lg'
@@ -297,8 +299,14 @@ export function GlassTabs<T extends string>({
   return (
     <nav
       className={`${GLASS_SURFACE} bg-[#120e1b]/80 border-[#e8ca8a]/30 ${
-        isLg ? 'rounded-2xl p-1.5' : isSm ? 'rounded-xl p-1' : 'rounded-2xl p-1'
-      } flex gap-1 ${vertical ? 'flex-col' : ''} ${className}`}
+        isLg
+          ? 'rounded-2xl p-1.5'
+          : isSm
+            ? responsiveScale
+              ? 'rounded-xl sm:rounded-2xl p-1 sm:p-1.5'
+              : 'rounded-xl p-1'
+            : 'rounded-2xl p-1'
+      } flex gap-1 sm:gap-1.5 ${vertical ? 'flex-col' : ''} ${className}`}
     >
       {tabs.map(({ id, label, icon: Icon, accent: tabAccent }) => {
         const itemAccent = tabAccent || globalAccent
@@ -324,7 +332,9 @@ export function GlassTabs<T extends string>({
                 : isLg
                   ? 'flex-1 gap-2 py-3 px-3 text-sm sm:text-base font-bold uppercase tracking-wider'
                   : isSm
-                    ? 'flex-1 gap-1 py-1.5 px-2 text-xs font-medium'
+                    ? responsiveScale
+                      ? 'flex-1 gap-1 sm:gap-2 py-1.5 sm:py-2.5 px-2 sm:px-3 text-xs sm:text-sm font-medium sm:font-semibold'
+                      : 'flex-1 gap-1 py-1.5 px-2 text-xs font-medium'
                     : 'flex-1 gap-1.5 py-2 px-1 text-xs'
             } ${
               isSelected
@@ -334,8 +344,8 @@ export function GlassTabs<T extends string>({
           >
             {Icon && (
               <Icon
-                size={vertical ? 17 : isLg ? 19 : isSm ? 13 : 15}
-                className={`shrink-0 ${isSelected ? activeIconClass : 'text-[#e8ca8a]/80'}`}
+                size={vertical ? 17 : isLg ? 19 : isSm ? (responsiveScale ? 14 : 13) : 15}
+                className={`shrink-0 ${responsiveScale ? 'sm:w-[17px] sm:h-[17px]' : ''} ${isSelected ? activeIconClass : 'text-[#e8ca8a]/80'}`}
               />
             )}
             <span className={vertical ? '' : 'truncate'}>{label}</span>

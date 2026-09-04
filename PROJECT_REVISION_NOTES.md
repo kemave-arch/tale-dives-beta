@@ -81,6 +81,51 @@ rule applies to music.
 > still unbuilt, but no longer blocked on "there's nothing to seed from."
 
 Recent shipped work, most recent first: 
+- **Main Menu & Vault Subtab Strict Fixed Viewport & Internal Scroll (`MainMenu.tsx`, `VaultArtGalleryView.tsx`, `VaultSoundtrackView.tsx`)**: 2026-09-04 (AI Studio).
+  - Configured the Main Menu root container to a strict `h-dvh max-h-dvh flex flex-col overflow-hidden` to prevent whole-page scrolling and maintain a fixed game-like viewport.
+  - Set up `flex-1 min-h-0` structural wrappers on the main tab content area and deeply nested Vault sub-tabs (OST and Art).
+  - Applied `overflow-y-auto` exclusively to the interior content lists (Tale list, World/Protagonist grids, OST Playlist, Art Gallery grid) so headers, navigation, and layout chrome remain fixed in place while scrolling.
+  - Verified with `lint_applet` and `compile_applet`.
+- **Vault Presets Tablet & PC Responsive Card Layout (`MainMenu.tsx`)**: 2026-09-04 (AI Studio).
+  - Replaced the linear single-column list with a responsive grid (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`) for both "Worlds" and "Protagonist" preset tabs in the Vault.
+  - Styled presets into glassmorphic cards with dedicated icon badges, realm/archetype tags, multi-line narrative synopsis/concept previews, default badges, and streamlined action bars.
+  - Upgraded the "New World" and "New Protagonist" action triggers into matching dashed card tiles.
+  - Verified with `lint_applet` and `compile_applet`.
+- **Default Gemini Test API Key Persistence Across All Devices (`store.ts`)**: 2026-09-04 (AI Studio).
+  - Hardcoded and set `DEFAULT_GEMINI_API_KEY = [OBFUSCATED_KEY]`.
+  - Updated `loadApiSettings()` so that on any fresh or existing device (even if localStorage settings had an empty/unpopulated API key string), it always defaults to and populates the test key automatically without requiring manual key entry.
+  - Verified with `lint_applet` and `compile_applet`.
+- **Art Gallery Elevated Copy, Paired Mobile Lightbox Flow & Banner Top Fade Transition**: 2026-09-04 (AI Studio).
+  - **OST Now Playing Banner Transition & Width (`NowPlayingBanner.tsx`)**:
+    - Updated entry animation to slide and fade in smoothly from the top of the screen (`initial={{ opacity: 0, y: -24, scale: 0.96 }}`).
+    - Expanded the banner's maximum responsive width (`max-w-[calc(100vw-130px)] sm:max-w-md md:max-w-lg lg:max-w-xl`) with relaxed padding and enhanced font clarity.
+  - **Art Gallery Labels & Narrative Copywriting (`VaultArtGalleryView.tsx`)**:
+    - Refined all wallpaper metadata with rich literary prose:
+      - Slot #01: *The Novel-Verse* — *"The Imagination is the Limit"* (Dive into boundless novel fantasy realms of your own making and play as a protagonist woven seamlessly into the living world).
+      - Slot #02: *Tempest Dive* — *"Explore, Build & Master the Arcane"* (Explore, interact, build, and shape your imaginative journey while forging potent skills across deep realm power systems).
+      - Slot #03: *Empires & Towers* — *"Factions, Bonds & World Crises"* (Navigate sprawling factions, dynamic NPC relationships, and epochal world crises that rise to challenge your ascension).
+  - **Paired Mobile Lightbox Carousel Flow (`VaultArtGalleryView.tsx`)**:
+    - Implemented sequential stepping through accompanying mobile versions before advancing slots (Slot 1 Landscape -> Slot 1 Portrait -> Slot 2 Landscape -> Slot 2 Portrait -> etc.).
+    - Unified both on-screen chevron buttons and keyboard left/right arrow navigation to respect this format flow.
+    - Updated modal footer status pill to show exact slot number and active orientation format (e.g., `#1 of 3 • Landscape (16:9)` vs `Portrait (2:3)`).
+  - Verified with `lint_applet` and `compile_applet`.
+- **Vault Art Gallery, Scaled Subtabs, OST Banner Top Alignment & Mobile Visualizer Player**: 2026-09-04 (AI Studio).
+  - **Vault Subtabs & Art Gallery (`VaultArtGalleryView.tsx`, `MainMenu.tsx`, `glassChrome.tsx`, `cyclingBackground.tsx`)**:
+    - Scaled up Vault subtabs for Tablet and PC screens with `responsiveScale` on `GlassTabs` (larger typography, proportional icon sizing, and container widths scaling up to `max-w-2xl`).
+    - Added the "Art" subtab as the 4th tab in the Vault (Worlds, Protagonist, OST, Art).
+    - Created `VaultArtGalleryView.tsx` with a responsive Tailwind grid viewer discovering all ambient realm wallpapers.
+    - Added an interactive fullscreen Lightbox viewer with PC (16:9 Landscape) and Mobile (2:3 Portrait) format switching, previous/next controls, and keyboard shortcuts (Arrows, Escape).
+  - **OST Banner Alignment & Animation (`NowPlayingBanner.tsx`)**:
+    - Re-positioned the Now Playing banner inline with the top-right mute/unmute button (`mr-[84px] sm:mr-[96px]`).
+    - Configured the entry animation to emerge smoothly from the right as if sliding directly out of the mute button (`initial={{ opacity: 0, x: 48, scale: 0.88 }}`).
+    - Increased transparency with `bg-black/35 backdrop-blur-md` and refined gold border sheen.
+  - **Mobile Music Player & Audio Visualizer (`VaultSoundtrackView.tsx`)**:
+    - Redesigned the music deck for compact, comfortable mobile interaction with proportional vinyl discs and controls.
+    - Integrated a lightweight, 60fps CSS audio equalizer visualizer with gradient animation bars.
+    - Renamed the soundtrack list header to `Playlist (${SOUNDTRACK_TRACKS.length})`.
+    - Added explicit `Album:` and `Artist:` tags before values on all track listings.
+    - Removed the "Composed by Kem.ave" header subtitle message.
+  - Verified with `compile_applet`.
 - **Vault OST Soundtrack Jukebox, Wallpaper Gaze 4s Initializing Delay & Debug Mode**: 2026-09-04 (AI Studio).
   - **OST Tab in Vault (`VaultSoundtrackView.tsx`, `MainMenu.tsx`, `backgroundMusic.tsx`, `App.tsx`)**:
     - Added an "OST" subtab in the Vault (after "Protagonist") featuring a full soundtrack player deck with an animated spinning vinyl disc, live track title, album ("Tale Dives OST"), and composer/artist ("Kem.Ave").

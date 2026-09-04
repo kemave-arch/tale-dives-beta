@@ -1,8 +1,9 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-04, Claude Code on the web — richer World/Protagonist creation
-data (see the new entry at the bottom of this file's log). Previous entry below is from
-a home-machine session (UI unification pass plus the Skills system).
+**Last updated:** 2026-09-04, Claude Code on the web — a reusable long-text expand-to-edit
+modal, wired into every long textarea in the app (see the new entry at the bottom of
+this file's log). Previous entry below is from a home-machine session (UI unification
+pass plus the Skills system).
 
 > ## 🎨 READ THIS BEFORE TOUCHING ANY SCREEN — the app now has ONE theme
 > The selectable parchment/obsidian **skins are gone** (`UiPrefs.skin`, the `Skin` type,
@@ -1021,3 +1022,53 @@ New entries below, most recent first.
     type="button">` on every chip/result so nothing accidentally submits a form), and
     confirmed via `git diff` that no unrelated formatting churn rode along in any of the
     nine touched files.
+
+- **2026-09-04** (Claude Code on the web) — Reusable long-text expand-to-edit modal,
+  wired into every long `<textarea>` in the app. New `src/lib/useLongTextEditor.tsx`,
+  modeled directly on the existing `useConfirm.tsx` (same promise-based `{ edit,
+  dialog }` shape, same backdrop-click-cancels-with-`stopPropagation` nesting safety),
+  built entirely from `glassChrome.tsx` primitives — a `GLASS_SURFACE`-styled panel,
+  near-fullscreen on mobile (`h-[80vh]`, capped `max-w-lg` on desktop), Cancel/Save
+  footer. **No `window.confirm()` anywhere** — Cancel only discards an in-progress
+  draft, never the real field (nothing is written back until Save), so there's no
+  destructive action to gate behind a confirmation at all, sidestepping the exact bug
+  class `useConfirm.tsx`'s own doc comment describes (native `window.confirm()`
+  silently resolving `false` with no dialog shown in this app's embedded preview
+  environments).
+  - **Trigger**: a small `Maximize2` icon in a field's label row, opening the modal
+    pre-filled. `GlassField` (`glassChrome.tsx`) gained an optional `onExpand?: () =>
+    void` prop for this — covers every `glassChrome.tsx`-based screen (`WorldSetup.tsx`:
+    Power System, World Background, Narration Style; `NewGame.tsx`: Background, plus
+    the conditional Tale Dive Brief field shown when editing a saved Protagonist
+    preset; `TaleBrief.tsx`: both its own textareas).
+  - **The single highest-leverage change**: `Codex.tsx`'s shared `TextField` component
+    (its `textarea` branch is used by 30+ call sites across every CRUD category — NPCs,
+    Locations, Factions, Lore, Quests, Bestiary, Items, Skills, Realm) gained the same
+    icon automatically, with zero changes needed at any individual call site. Threading
+    `editLongText` through 30+ props would have been a lot of pure mechanical noise for
+    one value every call site needed identically, so it's provided once via a small
+    `LongTextEditorContext` (local to `Codex.tsx`, not exported) and consumed inside
+    `TextField` instead — this codebase's first use of React Context, deliberately
+    narrow in scope rather than a new sprawling pattern.
+  - **`Codex.tsx` and `SlashCommandManager.tsx` each instantiate their own local
+    `useLongTextEditor()`**, matching a convention discovered mid-implementation: both
+    already call `useConfirm()` locally themselves (not fed via a prop from `App.tsx`
+    the way `WorldSetup`/`NewGame`/`TaleBrief` are) — so `editLongText` follows
+    whichever pattern each screen had already established for `confirm`, rather than
+    forcing one convention everywhere.
+  - **Deliberately excluded**: Chronicle's per-turn action textarea (`Chronicle.tsx`
+    ~line 1030) — the game's core live-typing input, wired to autocomplete dropdown
+    positioning and a focus ref, typed into on essentially every turn. Not a "long
+    field to review," and routing it through an expand-to-modal pattern would break
+    the type-and-send interaction it's built for.
+  - **Verified live**, real headless browser, both desktop and the 390px mobile
+    viewport: opened the modal from `WorldSetup`'s Power System field, confirmed
+    Save writes the new text back to the underlying field, Cancel discards without
+    touching it, and clicking the backdrop behaves like Cancel. Then the harder
+    case — opened the modal *from inside* the already-open `SlashCommandManager`
+    overlay dialog (itself `z-30`, the new modal `z-50`) and confirmed it stacks
+    correctly on top, typing into it, then clicking *its own* backdrop closed only
+    that inner modal and left `SlashCommandManager` fully open and undisturbed
+    underneath — the exact nesting behavior the `stopPropagation` pattern (copied
+    from `useConfirm.tsx`) exists to guarantee. `npm run typecheck`/`npm run build`
+    both clean throughout.

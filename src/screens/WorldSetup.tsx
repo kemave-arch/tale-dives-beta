@@ -10,6 +10,7 @@ import type { WorldData } from '../types.ts'
 interface WorldSetupProps {
   worldTemplates?: WorldData[]
   initial?: WorldData | null
+  editLongText: (label: string, value: string, hint?: string) => Promise<string | null>
   onBack: () => void
   onContinue: (world: WorldData) => void
   onSavePreset?: (world: WorldData) => void
@@ -35,6 +36,7 @@ const POWER_SYSTEM_CHIPS = ['Hard magic, costly', 'Soft magic, mysterious', 'Cul
 export default function WorldSetup({
   worldTemplates = [],
   initial,
+  editLongText,
   onBack,
   onContinue,
   onSavePreset,
@@ -147,7 +149,14 @@ export default function WorldSetup({
                     />
                   </GlassField>
 
-                  <GlassField label="Power System" hint="Magic, cultivation, tech, or pure skill — however power works here. Optional.">
+                  <GlassField
+                    label="Power System"
+                    hint="Magic, cultivation, tech, or pure skill — however power works here. Optional."
+                    onExpand={async () => {
+                      const result = await editLongText('Power System', powerSystem)
+                      if (result !== null) setPowerSystem(result)
+                    }}
+                  >
                     <div className="flex flex-col gap-2">
                       <SuggestionChips options={POWER_SYSTEM_CHIPS} onPick={setPowerSystem} />
                       <textarea
@@ -183,7 +192,13 @@ export default function WorldSetup({
                     </div>
                   </div>
 
-                  <GlassField label="World Background">
+                  <GlassField
+                    label="World Background"
+                    onExpand={async () => {
+                      const result = await editLongText('World Background', background)
+                      if (result !== null) setBackground(result)
+                    }}
+                  >
                     <textarea
                       value={background}
                       onChange={(e) => setBackground(e.target.value)}
@@ -193,7 +208,13 @@ export default function WorldSetup({
                     />
                   </GlassField>
 
-                  <GlassField label="Narration Style">
+                  <GlassField
+                    label="Narration Style"
+                    onExpand={async () => {
+                      const result = await editLongText('Narration Style', narrationStyle)
+                      if (result !== null) setNarrationStyle(result)
+                    }}
+                  >
                     <textarea
                       value={narrationStyle}
                       onChange={(e) => setNarrationStyle(e.target.value)}

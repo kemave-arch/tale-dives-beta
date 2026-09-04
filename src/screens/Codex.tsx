@@ -1,8 +1,8 @@
-import { useState, useMemo, useEffect } from 'react'
+import { createContext, useState, useMemo, useEffect, useContext } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
   ChevronRight, Globe, BookOpen, Users, ShieldCheck, Map, ScrollText, Target, Skull, Backpack,
-  Pencil, Save, X, Trash2, Plus, Lock, User, Hammer, Clock, Sparkles,
+  Pencil, Save, X, Trash2, Plus, Lock, User, Hammer, Clock, Sparkles, Maximize2,
 } from 'lucide-react'
 import { DASHED_ROW_CLASS, GlassHeader, GlassIconButton, GlassScreen, SELECT_CLASS } from '../lib/glassChrome.tsx'
 import { slugify } from '../lib/slug.ts'
@@ -14,6 +14,7 @@ import { canAffordRecipe } from '../lib/crafting.ts'
 import { hoursRemaining } from '../lib/gameTime.ts'
 import { deriveStanding, effectiveStanding, repTierLabel } from '../lib/factions.ts'
 import { useConfirm } from '../lib/useConfirm.tsx'
+import { useLongTextEditor } from '../lib/useLongTextEditor.tsx'
 import { EQUIPPABLE_TYPES } from '../types.ts'
 import type {
   BestiaryEntry, CraftingJob, Discovery, EquipSlot, FactionEntry, ItemEntry, ItemType, LocationEntry, LogEntry, LoreEntry, NpcEntry, Player,
@@ -227,6 +228,15 @@ function DetailPanel({ children }: { children: React.ReactNode }) {
   return <div className="rounded-2xl p-5 flex flex-col gap-4 border border-[#e8ca8a]/25 bg-transparent backdrop-blur-sm">{children}</div>
 }
 
+// TextField's textarea variant is used across every Codex CRUD form (NPCs,
+// Locations, Factions, Lore, Quests, Bestiary, Items, Skills, Realm) — 30+
+// call sites. Rather than thread useLongTextEditor.tsx's `edit` fn through
+// every one of them as an explicit prop, it's provided once via this local
+// context (set up by the main Codex component below) and consumed here, so
+// every textarea gets the expand affordance automatically with zero changes
+// at any individual call site.
+const LongTextEditorContext = createContext<((label: string, value: string, hint?: string) => Promise<string | null>) | null>(null)
+
 function TextField({
   label, value, onChange, textarea, placeholder,
 }: {
@@ -236,10 +246,28 @@ function TextField({
   textarea?: boolean
   placeholder?: string
 }) {
+  const editLongText = useContext(LongTextEditorContext)
   const cls = 'mt-1 w-full rounded-lg border border-[#e8ca8a]/25 bg-[#e8ca8a]/[0.04] backdrop-blur-sm px-3 py-2 font-narrative text-sm text-ink placeholder:text-[#e8ca8a]/35'
   return (
     <label className="block">
-      <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">{label}</span>
+      <span className="flex items-center gap-2">
+        <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">{label}</span>
+        {textarea && editLongText && (
+          <button
+            type="button"
+            onClick={async (e) => {
+              e.preventDefault() // sits inside a <label> — don't let it refocus/click through to the field
+              const result = await editLongText(label, value)
+              if (result !== null) onChange(result)
+            }}
+            title="Expand"
+            aria-label="Expand to edit"
+            className="ml-auto text-[#e8ca8a]/60 hover:text-[#f5dfa0] transition-colors duration-150"
+          >
+            <Maximize2 size={13} />
+          </button>
+        )}
+      </span>
       {textarea ? (
         <textarea rows={3} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className={cls} />
       ) : (
@@ -358,6 +386,7 @@ export default function Codex({
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<Record<string, any>>({})
   const { confirm, dialog: confirmDialog } = useConfirm()
+  const { edit: editLongText, dialog: longTextDialog } = useLongTextEditor()
 
   const classNameFor = (id?: string) => (id ? PRESET_CLASSES.find((c) => c.id === id)?.name : undefined)
 
@@ -913,6 +942,7 @@ export default function Codex({
     // Dark ground, not the creation flow's artwork: the Codex is dense,
     // heavily scrolled reference reading, where a picture behind the text
     // would fight it.
+    <LongTextEditorContext.Provider value={editLongText}>
     <GlassScreen ground="dark" className="px-4 pb-16">
       <GlassHeader title={title} onBack={back} className="!px-0 mb-5" />
 
@@ -1689,5 +1719,7 @@ export default function Codex({
 
       {confirmDialog}
     </GlassScreen>
+    {longTextDialog}
+    </LongTextEditorContext.Provider>
   )
 }

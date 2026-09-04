@@ -17,6 +17,7 @@ interface TaleBriefProps {
   initialNarrationStyle: string
   initialTemperature: number
   initialCombatMode?: CombatMode
+  editLongText: (label: string, value: string, hint?: string) => Promise<string | null>
   onBack: () => void
   onBegin: (payload: TaleBriefPayload) => void
 }
@@ -65,6 +66,7 @@ export default function TaleBrief({
   initialNarrationStyle,
   initialTemperature,
   initialCombatMode = 'NARRATIVE',
+  editLongText,
   onBack,
   onBegin,
 }: TaleBriefProps) {
@@ -79,7 +81,14 @@ export default function TaleBrief({
 
       <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
         <div className="max-w-md mx-auto flex flex-col gap-4">
-          <GlassField label="Where do you dive in?" hint="Optional — leave blank and the Narrator decides.">
+          <GlassField
+            label="Where do you dive in?"
+            hint="Optional — leave blank and the Narrator decides."
+            onExpand={async () => {
+              const result = await editLongText('Where do you dive in?', opening)
+              if (result !== null) setOpening(result)
+            }}
+          >
             <textarea
               value={opening}
               onChange={(e) => setOpening(e.target.value)}
@@ -89,7 +98,13 @@ export default function TaleBrief({
             />
           </GlassField>
 
-          <GlassField label="Narration Style">
+          <GlassField
+            label="Narration Style"
+            onExpand={async () => {
+              const result = await editLongText('Narration Style', narrationStyle)
+              if (result !== null) setNarrationStyle(result)
+            }}
+          >
             <textarea
               value={narrationStyle}
               onChange={(e) => setNarrationStyle(e.target.value)}

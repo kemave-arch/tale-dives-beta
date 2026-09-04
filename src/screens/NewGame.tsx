@@ -11,6 +11,7 @@ interface NewGameProps {
   protagonistTemplates?: ProtagonistData[]
   initial?: ProtagonistData | null
   showBriefField?: boolean // §Phase B.4 — the Tale Dive Brief screen owns this step for the 'tale' flow; library-preset editing still sets a stored default here
+  editLongText: (label: string, value: string, hint?: string) => Promise<string | null>
   onBack: () => void
   onBegin: (protagonist: ProtagonistData) => void
   onSavePreset?: (protagonist: ProtagonistData) => void
@@ -33,6 +34,7 @@ export default function NewGame({
   protagonistTemplates = [],
   initial,
   showBriefField = false,
+  editLongText,
   onBack,
   onBegin,
   onSavePreset,
@@ -145,7 +147,14 @@ export default function NewGame({
 
               {tab === 'identity' && (
                 <>
-                  <GlassField label="Background" hint="Optional.">
+                  <GlassField
+                    label="Background"
+                    hint="Optional."
+                    onExpand={async () => {
+                      const result = await editLongText('Background', background)
+                      if (result !== null) setBackground(result)
+                    }}
+                  >
                     <textarea
                       value={background}
                       onChange={(e) => setBackground(e.target.value)}
@@ -198,7 +207,14 @@ export default function NewGame({
                   </GlassField>
 
                   {showBriefField && (
-                    <GlassField label="Tale Dive Brief" hint="Optional.">
+                    <GlassField
+                      label="Tale Dive Brief"
+                      hint="Optional."
+                      onExpand={async () => {
+                        const result = await editLongText('Tale Dive Brief', opening)
+                        if (result !== null) setOpening(result)
+                      }}
+                    >
                       <textarea
                         value={opening}
                         onChange={(e) => setOpening(e.target.value)}

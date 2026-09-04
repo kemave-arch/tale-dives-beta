@@ -33,6 +33,7 @@ import { getProvider } from './api/providers/index.ts'
 import { PROSE_DEPTHS, DEFAULT_NARRATION_STYLE } from './api/turnContract.ts'
 import { readJSONFile, saveJSON } from './lib/backup.ts'
 import { useConfirm } from './lib/useConfirm.tsx'
+import { useLongTextEditor } from './lib/useLongTextEditor.tsx'
 import { useBackgroundMusic } from './lib/backgroundMusic.tsx'
 import * as store from './lib/store.ts'
 import { CURRENT_SCHEMA_VERSION, EQUIPPABLE_TYPES } from './types.ts'
@@ -145,6 +146,7 @@ export default function App() {
 
   const [pendingRecall, setPendingRecall] = useState<string | null>(null) // §6.6 — a targeted/full !recall snapshot waiting to ride along on the next real turn
   const { confirm, dialog: confirmDialog } = useConfirm()
+  const { edit: editLongText, dialog: longTextDialog } = useLongTextEditor()
   // Mounted here rather than in a screen so the soundtrack keeps playing
   // across navigation instead of restarting whenever a screen unmounts.
   const { muted: musicMuted, toggleMute: toggleMusicMute, setMuted: setMusicMuted } = useBackgroundMusic()
@@ -1094,6 +1096,7 @@ export default function App() {
       <WorldSetup
         worldTemplates={Object.values(worlds)}
         initial={worldSetupInitial}
+        editLongText={editLongText}
         onBack={() => setScreen(worldSetupMode === 'library' ? 'mainmenu' : 'storymode')}
         onContinue={(worldData) => {
           if (worldSetupMode === 'library') {
@@ -1113,6 +1116,7 @@ export default function App() {
       <NewGame
         protagonistTemplates={Object.values(protagonists)}
         initial={newGameInitial}
+        editLongText={editLongText}
         showBriefField={newGameMode === 'library'}
         onBack={() => setScreen(newGameMode === 'tale' ? 'worldsetup' : 'mainmenu')}
         onBegin={(protagonistData) => {
@@ -1135,6 +1139,7 @@ export default function App() {
         initialOpening={pendingProtagonist.opening}
         initialNarrationStyle={pendingWorld.narrationStyle}
         initialTemperature={apiSettings.temperature}
+        editLongText={editLongText}
         onBack={() => setScreen('newgame')}
         onBegin={({ opening, narrationStyle, temperature, combatMode }) => {
           setApiSettings((a) => ({ ...a, temperature }))
@@ -1319,6 +1324,7 @@ export default function App() {
       )}
 
       {confirmDialog}
+      {longTextDialog}
     </>
   )
 }

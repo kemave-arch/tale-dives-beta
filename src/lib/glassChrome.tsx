@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Maximize2 } from 'lucide-react'
 import { CyclingBackground } from './cyclingBackground.tsx'
 
 // Shared "border-only glassmorphism" chrome for screens that sit directly on
@@ -318,12 +318,41 @@ export const LABEL_CLASS = 'font-display text-[11px] uppercase tracking-[0.14em]
 // on the label's baseline despite the two different fonts and sizes, and
 // `flex-wrap` lets a long hint drop to its own line on a narrow screen rather
 // than crushing the label beside it.
-export function GlassField({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+// `onExpand`, when set, renders a small icon button that opens the field's
+// content in useLongTextEditor.tsx's large modal — for a textarea long
+// enough that its own fixed-height box makes reviewing or editing it
+// awkward. Left off for every short field; only set it on the ones that
+// actually need it.
+export function GlassField({
+  label,
+  hint,
+  onExpand,
+  children,
+}: {
+  label: string
+  hint?: string
+  onExpand?: () => void
+  children: ReactNode
+}) {
   return (
     <label className="flex flex-col gap-1.5">
       <span className="flex flex-wrap items-baseline gap-x-2">
         <span className={LABEL_CLASS}>{label}</span>
         {hint && <span className="font-narrative italic text-[11px] text-[#e8ca8a]/70">{hint}</span>}
+        {onExpand && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault() // this sits inside a <label> — don't let it refocus/click through to the field
+              onExpand()
+            }}
+            title="Expand"
+            aria-label="Expand to edit"
+            className="ml-auto text-[#e8ca8a]/60 hover:text-[#f5dfa0] transition-colors duration-150"
+          >
+            <Maximize2 size={13} />
+          </button>
+        )}
       </span>
       {children}
     </label>

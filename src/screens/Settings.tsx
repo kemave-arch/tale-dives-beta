@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Cpu, SlidersHorizontal, Database, Info, X, Save, Download, Upload, RotateCcw, FolderOpen, FolderX } from 'lucide-react'
+import { Cpu, SlidersHorizontal, Database, Info, X, Save, Download, Upload, RotateCcw, FolderOpen, FolderX, Maximize, Minimize } from 'lucide-react'
 import { PROSE_DEPTHS } from '../api/turnContract.ts'
 import { allProviders, getProvider } from '../api/providers/index.ts'
 import { forgetSaveFolder, loadSaveFolder, pickSaveFolder, supportsFileSystemAccess } from '../lib/fsAccess.ts'
@@ -136,7 +136,22 @@ export default function Settings({
   )
   const [combatMode, setCombatMode] = useState<CombatMode>(game?.combatMode ?? 'NARRATIVE')
   const [folderLinked, setFolderLinked] = useState<boolean | null>(null) // null = still checking
+  const [isFullscreen, setIsFullscreen] = useState(!!document.fullscreenElement)
   const importRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  }, [])
+
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {})
+    } else {
+      document.documentElement.requestFullscreen().catch(() => {})
+    }
+  }
 
   // §6.4B Local Save status — re-checked on mount since a granted folder
   // handle's permission doesn't survive a page reload.
@@ -327,6 +342,15 @@ export default function Settings({
               <p className="font-narrative text-[11px] text-ink-muted mt-1">
                 How solid the header, HUD, and input bar glass look over the ambient background. Lower is more see-through; 100% is fully solid.
               </p>
+            </div>
+
+            <div>
+              <p className={LABEL_CLASS}>Display</p>
+              <div className="mt-2">
+                <GlassButton onClick={toggleFullscreen} icon={isFullscreen ? Minimize : Maximize} tone="default" className="w-full">
+                  {isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+                </GlassButton>
+              </div>
             </div>
           </div>
         )}

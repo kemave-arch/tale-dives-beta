@@ -1,0 +1,17 @@
+{
+  "name": "Tale Dives",
+  "short_name": "Tale Dives",
+  "description": "An AI text-based fantasy RPG diving engine.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#151724",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

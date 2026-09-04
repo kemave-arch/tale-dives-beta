@@ -71,7 +71,19 @@ function errorMessage(err: unknown): string {
 }
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>('title')
+  const [screen, setScreen] = useState<Screen>(() => {
+    const saved = sessionStorage.getItem('td_active_screen') as Screen
+    if (!saved) return 'title'
+    
+    // Safety check: if screen requires an active game but none is loaded, fallback to title.
+    const id = store.loadActiveCampaignId()
+    const all = store.loadCampaigns()
+    const hasGame = !!(id && all[id])
+    if ((saved === 'chronicle' || saved === 'codex') && !hasGame) {
+      return 'title'
+    }
+    return saved
+  })
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   const [apiSettings, setApiSettings] = useState(store.loadApiSettings)
@@ -135,7 +147,7 @@ export default function App() {
   const { confirm, dialog: confirmDialog } = useConfirm()
   // Mounted here rather than in a screen so the soundtrack keeps playing
   // across navigation instead of restarting whenever a screen unmounts.
-  const { muted: musicMuted, toggleMute: toggleMusicMute } = useBackgroundMusic()
+  const { muted: musicMuted, toggleMute: toggleMusicMute, setMuted: setMusicMuted } = useBackgroundMusic()
 
   useEffect(() => { store.saveApiSettings(apiSettings) }, [apiSettings])
   useEffect(() => { store.saveUiPrefs(uiPrefs) }, [uiPrefs])
@@ -144,6 +156,12 @@ export default function App() {
   useEffect(() => { store.saveCampaigns(campaigns) }, [campaigns])
   useEffect(() => { if (activeCampaignId) store.saveActiveCampaignId(activeCampaignId) }, [activeCampaignId])
   useEffect(() => { store.saveGlobalSlashCommands(globalSlashCommands) }, [globalSlashCommands])
+  useEffect(() => {
+    sessionStorage.setItem('td_active_screen', screen)
+    if (screen === 'title' && musicMuted) {
+      setMusicMuted(false)
+    }
+  }, [screen, musicMuted, setMusicMuted])
 
   // The actively-played campaign is kept in `game` for the turn loop, and
   // mirrored into the `campaigns` library on every change.

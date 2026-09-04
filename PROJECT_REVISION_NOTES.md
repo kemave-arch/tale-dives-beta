@@ -66,19 +66,15 @@ rule applies to music.
 >    is still open** and was explicitly deprioritized by the user ("Skill quick slot is
 >    not a priority"), so do not start it without asking. See §3's Skills entry for what
 >    shipped and the two deliberate omissions.
-> 2. **API Failure Diagnostics Panel** (§3.5) — *next up.* Masked key, one-click "Copy
->    Diagnostic Report," Retry / Open Settings / Dismiss-into-PAUSE.
-> 3. **Action Suggestion Pills** (§6.4C) — *cheapest of the four.* The `act` schema field
->    already exists, is required, and the model already populates it every turn; nothing
->    in `src/` reads it (verified by grep). This is `App.tsx` (store it on the `LogEntry`)
->    plus `Chronicle.tsx` (render clickable pills that fill the input) — no schema or
->    prompt work needed.
-> 4. **Codex overhaul — filters.** User: "some items have drilldowns, but what we're
->    missing are filters." Check against the blueprint before scoping. Note §6.4D also
->    specifies a **search bar** above each Entry Grid, which likewise doesn't exist.
+> 2. ~~**API Failure Diagnostics Panel**~~ (§3.5) — **done**. Masked key, one-click "Copy
+>    Diagnostic Report," Retry / Open Settings / Dismiss-into-PAUSE. Styled in glassmorphism.
+> 3. ~~**Action Suggestion Pills**~~ (§6.4C) — **done**. The `act` schema field is now rendered
+>    as clickable pills below the prose.
+> 4. ~~**Codex overhaul — filters & search.**~~ — **done**. Both categories and details views now have dynamic filtering and search capabilities.
+> 5. **Progressive Web App (PWA) & Fullscreen UI** — **done**. Added `manifest.json` for "Add to Home Screen" support and manual Fullscreen toggle in Settings.
 >
 > Also still open from earlier, unrelated to the list above: campaign seeding, the
-> prologue beat, and streaming turn rendering (§4 item 7), and Inspired Mode (§4 item 5,
+> prologue beat, and streaming turn rendering (§4 item 7), and **Inspired Mode** (§4 item 5,
 > deferred on a quota block with evidence — read that entry before re-attempting).
 
 Recent shipped work, most recent first: a **glass-button pass** on the shared

@@ -222,5 +222,5 @@ export function useBackgroundMusic() {
     setMuted((prev) => !prev)
   }
 
-  return { muted, toggleMute }
+  return { muted, toggleMute, setMuted }
 }

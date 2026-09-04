@@ -1,6 +1,8 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-04, AI Studio — Setup screens overhaul (horizontal subtabs, Load Preset compact table with search, auto-expanding long text fields, full-width forms).
+**Last updated:** 2026-09-04, Claude Code on the web — re-verified soundtrack pathing
+after a large AI Studio batch (OST jukebox, navigation history); no bug found, see the
+log entry below for the live proof.
 
 > ## 🎨 READ THIS BEFORE TOUCHING ANY SCREEN — the app now has ONE theme
 > The selectable parchment/obsidian **skins are gone** (`UiPrefs.skin`, the `Skin` type,
@@ -81,6 +83,34 @@ rule applies to music.
 > still unbuilt, but no longer blocked on "there's nothing to seed from."
 
 Recent shipped work, most recent first: 
+- **Re-verified soundtrack pathing after the OST jukebox/navigation-history batch**:
+  2026-09-04 (Claude Code on the web). The user asked to "fix again the Vite pathing
+  for soundtracks" after merging AI Studio's `cd955f0`/`4bdd1e7`/`a7c8729` (OST jukebox
+  with `playTrack`/`nextTrack`/`prevTrack`, `NowPlayingBanner`, and real
+  `history.pushState`/`popstate` navigation). Static review of `backgroundMusic.tsx`,
+  `soundtrackManifest.ts`, `vite.config.ts`, `cyclingBackground.tsx`, and the new
+  `Vault*`/`NowPlayingBanner` components found no hardcoded path and confirmed
+  `discoverTracks()` still builds URLs from `import.meta.env.BASE_URL`, unchanged since
+  the manifest rewrite two entries below. `App.tsx`'s new `pushState`/`replaceState`
+  calls never pass a `url` argument, so the document's own URL (and therefore how a
+  relative `./tracks/...` resolves) never changes on navigation either.
+  **Verified live, not just by reading**: built `dist/`, served it under a simulated
+  `/tale-dives-beta/` GitHub Pages subpath (a sibling directory symlinked to `dist/`,
+  served by `python3 -m http.server`, so missing files 404 for real instead of hitting
+  the dev server's SPA fallback), then drove real headless Chromium
+  (`/opt/pw-browsers/chromium-1194/chrome-linux/chrome` via the `playwright` npm
+  package). `td-soundtrack`'s `currentSrc` resolved to the correct absolute URL under
+  the subpath with `readyState: 4` (fully loaded) immediately on load — matching
+  §0's muted-autoplay trap exactly (`paused: true` pre-gesture is expected, not a path
+  failure). A genuine (non-mute-button) click then correctly auto-unmuted via the
+  existing first-interaction listener, and `currentTime` advanced 1.49s → 2.99s across
+  a real 1.5s wait, proving actual audible playback, not just a loaded buffer.
+  Confirmed via the GitHub Actions API that `a7c8729` (the current head) already
+  deployed successfully, so this simulation matches what's actually live. **No code
+  change was needed or made** — the pathing has been correct since the manifest
+  rewrite; this entry exists so a future session doesn't re-spend time on the same
+  already-disproven theory (see §0's muted-autoplay trap, which already documents this
+  exact "it looks like a path bug but isn't" pattern from an earlier session).
 - **Hidden About Screen in Settings (`Settings.tsx`)**: 2026-09-04 (AI Studio).
   - Temporarily removed the "About" tab and `AboutPanel` from the Settings modal as requested.
   - Verified with `compile_applet`.

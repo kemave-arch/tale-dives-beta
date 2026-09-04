@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 
-// Soundtrack lives in public/tracks/ as ost_1.mp3, ost_2.mp3, ... — the same
-// numbered-and-auto-discovered convention the background art uses (see
-// cyclingBackground.tsx). Dropping ost_3.mp3 into that folder is enough on
-// its own to add it to the rotation; no code change needed.
-const TRACK_PREFIX = 'tracks/ost_'
-const TRACK_EXT = '.mp3'
+// Soundtrack lives in public/tracks/ as tale_dives_ost-0.opus,
+// tale_dives_ost-1.opus, ... — auto-discovered the same way the background
+// art is (see cyclingBackground.tsx), though 0-indexed rather than 1-indexed
+// like the art (matches how the files actually got named on conversion from
+// mp3 to opus — smaller files, same quality). Dropping tale_dives_ost-7.opus
+// into that folder is enough on its own to add it to the rotation; no code
+// change needed.
+const TRACK_PREFIX = 'tracks/tale_dives_ost-'
+const TRACK_EXT = '.opus'
 const MAX_TRACK_PROBE = 20 // sanity cap, not an expected real count
 const PROBE_TIMEOUT_MS = 5000
 const FADE_MS = 2500
@@ -49,7 +52,7 @@ function probeTrackExists(src: string): Promise<boolean> {
 
 async function discoverTracks(base: string): Promise<string[]> {
   const found: string[] = []
-  for (let i = 1; i <= MAX_TRACK_PROBE; i++) {
+  for (let i = 0; i <= MAX_TRACK_PROBE; i++) {
     const src = `${base}${TRACK_PREFIX}${i}${TRACK_EXT}`
     if (!(await probeTrackExists(src))) break
     found.push(src)

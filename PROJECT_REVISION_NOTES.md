@@ -1072,3 +1072,21 @@ New entries below, most recent first.
     underneath — the exact nesting behavior the `stopPropagation` pattern (copied
     from `useConfirm.tsx`) exists to guarantee. `npm run typecheck`/`npm run build`
     both clean throughout.
+
+- **2026-09-04** (Claude Code on the web) — Soundtrack converted from mp3 to opus
+  (smaller files, same quality), with a new naming pattern the user chose:
+  `tale_dives_ost-0.opus`, `tale_dives_ost-1.opus`, ... — 0-indexed, unlike the
+  1-indexed `pc_title-bg<N>.webp` background-art convention. `src/lib/
+  backgroundMusic.tsx`'s discovery constants (`TRACK_PREFIX`/`TRACK_EXT`) and its
+  probe loop's starting index updated to match; still auto-discovered the same way
+  (drop a new numbered file in, it joins the rotation, no further code change).
+  Removed the now-orphaned `public/tracks/ost_1.mp3`/`ost_2.mp3` — the old pattern
+  the code no longer looks for. **This repo currently has zero audio tracks** until
+  the actual `.opus` files land in `public/tracks/` (expected via AI Studio, per
+  this project's usual split — this session only updated the discovery code, no
+  audio bytes were provided to it). `npm run build` clean. **Not verified live**:
+  no real `.opus` files exist in this repo yet to test playback/discovery against;
+  a future session (or the user) should confirm actual playback once the files are
+  in place, and note that Opus-in-a-bare-`.opus`-file `<audio>` support is solid in
+  Chrome/Firefox/Edge but has historically been spottier on Safari/iOS — worth a
+  real-device check there specifically if that audience matters for this project.

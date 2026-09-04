@@ -1,6 +1,12 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-04, Claude Code on the web — the Codex overhaul: every entry
+**Last updated:** 2026-09-04, Claude Code on the web — a follow-up pass on the Codex
+overhaul: 4 categories whose data genuinely differs in shape from the rest got their
+own visual treatment instead of the shared accent-card template alone — Items now
+carry a real RPG loot-rarity border/glow (grey/green/blue/purple/gold), Bestiary shows
+HP/Base Damage as a monster-manual stat block, Factions got a 5-segment reputation
+gauge, and Quests a colored status ribbon (in-progress/completed/failed). See the log
+entry below. Earlier today: the Codex overhaul itself — every entry
 type (NPCs, Factions, Locations, Lore, Quests, Bestiary, Skills, Items) gained real
 depth fields (Lore in particular had *no body text field at all* before this), and the
 whole screen moved from a plain flat list/label-value UI to a per-category
@@ -98,6 +104,43 @@ rule applies to music.
 > still unbuilt, but no longer blocked on "there's nothing to seed from."
 
 Recent shipped work, most recent first: 
+- **Codex per-category visual differentiation (`Codex.tsx`)**: 2026-09-04 (Claude Code
+  on the web), a direct follow-up to the Codex overhaul below. The user's correction:
+  "due to the differing nature of data of entries in Codex, you're allowed to make
+  visuals that is most suitable for them like a high-end RPG" — i.e. don't stop at
+  giving every category its own accent color on an otherwise-identical template;
+  actually shape the layout around what each category's data *is*. Picked the 4
+  categories where this was clearly warranted rather than doing all 8 uniformly:
+  - **Items — rarity-tinted accent, not just the flat gold category color.** New
+    `ITEM_RARITY_ACCENTS` (common grey, uncommon green, rare blue, epic purple,
+    legendary gold-with-extra-glow), same `CategoryAccent` shape as the category
+    accents so every existing component (`DeckEntryCard`, `EntryHeroHeader`,
+    `SectionCard`, `TagPills`) just takes it as a drop-in replacement via a new
+    `itemAccentFor(rarity)` lookup — no new UI code needed beyond the accent set
+    itself. This is the single most recognizable "high-end RPG" convention there is
+    for loot (Diablo/WoW-style item-rarity coloring); falls back to the plain gold
+    category accent when `rarity` is unset or unrecognized.
+  - **Bestiary — HP/Base Damage as a stat block**, not two more label/value rows: new
+    `StatTile` (a bordered tile, big number, small label underneath), rendered as a
+    side-by-side pair in the Combat Profile section card — reads like an actual
+    monster-manual stat block instead of prose-style fields.
+  - **Factions — a 5-segment reputation gauge**, not just the tier name as text: new
+    `ReputationMeter`, filled left-to-right across §5.4's real Hostile/Suspicious/
+    Neutral/Favored/Allied 5-tier scale (`lib/factions.ts`'s own `REP_TIER_LABELS`) up
+    to the current tier — the classic RPG rep-bar convention instead of a bare number.
+  - **Quests — a colored status ribbon**, not plain status text: new
+    `QuestStatusBadge` (icon + label, green check "Completed", rose X "Failed", teal
+    arrow "In Progress"/other), shown both on the list card (next to the title,
+    `DeckEntryCard` gained a new `statusBadge` slot for this) and in the detail
+    header's badge row — a quest tracker's checklist feel instead of a plain field.
+  - `npm run typecheck`/`npm run build` clean. Verified live: seeded a second synthetic
+    campaign (a Legendary-rarity weapon vs. a Common one, factions at Hostile and
+    Favored tiers, quests at all three statuses) and confirmed via headless Chromium
+    screenshots that every one of the above renders correctly — the legendary item's
+    gold glow is immediately visually distinct from the common item in the same list,
+    the reputation gauge fills exactly 1-of-5 segments for a Hostile faction, all
+    three quest status ribbons show their correct color/icon/label, and the Bestiary
+    stat tiles render the real HP/damage numbers.
 - **Codex overhaul: real entry data + modern-card UI, per-turn debug payload
   (`types.ts`, `Codex.tsx`, `App.tsx`, `Chronicle.tsx`)**: 2026-09-04 (Claude Code on
   the web). The user asked for "extensive work in the Codex" — most entries were "too

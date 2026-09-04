@@ -2,7 +2,7 @@ import { createContext, useState, useMemo, useEffect, useContext } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
   Globe, BookOpen, Users, ShieldCheck, Map, ScrollText, Target, Skull, Backpack,
-  Pencil, Save, X, Trash2, Plus, Lock, User, Hammer, Clock, Sparkles,
+  Pencil, Save, X, Trash2, Plus, Lock, User, Hammer, Clock, Sparkles, CheckCircle2, XCircle, ArrowRight,
 } from 'lucide-react'
 import { DASHED_ROW_CLASS, GLASS_SURFACE_LIST, GlassHeader, GlassIconButton, GlassScreen, SELECT_CLASS } from '../lib/glassChrome.tsx'
 import { slugify } from '../lib/slug.ts'
@@ -350,6 +350,7 @@ interface CategoryAccent {
   badge: string // pill badge (default/auto-tagged/etc.)
   sectionIcon: string // just the icon color, for section-card headers
   tag: string // a single tag chip
+  solid?: string // a solid fill in the accent hue, for meters/stat tiles
 }
 
 const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
@@ -370,6 +371,7 @@ const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
     badge: 'rounded bg-[#fbbf24]/20 text-[#fde68a] border border-[#fbbf24]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
     sectionIcon: 'text-[#fbbf24]',
     tag: 'rounded-full border border-[#fbbf24]/35 bg-[#fbbf24]/10 px-2 py-0.5 text-[10px] font-mono text-[#fde68a]',
+    solid: 'bg-[#fbbf24]',
   },
   locations: {
     icon: Map,
@@ -406,6 +408,7 @@ const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
     badge: 'rounded bg-[#ef4444]/20 text-[#fca5a5] border border-[#ef4444]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
     sectionIcon: 'text-[#ef4444]',
     tag: 'rounded-full border border-[#ef4444]/35 bg-[#ef4444]/10 px-2 py-0.5 text-[10px] font-mono text-[#fca5a5]',
+    solid: 'bg-[#ef4444]',
   },
   skills: {
     icon: Sparkles,
@@ -440,17 +443,120 @@ const NEUTRAL_ACCENT: CategoryAccent = {
   tag: 'rounded-full border border-[#e8ca8a]/35 bg-[#e8ca8a]/10 px-2 py-0.5 text-[10px] font-mono text-[#fae5b5]',
 }
 
+// Item rarity gets its own accent set, in the same shape as CATEGORY_ACCENTS
+// — the classic loot-tier convention (grey/green/blue/purple/gold border and
+// glow, rising in intensity) reads instantly to anyone who's played an RPG,
+// and does more to distinguish one item from another than a single flat
+// "gold = item" color ever could. Falls back to CATEGORY_ACCENTS.items
+// (plain gold) when `rarity` is unset or doesn't match one of these five.
+const ITEM_RARITY_ACCENTS: Record<string, CategoryAccent> = {
+  common: {
+    icon: Backpack,
+    card: `${GLASS_SURFACE_LIST} bg-[#1c1e20]/85 border-[#9ca3af]/35 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#9ca3af]/70 hover:bg-[#25282b]/95 hover:shadow-[0_8px_20px_rgba(156,163,175,0.15)] cursor-pointer group`,
+    iconBadge: 'w-9 h-9 rounded-xl bg-[#9ca3af]/15 border border-[#9ca3af]/30 flex items-center justify-center text-[#9ca3af] shrink-0 group-hover:scale-105 transition-transform',
+    kicker: 'font-mono text-[10px] text-[#d1d5db]/75 uppercase tracking-wider',
+    badge: 'rounded bg-[#9ca3af]/20 text-[#d1d5db] border border-[#9ca3af]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+    sectionIcon: 'text-[#9ca3af]',
+    tag: 'rounded-full border border-[#9ca3af]/35 bg-[#9ca3af]/10 px-2 py-0.5 text-[10px] font-mono text-[#d1d5db]',
+  },
+  uncommon: {
+    icon: Backpack,
+    card: `${GLASS_SURFACE_LIST} bg-[#0d2118]/85 border-[#4ade80]/35 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#4ade80]/80 hover:bg-[#122e21]/95 hover:shadow-[0_8px_24px_rgba(74,222,128,0.2)] cursor-pointer group`,
+    iconBadge: 'w-9 h-9 rounded-xl bg-[#4ade80]/15 border border-[#4ade80]/30 flex items-center justify-center text-[#4ade80] shrink-0 group-hover:scale-105 transition-transform',
+    kicker: 'font-mono text-[10px] text-[#86efac]/75 uppercase tracking-wider',
+    badge: 'rounded bg-[#4ade80]/20 text-[#86efac] border border-[#4ade80]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+    sectionIcon: 'text-[#4ade80]',
+    tag: 'rounded-full border border-[#4ade80]/35 bg-[#4ade80]/10 px-2 py-0.5 text-[10px] font-mono text-[#86efac]',
+  },
+  rare: {
+    icon: Backpack,
+    card: `${GLASS_SURFACE_LIST} bg-[#0d1b2a]/85 border-[#60a5fa]/35 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#60a5fa]/80 hover:bg-[#12263a]/95 hover:shadow-[0_8px_24px_rgba(96,165,250,0.2)] cursor-pointer group`,
+    iconBadge: 'w-9 h-9 rounded-xl bg-[#60a5fa]/15 border border-[#60a5fa]/30 flex items-center justify-center text-[#60a5fa] shrink-0 group-hover:scale-105 transition-transform',
+    kicker: 'font-mono text-[10px] text-[#93c5fd]/75 uppercase tracking-wider',
+    badge: 'rounded bg-[#60a5fa]/20 text-[#93c5fd] border border-[#60a5fa]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+    sectionIcon: 'text-[#60a5fa]',
+    tag: 'rounded-full border border-[#60a5fa]/35 bg-[#60a5fa]/10 px-2 py-0.5 text-[10px] font-mono text-[#93c5fd]',
+  },
+  epic: {
+    icon: Backpack,
+    card: `${GLASS_SURFACE_LIST} bg-[#190d29]/85 border-[#c084fc]/35 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#c084fc]/80 hover:bg-[#23123a]/95 hover:shadow-[0_8px_24px_rgba(192,132,252,0.25)] cursor-pointer group`,
+    iconBadge: 'w-9 h-9 rounded-xl bg-[#c084fc]/15 border border-[#c084fc]/30 flex items-center justify-center text-[#c084fc] shrink-0 group-hover:scale-105 transition-transform',
+    kicker: 'font-mono text-[10px] text-[#d8b4fe]/75 uppercase tracking-wider',
+    badge: 'rounded bg-[#c084fc]/20 text-[#d8b4fe] border border-[#c084fc]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+    sectionIcon: 'text-[#c084fc]',
+    tag: 'rounded-full border border-[#c084fc]/35 bg-[#c084fc]/10 px-2 py-0.5 text-[10px] font-mono text-[#d8b4fe]',
+  },
+  legendary: {
+    icon: Backpack,
+    card: `${GLASS_SURFACE_LIST} bg-[#241c08]/90 border-[#fbbf24]/50 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#fbbf24]/90 hover:bg-[#332a0c]/95 hover:shadow-[0_8px_28px_rgba(251,191,36,0.35)] shadow-[0_0_16px_rgba(251,191,36,0.12)] cursor-pointer group`,
+    iconBadge: 'w-9 h-9 rounded-xl bg-[#fbbf24]/20 border border-[#fbbf24]/50 flex items-center justify-center text-[#fbbf24] shrink-0 group-hover:scale-105 transition-transform',
+    kicker: 'font-mono text-[10px] text-[#fde68a]/85 uppercase tracking-wider',
+    badge: 'rounded bg-[#fbbf24]/25 text-[#fde68a] border border-[#fbbf24]/50 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+    sectionIcon: 'text-[#fbbf24]',
+    tag: 'rounded-full border border-[#fbbf24]/40 bg-[#fbbf24]/15 px-2 py-0.5 text-[10px] font-mono text-[#fde68a]',
+  },
+}
+
+function itemAccentFor(rarity: string | undefined): CategoryAccent {
+  const key = rarity?.toLowerCase().trim()
+  return (key && ITEM_RARITY_ACCENTS[key]) || CATEGORY_ACCENTS.items
+}
+
+// A small numeric stat tile — Bestiary's HP/Base Damage, side by side, read
+// like a monster-manual stat block rather than another label/value row.
+function StatTile({ label, value, accent }: { label: string; value: string | number; accent: CategoryAccent }) {
+  return (
+    <div className="flex-1 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-center">
+      <div className={`font-display font-bold text-lg leading-tight ${accent.sectionIcon}`}>{value}</div>
+      <div className="font-mono text-[9px] uppercase tracking-wider text-ink-muted mt-0.5">{label}</div>
+    </div>
+  )
+}
+
+// §5.4's 5-Tier scale (lib/factions.ts's REP_TIER_LABELS) as a segmented
+// gauge — Hostile through Allied filled up to the current tier, the same
+// "reputation meter" convention most RPGs use instead of a bare number.
+const REP_TIER_STEPS = [-2, -1, 0, 1, 2]
+function ReputationMeter({ tier, accent }: { tier: number; accent: CategoryAccent }) {
+  const clamped = Math.max(-2, Math.min(2, Math.round(tier)))
+  return (
+    <div className="flex gap-1 mt-1">
+      {REP_TIER_STEPS.map((step) => (
+        <div key={step} className={`flex-1 h-2 rounded-full ${step <= clamped ? (accent.solid ?? 'bg-[#e8ca8a]') : 'bg-white/10'}`} />
+      ))}
+    </div>
+  )
+}
+
+// A quest's status as a colored ribbon — the checklist/tracker feel a quest
+// log needs, rather than plain status text sitting next to everything else.
+const QUEST_STATUS_META: Record<string, { label: string; icon: LucideIcon; className: string }> = {
+  completed: { label: 'Completed', icon: CheckCircle2, className: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40' },
+  failed: { label: 'Failed', icon: XCircle, className: 'bg-rose-500/15 text-rose-300 border-rose-500/40' },
+  advanced: { label: 'In Progress', icon: ArrowRight, className: 'bg-[#34d399]/15 text-[#6ee7b7] border-[#34d399]/40' },
+}
+function QuestStatusBadge({ status }: { status?: string }) {
+  const meta = QUEST_STATUS_META[status ?? ''] ?? { label: status || 'Active', icon: Target, className: 'bg-[#34d399]/15 text-[#6ee7b7] border-[#34d399]/40' }
+  const Icon = meta.icon
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase tracking-wide shrink-0 ${meta.className}`}>
+      <Icon size={11} /> {meta.label}
+    </span>
+  )
+}
+
 // The list-view "deck card" — replaces the old plain EntryCard for the 8
 // real CRUD categories. `kicker` is the short type/status line under the
 // title (e.g. a location's region, a quest's status); `tags` renders as up
 // to 4 small chips, matching a modern TCG/RPG card's keyword line.
 function DeckEntryCard({
-  accent, icon, title, kicker, subtitle, badge, tags, onClick,
+  accent, icon, title, kicker, statusBadge, subtitle, badge, tags, onClick,
 }: {
   accent: CategoryAccent
   icon?: LucideIcon
   title: string
   kicker?: string
+  statusBadge?: React.ReactNode // a richer badge (e.g. Quests' colored status ribbon), shown beside the kicker line
   subtitle?: string
   badge?: React.ReactNode
   tags?: string[]
@@ -466,7 +572,12 @@ function DeckEntryCard({
           </div>
           <div className="min-w-0">
             <h3 className="font-display font-bold text-sm text-ink group-hover:text-white truncate">{title}</h3>
-            {kicker && <p className={accent.kicker}>{kicker}</p>}
+            {(kicker || statusBadge) && (
+              <p className={`${accent.kicker} flex items-center gap-1.5`}>
+                {kicker}
+                {statusBadge}
+              </p>
+            )}
           </div>
         </div>
         {badge}
@@ -1633,10 +1744,13 @@ export default function Codex({
                 badges={<AutoBadge shown={factions[entryId].autoLogged} />}
               />
               <SectionCard accent={CATEGORY_ACCENTS.factions} icon={ShieldCheck} title="Standing">
-                <FieldRow
-                  label="Reputation Tier"
-                  value={`${repTierLabel(factions[entryId].repTier)} (${factions[entryId].repTier > 0 ? '+' : ''}${factions[entryId].repTier} of -2 to +2)`}
-                />
+                <div>
+                  <FieldRow
+                    label="Reputation Tier"
+                    value={`${repTierLabel(factions[entryId].repTier)} (${factions[entryId].repTier > 0 ? '+' : ''}${factions[entryId].repTier} of -2 to +2)`}
+                  />
+                  <ReputationMeter tier={factions[entryId].repTier} accent={CATEGORY_ACCENTS.factions} />
+                </div>
                 {factions[entryId].rivalId && factions[factions[entryId].rivalId!] && (
                   <FieldRow label="Rival Faction" value={factions[factions[entryId].rivalId!].name} />
                 )}
@@ -1811,7 +1925,7 @@ export default function Codex({
               key={id}
               accent={CATEGORY_ACCENTS.quests}
               title={isHidden(q) ? '???' : q.name}
-              kicker={isHidden(q) ? undefined : (q.status ?? 'active')}
+              statusBadge={isHidden(q) ? undefined : <QuestStatusBadge status={q.status} />}
               subtitle={isHidden(q) ? (q.discovery?.teaser || 'Not yet discovered.') : (q.description || q.note)}
               badge={isHidden(q) ? <LockBadge /> : <AutoBadge shown={q.autoLogged} />}
               tags={isHidden(q) ? undefined : q.tags}
@@ -1848,11 +1962,14 @@ export default function Codex({
               <EntryHeroHeader
                 accent={CATEGORY_ACCENTS.quests}
                 title={quests[entryId].name}
-                subtitle={quests[entryId].status ?? 'active'}
-                badges={<AutoBadge shown={quests[entryId].autoLogged} />}
+                badges={
+                  <>
+                    <QuestStatusBadge status={quests[entryId].status} />
+                    <AutoBadge shown={quests[entryId].autoLogged} />
+                  </>
+                }
               />
               <SectionCard accent={CATEGORY_ACCENTS.quests} icon={Target} title="Objective">
-                <FieldRow label="Status" value={quests[entryId].status ?? 'active'} />
                 {quests[entryId].description && <FieldRow label="Description" value={quests[entryId].description} />}
                 {quests[entryId].questGiver && <FieldRow label="Quest Giver" value={quests[entryId].questGiver} />}
                 {quests[entryId].reward && <FieldRow label="Reward" value={quests[entryId].reward} />}
@@ -1924,8 +2041,12 @@ export default function Codex({
               />
               <SectionCard accent={CATEGORY_ACCENTS.bestiary} icon={Skull} title="Combat Profile">
                 <FieldRow label="Threat Tier" value={bestiary[entryId].threatTier} />
-                {bestiary[entryId].hpMax !== undefined && <FieldRow label="HP" value={String(bestiary[entryId].hpMax)} />}
-                {bestiary[entryId].dmgBase !== undefined && <FieldRow label="Base Damage" value={String(bestiary[entryId].dmgBase)} />}
+                {(bestiary[entryId].hpMax !== undefined || bestiary[entryId].dmgBase !== undefined) && (
+                  <div className="flex gap-2">
+                    {bestiary[entryId].hpMax !== undefined && <StatTile label="HP" value={bestiary[entryId].hpMax!} accent={CATEGORY_ACCENTS.bestiary} />}
+                    {bestiary[entryId].dmgBase !== undefined && <StatTile label="Base Damage" value={bestiary[entryId].dmgBase!} accent={CATEGORY_ACCENTS.bestiary} />}
+                  </div>
+                )}
               </SectionCard>
               {(bestiary[entryId].description || bestiary[entryId].habitat || bestiary[entryId].weaknesses || bestiary[entryId].lootTable) && (
                 <SectionCard accent={CATEGORY_ACCENTS.bestiary} icon={ScrollText} title="Bestiary Notes">
@@ -2063,14 +2184,15 @@ export default function Codex({
             const qty = inventory[id]
             const item = items[id]
             const slot = equippedSlotFor(id)
+            const accent = itemAccentFor(item?.rarity)
             return (
               <DeckEntryCard
                 key={id}
-                accent={CATEGORY_ACCENTS.items}
+                accent={accent}
                 title={item?.name ?? id.replace(/_/g, ' ')}
                 kicker={[item?.type ?? 'unknown', item?.rarity].filter(Boolean).join(' · ')}
                 subtitle={`×${qty}${statBonusText(item?.statBonus) ? ` · ${statBonusText(item?.statBonus)}` : ''}${item?.loreText ? ` — ${item.loreText}` : ''}`}
-                badge={slot ? <span className={CATEGORY_ACCENTS.items.badge}>equipped</span> : undefined}
+                badge={slot ? <span className={accent.badge}>equipped</span> : undefined}
                 tags={item?.tags}
                 onClick={() => setEntryId(id)}
               />
@@ -2153,12 +2275,12 @@ export default function Codex({
           ) : (
             <div className="flex flex-col gap-3">
               <EntryHeroHeader
-                accent={CATEGORY_ACCENTS.items}
+                accent={itemAccentFor(items[entryId]?.rarity)}
                 title={items[entryId]?.name ?? entryId.replace(/_/g, ' ')}
                 subtitle={[items[entryId]?.type ?? 'unknown', items[entryId]?.rarity].filter(Boolean).join(' · ')}
-                badges={equippedSlotFor(entryId) ? <span className={CATEGORY_ACCENTS.items.badge}>equipped</span> : undefined}
+                badges={equippedSlotFor(entryId) ? <span className={itemAccentFor(items[entryId]?.rarity).badge}>equipped</span> : undefined}
               />
-              <SectionCard accent={CATEGORY_ACCENTS.items} icon={Backpack} title="Item">
+              <SectionCard accent={itemAccentFor(items[entryId]?.rarity)} icon={Backpack} title="Item">
                 <FieldRow label="Type" value={items[entryId]?.type ?? 'unknown'} />
                 <FieldRow label="Quantity" value={String(inventory[entryId] ?? 0)} />
                 {items[entryId]?.value !== undefined && <FieldRow label="Value" value={String(items[entryId]!.value)} />}
@@ -2182,7 +2304,7 @@ export default function Codex({
                   </div>
                 )}
               </SectionCard>
-              <TagPills tags={items[entryId]?.tags} accent={CATEGORY_ACCENTS.items} />
+              <TagPills tags={items[entryId]?.tags} accent={itemAccentFor(items[entryId]?.rarity)} />
             </div>
           )}
         </>

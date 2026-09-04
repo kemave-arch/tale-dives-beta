@@ -129,11 +129,15 @@ interface SummaryParams {
 }
 
 // §2 Phase E Chapter Milestone — a plain-text (not JSON-schema) follow-up
-// call over the same conversation history, asking for a 2-sentence recap.
+// call over the same conversation history, asking for a rich recap.
 // Deliberately its own request rather than folding a summary field into
 // TURN_SCHEMA (§3.6: every field but `nar` stays a compact mechanism, and a
 // chapter summary is prose that only exists once every ~15 turns — it isn't
 // worth carrying on every single turn's schema).
+// Widened from a terse 2-sentence/200-token cap to a full narrated recap
+// (2026-09-04, alongside the IMMERSIVE prose-depth increase) so chapter
+// breaks read like a real novel's "previously..." passage instead of a
+// mechanical plot-point list.
 export async function runSummary({ apiKey, model, temperature, history }: SummaryParams): Promise<string> {
   const url = `${BASE_URL}/${encodeURIComponent(model)}:generateContent`
 
@@ -144,12 +148,12 @@ export async function runSummary({ apiKey, model, temperature, history }: Summar
         role: 'user',
         parts: [
           {
-            text: 'Summarize this chapter of the story so far in exactly two sentences, third person, focusing only on major plot developments. Output ONLY the two sentences — no preamble, no markdown.',
+            text: 'Write a rich, narrated recap of this chapter of the story so far — several full paragraphs, third person, past tense, in the same evocative prose style as the narration itself. Cover major plot developments, emotional turns, and standout moments, not just a bare list of events. Output ONLY the recap prose — no preamble, no headings, no markdown.',
           },
         ],
       },
     ],
-    generationConfig: { temperature, maxOutputTokens: 200 },
+    generationConfig: { temperature, maxOutputTokens: 3072 },
   }
 
   const res = await fetch(url, {

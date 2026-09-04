@@ -250,7 +250,7 @@ export default function App() {
       world, // §Phase A — kept for reference until the Codex Realm Overview exists
       player,
       combatMode, // §5.1d — defaults to NARRATIVE (see the Tale Dive Brief screen's toggle)
-      proseDepth: PROSE_DEPTHS.BALANCED,
+      proseDepth: PROSE_DEPTHS.IMMERSIVE, // default changed 2026-09-04 per explicit request for the most immersive prose by default; still overridable per-campaign in Settings
       narrationStyle: world.narrationStyle || DEFAULT_NARRATION_STYLE,
       locations: {}, // §5.10 Locations Codex — populated by auto-registration
       npcs: {}, // §5.5/§5.14 NPC Codex — populated by auto-registration

@@ -211,10 +211,15 @@ export const TURN_SCHEMA = {
 }
 
 // §4.4/§7.1 shared Prose Depth table — token ceiling only, never model choice.
+// IMMERSIVE's ceiling was raised (2026-09-04) specifically for novel-length
+// turns — both the guidance text fed to the model via jitContext.ts's
+// "Target Prose Depth" line and the hard maxOutputTokens ceiling passed to
+// the API had to move together, since raising the ceiling alone doesn't
+// make the model write longer if it's still being told the old target.
 export const PROSE_DEPTHS: Record<'CONCISE' | 'BALANCED' | 'IMMERSIVE', ProseDepthConfig> = {
   CONCISE: { label: 'CONCISE', targetTokens: '~600-800 tokens', maxOutputTokens: 1280 },
   BALANCED: { label: 'BALANCED', targetTokens: '~1,100-1,400 tokens', maxOutputTokens: 2048 },
-  IMMERSIVE: { label: 'IMMERSIVE', targetTokens: '~1,800-2,600 tokens', maxOutputTokens: 3584 },
+  IMMERSIVE: { label: 'IMMERSIVE', targetTokens: '~2,800-4,000 tokens', maxOutputTokens: 6144 },
 }
 
 export const DEFAULT_NARRATION_STYLE =

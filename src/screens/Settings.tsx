@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Cpu, SlidersHorizontal, Database, Info, X, Save, Download, Upload, RotateCcw, FolderOpen, FolderX, Maximize, Minimize } from 'lucide-react'
+import { Cpu, SlidersHorizontal, Database, Info, X, Save, Download, Upload, RotateCcw, FolderOpen, FolderX, Maximize, Minimize, Trash2 } from 'lucide-react'
 import { PROSE_DEPTHS } from '../api/turnContract.ts'
 import { allProviders, getProvider } from '../api/providers/index.ts'
 import { forgetSaveFolder, loadSaveFolder, pickSaveFolder, supportsFileSystemAccess } from '../lib/fsAccess.ts'
@@ -110,6 +110,7 @@ interface SettingsProps {
   onBackupAll: () => void
   onImportJson: (file: File) => void
   onResetDefaults: () => void
+  onClearCache: () => void
 }
 
 // Blueprint §6.4E — one drawer, reused pre-campaign and in-story. Gameplay
@@ -124,6 +125,7 @@ export default function Settings({
   onBackupAll,
   onImportJson,
   onResetDefaults,
+  onClearCache,
 }: SettingsProps) {
   const [tab, setTab] = useState<(typeof TABS)[number]['id']>('model')
   const [provider, setProvider] = useState(apiSettings.provider)
@@ -399,6 +401,9 @@ export default function Settings({
               </GlassButton>
               <GlassButton onClick={onResetDefaults} tone="danger" icon={RotateCcw}>
                 Reset Defaults
+              </GlassButton>
+              <GlassButton onClick={onClearCache} tone="danger" icon={Trash2} className="col-span-2">
+                Clear Local Data
               </GlassButton>
               <input
                 ref={importRef}

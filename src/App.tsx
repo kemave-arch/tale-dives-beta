@@ -1279,8 +1279,14 @@ export default function App() {
             }
           }}
           onResetDefaults={async () => {
+            if (!(await confirm('Restore default settings? This will not erase your campaigns.'))) return
+            setApiSettings(store.loadApiSettings())
+            setUiPrefs(store.loadUiPrefs())
+          }}
+          onClearCache={async () => {
             if (!(await confirm('Erase all Tales, Worlds, and Protagonists on this device? This cannot be undone.'))) return
             localStorage.clear()
+            sessionStorage.clear()
             window.location.reload()
           }}
         />

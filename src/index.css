@@ -1,0 +1,307 @@
+@import "tailwindcss";
+
+/* Tailwind utility tokens — each resolves to a CSS custom property below, so
+   `bg-canvas`, `text-gold-primary`, etc. stay dynamic across skins instead of
+   being baked to a fixed hex at build time (Blueprint §6.1, extended with a
+   selectable dark "obsidian" skin per later design direction). */
+@theme {
+  --color-canvas: var(--td-canvas);
+  --color-surface: var(--td-surface);
+  --color-surface-raised: var(--td-surface-raised);
+  --color-ink: var(--td-ink);
+  --color-ink-muted: var(--td-ink-muted);
+  --color-gold-primary: var(--td-gold-primary);
+  --color-gold-accent: var(--td-gold-accent);
+  --color-gold-action: var(--td-gold-action);
+  --color-emerald: var(--td-emerald);
+  --color-emerald-bg: var(--td-emerald-bg);
+  --color-rose: var(--td-rose);
+  --color-rose-bg: var(--td-rose-bg);
+  --color-skill: var(--td-skill);
+  --color-skill-bg: var(--td-skill-bg);
+  --color-parchment: var(--td-parchment);
+  --color-parchment-header: var(--td-parchment-header);
+
+  --font-display: "Cinzel", serif;
+  --font-narrative: "Lora", serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+/* ONE theme — the dark "obsidian glass" language established by Title and
+   MainMenu, now the whole app's (the selectable parchment/obsidian skins were
+   retired: the light-parchment default was why Codex/Settings/the creation
+   flow read as a different app from the front door). Colors here are the
+   values Title/MainMenu already hardcode, promoted to tokens so screens stop
+   re-inventing them: #e8ca8a accent, #f0ca65 action gold, warm off-white ink. */
+:root {
+  --td-canvas: #07050c;
+  --td-surface: #14101ccc;
+  --td-surface-raised: #1b1626;
+  --td-ink: #f0e3c4;
+  /* Secondary text sits on artwork as often as on flat dark, so it is kept
+     well above a typical "muted" value — at #a08e6d it washed out against the
+     brighter regions of the background images. */
+  --td-ink-muted: #d3c1a0;
+  --td-gold-primary: #f0ca65;
+  --td-gold-accent: #e8ca8a;
+  --td-gold-action: #f0ca65;
+  --td-emerald: #34d399;
+  --td-emerald-bg: #143223b3;
+  --td-rose: #f87171;
+  --td-rose-bg: #3a1620b3;
+  --td-skill: #a9c1f5;
+  --td-skill-bg: #1e2a4ab3;
+  --td-parchment: #f8f1de;
+  --td-parchment-header: #e0d3ba;
+  --td-glow: 0 0 24px rgba(240, 202, 101, 0.12), 0 8px 28px rgba(0, 0, 0, 0.55);
+}
+
+/* The Story Viewer's reading surface stays warm light paper while everything
+   around it is dark glass — the one deliberate exception to the palette above.
+   That inversion is why these tokens are re-declared HERE rather than the text
+   colors being changed at each call site: `--td-ink` and friends are used both
+   for text on dark chrome and for text on this light paper, so they have to
+   diverge. Redefining them on the container re-points every `text-ink` /
+   `text-gold-primary` / `text-skill` inside it (TurnBlock's badges, richText's
+   skill and item spans, the dossier rows) to on-paper values through the
+   normal cascade, with no per-class changes anywhere in the subtree.
+   Anything added inside the reading surface inherits this automatically. */
+.parchment-surface {
+  --td-ink: #2a241e;
+  --td-ink-muted: #6b6152;
+  --td-gold-primary: #8a6a24;
+  --td-gold-accent: #b08d3f;
+  --td-emerald: #0f5132;
+  --td-emerald-bg: #dff3e8;
+  --td-rose: #9f1239;
+  --td-rose-bg: #fce7ea;
+  --td-skill: #31456e;
+  --td-skill-bg: #e8eefb;
+  color: var(--td-ink);
+}
+
+body {
+  margin: 0;
+  background: var(--td-canvas);
+  color: var(--td-ink);
+  font-family: var(--font-narrative);
+}
+
+/* Standard glass surface — Blueprint §6.1a, now border-only to match the
+   GLASS_SURFACE class in lib/glassChrome.tsx that Title/MainMenu use: a
+   near-transparent fill that lets the ground through, a thin gold hairline,
+   and blur doing the real work. Kept as a CSS class (rather than folded into
+   glassChrome.tsx) because several screens apply it to non-button elements
+   and to framer-motion components. */
+.glass-panel {
+  backdrop-filter: blur(12px);
+  background: rgba(232, 202, 138, 0.045);
+  border: 1px solid color-mix(in srgb, var(--td-gold-accent) 25%, transparent);
+  box-shadow: var(--td-glow);
+}
+.glass-panel-hover {
+  transition: border-color 0.15s ease-out, background-color 0.15s ease-out;
+}
+.glass-panel-hover:hover {
+  background: rgba(232, 202, 138, 0.09);
+  border-color: color-mix(in srgb, var(--td-gold-accent) 60%, transparent);
+}
+
+.glow-ring {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--td-gold-accent) 55%, transparent), var(--td-glow);
+}
+
+/* Subtle paper-grain texture for the parchment reading surface (§6.4C) — a
+   static tiled SVG noise raster, no JS/continuous repaint, negligible cost. */
+.parchment-texture {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+}
+
+/* §3.2 obsidian glass chrome — a runtime-set --turn-accent (fixed gold) tints
+   only the border/ring, never the fill. Flat obsidian background, no color-wash
+   gradient — matches the reference app's clean idle/focus card look. */
+.turn-glow {
+  --turn-accent: var(--td-gold-accent);
+  --chrome-alpha-idle: 0.4;
+  --chrome-alpha-focus: 0.6;
+  background: rgba(26, 31, 46, var(--chrome-alpha-idle));
+  border-color: color-mix(in srgb, var(--turn-accent) 30%, transparent);
+  box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.5);
+  transition: background 0.25s ease-out, box-shadow 0.2s ease-out, border-color 0.2s ease-out;
+}
+.turn-glow:focus,
+.turn-glow:hover,
+.turn-glow:focus-within {
+  outline: none;
+  background: rgba(26, 31, 46, var(--chrome-alpha-focus));
+  border-color: var(--turn-accent);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--turn-accent) 45%, transparent),
+    0 12px 28px -8px rgba(0, 0, 0, 0.7);
+}
+.turn-glow-btn {
+  box-shadow: 0 4px 12px -3px rgba(0, 0, 0, 0.5);
+}
+.turn-glow-btn:disabled {
+  box-shadow: none;
+}
+
+/* §9.2 block navigator — idle: nearly invisible; hover/focus: solid, no glow
+   blur, borderless. Fading back to idle waits a beat (transition-delay) so it
+   doesn't snap transparent the instant the pointer lifts off; going solid is
+   instant (delay reset to 0 on the active selectors). */
+.turn-nav {
+  --turn-accent: var(--td-gold-accent);
+  background: rgba(20, 22, 34, 0.12);
+  transition: background 0.25s ease-out 0.6s, box-shadow 0.25s ease-out 0.6s;
+}
+.turn-nav:hover,
+.turn-nav:focus-within {
+  background: rgba(20, 22, 34, 0.88);
+  transition-delay: 0s;
+  box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.6);
+}
+
+/* Rising gold embers layered over the artwork, echoing its own painted
+   light-streaks. Pure CSS, randomized once per mount. `fixed` with z-index 1
+   puts them ABOVE the background art and its scrim (z-0) but BELOW every
+   glass panel and control (z-10), and keeps them anchored to the viewport on
+   screens that scroll. Shared by Title and every ground="art" screen. */
+.title-sparks {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.title-sparks span {
+  position: absolute;
+  bottom: 0;
+  border-radius: 50%;
+  background: #f5dfa0;
+  box-shadow: 0 0 6px 1.5px rgba(240, 202, 101, 0.85);
+  opacity: 0;
+  animation: title-spark-rise linear infinite;
+}
+@keyframes title-spark-rise {
+  0% { opacity: 0; transform: translateY(0) scale(0.6); }
+  12% { opacity: 0.9; }
+  80% { opacity: 0.45; }
+  100% { opacity: 0; transform: translateY(-92vh) scale(1.1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .title-sparks span { animation: none; opacity: 0.2; }
+}
+
+/* About tab — the birthday scene for the app's dedication. Everything here
+   animates transform/opacity/background-position only, so it stays on the
+   compositor and never triggers layout; the whole thing is switched off under
+   prefers-reduced-motion. */
+.bday-confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: inherit;
+}
+.bday-confetti span {
+  position: absolute;
+  top: -14px;
+  border-radius: 1px;
+  opacity: 0;
+  animation: bday-fall linear infinite;
+}
+@keyframes bday-fall {
+  0% { opacity: 0; transform: translateY(0) rotate(0deg); }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(420px) rotate(600deg); }
+}
+
+.bday-gift {
+  animation: bday-bob 2.8s ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+@keyframes bday-bob {
+  0%, 100% { transform: translateY(0) rotate(-2.5deg); }
+  50% { transform: translateY(-7px) rotate(2.5deg); }
+}
+
+/* Gold sweep across the lettering — a moving background behind clipped text,
+   so nothing about the text itself is re-laid-out. */
+.bday-title {
+  background-image: linear-gradient(100deg, #a87f2c 0%, #f0ca65 30%, #fff6da 45%, #f0ca65 60%, #a87f2c 100%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: bday-shimmer 5s linear infinite;
+}
+@keyframes bday-shimmer {
+  0% { background-position: 250% 50%; }
+  100% { background-position: -50% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Keep the gradient fill on the title — only the sweep stops. */
+  .bday-confetti span,
+  .bday-gift,
+  .bday-title {
+    animation: none;
+  }
+  .bday-confetti span { opacity: 0.75; }
+}
+
+/* Scrollbars are hidden everywhere by default — this is a game shell, not a
+   webpage, and a visible scrollbar (or an OS overlay one flashing in at the
+   edge of the eye) reads as browser chrome breaking the illusion rather than
+   as navigation. Scrolling itself is untouched everywhere this applies —
+   `overflow` stays whatever it already was; only the visual track/thumb
+   disappears, so wheel/touch/keyboard scrolling all keep working.
+
+   The one deliberate exception is `.parchment-surface` below, the
+   Chronicle's own reading pane: scrolling through the tale IS the point
+   there, so it keeps a real, themed gold scrollbar. This also fully
+   subsumes an earlier, narrower fix that reserved `scrollbar-gutter: stable`
+   on every scrollable element to stop a textarea's text reflowing sideways
+   the instant a scrollbar appeared — with the scrollbar hidden and 0-width
+   everywhere by default, that reflow can no longer happen at all, so the
+   gutter reservation only needs to exist on the one element that still has
+   a real scrollbar to guard against (see below). */
+* {
+  scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Themed scrollbar for the parchment reading surface specifically —
+   deliberately muted: at full --td-gold-accent the thumb read as a bright
+   yellow bar slamming in at the right edge the moment anything became
+   scrollable. It's chrome, not an accent — it brightens on hover, when
+   you're actually reaching for it. `scrollbar-gutter: stable` reserves its
+   track before it appears, so the tale's own text never jumps sideways the
+   instant it grows past one screen. */
+.parchment-surface {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--td-gold-accent) 70%, transparent) transparent;
+  scrollbar-gutter: stable;
+}
+.parchment-surface::-webkit-scrollbar {
+  display: block;
+  width: 8px;
+  height: 8px;
+}
+.parchment-surface::-webkit-scrollbar-track {
+  background: transparent;
+}
+.parchment-surface::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--td-gold-accent) 70%, transparent);
+  border-radius: 999px;
+}
+.parchment-surface::-webkit-scrollbar-thumb:hover {
+  background-color: var(--td-gold-accent);
+}

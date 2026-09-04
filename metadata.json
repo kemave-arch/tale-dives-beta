@@ -1,0 +1,6 @@
+{
+  "name": "Tale Dives",
+  "description": "An AI text-based fantasy RPG diving engine — local-first, provider-agnostic.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

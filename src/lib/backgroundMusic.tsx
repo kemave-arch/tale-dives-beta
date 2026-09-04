@@ -166,6 +166,29 @@ export function useBackgroundMusic() {
     window.addEventListener('pointerdown', retryOnGesture)
     window.addEventListener('keydown', retryOnGesture)
 
+    // First genuine interaction with the page — not just enough to satisfy
+    // the browser's autoplay gate silently (retryOnGesture above already does
+    // that), but an actual real unmute, since the visitor is now demonstrably
+    // here and the gesture legitimately authorizes audible playback. Skips
+    // the mute toggle itself: that button already has its own onClick
+    // (toggleMute), and if this fired for it too it would double-handle the
+    // same tap — flip to unmuted here, then immediately flip again when the
+    // toggle's own handler runs, landing back on muted. Every OTHER first
+    // interaction (Dive In, Settings, tapping anywhere) is exactly what
+    // should trigger this. Self-removing after the one shot; if every
+    // interaction so far has been the toggle itself, it just keeps waiting.
+    function isMusicToggleTarget(target: EventTarget | null): boolean {
+      return target instanceof Element && !!target.closest('[aria-label="Mute music"], [aria-label="Unmute music"]')
+    }
+    function unmuteOnFirstRealInteraction(e: Event) {
+      if (isMusicToggleTarget(e.target)) return
+      window.removeEventListener('pointerdown', unmuteOnFirstRealInteraction)
+      window.removeEventListener('keydown', unmuteOnFirstRealInteraction)
+      setMuted(false)
+    }
+    window.addEventListener('pointerdown', unmuteOnFirstRealInteraction)
+    window.addEventListener('keydown', unmuteOnFirstRealInteraction)
+
     function handleTimeUpdate() {
       if (fadingOut || !Number.isFinite(audio.duration)) return
       // Guard the fade window against a track shorter than the fade itself,
@@ -196,6 +219,8 @@ export function useBackgroundMusic() {
       cancelled = true
       window.removeEventListener('pointerdown', retryOnGesture)
       window.removeEventListener('keydown', retryOnGesture)
+      window.removeEventListener('pointerdown', unmuteOnFirstRealInteraction)
+      window.removeEventListener('keydown', unmuteOnFirstRealInteraction)
       audio.removeEventListener('timeupdate', handleTimeUpdate)
       audio.removeEventListener('ended', handleEnded)
       if (fadeTimerRef.current !== null) clearInterval(fadeTimerRef.current)

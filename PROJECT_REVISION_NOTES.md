@@ -1117,3 +1117,32 @@ New entries below, most recent first.
   this exact path silently re-enabled audio); the reverse (unmuted → navigate away →
   back) also holds correctly since there's no longer any effect touching mute state
   on screen change. `npm run build` clean.
+
+  **Follow-up, same day**: the fully-manual version above was one step too far —
+  the user wanted the *first genuine interaction anywhere* to auto-unmute (a real
+  gesture legitimately authorizes audible playback; this is standard practice, not
+  fighting the browser), with the mute button taking over as a normal toggle only
+  after that. Added a second self-removing `pointerdown`/`keydown` listener in
+  `backgroundMusic.tsx` (alongside the existing `retryOnGesture`, which still just
+  keeps *muted* pre-buffer playback alive and is unchanged) that calls `setMuted
+  (false)` on the first qualifying interaction.
+
+  **The real design problem**: this listener and the mute button's own `onClick`
+  (`toggleMute`) can both fire for the exact same tap, if the user's first-ever
+  interaction happens to *be* the mute button — `pointerdown` fires before `click`,
+  so a naive version would unmute via the listener, then immediately re-toggle back
+  to muted when the button's own handler ran a moment later. Fixed by having the
+  listener check the event target against both buttons' `aria-label`s ("Mute
+  music"/"Unmute music", shared by both Title's and Main Menu's `GlassIconButton`
+  instances) and skip entirely when the interaction is on the toggle itself —
+  letting the button's own `onClick` be the sole handler for that case, no
+  coordination needed. As long as every interaction so far has been the toggle, the
+  listener just keeps waiting rather than firing on the wrong one.
+
+  Verified live (same real-`<audio>`-element inspection method as this file's other
+  audio entries) against both cases: (1) first interaction is something else (e.g.
+  "Dive In") — auto-unmutes, confirmed real playback (`currentTime` advancing); (2)
+  first interaction is the mute button itself — no double-toggle bug, ends up
+  correctly unmuted and playing from that single tap, and a second tap correctly
+  re-mutes, proving the toggle behaves completely normally afterward. `npm run
+  build` clean.

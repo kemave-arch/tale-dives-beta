@@ -1,5 +1,39 @@
 # Tale Dives — Project Revision Notes
 
+**Last updated:** 2026-09-05 — Typewriter Narration Removal:
+- **Removed Typewriter Narration**: Removed `TypewriterText` component and character-by-character animation logic from `Chronicle.tsx`. Narration now renders immediately upon turn generation.
+- **Verification**: Verified via `lint_applet` (clean `tsc --noEmit`) and `compile_applet` (clean build).
+
+**Last updated:** 2026-09-05 — Menu & Screen Header Text Color:
+- **Header Text Color Updated**: Changed menu and screen header text colors in `GlassHeader` (`src/lib/glassChrome.tsx`) and `Settings.tsx` from `#f0ca65` to `#e8ca8a` across Story Viewer and Menu UIs.
+- **Verification**: Verified via `lint_applet` (clean `tsc --noEmit`) and `compile_applet` (clean build).
+
+**Last updated:** 2026-09-05 — Codex Sleek Dark Card Theme & Sans Subtitles:
+- **Codex Dark Navy Card Aesthetic**: Updated card styling across all categories in `Codex.tsx` (`CATEGORY_ACCENTS`, `NEUTRAL_ACCENT`, `ITEM_RARITY_ACCENTS`, `DeckEntryCard`) to match the dark navy/charcoal sleek card theme from the reference photo. Cards use deep charcoal-navy background (`bg-[#131622]/90`), subtle dark border (`border-[#23283b]`), rounded corners (`rounded-xl`), rounded icon badges (`w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] text-[#e8ca8a]`), gold uppercase titles (`text-[#e8ca8a] font-display font-bold uppercase tracking-wider`), muted descriptions (`text-[#9095a8]`), and dark numeric count badges (`bg-[#1a1d2b] border-[#2d3348] text-[#a0a5b8] font-mono`).
+- **Smooth Sans Category Subtitles**: Updated `DeckEntryCard` subtitle typography to use `font-sans` for a smooth, clean sans-serif category description.
+- **CODEX ARCHIVES Container Box**: Wrapped the main category menu grid in a dark framed box with a `CODEX ARCHIVES` header and total categories count.
+- **Verification**: Verified via `lint_applet` (clean `tsc --noEmit`) and `compile_applet` (clean build).
+
+**Last updated:** 2026-09-05 — Codex Compact Deck Views & Crafting Rename:
+- **Compact Deck View Cards**: Compacted the card padding, icon badge sizes, and typography spacing across all Codex categories (`CATEGORY_ACCENTS`, `NEUTRAL_ACCENT`, `ITEM_RARITY_ACCENTS`, `DeckEntryCard`, and Crafting recipe cards). Reduced padding (`p-2.5`), badge size (`w-7 h-7`), icon size (`14px`), and line spacing for a tighter, denser RPG codex layout.
+- **Renamed Category**: Renamed "Workbenches & Recipes" category to "Crafting" in `Codex.tsx` (`categories` array label and category headers).
+- **Verification**: Verified via `compile_applet` (clean build) and `lint_applet` (clean `tsc --noEmit`).
+
+**Last updated:** 2026-09-05 — Chronicle Story View Refinements:
+- **Centering Text Container**: Centered the log container (`max-w-2xl sm:max-w-3xl mx-auto w-full`) inside the Parchment view while keeping the narrative prose and player action text left-aligned (`text-left`).
+- **Updated Drawer Menu Button**: Replaced the drawer icon with `LayoutGrid` on the input bar tray and popup header.
+- **Harmonized Button Hover Colors**: Harmonized hover states across all input tray buttons (`/` slash manager, `LayoutGrid` drawer menu, and `Send` button) to use identical gold highlight styling (`hover:border-[#f0ca65] hover:bg-[#2c1d3e] hover:text-[#f0ca65]`).
+- **Full-Width Mobile/Tablet Input Bar**: Adjusted the input tray to cover the full width of the screen at the bottom on mobile/tablet (`bottom-0 inset-x-0 rounded-t-2xl border-t border-x-0 border-b-0`), transitioning to a floating bar on desktop screens (`lg:bottom-5 lg:inset-x-6 lg:max-w-4xl lg:rounded-2xl lg:border`).
+- **Enlarged Textarea Height**: Increased default rows to `2` and increased minimum vertical height (`min-h-[56px] py-2`) for comfortable typing.
+- **Typewriter Narration Animation**: Integrated `TypewriterText` component in `TurnBlock` so new LLM outputs type in progressively with a glowing pulse cursor, with click/tap-to-skip support to immediately reveal the full text.
+- **Verification**: Verified via `lint_applet` (clean `tsc --noEmit`) and `compile_applet` (clean build).
+
+**Last updated:** 2026-09-05 — Story View / Chronicle UI Refactoring:
+- **PC Two-Column Layout**: Added `DesktopLeftSidebar` in `Chronicle.tsx` visible on desktop breakpoints (`lg:`). Displays character info & attributes, pools (HP/MP/ST + wealth), equipped gear slots (Weapon, Armor, Accessory), and tactical combat HUD on the left, while the Parchment log renders on the right. Mobile and tablet maintain the single-column centered reading view.
+- **Input Bar Drawer Menu**: Replaced the previous radial menu with a responsive Codex Navigation drawer menu that extends upward from the input bar. Features rounded-square (`rounded-xl`) icon buttons for Items, Spells, Quests, Monsters, World, NPCs, Factions, Lore, and Crafting. Clicking anywhere on the Parchment automatically retracts the drawer.
+- **Elevated Input Bar & Mobile Alignment**: Elevated the input tray above screen bottom with responsive spacing (`bottom-3 sm:bottom-5`). Added `text-center sm:text-left` alignment to mobile narrative prose and action text. Fixed hostile name truncation in the combat header by displaying untruncated name labels.
+- **Verification**: Verified via `lint_applet` (clean `tsc --noEmit`) and `compile_applet` (clean build).
+
 **Last updated:** 2026-09-05, Claude Code on the web — five changes from a token-budget
 review + a real user-reported gap. (1) A light pass on `jitContext.ts`'s context-slice
 labels: `Combat Resolution Mode`→`Combat Mode`, `Target Prose Depth`→`Prose Depth`,

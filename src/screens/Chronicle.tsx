@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Menu, Settings as SettingsIcon, Send, Star, BookOpen, Library, Sparkle, X, ExternalLink,
   ChevronUp, ChevronDown, ChevronsDown, History, Pause, Users, Backpack, Map as MapIcon, ShieldCheck, Target, Skull, HelpCircle,
-  Unlock, Lock, Repeat, Hammer, Ghost, Compass, ScrollText, User, Swords, Sparkles,
+  Unlock, Lock, Repeat, Hammer, Ghost, ScrollText, Swords, Sparkles, LayoutGrid,
   AlertTriangle, Copy, Check, RotateCcw, Bug, Pencil, MoreHorizontal, Trash2, Heart, Zap, Activity, Coins,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -68,18 +68,6 @@ interface ChronicleProps {
 const WINDOW_SIZE = 20 // §9.2 — cap how many turns stay mounted; older ones load in on demand
 const INPUT_MAX_HEIGHT = 160
 
-// §6.5 Fantasy Radial Menu — a fan of shortcuts arcing upward from the FAB so
-// it never covers the input tray below. Angles are standard math degrees
-// (0=right, 90=up); spread across the upper arc rather than a full circle.
-const RADIAL_RADIUS = 74
-function radialPos(index: number, count: number): { x: number; y: number } {
-  const startDeg = 12
-  const endDeg = 168
-  const deg = count === 1 ? 90 : startDeg + (index * (endDeg - startDeg)) / (count - 1)
-  const rad = (deg * Math.PI) / 180
-  return { x: Math.cos(rad) * RADIAL_RADIUS, y: -Math.sin(rad) * RADIAL_RADIUS }
-}
-
 function PoolBar({
   icon: Icon,
   label,
@@ -96,9 +84,9 @@ function PoolBar({
   const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0
   return (
     <div className="flex items-center gap-1.5 flex-1 min-w-0" title={`${label}: ${value}/${max}`}>
-      <div className="flex items-center gap-1 shrink-0">
+      <div className="flex items-center gap-1 shrink-0 max-w-[150px] sm:max-w-none">
         <Icon size={12} style={{ color: colorVar }} className="shrink-0" />
-        <span className="font-mono text-[10px] font-bold uppercase tracking-wider" style={{ color: colorVar }}>
+        <span className="font-mono text-[10px] font-bold uppercase tracking-wider truncate" style={{ color: colorVar }}>
           {label}
         </span>
       </div>
@@ -124,6 +112,147 @@ function CurrencyBadge({ copper }: { copper: number }) {
         {(c > 0 || (p === 0 && g === 0 && s === 0)) && <span className="text-[#f97316]">{c}<span className="text-[#ea580c] text-[9px] font-normal">C</span></span>}
       </div>
     </div>
+  )
+}
+
+function DesktopLeftSidebar({
+  player,
+  items,
+  combat,
+  locationName,
+}: {
+  player: Player
+  items?: Record<string, ItemEntry>
+  combat?: CombatState
+  locationName?: string
+}) {
+  const equippedWeapon = player.equipped?.weapon ? items?.[player.equipped.weapon] : null
+  const equippedArmor = player.equipped?.armor ? items?.[player.equipped.armor] : null
+  const equippedAccessory = player.equipped?.accessory ? items?.[player.equipped.accessory] : null
+
+  return (
+    <aside className="hidden lg:flex lg:w-80 xl:w-96 shrink-0 flex-col gap-4 overflow-y-auto p-4 bg-[#0e1017]/90 border-r border-[#c89d51]/25 backdrop-blur-md text-[#f5ebd7] z-10 h-full">
+      {/* 1. Character Overview */}
+      <div className="bg-[#181324] border border-[#c89d51]/40 rounded-xl p-4 shadow-lg relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-24 h-24 bg-[#c89d51]/5 rounded-full blur-2xl pointer-events-none" />
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-12 h-12 rounded-xl bg-[#2b1e38] border border-[#c89d51]/60 flex items-center justify-center text-[#d4af37] shadow-inner font-serif text-lg font-bold shrink-0">
+            {player.name ? player.name.charAt(0).toUpperCase() : 'P'}
+          </div>
+          <div className="min-w-0 flex-1">
+            <h2 className="font-serif text-lg font-bold text-[#f5ebd7] leading-tight truncate">{player.name || 'Hero'}</h2>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="font-display text-xs font-semibold text-[#d4af37] bg-[#c89d51]/15 px-2 py-0.5 rounded-md border border-[#c89d51]/30 shrink-0">
+                Lvl {player.level}
+              </span>
+              <span className="font-serif text-xs text-[#c8b8a2] truncate">{player.className || 'Adventurer'}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Attrs Grid */}
+        <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-[#c89d51]/20">
+          <div className="bg-[#100b1a] border border-[#c89d51]/20 p-2 rounded-lg text-center">
+            <span className="block font-mono text-[10px] text-[#a89575] font-bold uppercase">STR</span>
+            <span className="font-mono text-sm font-bold text-[#f5ebd7]">{player.attrs?.STR ?? 10}</span>
+          </div>
+          <div className="bg-[#100b1a] border border-[#c89d51]/20 p-2 rounded-lg text-center">
+            <span className="block font-mono text-[10px] text-[#a89575] font-bold uppercase">INT</span>
+            <span className="font-mono text-sm font-bold text-[#f5ebd7]">{player.attrs?.INT ?? 10}</span>
+          </div>
+          <div className="bg-[#100b1a] border border-[#c89d51]/20 p-2 rounded-lg text-center">
+            <span className="block font-mono text-[10px] text-[#a89575] font-bold uppercase">AGI</span>
+            <span className="font-mono text-sm font-bold text-[#f5ebd7]">{player.attrs?.AGI ?? 10}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Stats & Pools HUD */}
+      <div className="bg-[#181324] border border-[#c89d51]/40 rounded-xl p-4 shadow-lg space-y-3">
+        <div className="flex items-center justify-between border-b border-[#c89d51]/20 pb-2">
+          <h3 className="font-serif text-xs font-bold text-[#d4af37] tracking-wider uppercase">
+            Vitals & Wealth
+          </h3>
+          <CurrencyBadge copper={player.copper} />
+        </div>
+        <div className="space-y-2.5">
+          <PoolBar icon={Heart} label="Health" value={player.hp} max={player.hpMax} colorVar="#fb3552" />
+          <PoolBar icon={Zap} label="Mana" value={player.mp} max={player.mpMax} colorVar="#22d3ee" />
+          <PoolBar icon={Activity} label="Stamina" value={player.st} max={player.stMax} colorVar="#34d399" />
+        </div>
+        {(player.locDisp || locationName) && (
+          <div className="pt-2 border-t border-[#c89d51]/20 flex items-center gap-2 text-xs text-[#c8b8a2] font-serif">
+            <MapIcon size={14} className="text-[#d4af37] shrink-0" />
+            <span className="truncate">{player.locDisp || locationName}</span>
+            {player.time && (
+              <span className="ml-auto font-mono text-[11px] text-[#a89575] shrink-0">
+                D{player.time.d} {player.time.h}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 3. Equip Slots */}
+      <div className="bg-[#181324] border border-[#c89d51]/40 rounded-xl p-4 shadow-lg space-y-2.5">
+        <h3 className="font-serif text-xs font-bold text-[#d4af37] tracking-wider uppercase border-b border-[#c89d51]/20 pb-2">
+          Equipped Gear
+        </h3>
+        {/* Weapon Slot */}
+        <div className="flex items-center gap-3 p-2 rounded-lg bg-[#100b1a] border border-[#c89d51]/20">
+          <div className="w-8 h-8 rounded-md bg-[#251933] border border-[#c89d51]/40 flex items-center justify-center text-[#d4af37] shrink-0">
+            <Swords size={16} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="block font-mono text-[9px] uppercase tracking-wider text-[#a89575]">Weapon</span>
+            <span className="font-serif text-xs font-medium text-[#f5ebd7] truncate block">
+              {equippedWeapon ? equippedWeapon.name : player.equipped?.weapon || 'Empty Hand'}
+            </span>
+          </div>
+        </div>
+
+        {/* Armor Slot */}
+        <div className="flex items-center gap-3 p-2 rounded-lg bg-[#100b1a] border border-[#c89d51]/20">
+          <div className="w-8 h-8 rounded-md bg-[#251933] border border-[#c89d51]/40 flex items-center justify-center text-[#d4af37] shrink-0">
+            <ShieldCheck size={16} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="block font-mono text-[9px] uppercase tracking-wider text-[#a89575]">Armor</span>
+            <span className="font-serif text-xs font-medium text-[#f5ebd7] truncate block">
+              {equippedArmor ? equippedArmor.name : player.equipped?.armor || 'No Armor'}
+            </span>
+          </div>
+        </div>
+
+        {/* Accessory Slot */}
+        <div className="flex items-center gap-3 p-2 rounded-lg bg-[#100b1a] border border-[#c89d51]/20">
+          <div className="w-8 h-8 rounded-md bg-[#251933] border border-[#c89d51]/40 flex items-center justify-center text-[#d4af37] shrink-0">
+            <Sparkles size={16} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="block font-mono text-[9px] uppercase tracking-wider text-[#a89575]">Accessory</span>
+            <span className="font-serif text-xs font-medium text-[#f5ebd7] truncate block">
+              {equippedAccessory ? equippedAccessory.name : player.equipped?.accessory || 'None'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Active Tactical Combat */}
+      {combat?.active && (
+        <div className="bg-[#2a0e14] border border-rose/50 rounded-xl p-4 shadow-lg space-y-2 mt-auto">
+          <div className="flex items-center justify-between text-rose-300 font-serif text-xs font-bold uppercase tracking-wider">
+            <span className="flex items-center gap-1.5">
+              <Swords size={14} className="text-rose-500" /> Tactical Encounter
+            </span>
+          </div>
+          <p className="font-serif text-sm font-bold text-white truncate">
+            {combat.enemyName?.toUpperCase() ?? 'HOSTILE'}
+          </p>
+          <PoolBar icon={Heart} label="Enemy HP" value={combat.enemyHp ?? 0} max={combat.enemyHpMax ?? 1} colorVar="#f43f5e" />
+        </div>
+      )}
+    </aside>
   )
 }
 
@@ -480,7 +609,7 @@ const TurnBlock = memo(function TurnBlock({
       style={{ borderColor: stateMeta ? `color-mix(in srgb, ${stateMeta.accent} 33%, transparent)` : 'transparent' }}
     >
       {entry.time && entry.locDisp && (
-        <p className="font-mono text-[10px] font-semibold uppercase tracking-wide text-gold-primary">
+        <p className="font-mono text-[10px] font-semibold uppercase tracking-wide text-gold-primary text-left">
           {formatTimestamp(entry.time, entry.locDisp)}
         </p>
       )}
@@ -490,7 +619,7 @@ const TurnBlock = memo(function TurnBlock({
             font-mono "> " console-prompt prefix, which read like a terminal
             echo rather than part of the story); gold-primary is what still
             marks it as a different voice from the narration beneath it. */}
-        {entry.action && <p className="font-narrative italic text-sm text-gold-primary">{entry.action}</p>}
+        {entry.action && <p className="font-narrative italic text-sm text-gold-primary text-left">{entry.action}</p>}
         {StateIcon && stateMeta && (
           <span className="inline-flex items-center gap-1 text-[10px] font-display" style={{ color: stateMeta.accent }}>
             <StateIcon size={11} /> {stateMeta.label}
@@ -498,11 +627,13 @@ const TurnBlock = memo(function TurnBlock({
         )}
       </div>
       {entry.mood && (
-        <p className="inline-flex items-center gap-1 text-[11px] italic text-ink-muted">
+        <p className="inline-flex items-center gap-1 text-[11px] italic text-ink-muted text-left">
           <Sparkle size={10} /> {entry.mood}
         </p>
       )}
-      <p className="font-narrative text-sm leading-relaxed whitespace-pre-wrap">{renderNarrative(entry.nar, onTapTerm)}</p>
+      <div className="font-narrative text-sm leading-relaxed whitespace-pre-wrap text-left">
+        {renderNarrative(entry.nar, onTapTerm)}
+      </div>
       {entry.levelUp && (
         <p className="inline-flex items-center gap-1.5 rounded-full bg-gold-accent/15 border border-gold-accent/40 px-3 py-1 font-display text-xs text-gold-primary">
           <Star size={12} /> Level {entry.levelUp}
@@ -789,27 +920,26 @@ export default function Chronicle({
   const [statsCollapsed, setStatsCollapsed] = useState(false)
   const [navDragPos, setNavDragPos] = useState<{ y: number } | null>(null)
   const [navDragging, setNavDragging] = useState(false)
-  const [radialOpen, setRadialOpen] = useState(false)
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
   const lastLogEntry = useMemo(() => log[log.length - 1], [log])
 
-  // §6.5 Fantasy Radial Menu — Codex/Settings already have one-tap header
-  // buttons, so the ring's value is fast shortcuts straight into the
-  // categories actually checked mid-scene; Crafting only appears while a job
-  // is queued or ready, keeping the resting ring uncluttered otherwise.
-  const radialActions = useMemo(() => {
+  const drawerActions = useMemo(() => {
     const actions: { icon: LucideIcon; label: string; onClick: () => void }[] = [
-      { icon: BookOpen, label: 'Codex', onClick: onOpenCodex },
-      { icon: ScrollText, label: 'Quest Log', onClick: () => onOpenCodexCategory('quests') },
-      { icon: Backpack, label: 'Inventory', onClick: () => onOpenCodexCategory('items') },
-      { icon: User, label: 'Character', onClick: () => onOpenCodexCategory('character') },
-      { icon: SettingsIcon, label: 'Settings', onClick: onOpenSettings },
+      { icon: Backpack, label: 'Items', onClick: () => onOpenCodexCategory('items') },
+      { icon: Sparkles, label: 'Spells', onClick: () => onOpenCodexCategory('skills') },
+      { icon: ScrollText, label: 'Quests', onClick: () => onOpenCodexCategory('quests') },
+      { icon: Skull, label: 'Monsters', onClick: () => onOpenCodexCategory('bestiary') },
+      { icon: MapIcon, label: 'World', onClick: () => onOpenCodexCategory('locations') },
+      { icon: Users, label: 'NPCs', onClick: () => onOpenCodexCategory('npcs') },
+      { icon: ShieldCheck, label: 'Factions', onClick: () => onOpenCodexCategory('factions') },
+      { icon: BookOpen, label: 'Lore', onClick: () => onOpenCodexCategory('lore') },
     ]
     if (crafting && crafting.length > 0) {
       actions.push({ icon: Hammer, label: 'Crafting', onClick: () => onOpenCodexCategory('crafting') })
     }
     return actions
-  }, [crafting, onOpenCodex, onOpenCodexCategory, onOpenSettings])
+  }, [crafting, onOpenCodexCategory])
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
@@ -1056,381 +1186,401 @@ export default function Chronicle({
       | undefined)
 
   return (
-    <div className="fixed inset-0 overflow-hidden text-ink bg-canvas">
-      {/* Full-bleed dark obsidian header — flat, no color-wash gradient; the
-          gold accent lives only in the border. */}
-      <header
-        ref={headerRef}
-        className="fixed top-0 inset-x-0 z-10 flex flex-col border-b shadow-2xl transition-[background,border-color] duration-700 ease-out"
-        style={{
-          background: `rgba(11,13,20,${chromeAlpha})`,
-          borderColor: `${stateAccent}45`,
-        }}
-      >
-        <div
-          className="flex items-center justify-between px-3 py-1.5"
-          style={{ paddingTop: 'max(0.375rem, env(safe-area-inset-top))' }}
-        >
-          <button onClick={onOpenMenu} aria-label="Menu" className="w-7 h-7 rounded-full inline-flex items-center justify-center text-[#e8ca8a] hover:bg-white/10">
-            <Menu size={16} />
-          </button>
-          <div className="font-display text-xs font-semibold tracking-wide text-center flex-1 truncate px-2 text-[#e8ca8a]">
-            {title}
-          </div>
-          {debugMode && (
-            <button
-              onClick={() => setSessionPayloadOpen((v) => !v)}
-              aria-label="Session Payload"
-              title="This session's turn-by-turn request/response/finishReason since turn 0, for debugging"
-              className={`w-7 h-7 rounded-full inline-flex items-center justify-center hover:bg-white/10 ${sessionPayloadOpen ? 'text-rose' : 'text-[#e8ca8a]'}`}
-            >
-              <Bug size={16} />
-            </button>
-          )}
-          <button onClick={onOpenCodex} aria-label="Codex" className="w-7 h-7 rounded-full inline-flex items-center justify-center text-[#e8ca8a] hover:bg-white/10">
-            <Library size={16} />
-          </button>
-          <button onClick={onOpenSettings} aria-label="Settings" className="w-7 h-7 rounded-full inline-flex items-center justify-center text-[#e8ca8a] hover:bg-white/10">
-            <SettingsIcon size={16} />
-          </button>
-        </div>
+    <div className="fixed inset-0 overflow-hidden text-ink bg-canvas flex flex-col lg:flex-row">
+      {/* PC Left Sidebar (Character Info, Equipment Slots, Stats HUD, Tactical Combat) */}
+      <DesktopLeftSidebar
+        player={player}
+        items={items}
+        combat={combat}
+        locationName={locations[player.locId]?.name || player.locDisp}
+      />
 
-        {/* Player Vitals HUD Bar placed below header bar */}
-        <div className="px-3 border-t border-white/10 bg-black/25 backdrop-blur-sm">
-          <div className="flex items-center justify-between py-0.5">
-            <button
-              onClick={() => setStatsCollapsed((v) => !v)}
-              aria-label={statsCollapsed ? 'Expand stats' : 'Collapse stats'}
-              className="w-full flex items-center justify-center leading-none text-white/40 hover:text-[#e8ca8a] py-0.5 cursor-pointer"
-            >
-              {statsCollapsed ? <ChevronDown size={11} /> : <ChevronUp size={11} />}
+      {/* Main Story Container */}
+      <div className="flex-1 flex flex-col h-full relative overflow-hidden">
+        {/* Mobile/Tablet Header Bar */}
+        <header
+          ref={headerRef}
+          className="absolute top-0 inset-x-0 z-10 flex flex-col border-b shadow-2xl transition-[background,border-color] duration-700 ease-out"
+          style={{
+            background: `rgba(11,13,20,${chromeAlpha})`,
+            borderColor: `${stateAccent}45`,
+          }}
+        >
+          <div
+            className="flex items-center justify-between px-3 py-1.5"
+            style={{ paddingTop: 'max(0.375rem, env(safe-area-inset-top))' }}
+          >
+            <button onClick={onOpenMenu} aria-label="Menu" className="w-8 h-8 rounded-xl inline-flex items-center justify-center text-[#e8ca8a] hover:bg-white/10">
+              <Menu size={16} />
+            </button>
+            <div className="font-display text-xs font-semibold tracking-wide text-center flex-1 truncate px-2 text-[#e8ca8a]">
+              {title}
+            </div>
+            {debugMode && (
+              <button
+                onClick={() => setSessionPayloadOpen((v) => !v)}
+                aria-label="Session Payload"
+                title="This session's turn-by-turn request/response/finishReason since turn 0, for debugging"
+                className={`w-8 h-8 rounded-xl inline-flex items-center justify-center hover:bg-white/10 ${sessionPayloadOpen ? 'text-rose' : 'text-[#e8ca8a]'}`}
+              >
+                <Bug size={16} />
+              </button>
+            )}
+            <button onClick={onOpenCodex} aria-label="Codex" className="w-8 h-8 rounded-xl inline-flex items-center justify-center text-[#e8ca8a] hover:bg-white/10">
+              <Library size={16} />
+            </button>
+            <button onClick={onOpenSettings} aria-label="Settings" className="w-8 h-8 rounded-xl inline-flex items-center justify-center text-[#e8ca8a] hover:bg-white/10">
+              <SettingsIcon size={16} />
             </button>
           </div>
-          <div
-            className="grid transition-[grid-template-rows] duration-200 ease-out"
-            style={{ gridTemplateRows: statsCollapsed ? '0fr' : '1fr' }}
-          >
-            <div className="overflow-hidden">
-              <div className="px-1 pb-1.5 flex items-center gap-3 text-white/80 flex-wrap sm:flex-nowrap">
-                <PoolBar icon={Heart} label="HP" value={player.hp} max={player.hpMax} colorVar="#fb3552" />
-                <PoolBar icon={Zap} label="MP" value={player.mp} max={player.mpMax} colorVar="#22d3ee" />
-                <PoolBar icon={Activity} label="ST" value={player.st} max={player.stMax} colorVar="#34d399" />
-                <CurrencyBadge copper={player.copper} />
+
+          {/* Player Vitals HUD Bar placed below header bar (mobile / tablet) */}
+          <div className="lg:hidden px-3 border-t border-white/10 bg-black/25 backdrop-blur-sm">
+            <div className="flex items-center justify-between py-0.5">
+              <button
+                onClick={() => setStatsCollapsed((v) => !v)}
+                aria-label={statsCollapsed ? 'Expand stats' : 'Collapse stats'}
+                className="w-full flex items-center justify-center leading-none text-white/40 hover:text-[#e8ca8a] py-0.5 cursor-pointer"
+              >
+                {statsCollapsed ? <ChevronDown size={11} /> : <ChevronUp size={11} />}
+              </button>
+            </div>
+            <div
+              className="grid transition-[grid-template-rows] duration-200 ease-out"
+              style={{ gridTemplateRows: statsCollapsed ? '0fr' : '1fr' }}
+            >
+              <div className="overflow-hidden">
+                <div className="px-1 pb-1.5 flex items-center gap-3 text-white/80 flex-wrap sm:flex-nowrap">
+                  <PoolBar icon={Heart} label="HP" value={player.hp} max={player.hpMax} colorVar="#fb3552" />
+                  <PoolBar icon={Zap} label="MP" value={player.mp} max={player.mpMax} colorVar="#22d3ee" />
+                  <PoolBar icon={Activity} label="ST" value={player.st} max={player.stMax} colorVar="#34d399" />
+                  <CurrencyBadge copper={player.copper} />
+                </div>
               </div>
             </div>
           </div>
+
+          {combat?.active && (
+            <div className="lg:hidden border-t border-rose/30 px-4 py-1 text-white/80 bg-rose-950/40">
+              <PoolBar icon={Swords} label={combat.enemyName?.toUpperCase() ?? 'HOSTILE'} value={combat.enemyHp ?? 0} max={combat.enemyHpMax ?? 1} colorVar="#e11d48" />
+            </div>
+          )}
+
+          {debugMode && sessionPayloadOpen && <SessionPayloadPanel log={log} title={title} />}
+        </header>
+
+        {/* Parchment Log Container */}
+        <div
+          ref={scrollRef}
+          onClick={() => setDrawerOpen(false)}
+          className="parchment-surface absolute inset-0 overflow-y-auto bg-parchment parchment-texture rounded-xl pl-4 pr-6 space-y-4 cursor-default"
+          style={{ top: 6, bottom: 6, left: 6, right: 6, paddingTop: headerHeight + 16, paddingBottom: bottomHeight + 40 }}
+        >
+          <div className="max-w-2xl sm:max-w-3xl mx-auto w-full space-y-4">
+            {log.length === 0 && (
+              <p className="font-narrative italic text-sm opacity-60 text-center">
+                The tale hasn't begun. Type an action below to dive in.
+              </p>
+            )}
+            {hasEarlierTurns && (
+              <button
+                onClick={loadEarlierTurns}
+                className="mx-auto flex items-center gap-1.5 rounded-xl border border-gold-accent/40 px-3 py-1.5 font-display text-xs text-gold-primary cursor-pointer hover:bg-gold-accent/10"
+              >
+                <History size={12} /> Load Earlier Turns
+              </button>
+            )}
+            {visibleLog.map((entry, i) => (
+              <TurnBlock
+                key={windowStart + i}
+                entry={entry}
+                globalIndex={windowStart + i}
+                onTapTerm={onTapTerm}
+                registerRef={registerRef}
+                debugMode={debugMode}
+                isLastTurn={windowStart + i === log.length - 1}
+                onEditLastTurn={onEditLastTurn}
+                onRemoveLastTurn={onRemoveLastTurn}
+                editLongText={editLongText}
+                confirmAction={confirmAction}
+                setInput={setInput}
+              />
+            ))}
+            {busy && <p className="font-narrative italic text-sm opacity-50 text-left">The thread of fate is being woven...</p>}
+            {lastLogEntry?.act && lastLogEntry.act.length > 0 && !busy && !error && (
+              <div className="flex flex-col gap-1.5 pt-2 border-t border-gold-accent/15">
+                <span className="text-[10px] font-mono tracking-wider text-gold-primary opacity-60 uppercase text-left">Suggested Actions</span>
+                <div className="flex flex-wrap gap-1.5 justify-start">
+                  {lastLogEntry.act.map((suggestion, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setInput(suggestion)}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-gold-accent/10 hover:bg-gold-accent/20 border border-gold-accent/35 hover:border-gold-accent/60 px-3 py-1 font-narrative text-xs text-gold-primary transition-all cursor-pointer active:scale-[0.98]"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {error && (
+              <ApiErrorPanel
+                error={error}
+                apiSettings={apiSettings}
+                proseDepth={proseDepth}
+                lastActionText={lastActionText}
+                onRetry={onRetry}
+                onDismissError={onDismissError}
+                onOpenSettings={onOpenSettings}
+                setInput={setInput}
+              />
+            )}
+          </div>
         </div>
 
-        {combat?.active && (
-          <div className="border-t border-rose/30 px-4 py-1 text-white/80 bg-rose-950/40">
-            <PoolBar icon={Swords} label={combat.enemyName?.slice(0, 3).toUpperCase() ?? 'ENM'} value={combat.enemyHp ?? 0} max={combat.enemyHpMax ?? 1} colorVar="#e11d48" />
-          </div>
-        )}
-
-        {debugMode && sessionPayloadOpen && <SessionPayloadPanel log={log} title={title} />}
-      </header>
-
-      <div
-        ref={scrollRef}
-        // `parchment-surface` (index.css) re-declares the ink/gold/semantic
-        // tokens for this subtree only. Without it every text-ink descendant
-        // here would use the dark-chrome palette — warm near-white on cream
-        // paper, i.e. invisible. This is the one place in the app that
-        // deliberately inverts to a light ground.
-        className="parchment-surface fixed overflow-y-auto bg-parchment parchment-texture rounded-xl pl-4 pr-6 space-y-4"
-        style={{ top: 6, bottom: 6, left: 6, right: 6, paddingTop: headerHeight + 16, paddingBottom: bottomHeight + 24 }}
-      >
-        {log.length === 0 && (
-          <p className="font-narrative italic text-sm opacity-60">
-            The tale hasn't begun. Type an action below to dive in.
-          </p>
-        )}
-        {hasEarlierTurns && (
-          <button
-            onClick={loadEarlierTurns}
-            className="mx-auto flex items-center gap-1.5 rounded-full border border-gold-accent/40 px-3 py-1.5 font-display text-xs text-gold-primary"
+        {/* Turn Navigator */}
+        {log.length > 0 && (
+          <div
+            ref={navRef}
+            onPointerDown={onNavPointerDown}
+            onPointerMove={onNavPointerMove}
+            onPointerUp={onNavPointerUp}
+            onPointerCancel={onNavPointerUp}
+            className="turn-nav group fixed z-10 flex flex-col items-center gap-0.5 rounded-xl backdrop-blur-sm px-1 py-1.5 cursor-grab active:cursor-grabbing touch-none"
+            style={{
+              right: 14,
+              ...(navDragPos ? { top: navDragPos.y } : { bottom: bottomHeight + 16 }),
+              ['--turn-accent' as string]: stateAccent,
+              ...(navDragging ? { background: 'rgba(20,22,34,0.88)' } : {}),
+            }}
           >
-            <History size={12} /> Load Earlier Turns
-          </button>
-        )}
-        {visibleLog.map((entry, i) => (
-          <TurnBlock
-            key={windowStart + i}
-            entry={entry}
-            globalIndex={windowStart + i}
-            onTapTerm={onTapTerm}
-            registerRef={registerRef}
-            debugMode={debugMode}
-            isLastTurn={windowStart + i === log.length - 1}
-            onEditLastTurn={onEditLastTurn}
-            onRemoveLastTurn={onRemoveLastTurn}
-            editLongText={editLongText}
-            confirmAction={confirmAction}
-            setInput={setInput}
-          />
-        ))}
-        {busy && <p className="font-narrative italic text-sm opacity-50">The thread of fate is being woven...</p>}
-        {lastLogEntry?.act && lastLogEntry.act.length > 0 && !busy && !error && (
-          <div className="flex flex-col gap-1.5 pt-2 border-t border-gold-accent/15">
-            <span className="text-[10px] font-mono tracking-wider text-gold-primary opacity-60 uppercase">Suggested Actions</span>
-            <div className="flex flex-wrap gap-1.5">
-              {lastLogEntry.act.map((suggestion, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setInput(suggestion)}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-gold-accent/10 hover:bg-gold-accent/20 border border-gold-accent/35 hover:border-gold-accent/60 px-3 py-1 font-narrative text-xs text-gold-primary transition-all cursor-pointer active:scale-[0.98]"
-                >
-                  {suggestion}
-                </button>
-              ))}
-            </div>
+            <button
+              onClick={goPrevious}
+              aria-label="Previous turn"
+              className="w-6 h-6 rounded-lg inline-flex items-center justify-center text-white/40 hover:!text-[#e8ca8a] group-hover:text-white/70 hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <ChevronUp size={13} />
+            </button>
+            <span className="font-mono text-[10px] tabular-nums text-white/40 group-hover:text-white/80 transition-colors">
+              {navPosition || ''}
+            </span>
+            <button
+              onClick={goNext}
+              aria-label="Next turn"
+              className="w-6 h-6 rounded-lg inline-flex items-center justify-center text-white/40 hover:!text-[#e8ca8a] group-hover:text-white/70 hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <ChevronDown size={13} />
+            </button>
+            <div className="w-3 h-px my-0.5 bg-white/10 group-hover:bg-white/20 transition-colors" />
+            <button
+              onClick={jumpToLatest}
+              aria-label="Jump to latest"
+              className="w-6 h-6 rounded-lg inline-flex items-center justify-center text-white/40 hover:!text-[#e8ca8a] group-hover:text-white/70 hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <ChevronsDown size={13} />
+            </button>
           </div>
         )}
-        {error && (
-          <ApiErrorPanel
-            error={error}
-            apiSettings={apiSettings}
-            proseDepth={proseDepth}
-            lastActionText={lastActionText}
-            onRetry={onRetry}
-            onDismissError={onDismissError}
-            onOpenSettings={onOpenSettings}
-            setInput={setInput}
-          />
-        )}
-      </div>
 
-      {/* §9.2 Block Navigator — idle: nearly invisible; hover/focus: lights up
-          solid, matching the reference's idle-transparent/active-solid chrome. */}
-      {log.length > 0 && (
+        {/* Elevated Input Bar Tray with Extending Drawer Menu */}
         <div
-          ref={navRef}
-          onPointerDown={onNavPointerDown}
-          onPointerMove={onNavPointerMove}
-          onPointerUp={onNavPointerUp}
-          onPointerCancel={onNavPointerUp}
-          className="turn-nav group fixed z-10 flex flex-col items-center gap-0.5 rounded-xl backdrop-blur-sm px-1 py-1.5 cursor-grab active:cursor-grabbing touch-none"
+          ref={bottomRef}
+          className="absolute bottom-0 inset-x-0 lg:bottom-5 lg:inset-x-6 lg:max-w-4xl lg:mx-auto z-20 flex flex-col rounded-t-2xl lg:rounded-2xl border-t border-x-0 border-b-0 lg:border shadow-2xl transition-[background,border-color] duration-700 ease-out backdrop-blur-md"
           style={{
-            right: 10,
-            ...(navDragPos ? { top: navDragPos.y } : { bottom: bottomHeight + 10 }),
-            ['--turn-accent' as string]: stateAccent,
-            ...(navDragging ? { background: 'rgba(20,22,34,0.88)' } : {}),
+            background: `rgba(11,13,20,${chromeAlpha})`,
+            borderColor: `${stateAccent}45`,
           }}
         >
-          <button
-            onClick={goPrevious}
-            aria-label="Previous turn"
-            className="w-6 h-6 rounded-full inline-flex items-center justify-center text-white/40 hover:!text-[#e8ca8a] group-hover:text-white/70 hover:bg-white/10 transition-colors"
-          >
-            <ChevronUp size={13} />
-          </button>
-          <span className="font-mono text-[10px] tabular-nums text-white/40 group-hover:text-white/80 transition-colors">
-            {navPosition || ''}
-          </span>
-          <button
-            onClick={goNext}
-            aria-label="Next turn"
-            className="w-6 h-6 rounded-full inline-flex items-center justify-center text-white/40 hover:!text-[#e8ca8a] group-hover:text-white/70 hover:bg-white/10 transition-colors"
-          >
-            <ChevronDown size={13} />
-          </button>
-          <div className="w-3 h-px my-0.5 bg-white/10 group-hover:bg-white/20 transition-colors" />
-          <button
-            onClick={jumpToLatest}
-            aria-label="Jump to latest"
-            className="w-6 h-6 rounded-full inline-flex items-center justify-center text-white/40 hover:!text-[#e8ca8a] group-hover:text-white/70 hover:bg-white/10 transition-colors"
-          >
-            <ChevronsDown size={13} />
-          </button>
-        </div>
-      )}
+          {/* Drawer Menu Popup */}
+          <AnimatePresence>
+            {drawerOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: 12, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.97 }}
+                transition={{ duration: 0.18, ease: 'easeOut' }}
+                className="absolute bottom-full mb-3 left-0 right-0 p-3 sm:p-4 rounded-2xl bg-[#14101d]/95 border border-[#c89d51]/50 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.9)] z-30"
+              >
+                <div className="flex items-center justify-between mb-2.5 px-1 border-b border-[#c89d51]/20 pb-1.5">
+                  <span className="font-serif text-xs font-bold uppercase tracking-wider text-[#d4af37] flex items-center gap-1.5">
+                    <LayoutGrid size={14} /> Codex Navigation
+                  </span>
+                  <button
+                    onClick={() => setDrawerOpen(false)}
+                    className="text-[#a89575] hover:text-[#f5ebd7] p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+                <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+                  {drawerActions.map((act) => (
+                    <button
+                      key={act.label}
+                      onClick={() => {
+                        act.onClick()
+                        setDrawerOpen(false)
+                      }}
+                      className="group flex flex-col items-center justify-center p-2 rounded-xl bg-[#23172e] border border-[#c89d51]/30 hover:border-[#f0ca65] hover:bg-[#322042] active:scale-95 text-[#f5ebd7] transition-all shadow-md cursor-pointer aspect-square"
+                    >
+                      <act.icon size={20} className="text-[#d4af37] group-hover:text-[#fff5dd] transition-colors mb-1 shrink-0" />
+                      <span className="font-serif text-[10px] font-medium text-[#c8b8a2] group-hover:text-[#ffffff] truncate w-full text-center">
+                        {act.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-      {/* §6.5 Fantasy Radial Menu — Codex/Settings already have header buttons,
-          so this ring exists for the shortcuts that don't: Quest Log,
-          Inventory, Character, and Crafting once a job is queued. Kept small
-          and quiet (matches the block navigator's low-visual-weight style)
-          rather than a bold floating action button — a thin gold ring at
-          rest, brightening into a glow on hover and peaking on press. The
-          FAB sits centered on the input tray's top edge, reading as the hub
-          the tray radiates from. Backdrop sits one layer below the FAB/fan
-          so an outside tap collapses it without swallowing taps on the fan
-          itself. */}
-      {radialOpen && <div className="fixed inset-0 z-[15]" onClick={() => setRadialOpen(false)} aria-hidden="true" />}
-      <div className="fixed left-1/2 z-20" style={{ bottom: bottomHeight - 18, transform: 'translateX(-50%)' }}>
-        <AnimatePresence>
-          {radialOpen &&
-            radialActions.map((action, i) => {
-              const { x, y } = radialPos(i, radialActions.length)
-              return (
-                <motion.button
-                  key={action.label}
-                  onClick={() => {
-                    action.onClick()
-                    setRadialOpen(false)
-                  }}
-                  aria-label={action.label}
-                  title={action.label}
-                  initial={{ opacity: 0, x: 0, y: 0, scale: 0.4 }}
-                  animate={{ opacity: 1, x, y, scale: 1 }}
-                  exit={{ opacity: 0, x: 0, y: 0, scale: 0.4 }}
-                  transition={{ type: 'spring', stiffness: 320, damping: 22, delay: i * 0.03 }}
-                  className="absolute left-1/2 top-1/2 w-10 h-10 rounded-full flex items-center justify-center text-[#e8ca8a] transition-shadow duration-150 shadow-[0_0_0_1px_rgba(232,202,138,0.18),0_2px_8px_rgba(0,0,0,0.45)] hover:shadow-[0_0_0_1px_rgba(232,202,138,0.4),0_0_16px_3px_rgba(232,202,138,0.5)] active:shadow-[0_0_0_1.5px_rgba(232,202,138,0.6),0_0_22px_5px_rgba(232,202,138,0.75)]"
-                  style={{ marginLeft: -20, marginTop: -20, background: 'rgba(20,22,34,0.92)', border: '1px solid rgba(232,202,138,0.35)' }}
-                >
-                  <action.icon size={15} />
-                </motion.button>
-              )
-            })}
-        </AnimatePresence>
-        <button
-          onClick={() => setRadialOpen((v) => !v)}
-          aria-label={radialOpen ? 'Close quick actions' : 'Quick actions'}
-          className={`relative w-10 h-10 rounded-full inline-flex items-center justify-center transition-shadow duration-150 ${
-            radialOpen
-              ? 'text-[#e8ca8a] shadow-[0_0_0_1.5px_rgba(232,202,138,0.6),0_0_20px_4px_rgba(232,202,138,0.65)]'
-              : 'text-[#e8ca8a] shadow-[0_0_0_1px_rgba(232,202,138,0.25),0_2px_8px_rgba(0,0,0,0.45)] hover:shadow-[0_0_0_1px_rgba(232,202,138,0.4),0_0_14px_3px_rgba(232,202,138,0.45)]'
-          }`}
-          style={{ background: 'rgba(20,22,34,0.92)', border: '1px solid rgba(232,202,138,0.4)' }}
-        >
-          {radialOpen ? <X size={17} /> : <Compass size={17} />}
-        </button>
-      </div>
+          <div className="relative px-3 pt-2 pb-2.5 flex gap-2 items-end">
+            {/* Bang Suggestions */}
+            {bangSuggestions.length > 0 && (
+              <div className="absolute left-3 right-3 bottom-full mb-1.5 rounded-xl border border-[#e8ca8a]/25 bg-[#141622]/90 backdrop-blur-md shadow-2xl overflow-hidden">
+                {bangSuggestions.map((cmd, i) => (
+                  <button
+                    key={cmd.name}
+                    onClick={() => selectBangSuggestion(cmd.name)}
+                    onMouseEnter={() => setBangHighlight(i)}
+                    className={`w-full text-left px-3 py-2 flex items-center justify-between gap-3 transition-colors ${
+                      i === bangHighlight ? 'bg-[#e8ca8a]/15' : ''
+                    }`}
+                  >
+                    <span className="font-mono text-xs font-semibold text-[#e8ca8a] shrink-0">{cmd.usage}</span>
+                    <span className="text-[11px] text-white/50 truncate">{cmd.description}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {/* Slash Suggestions */}
+            {slashSuggestions.length > 0 && (
+              <div className="absolute left-3 right-3 bottom-full mb-1.5 rounded-xl border border-[#e8ca8a]/25 bg-[#141622]/90 backdrop-blur-md shadow-2xl overflow-hidden">
+                {slashSuggestions.map((cmd, i) => (
+                  <button
+                    key={cmd.id}
+                    onClick={() => selectSlashSuggestion(cmd)}
+                    onMouseEnter={() => setSlashHighlight(i)}
+                    className={`w-full text-left px-3 py-2 flex items-center justify-between gap-3 transition-colors ${
+                      i === slashHighlight ? 'bg-[#e8ca8a]/15' : ''
+                    }`}
+                  >
+                    <span className="font-mono text-xs font-semibold text-[#e8ca8a] shrink-0">/{cmd.name}</span>
+                    <span className="text-[11px] text-white/50 truncate">{cmd.prompt}</span>
+                  </button>
+                ))}
+                {slashCommands.length === 0 && (
+                  <p className="px-3 py-2 text-[11px] text-white/40 italic">No slash commands yet — tap / below to create one.</p>
+                )}
+              </div>
+            )}
 
-      <div
-        ref={bottomRef}
-        className="fixed bottom-0 inset-x-0 z-10 flex flex-col border-t shadow-2xl transition-[background,border-color] duration-700 ease-out"
-        style={{
-          background: `rgba(11,13,20,${chromeAlpha})`,
-          borderColor: `${stateAccent}45`,
-        }}
-      >
-        <div className="relative px-3 pt-2 pb-2.5 flex gap-2 items-end">
-          {/* §6.6 Command Palette — pops up above the input while the "!word"
-              itself is being typed; arrow keys/Enter navigate it, matching
-              regular typed text once a target follows the space. */}
-          {bangSuggestions.length > 0 && (
-            <div className="absolute left-3 right-3 bottom-full mb-1.5 rounded-xl border border-[#e8ca8a]/25 bg-[#141622]/60 backdrop-blur-sm shadow-2xl overflow-hidden">
-              {bangSuggestions.map((cmd, i) => (
-                <button
-                  key={cmd.name}
-                  onClick={() => selectBangSuggestion(cmd.name)}
-                  onMouseEnter={() => setBangHighlight(i)}
-                  className={`w-full text-left px-3 py-2 flex items-center justify-between gap-3 transition-colors ${
-                    i === bangHighlight ? 'bg-[#e8ca8a]/15' : ''
-                  }`}
-                >
-                  <span className="font-mono text-xs font-semibold text-[#e8ca8a] shrink-0">{cmd.usage}</span>
-                  <span className="text-[11px] text-white/50 truncate">{cmd.description}</span>
-                </button>
-              ))}
-            </div>
-          )}
-          {slashSuggestions.length > 0 && (
-            <div className="absolute left-3 right-3 bottom-full mb-1.5 rounded-xl border border-[#e8ca8a]/25 bg-[#141622]/60 backdrop-blur-sm shadow-2xl overflow-hidden">
-              {slashSuggestions.map((cmd, i) => (
-                <button
-                  key={cmd.id}
-                  onClick={() => selectSlashSuggestion(cmd)}
-                  onMouseEnter={() => setSlashHighlight(i)}
-                  className={`w-full text-left px-3 py-2 flex items-center justify-between gap-3 transition-colors ${
-                    i === slashHighlight ? 'bg-[#e8ca8a]/15' : ''
-                  }`}
-                >
-                  <span className="font-mono text-xs font-semibold text-[#e8ca8a] shrink-0">/{cmd.name}</span>
-                  <span className="text-[11px] text-white/50 truncate">{cmd.prompt}</span>
-                </button>
-              ))}
-              {slashCommands.length === 0 && (
-                <p className="px-3 py-2 text-[11px] text-white/40 italic">No slash commands yet — tap /  below to create one.</p>
-              )}
-            </div>
-          )}
-          <button
-            onClick={onOpenSlashManager}
-            aria-label="Slash commands"
-            className="shrink-0 w-8 h-8 rounded-full inline-flex items-center justify-center text-[#e8ca8a]/70 hover:bg-white/10 hover:text-[#e8ca8a] font-mono text-sm font-bold"
-          >
-            /
-          </button>
-          <textarea
-            ref={textareaRef}
-            rows={1}
-            value={input}
-            onChange={(e) => {
-              setInput(e.target.value)
-              setBangHighlight(0)
-              setBangDismissed(false)
-              setSlashHighlight(0)
-              setSlashDismissed(false)
-            }}
-            onKeyDown={(e) => {
-              if (bangSuggestions.length > 0) {
-                if (e.key === 'ArrowDown') {
-                  e.preventDefault()
-                  setBangHighlight((h) => (h + 1) % bangSuggestions.length)
-                  return
+            {/* Slash Command Button */}
+            <button
+              onClick={onOpenSlashManager}
+              aria-label="Slash commands"
+              title="Slash Command Manager"
+              className="shrink-0 w-8 h-8 rounded-xl inline-flex items-center justify-center font-mono text-sm font-bold bg-[#1e142a] text-[#e8ca8a] border border-[#c89d51]/40 hover:bg-[#2c1d3e] hover:border-[#f0ca65] hover:text-[#f0ca65] transition-all cursor-pointer"
+            >
+              /
+            </button>
+
+            {/* Drawer Menu Button */}
+            <button
+              onClick={() => setDrawerOpen((v) => !v)}
+              aria-label={drawerOpen ? 'Close navigation drawer' : 'Open navigation drawer'}
+              title="Quick Codex Navigation Drawer"
+              className={`shrink-0 w-8 h-8 rounded-xl inline-flex items-center justify-center transition-all border cursor-pointer ${
+                drawerOpen
+                  ? 'bg-[#c89d51] text-[#0e1017] border-[#f0ca65] shadow-[0_0_12px_rgba(200,157,81,0.5)]'
+                  : 'bg-[#1e142a] text-[#e8ca8a] border-[#c89d51]/40 hover:bg-[#2c1d3e] hover:border-[#f0ca65] hover:text-[#f0ca65]'
+              }`}
+            >
+              <LayoutGrid size={16} />
+            </button>
+
+            {/* Input Textarea */}
+            <textarea
+              ref={textareaRef}
+              rows={2}
+              value={input}
+              onChange={(e) => {
+                setInput(e.target.value)
+                setBangHighlight(0)
+                setBangDismissed(false)
+                setSlashHighlight(0)
+                setSlashDismissed(false)
+              }}
+              onKeyDown={(e) => {
+                if (bangSuggestions.length > 0) {
+                  if (e.key === 'ArrowDown') {
+                    e.preventDefault()
+                    setBangHighlight((h) => (h + 1) % bangSuggestions.length)
+                    return
+                  }
+                  if (e.key === 'ArrowUp') {
+                    e.preventDefault()
+                    setBangHighlight((h) => (h - 1 + bangSuggestions.length) % bangSuggestions.length)
+                    return
+                  }
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    selectBangSuggestion(bangSuggestions[bangHighlight].name)
+                    return
+                  }
+                  if (e.key === 'Escape') {
+                    e.preventDefault()
+                    setBangDismissed(true)
+                    return
+                  }
                 }
-                if (e.key === 'ArrowUp') {
-                  e.preventDefault()
-                  setBangHighlight((h) => (h - 1 + bangSuggestions.length) % bangSuggestions.length)
-                  return
+                if (slashSuggestions.length > 0) {
+                  if (e.key === 'ArrowDown') {
+                    e.preventDefault()
+                    setSlashHighlight((h) => (h + 1) % slashSuggestions.length)
+                    return
+                  }
+                  if (e.key === 'ArrowUp') {
+                    e.preventDefault()
+                    setSlashHighlight((h) => (h - 1 + slashSuggestions.length) % slashSuggestions.length)
+                    return
+                  }
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    selectSlashSuggestion(slashSuggestions[slashHighlight])
+                    return
+                  }
+                  if (e.key === 'Escape') {
+                    e.preventDefault()
+                    setSlashDismissed(true)
+                    return
+                  }
                 }
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
-                  selectBangSuggestion(bangSuggestions[bangHighlight].name)
-                  return
+                  send()
                 }
-                if (e.key === 'Escape') {
-                  e.preventDefault()
-                  setBangDismissed(true)
-                  return
-                }
-              }
-              if (slashSuggestions.length > 0) {
-                if (e.key === 'ArrowDown') {
-                  e.preventDefault()
-                  setSlashHighlight((h) => (h + 1) % slashSuggestions.length)
-                  return
-                }
-                if (e.key === 'ArrowUp') {
-                  e.preventDefault()
-                  setSlashHighlight((h) => (h - 1 + slashSuggestions.length) % slashSuggestions.length)
-                  return
-                }
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  selectSlashSuggestion(slashSuggestions[slashHighlight])
-                  return
-                }
-                if (e.key === 'Escape') {
-                  e.preventDefault()
-                  setSlashDismissed(true)
-                  return
-                }
-              }
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                send()
-              }
-            }}
-            placeholder="What do you do?"
-            disabled={busy}
-            className="turn-glow flex-1 resize-none rounded-xl border backdrop-blur-sm px-3 py-1 font-narrative text-sm leading-snug text-white/90 placeholder:text-white/35"
-            style={{
-              maxHeight: INPUT_MAX_HEIGHT,
-              ['--turn-accent' as string]: stateAccent,
-              ['--chrome-alpha-idle' as string]: inputIdleAlpha,
-              ['--chrome-alpha-focus' as string]: inputFocusAlpha,
-            }}
-          />
-          <button
-            onClick={send}
-            disabled={busy || !input.trim()}
-            aria-label="Send"
-            className="turn-glow-btn w-8 h-8 shrink-0 rounded-full inline-flex items-center justify-center transition-colors bg-[#e8ca8a] text-[#0e1017] disabled:bg-white/10 disabled:text-white/25"
-          >
-            <Send size={14} />
-          </button>
+              }}
+              placeholder="What do you do?"
+              disabled={busy}
+              className="turn-glow flex-1 resize-none rounded-xl border backdrop-blur-sm px-3 py-2 font-narrative text-sm leading-relaxed text-white/90 placeholder:text-white/35 min-h-[56px]"
+              style={{
+                maxHeight: INPUT_MAX_HEIGHT,
+                ['--turn-accent' as string]: stateAccent,
+                ['--chrome-alpha-idle' as string]: inputIdleAlpha,
+                ['--chrome-alpha-focus' as string]: inputFocusAlpha,
+              }}
+            />
+
+            {/* Send Button */}
+            <button
+              onClick={send}
+              disabled={busy || !input.trim()}
+              aria-label="Send"
+              className="turn-glow-btn w-8 h-8 shrink-0 rounded-xl inline-flex items-center justify-center transition-all bg-[#e8ca8a] text-[#0e1017] border border-[#f0ca65] hover:bg-[#f0ca65] hover:shadow-[0_0_12px_rgba(200,157,81,0.5)] disabled:bg-white/10 disabled:text-white/25 disabled:border-transparent cursor-pointer"
+            >
+              <Send size={14} />
+            </button>
+          </div>
         </div>
       </div>
 

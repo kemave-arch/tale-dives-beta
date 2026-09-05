@@ -164,7 +164,7 @@ export default function Settings({
             </button>
           ))}
         </nav>
-        <h3 className="text-center font-display text-sm font-semibold tracking-wide text-[#f0ca65] mb-4">
+        <h3 className="text-center font-display text-sm font-semibold tracking-wide text-[#e8ca8a] mb-4">
           {TABS.find((t) => t.id === tab)?.label}
         </h3>
 

@@ -279,7 +279,7 @@ export function GlassHeader({ title, subtitle, onBack, right, className = '' }: 
     >
       {onBack && <GlassIconButton icon={ArrowLeft} label="Back" onClick={onBack} />}
       <div className="flex-1 min-w-0">
-        {title && <h2 className="font-display font-bold text-lg text-[#f0ca65] truncate">{title}</h2>}
+        {title && <h2 className="font-display font-bold text-lg text-[#e8ca8a] truncate">{title}</h2>}
         {subtitle && <p className="font-narrative italic text-xs text-[#e8ca8a]/95 truncate">{subtitle}</p>}
       </div>
       {right && <div className="flex items-center gap-1 shrink-0">{right}</div>}

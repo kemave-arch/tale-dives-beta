@@ -356,91 +356,90 @@ interface CategoryAccent {
 const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
   npcs: {
     icon: Users,
-    card: `${GLASS_SURFACE_LIST} bg-[#24101a]/85 border-[#fb7185]/35 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#fb7185]/80 hover:bg-[#331624]/95 hover:shadow-[0_8px_24px_rgba(251,113,133,0.2)] cursor-pointer group`,
-    iconBadge: 'w-9 h-9 rounded-xl bg-[#fb7185]/15 border border-[#fb7185]/35 flex items-center justify-center text-[#fb7185] shrink-0 group-hover:scale-105 transition-transform',
-    kicker: 'font-mono text-[10px] text-[#fecdd3]/75 uppercase tracking-wider',
-    badge: 'rounded bg-[#fb7185]/20 text-[#fecdd3] border border-[#fb7185]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#23283b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#fb7185]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(251,113,133,0.2)] cursor-pointer group`,
+    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#fb7185] shrink-0 group-hover:scale-105 group-hover:border-[#fb7185]/60 group-hover:bg-[#2e1823] transition-all',
+    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#fb7185]/90',
+    badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#fb7185]/60 group-hover:text-[#fecdd3] group-hover:bg-[#fb7185]/20 transition-all',
     sectionIcon: 'text-[#fb7185]',
-    tag: 'rounded-full border border-[#fb7185]/35 bg-[#fb7185]/10 px-2 py-0.5 text-[10px] font-mono text-[#fecdd3]',
+    tag: 'rounded-full border border-[#fb7185]/35 bg-[#fb7185]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#fecdd3]',
   },
   factions: {
     icon: ShieldCheck,
-    card: `${GLASS_SURFACE_LIST} bg-[#241c0a]/85 border-[#fbbf24]/35 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#fbbf24]/80 hover:bg-[#33280e]/95 hover:shadow-[0_8px_24px_rgba(251,191,36,0.2)] cursor-pointer group`,
-    iconBadge: 'w-9 h-9 rounded-xl bg-[#fbbf24]/15 border border-[#fbbf24]/35 flex items-center justify-center text-[#fbbf24] shrink-0 group-hover:scale-105 transition-transform',
-    kicker: 'font-mono text-[10px] text-[#fde68a]/75 uppercase tracking-wider',
-    badge: 'rounded bg-[#fbbf24]/20 text-[#fde68a] border border-[#fbbf24]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#23283b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#fbbf24]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(251,191,36,0.2)] cursor-pointer group`,
+    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#fbbf24] shrink-0 group-hover:scale-105 group-hover:border-[#fbbf24]/60 group-hover:bg-[#2b2414] transition-all',
+    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#fde68a]/90',
+    badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#fbbf24]/60 group-hover:text-[#fde68a] group-hover:bg-[#fbbf24]/20 transition-all',
     sectionIcon: 'text-[#fbbf24]',
-    tag: 'rounded-full border border-[#fbbf24]/35 bg-[#fbbf24]/10 px-2 py-0.5 text-[10px] font-mono text-[#fde68a]',
+    tag: 'rounded-full border border-[#fbbf24]/35 bg-[#fbbf24]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#fde68a]',
     solid: 'bg-[#fbbf24]',
   },
   locations: {
     icon: Map,
-    card: `${GLASS_SURFACE_LIST} bg-[#091824]/85 border-[#38bdf8]/35 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#38bdf8]/80 hover:bg-[#0c2234]/95 hover:shadow-[0_8px_24px_rgba(56,189,248,0.2)] cursor-pointer group`,
-    iconBadge: 'w-9 h-9 rounded-xl bg-[#38bdf8]/15 border border-[#38bdf8]/30 flex items-center justify-center text-[#38bdf8] shrink-0 group-hover:scale-105 transition-transform',
-    kicker: 'font-mono text-[10px] text-[#7dd3fc]/75 uppercase tracking-wider',
-    badge: 'rounded bg-[#38bdf8]/20 text-[#7dd3fc] border border-[#38bdf8]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#23283b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#38bdf8]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(56,189,248,0.2)] cursor-pointer group`,
+    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#38bdf8] shrink-0 group-hover:scale-105 group-hover:border-[#38bdf8]/60 group-hover:bg-[#142636] transition-all',
+    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#7dd3fc]/90',
+    badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#38bdf8]/60 group-hover:text-[#7dd3fc] group-hover:bg-[#38bdf8]/20 transition-all',
     sectionIcon: 'text-[#38bdf8]',
-    tag: 'rounded-full border border-[#38bdf8]/35 bg-[#38bdf8]/10 px-2 py-0.5 text-[10px] font-mono text-[#7dd3fc]',
+    tag: 'rounded-full border border-[#38bdf8]/35 bg-[#38bdf8]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#7dd3fc]',
   },
   lore: {
     icon: ScrollText,
-    card: `${GLASS_SURFACE_LIST} bg-[#190d29]/85 border-[#c084fc]/35 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#c084fc]/80 hover:bg-[#23123a]/95 hover:shadow-[0_8px_24px_rgba(192,132,252,0.2)] cursor-pointer group`,
-    iconBadge: 'w-9 h-9 rounded-xl bg-[#c084fc]/15 border border-[#c084fc]/30 flex items-center justify-center text-[#c084fc] shrink-0 group-hover:scale-105 transition-transform',
-    kicker: 'font-mono text-[10px] text-[#d8b4fe]/75 uppercase tracking-wider',
-    badge: 'rounded bg-[#c084fc]/20 text-[#d8b4fe] border border-[#c084fc]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#23283b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#c084fc]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(192,132,252,0.2)] cursor-pointer group`,
+    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#c084fc] shrink-0 group-hover:scale-105 group-hover:border-[#c084fc]/60 group-hover:bg-[#251838] transition-all',
+    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#d8b4fe]/90',
+    badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#c084fc]/60 group-hover:text-[#d8b4fe] group-hover:bg-[#c084fc]/20 transition-all',
     sectionIcon: 'text-[#c084fc]',
-    tag: 'rounded-full border border-[#c084fc]/35 bg-[#c084fc]/10 px-2 py-0.5 text-[10px] font-mono text-[#d8b4fe]',
+    tag: 'rounded-full border border-[#c084fc]/35 bg-[#c084fc]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#d8b4fe]',
   },
   quests: {
     icon: Target,
-    card: `${GLASS_SURFACE_LIST} bg-[#0a2118]/85 border-[#34d399]/35 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#34d399]/80 hover:bg-[#0e2e21]/95 hover:shadow-[0_8px_24px_rgba(52,211,153,0.2)] cursor-pointer group`,
-    iconBadge: 'w-9 h-9 rounded-xl bg-[#34d399]/15 border border-[#34d399]/30 flex items-center justify-center text-[#34d399] shrink-0 group-hover:scale-105 transition-transform',
-    kicker: 'font-mono text-[10px] text-[#6ee7b7]/75 uppercase tracking-wider',
-    badge: 'rounded bg-[#34d399]/20 text-[#6ee7b7] border border-[#34d399]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#23283b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#34d399]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(52,211,153,0.2)] cursor-pointer group`,
+    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#34d399] shrink-0 group-hover:scale-105 group-hover:border-[#34d399]/60 group-hover:bg-[#142e23] transition-all',
+    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#6ee7b7]/90',
+    badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#34d399]/60 group-hover:text-[#6ee7b7] group-hover:bg-[#34d399]/20 transition-all',
     sectionIcon: 'text-[#34d399]',
-    tag: 'rounded-full border border-[#34d399]/35 bg-[#34d399]/10 px-2 py-0.5 text-[10px] font-mono text-[#6ee7b7]',
+    tag: 'rounded-full border border-[#34d399]/35 bg-[#34d399]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#6ee7b7]',
   },
   bestiary: {
     icon: Skull,
-    card: `${GLASS_SURFACE_LIST} bg-[#240a0a]/85 border-[#ef4444]/35 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#ef4444]/80 hover:bg-[#331010]/95 hover:shadow-[0_8px_24px_rgba(239,68,68,0.2)] cursor-pointer group`,
-    iconBadge: 'w-9 h-9 rounded-xl bg-[#ef4444]/15 border border-[#ef4444]/30 flex items-center justify-center text-[#ef4444] shrink-0 group-hover:scale-105 transition-transform',
-    kicker: 'font-mono text-[10px] text-[#fca5a5]/75 uppercase tracking-wider',
-    badge: 'rounded bg-[#ef4444]/20 text-[#fca5a5] border border-[#ef4444]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#23283b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#ef4444]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(239,68,68,0.2)] cursor-pointer group`,
+    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#ef4444] shrink-0 group-hover:scale-105 group-hover:border-[#ef4444]/60 group-hover:bg-[#2e1414] transition-all',
+    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#fca5a5]/90',
+    badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#ef4444]/60 group-hover:text-[#fca5a5] group-hover:bg-[#ef4444]/20 transition-all',
     sectionIcon: 'text-[#ef4444]',
-    tag: 'rounded-full border border-[#ef4444]/35 bg-[#ef4444]/10 px-2 py-0.5 text-[10px] font-mono text-[#fca5a5]',
+    tag: 'rounded-full border border-[#ef4444]/35 bg-[#ef4444]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#fca5a5]',
     solid: 'bg-[#ef4444]',
   },
   skills: {
     icon: Sparkles,
-    card: `${GLASS_SURFACE_LIST} bg-[#140f2a]/85 border-[#818cf8]/35 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#818cf8]/80 hover:bg-[#1c1640]/95 hover:shadow-[0_8px_24px_rgba(129,140,248,0.2)] cursor-pointer group`,
-    iconBadge: 'w-9 h-9 rounded-xl bg-[#818cf8]/15 border border-[#818cf8]/30 flex items-center justify-center text-[#818cf8] shrink-0 group-hover:scale-105 transition-transform',
-    kicker: 'font-mono text-[10px] text-[#c7d2fe]/75 uppercase tracking-wider',
-    badge: 'rounded bg-[#818cf8]/20 text-[#c7d2fe] border border-[#818cf8]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#23283b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#818cf8]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(129,140,248,0.2)] cursor-pointer group`,
+    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#818cf8] shrink-0 group-hover:scale-105 group-hover:border-[#818cf8]/60 group-hover:bg-[#1e1a38] transition-all',
+    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#c7d2fe]/90',
+    badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#818cf8]/60 group-hover:text-[#c7d2fe] group-hover:bg-[#818cf8]/20 transition-all',
     sectionIcon: 'text-[#818cf8]',
-    tag: 'rounded-full border border-[#818cf8]/35 bg-[#818cf8]/10 px-2 py-0.5 text-[10px] font-mono text-[#c7d2fe]',
+    tag: 'rounded-full border border-[#818cf8]/35 bg-[#818cf8]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#c7d2fe]',
   },
   items: {
     icon: Backpack,
-    card: `${GLASS_SURFACE_LIST} bg-[#1f1710]/85 border-[#f0ca65]/35 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#f0ca65]/80 hover:bg-[#2a2016]/95 hover:shadow-[0_8px_24px_rgba(240,202,101,0.2)] cursor-pointer group`,
-    iconBadge: 'w-9 h-9 rounded-xl bg-[#f0ca65]/15 border border-[#f0ca65]/30 flex items-center justify-center text-[#f0ca65] shrink-0 group-hover:scale-105 transition-transform',
-    kicker: 'font-mono text-[10px] text-[#fae5b5]/75 uppercase tracking-wider',
-    badge: 'rounded bg-[#f0ca65]/20 text-[#fae5b5] border border-[#f0ca65]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#23283b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#f0ca65]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(240,202,101,0.2)] cursor-pointer group`,
+    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#f0ca65] shrink-0 group-hover:scale-105 group-hover:border-[#f0ca65]/60 group-hover:bg-[#2b2414] transition-all',
+    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#fae5b5]/90',
+    badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#f0ca65]/60 group-hover:text-[#fae5b5] group-hover:bg-[#f0ca65]/20 transition-all',
     sectionIcon: 'text-[#f0ca65]',
-    tag: 'rounded-full border border-[#f0ca65]/35 bg-[#f0ca65]/10 px-2 py-0.5 text-[10px] font-mono text-[#fae5b5]',
+    tag: 'rounded-full border border-[#f0ca65]/35 bg-[#f0ca65]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#fae5b5]',
   },
 }
 
-// For the 4 non-CRUD categories (Character/Realm/Crafting/Chapters) at the
-// top-level category grid — a single shared gold-neutral identity rather
-// than 4 more hues, since these aren't entry types with their own "kind."
+// For the non-CRUD categories (Character/Realm/Crafting/Chapters) at the
+// top-level category grid — a shared gold-accent identity matching the sleek dark deck.
 const NEUTRAL_ACCENT: CategoryAccent = {
   icon: Globe,
-  card: `${GLASS_SURFACE_LIST} bg-[#171224]/80 border-[#e8ca8a]/30 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#f0ca65]/70 hover:bg-[#1c1730]/95 hover:shadow-[0_8px_24px_rgba(240,202,101,0.15)] cursor-pointer group`,
-  iconBadge: 'w-9 h-9 rounded-xl bg-[#e8ca8a]/15 border border-[#e8ca8a]/30 flex items-center justify-center text-[#e8ca8a] shrink-0 group-hover:scale-105 transition-transform',
-  kicker: 'font-mono text-[10px] text-[#fae5b5]/75 uppercase tracking-wider',
-  badge: 'rounded bg-[#e8ca8a]/20 text-[#fae5b5] border border-[#e8ca8a]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+  card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#23283b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#f0ca65]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(240,202,101,0.18)] cursor-pointer group`,
+  iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#e8ca8a] shrink-0 group-hover:scale-105 group-hover:border-[#f0ca65]/60 group-hover:text-[#f0ca65] group-hover:bg-[#2b2414] transition-all',
+  kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#fae5b5]/90',
+  badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#f0ca65]/60 group-hover:text-[#fae5b5] group-hover:bg-[#f0ca65]/20 transition-all',
   sectionIcon: 'text-[#e8ca8a]',
-  tag: 'rounded-full border border-[#e8ca8a]/35 bg-[#e8ca8a]/10 px-2 py-0.5 text-[10px] font-mono text-[#fae5b5]',
+  tag: 'rounded-full border border-[#e8ca8a]/35 bg-[#e8ca8a]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#fae5b5]',
 }
 
 // Item rarity gets its own accent set, in the same shape as CATEGORY_ACCENTS
@@ -452,48 +451,48 @@ const NEUTRAL_ACCENT: CategoryAccent = {
 const ITEM_RARITY_ACCENTS: Record<string, CategoryAccent> = {
   common: {
     icon: Backpack,
-    card: `${GLASS_SURFACE_LIST} bg-[#1c1e20]/85 border-[#9ca3af]/35 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#9ca3af]/70 hover:bg-[#25282b]/95 hover:shadow-[0_8px_20px_rgba(156,163,175,0.15)] cursor-pointer group`,
-    iconBadge: 'w-9 h-9 rounded-xl bg-[#9ca3af]/15 border border-[#9ca3af]/30 flex items-center justify-center text-[#9ca3af] shrink-0 group-hover:scale-105 transition-transform',
-    kicker: 'font-mono text-[10px] text-[#d1d5db]/75 uppercase tracking-wider',
-    badge: 'rounded bg-[#9ca3af]/20 text-[#d1d5db] border border-[#9ca3af]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#2d3348] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#9ca3af]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(156,163,175,0.15)] cursor-pointer group`,
+    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#9ca3af] shrink-0 group-hover:scale-105 group-hover:border-[#9ca3af]/60 transition-all',
+    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#d1d5db]',
+    badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#9ca3af]/60 group-hover:text-[#d1d5db] transition-all',
     sectionIcon: 'text-[#9ca3af]',
-    tag: 'rounded-full border border-[#9ca3af]/35 bg-[#9ca3af]/10 px-2 py-0.5 text-[10px] font-mono text-[#d1d5db]',
+    tag: 'rounded-full border border-[#9ca3af]/35 bg-[#9ca3af]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#d1d5db]',
   },
   uncommon: {
     icon: Backpack,
-    card: `${GLASS_SURFACE_LIST} bg-[#0d2118]/85 border-[#4ade80]/35 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#4ade80]/80 hover:bg-[#122e21]/95 hover:shadow-[0_8px_24px_rgba(74,222,128,0.2)] cursor-pointer group`,
-    iconBadge: 'w-9 h-9 rounded-xl bg-[#4ade80]/15 border border-[#4ade80]/30 flex items-center justify-center text-[#4ade80] shrink-0 group-hover:scale-105 transition-transform',
-    kicker: 'font-mono text-[10px] text-[#86efac]/75 uppercase tracking-wider',
-    badge: 'rounded bg-[#4ade80]/20 text-[#86efac] border border-[#4ade80]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#23283b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#4ade80]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(74,222,128,0.2)] cursor-pointer group`,
+    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#4ade80] shrink-0 group-hover:scale-105 group-hover:border-[#4ade80]/60 group-hover:bg-[#142e23] transition-all',
+    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#86efac]',
+    badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#4ade80]/60 group-hover:text-[#86efac] group-hover:bg-[#4ade80]/20 transition-all',
     sectionIcon: 'text-[#4ade80]',
-    tag: 'rounded-full border border-[#4ade80]/35 bg-[#4ade80]/10 px-2 py-0.5 text-[10px] font-mono text-[#86efac]',
+    tag: 'rounded-full border border-[#4ade80]/35 bg-[#4ade80]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#86efac]',
   },
   rare: {
     icon: Backpack,
-    card: `${GLASS_SURFACE_LIST} bg-[#0d1b2a]/85 border-[#60a5fa]/35 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#60a5fa]/80 hover:bg-[#12263a]/95 hover:shadow-[0_8px_24px_rgba(96,165,250,0.2)] cursor-pointer group`,
-    iconBadge: 'w-9 h-9 rounded-xl bg-[#60a5fa]/15 border border-[#60a5fa]/30 flex items-center justify-center text-[#60a5fa] shrink-0 group-hover:scale-105 transition-transform',
-    kicker: 'font-mono text-[10px] text-[#93c5fd]/75 uppercase tracking-wider',
-    badge: 'rounded bg-[#60a5fa]/20 text-[#93c5fd] border border-[#60a5fa]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#23283b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#60a5fa]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(96,165,250,0.2)] cursor-pointer group`,
+    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#60a5fa] shrink-0 group-hover:scale-105 group-hover:border-[#60a5fa]/60 group-hover:bg-[#142636] transition-all',
+    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#93c5fd]',
+    badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#60a5fa]/60 group-hover:text-[#93c5fd] group-hover:bg-[#60a5fa]/20 transition-all',
     sectionIcon: 'text-[#60a5fa]',
-    tag: 'rounded-full border border-[#60a5fa]/35 bg-[#60a5fa]/10 px-2 py-0.5 text-[10px] font-mono text-[#93c5fd]',
+    tag: 'rounded-full border border-[#60a5fa]/35 bg-[#60a5fa]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#93c5fd]',
   },
   epic: {
     icon: Backpack,
-    card: `${GLASS_SURFACE_LIST} bg-[#190d29]/85 border-[#c084fc]/35 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#c084fc]/80 hover:bg-[#23123a]/95 hover:shadow-[0_8px_24px_rgba(192,132,252,0.25)] cursor-pointer group`,
-    iconBadge: 'w-9 h-9 rounded-xl bg-[#c084fc]/15 border border-[#c084fc]/30 flex items-center justify-center text-[#c084fc] shrink-0 group-hover:scale-105 transition-transform',
-    kicker: 'font-mono text-[10px] text-[#d8b4fe]/75 uppercase tracking-wider',
-    badge: 'rounded bg-[#c084fc]/20 text-[#d8b4fe] border border-[#c084fc]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#23283b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#c084fc]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(192,132,252,0.25)] cursor-pointer group`,
+    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#c084fc] shrink-0 group-hover:scale-105 group-hover:border-[#c084fc]/60 group-hover:bg-[#251838] transition-all',
+    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#d8b4fe]',
+    badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#c084fc]/60 group-hover:text-[#d8b4fe] group-hover:bg-[#c084fc]/20 transition-all',
     sectionIcon: 'text-[#c084fc]',
-    tag: 'rounded-full border border-[#c084fc]/35 bg-[#c084fc]/10 px-2 py-0.5 text-[10px] font-mono text-[#d8b4fe]',
+    tag: 'rounded-full border border-[#c084fc]/35 bg-[#c084fc]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#d8b4fe]',
   },
   legendary: {
     icon: Backpack,
-    card: `${GLASS_SURFACE_LIST} bg-[#241c08]/90 border-[#fbbf24]/50 rounded-2xl p-3.5 flex flex-col gap-2 transition-all duration-200 hover:border-[#fbbf24]/90 hover:bg-[#332a0c]/95 hover:shadow-[0_8px_28px_rgba(251,191,36,0.35)] shadow-[0_0_16px_rgba(251,191,36,0.12)] cursor-pointer group`,
-    iconBadge: 'w-9 h-9 rounded-xl bg-[#fbbf24]/20 border border-[#fbbf24]/50 flex items-center justify-center text-[#fbbf24] shrink-0 group-hover:scale-105 transition-transform',
-    kicker: 'font-mono text-[10px] text-[#fde68a]/85 uppercase tracking-wider',
-    badge: 'rounded bg-[#fbbf24]/25 text-[#fde68a] border border-[#fbbf24]/50 px-2 py-0.5 text-[9.5px] font-mono shrink-0',
+    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#fbbf24]/40 rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#fbbf24]/90 hover:bg-[#191c2c] hover:shadow-[0_4px_20px_rgba(251,191,36,0.35)] cursor-pointer group`,
+    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#fbbf24]/40 flex items-center justify-center text-[#fbbf24] shrink-0 group-hover:scale-105 group-hover:border-[#fbbf24]/70 group-hover:bg-[#2b2414] transition-all',
+    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#fde68a]',
+    badge: 'rounded-lg bg-[#1a1d2b] border border-[#fbbf24]/40 text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#fbbf24]/70 group-hover:text-[#fde68a] group-hover:bg-[#fbbf24]/20 transition-all',
     sectionIcon: 'text-[#fbbf24]',
-    tag: 'rounded-full border border-[#fbbf24]/40 bg-[#fbbf24]/15 px-2 py-0.5 text-[10px] font-mono text-[#fde68a]',
+    tag: 'rounded-full border border-[#fbbf24]/40 bg-[#fbbf24]/15 px-1.5 py-0.25 text-[9px] font-mono text-[#fde68a]',
   },
 }
 
@@ -528,7 +527,7 @@ function ReputationMeter({ tier, accent }: { tier: number; accent: CategoryAccen
   )
 }
 
-// A quest's status as a colored ribbon — the checklist/tracker feel a quest
+// A quest'status as a colored ribbon — the checklist/tracker feel a quest
 // log needs, rather than plain status text sitting next to everything else.
 const QUEST_STATUS_META: Record<string, { label: string; icon: LucideIcon; className: string }> = {
   completed: { label: 'Completed', icon: CheckCircle2, className: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40' },
@@ -568,10 +567,10 @@ function DeckEntryCard({
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className={accent.iconBadge}>
-            <Icon size={17} />
+            <Icon size={15} />
           </div>
           <div className="min-w-0">
-            <h3 className="font-display font-bold text-sm text-ink group-hover:text-white truncate">{title}</h3>
+            <h3 className="font-display font-bold text-xs sm:text-sm text-[#e8ca8a] group-hover:text-[#f0ca65] uppercase tracking-wider truncate">{title}</h3>
             {(kicker || statusBadge) && (
               <p className={`${accent.kicker} flex items-center gap-1.5`}>
                 {kicker}
@@ -582,7 +581,7 @@ function DeckEntryCard({
         </div>
         {badge}
       </div>
-      {subtitle && <p className="font-narrative text-xs text-ink-muted line-clamp-2 leading-relaxed">{subtitle}</p>}
+      {subtitle && <p className="font-sans text-[11px] text-[#9095a8] group-hover:text-[#b0b5c8] line-clamp-2 leading-snug">{subtitle}</p>}
       {tags && tags.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {tags.slice(0, 4).map((t) => (
@@ -1112,7 +1111,7 @@ export default function Codex({
     { id: 'lore', label: 'Lore', description: 'Legends, myths & discovered secrets', icon: ScrollText, count: Object.keys(lore).length },
     { id: 'chapters', label: 'Chapters', description: 'Chronological recap of the tale so far', icon: BookOpen, count: chapters.length },
     { id: 'character', label: 'Character', description: 'Attributes, class & derived pools', icon: User, count: 1 },
-    { id: 'crafting', label: 'Workbenches & Recipes', description: 'Craft items from held materials', icon: Hammer, count: crafting.length },
+    { id: 'crafting', label: 'Crafting', description: 'Craft items from held materials', icon: Hammer, count: crafting.length },
     { id: 'realm', label: 'Realm', description: 'Cosmology, setting, tone & core conflict', icon: Globe, count: 1 },
   ]
 
@@ -1353,25 +1352,35 @@ export default function Codex({
           CATEGORY_ACCENTS above) so this reads as a deck of distinct card
           kinds rather than a flat settings-style list. */}
       {!category && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {categories.map(({ id, label, description, icon: Icon, count }) => {
-            const accent = (CATEGORY_ACCENTS as Record<string, CategoryAccent>)[id] ?? NEUTRAL_ACCENT
-            return (
-              <DeckEntryCard
-                key={id}
-                accent={accent}
-                icon={Icon}
-                title={label}
-                subtitle={description}
-                badge={
-                  <span className={count > 0 ? accent.badge : `${accent.badge} opacity-60`}>
-                    {count}
-                  </span>
-                }
-                onClick={() => setCategory(id)}
-              />
-            )
-          })}
+        <div className="rounded-2xl border border-[#23283b] bg-[#0d0f18]/80 p-3.5 sm:p-4">
+          <div className="flex items-center justify-between mb-3 px-1">
+            <h2 className="font-display font-bold text-xs uppercase tracking-widest text-[#e8ca8a]/90">
+              CODEX ARCHIVES
+            </h2>
+            <span className="font-mono text-[10px] text-[#a0a5b8]">
+              {categories.length} CATEGORIES
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {categories.map(({ id, label, description, icon: Icon, count }) => {
+              const accent = (CATEGORY_ACCENTS as Record<string, CategoryAccent>)[id] ?? NEUTRAL_ACCENT
+              return (
+                <DeckEntryCard
+                  key={id}
+                  accent={accent}
+                  icon={Icon}
+                  title={label}
+                  subtitle={description}
+                  badge={
+                    <span className={count > 0 ? accent.badge : `${accent.badge} opacity-60`}>
+                      {count}
+                    </span>
+                  }
+                  onClick={() => setCategory(id)}
+                />
+              )
+            })}
+          </div>
         </div>
       )}
 
@@ -1474,7 +1483,7 @@ export default function Codex({
               {RECIPES.map((recipe) => {
                 const affordable = canAffordRecipe(inventory, recipe)
                 return (
-                  <div key={recipe.id} className="rounded-2xl p-4 flex flex-col gap-2 border border-[#e8ca8a]/25 bg-transparent backdrop-blur-sm">
+                  <div key={recipe.id} className="rounded-xl p-3 flex flex-col gap-1.5 border border-[#e8ca8a]/25 bg-transparent backdrop-blur-sm">
                     <div className="flex items-center justify-between gap-2">
                       <h3 className="font-display font-bold text-sm text-[#e8ca8a]">{recipe.name}</h3>
                       <span className="inline-flex items-center gap-1 font-mono text-[10px] text-ink-muted">

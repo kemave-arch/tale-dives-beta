@@ -57,6 +57,21 @@ interface RequestParams {
   history: HistoryTurn[]
 }
 
+// Gemini's non-Lite Flash and Pro models run extended "thinking" by default,
+// billed against the same maxOutputTokens budget as the visible narration —
+// the working theory behind the live MAX_TOKENS truncations users have been
+// hitting on BALANCED/IMMERSIVE turns well under their nominal ceiling.
+// Disabling it frees the whole budget for prose. Flash-Lite variants default
+// thinking off already (no override needed); 2.0-generation models predate
+// thinking entirely and don't accept `thinkingConfig` at all, so neither
+// gets this override. If a future Pro model rejects `thinkingBudget: 0`
+// (some require a nonzero minimum), that'll surface as a 400 on every turn —
+// worth checking for if a "3.1-pro-preview" turn errors out after this change.
+function thinkingBudgetOverride(model: string): { thinkingConfig: { thinkingBudget: number } } | Record<string, never> {
+  const hasThinkingByDefault = !model.includes('flash-lite') && !model.startsWith('gemini-2.0')
+  return hasThinkingByDefault ? { thinkingConfig: { thinkingBudget: 0 } } : {}
+}
+
 interface RawResponse {
   text: string
   finishReason?: string
@@ -74,6 +89,7 @@ async function requestOnce({ apiKey, model, temperature, maxOutputTokens, histor
       maxOutputTokens,
       responseMimeType: 'application/json',
       responseSchema: TURN_SCHEMA,
+      ...thinkingBudgetOverride(model),
     },
   }
 
@@ -157,7 +173,7 @@ export async function runSummary({ apiKey, model, temperature, maxOutputTokens, 
         ],
       },
     ],
-    generationConfig: { temperature, maxOutputTokens },
+    generationConfig: { temperature, maxOutputTokens, ...thinkingBudgetOverride(model) },
   }
 
   const res = await fetch(url, {

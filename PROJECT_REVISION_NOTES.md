@@ -1,28 +1,36 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-05, Claude Code on the web — continuing the same live
-truncation investigation as the paragraph below. Four changes, all debug/config
-tooling rather than a fix to the actual request: (1) `GEMINI_MODELS` gained 4 older
-generations (2.5 Flash/Flash Lite, 2.0 Flash/Flash Lite) alongside the existing 3.x
-lineup, kept selectable as a fallback since they predate (or, Flash-Lite historically,
-default off) the extended-thinking behavior suspected of eating the response budget;
-(2) the default model in `loadApiSettings()` changed to `gemini-3.5-flash-lite` (only
-affects a genuinely first-ever load — existing saved settings are untouched); (3) the
-session-wide payload export from the previous entry was reworked, per correction —
-no more `.txt` file download, instead a `SessionPayloadPanel` matching the per-turn
-debug button's copy-to-clipboard UX, toggled open from a new header icon and rendered
-inline inside the `<header>` itself so the `ResizeObserver`-driven parchment
-`paddingTop` reflows around it automatically; (4) both that panel and the pre-existing
-per-turn "View Payload" button now only render when Debug Mode (`uiPrefs.debugMode`,
-Settings' existing toggle) is on, instead of always being visible. Verified in headless
+**Last updated:** 2026-09-05, Claude Code on the web — landed the actual fix for the
+live truncation investigation below, on the user's own call ("i think non lite flash
+and pro models are prone to this anyway") rather than waiting on a confirmed
+`MAX_TOKENS` payload first. `gemini.ts` gained `thinkingBudgetOverride(model)`, added
+to `generationConfig` in both `requestOnce` (turn generation) and `runSummary`
+(chapter recaps): it sends `thinkingConfig: { thinkingBudget: 0 }` for every model
+*except* `-flash-lite` variants (thinking already defaults off there) and the
+`gemini-2.0-*` generation (predates thinking entirely, doesn't accept the field) —
+i.e. every non-Lite Flash and every Pro model gets thinking disabled, freeing the
+whole `maxOutputTokens` budget for visible narration instead of invisible reasoning.
+**Caveat flagged but not yet verified**: some real Gemini Pro models require a
+nonzero minimum thinking budget and reject `thinkingBudget: 0` outright — if a
+`gemini-3.1-pro-preview` turn starts 400ing after this change, that's the first
+thing to check (the debug tooling from the entries below — `finishReason` and the
+per-turn/session payload panels, both now gated behind Debug Mode — should make that
+easy to spot). Below is the debug/config tooling that led here: (1) `GEMINI_MODELS`
+gained 4 older generations (2.5 Flash/Flash Lite, 2.0 Flash/Flash Lite) alongside the
+existing 3.x lineup, kept selectable as a fallback; (2) the default model in
+`loadApiSettings()` changed to `gemini-3.5-flash-lite` (only affects a genuinely
+first-ever load — existing saved settings are untouched); (3) the session-wide
+payload export from the previous entry was reworked, per correction — no more `.txt`
+file download, instead a `SessionPayloadPanel` matching the per-turn debug button's
+copy-to-clipboard UX, toggled open from a new header icon and rendered inline inside
+the `<header>` itself so the `ResizeObserver`-driven parchment `paddingTop` reflows
+around it automatically; (4) both that panel and the pre-existing per-turn "View
+Payload" button now only render when Debug Mode (`uiPrefs.debugMode`, Settings'
+existing toggle) is on, instead of always being visible. Verified in headless
 Chromium: debugMode off shows zero debug buttons of either kind; debugMode on shows
 the session panel toggle plus one per-turn button per turn, the `MAX_TOKENS` rose
 flagging on a per-turn button, and the expanded session panel rendering correctly with
-its content reflowing the reading surface beneath it. The actual truncation root cause
-(working theory: a thinking-capable Gemini model spending the `maxOutputTokens` budget
-on invisible reasoning before any visible narration) is **still not confirmed** —
-waiting on the user's next payload, now with `finishReason` recorded, to check whether
-it really reads `MAX_TOKENS` before changing anything about the actual request.
+its content reflowing the reading surface beneath it.
 Earlier the same day: `LogEntry`/the debug panel gained `finishReason` surfacing (see
 below), and a since-superseded session-export button (see above). Earlier still: a
 follow-up pass on the Codex

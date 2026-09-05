@@ -27,6 +27,7 @@ export function applyInventoryChanges(
     if (item.name && item.type) {
       const existing = nextItems[item.id]
       nextItems[item.id] = {
+        ...existing,
         name: item.name,
         type: item.type,
         description: item.description ?? existing?.description,

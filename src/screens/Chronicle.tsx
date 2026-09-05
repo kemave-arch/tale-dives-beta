@@ -4,7 +4,7 @@ import {
   Menu, Settings as SettingsIcon, Send, Star, BookOpen, Library, Sparkle, X, ExternalLink,
   ChevronUp, ChevronDown, ChevronsDown, History, Pause, Users, Backpack, Map as MapIcon, ShieldCheck, Target, Skull, HelpCircle,
   Unlock, Lock, Repeat, Hammer, Ghost, Compass, ScrollText, User, Swords, Sparkles,
-  AlertTriangle, Copy, Check, RotateCcw, Bug,
+  AlertTriangle, Copy, Check, RotateCcw, Bug, Pencil, MoreHorizontal, Trash2,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { renderNarrative, type TapTermHandler } from '../lib/richText.tsx'
@@ -40,6 +40,10 @@ interface ChronicleProps {
   lastActionText?: string
   onRetry?: () => void
   onDismissError?: () => void
+  onEditLastTurn?: (newNar: string) => void
+  onRemoveLastTurn?: () => void
+  editLongText?: (label: string, value: string, hint?: string, placeholder?: string) => Promise<string | null>
+  confirmAction?: (message: string) => Promise<boolean>
   onSend: (action: string, forcePause?: boolean) => void
   onBangCommand: (raw: string) => void
   slashCommands: SlashCommand[]
@@ -136,6 +140,12 @@ interface TurnBlockProps {
   onTapTerm: TapTermHandler
   registerRef: (index: number, el: HTMLDivElement | null) => void
   debugMode?: boolean
+  isLastTurn?: boolean
+  onEditLastTurn?: (newNar: string) => void
+  onRemoveLastTurn?: () => void
+  editLongText?: (label: string, value: string, hint?: string, placeholder?: string) => Promise<string | null>
+  confirmAction?: (message: string) => Promise<boolean>
+  setInput?: (val: string) => void
 }
 
 // Debugging tool — every real narrated turn's request/response/finishReason
@@ -284,9 +294,64 @@ function DebugPayloadButton({ entry }: { entry: LogEntry }) {
   )
 }
 
+interface TurnActionsRowProps {
+  entry: LogEntry
+  debugMode?: boolean
+  onEdit: () => void
+  onRetry: () => void
+  onDelete: () => void
+}
+
+// Edit/Retry/Delete — only ever rendered for the single most recent real
+// narrated turn (TurnBlock below decides that), so a player can correct a
+// bad turn without it drifting from what the AI actually remembers next
+// turn. View Payload stays tucked under "More" here too, alongside Delete,
+// rather than duplicating DebugPayloadButton's own standalone rendering —
+// gated on Debug Mode same as everywhere else; Edit/Retry/Delete are not.
+function TurnActionsRow({ entry, debugMode, onEdit, onRetry, onDelete }: TurnActionsRowProps) {
+  const [moreOpen, setMoreOpen] = useState(false)
+  if (!entry.rawPayload) return null
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-3">
+        <button onClick={onEdit} className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wide text-ink-muted/70 hover:text-ink-muted">
+          <Pencil size={11} /> Edit
+        </button>
+        <button onClick={onRetry} className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wide text-ink-muted/70 hover:text-ink-muted">
+          <RotateCcw size={11} /> Retry
+        </button>
+        <button onClick={() => setMoreOpen((v) => !v)} className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wide text-ink-muted/70 hover:text-ink-muted">
+          <MoreHorizontal size={11} /> {moreOpen ? 'Less' : 'More'}
+        </button>
+      </div>
+      {moreOpen && (
+        <div className="flex flex-col gap-2 pl-0.5">
+          {debugMode && <DebugPayloadButton entry={entry} />}
+          <button onClick={onDelete} className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wide text-rose/80 hover:text-rose">
+            <Trash2 size={11} /> Delete Turn
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Isolated from `input` state (§9.2 perf fix) — memoized so a keystroke in the
 // input bar doesn't re-render/re-parse rich text for every mounted turn block.
-const TurnBlock = memo(function TurnBlock({ entry, globalIndex, onTapTerm, registerRef, debugMode }: TurnBlockProps) {
+const TurnBlock = memo(function TurnBlock({
+  entry,
+  globalIndex,
+  onTapTerm,
+  registerRef,
+  debugMode,
+  isLastTurn,
+  onEditLastTurn,
+  onRemoveLastTurn,
+  editLongText,
+  confirmAction,
+  setInput,
+}: TurnBlockProps) {
   const setRef = useCallback((el: HTMLDivElement | null) => registerRef(globalIndex, el), [globalIndex, registerRef])
 
   if (entry.bang) {
@@ -458,7 +523,36 @@ const TurnBlock = memo(function TurnBlock({ entry, globalIndex, onTapTerm, regis
           ))}
         </div>
       )}
-      {debugMode && <DebugPayloadButton entry={entry} />}
+      {isLastTurn ? (
+        <TurnActionsRow
+          entry={entry}
+          debugMode={debugMode}
+          onEdit={async () => {
+            if (!editLongText || !onEditLastTurn) return
+            const result = await editLongText(
+              'Edit Narration',
+              entry.nar,
+              "Rewrite this turn's prose. This also updates what the AI remembers for future turns.",
+            )
+            if (result !== null) onEditLastTurn(result)
+          }}
+          onRetry={async () => {
+            if (!confirmAction || !onRemoveLastTurn) return
+            const ok = await confirmAction('Retry this turn? It will be removed so you can revise and resend your action.')
+            if (ok) {
+              onRemoveLastTurn()
+              setInput?.(entry.action ?? '')
+            }
+          }}
+          onDelete={async () => {
+            if (!confirmAction || !onRemoveLastTurn) return
+            const ok = await confirmAction("Delete this turn? It will be removed from the tale and the AI's memory.")
+            if (ok) onRemoveLastTurn()
+          }}
+        />
+      ) : (
+        debugMode && <DebugPayloadButton entry={entry} />
+      )}
     </div>
   )
 })
@@ -638,6 +732,10 @@ export default function Chronicle({
   lastActionText,
   onRetry,
   onDismissError,
+  onEditLastTurn,
+  onRemoveLastTurn,
+  editLongText,
+  confirmAction,
   onSend,
   onBangCommand,
   slashCommands,
@@ -994,7 +1092,20 @@ export default function Chronicle({
           </button>
         )}
         {visibleLog.map((entry, i) => (
-          <TurnBlock key={windowStart + i} entry={entry} globalIndex={windowStart + i} onTapTerm={onTapTerm} registerRef={registerRef} debugMode={debugMode} />
+          <TurnBlock
+            key={windowStart + i}
+            entry={entry}
+            globalIndex={windowStart + i}
+            onTapTerm={onTapTerm}
+            registerRef={registerRef}
+            debugMode={debugMode}
+            isLastTurn={windowStart + i === log.length - 1}
+            onEditLastTurn={onEditLastTurn}
+            onRemoveLastTurn={onRemoveLastTurn}
+            editLongText={editLongText}
+            confirmAction={confirmAction}
+            setInput={setInput}
+          />
         ))}
         {busy && <p className="font-narrative italic text-sm opacity-50">The thread of fate is being woven...</p>}
         {lastLogEntry?.act && lastLogEntry.act.length > 0 && !busy && !error && (

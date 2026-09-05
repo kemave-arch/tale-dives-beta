@@ -1,6 +1,39 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-05, Claude Code on the web — removed the sub-3.0 Gemini
+**Last updated:** 2026-09-05, Claude Code on the web — five changes from a token-budget
+review + a real user-reported gap. (1) A light pass on `jitContext.ts`'s context-slice
+labels: `Combat Resolution Mode`→`Combat Mode`, `Target Prose Depth`→`Prose Depth`,
+`Base Copper Wealth`→`Copper` — kept in sync with `SYSTEM_INSTRUCTIONS`' own quoted
+references to the first two, since the model looks those labels up by exact string.
+(2) Fixed a real content gap behind "Quest progression seems stale": `quest_update`
+(schema + `QuestUpdate` type) only ever carried `quest_id`/`status`/`note` — no channel
+existed for `description`, so Codex quest entries could never hold more than an
+auto-title-cased name and a one-line status note, no matter how far a quest advanced.
+Added an optional `description` field (schema guidance: only send it the turn a quest
+is first introduced or its scope changes, so it doesn't repeat every turn), threaded
+through `applyQuestUpdate` (`lib/quests.ts`). (3) Fixed a latent bug in
+`applyInventoryChanges` (`lib/inventory.ts`): every `inv_add` fully rebuilt the Codex
+item record from scratch, silently wiping any player-set `rarity`/`loreText`/`value`/
+`tags` on a repeat acquisition of an already-known item — now spreads `...existing`
+first. (4) Investigated a report of items missing descriptions in Codex; traced the
+full pipeline (schema → merge → state save → render) and found it already correct
+end-to-end — likely a stale save from before the pipeline solidified, not a live bug;
+flagged for a fresh repro if it recurs. (5) Added turn-management controls to
+Chronicle: Edit/Retry/"..." (View Payload + Delete) buttons, but *only* on the single
+most recent real narrated turn — editing rewrites both the displayed `nar` and the
+matching raw JSON in both `log` and the live `history` sliding window (via a new
+`patchNarInRawPayload` in App.tsx, reusing `gemini.ts`'s now-exported `sanitize`) so
+what's shown and what the model actually remembers next turn never drift apart; Retry
+removes the turn and re-seeds the input box with the original action text for the
+player to revise and resend; Delete just removes it. Both Retry and Delete route
+through the existing `useConfirm` modal first. Deliberately scoped to *context*
+management only — HP/inventory/quest deltas that turn already applied are NOT rolled
+back, same as this app has never had a general undo system; said so directly in the
+code comments rather than pretending it's a full undo. Verified in headless Chromium:
+Edit/Retry/"..." appear exactly once (only the last turn), "..." reveals Delete Turn
++ View Payload, Edit+Save updates the visible text, and Retry correctly removes the
+turn, re-seeds the input, and the controls correctly follow to the new last turn.
+Earlier the same day: removed the sub-3.0 Gemini
 models (`gemini-2.5-flash`, `2.5-flash-lite`, `2.0-flash`, `2.0-flash-lite`) from
 `GEMINI_MODELS` per the user's call, after a long side investigation (see below)
 into whether the Interactions API — the newer, stateful Gemini endpoint the

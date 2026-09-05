@@ -176,7 +176,7 @@ export function buildContextSlice(state: Campaign, combatResultLine?: string | n
     lines.push(`World Flags: [${flags.slice(-MAX_FLAGS_SHOWN).join(', ')}]`)
   }
 
-  lines.push(`Combat Resolution Mode: ${combatMode}`)
+  lines.push(`Combat Mode: ${combatMode}`)
 
   // §3.1 example line — only present on a Tactical attack turn (§2 Phase D.2).
   if (combatResultLine) lines.push(combatResultLine)
@@ -187,9 +187,9 @@ export function buildContextSlice(state: Campaign, combatResultLine?: string | n
   if (craftReadyLine) lines.push(craftReadyLine)
 
   lines.push(
-    `Target Prose Depth: ${proseDepth.label} (${proseDepth.targetTokens})`,
+    `Prose Depth: ${proseDepth.label} (${proseDepth.targetTokens})`,
     `Narration Style: ${narrationStyle}`,
-    `Base Copper Wealth: ${player.copper}`,
+    `Copper: ${player.copper}`,
   )
 
   return lines.join('\n')

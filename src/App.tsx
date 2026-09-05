@@ -30,6 +30,7 @@ import { applyLevelUps, isChapterBoundary, CHAPTER_TURN_INTERVAL } from './lib/l
 import { parseKeywordLinks } from './lib/keywordLinks.ts'
 import { slugify } from './lib/slug.ts'
 import { getProvider } from './api/providers/index.ts'
+import { sanitize } from './api/providers/gemini.ts'
 import { PROSE_DEPTHS, DEFAULT_NARRATION_STYLE, MAX_OUTPUT_TOKENS_CEILING } from './api/turnContract.ts'
 import { readJSONFile, saveJSON } from './lib/backup.ts'
 import { useConfirm } from './lib/useConfirm.tsx'
@@ -209,6 +210,57 @@ export default function App() {
         }
       })
     }
+  }
+
+  // Turn CRUD (Edit/Retry/Delete on the last turn only, Chronicle.tsx) —
+  // patches just the `nar` field inside an already-stored raw payload,
+  // leaving every other field (turn_state, deltas, loc_id, etc.) untouched,
+  // so an edited turn's context for future API calls stays byte-consistent
+  // with what's actually displayed. Falls back to the raw text unchanged if
+  // it isn't valid JSON (a fallback-reader turn) — the caller still applies
+  // the display-only nar edit regardless.
+  function patchNarInRawPayload(raw: string, newNar: string): string {
+    try {
+      const parsed = JSON.parse(sanitize(raw))
+      return JSON.stringify({ ...parsed, nar: newNar })
+    } catch {
+      return raw
+    }
+  }
+
+  function handleEditLastTurn(newNar: string) {
+    setGame((g) => {
+      if (!g || g.log.length === 0) return g
+      const log = [...g.log]
+      const lastIndex = log.length - 1
+      const entry = log[lastIndex]
+      if (!entry.nar || !entry.rawPayload) return g
+      log[lastIndex] = { ...entry, nar: newNar, rawPayload: patchNarInRawPayload(entry.rawPayload, newNar) }
+      return { ...g, log }
+    })
+    setHistory((h) => {
+      if (h.length === 0) return h
+      const lastTurn = h[h.length - 1]
+      if (lastTurn.role !== 'model') return h
+      const newText = patchNarInRawPayload(lastTurn.parts[0].text ?? '', newNar)
+      return [...h.slice(0, -1), { role: 'model', parts: [{ text: newText }] }]
+    })
+  }
+
+  // Retry and Delete both boil down to this: drop the last turn from the
+  // displayed record (log) and from the conversational context the API sees
+  // next turn (history — a user+model pair per turn, so the last 2 entries).
+  // This corrects the *context*, not game mechanics — HP/inventory/quest
+  // deltas that turn already applied are NOT rolled back, same as this app
+  // has never had a general undo system. Retry additionally re-seeds the
+  // input box with the original action text (Chronicle.tsx) for the player
+  // to revise and resend.
+  function handleRemoveLastTurn() {
+    setGame((g) => {
+      if (!g || g.log.length === 0) return g
+      return { ...g, log: g.log.slice(0, -1), turnCount: Math.max(0, (g.turnCount ?? 0) - 1) }
+    })
+    setHistory((h) => h.slice(0, Math.max(0, h.length - 2)))
   }
 
   const [pendingRecall, setPendingRecall] = useState<string | null>(null) // §6.6 — a targeted/full !recall snapshot waiting to ride along on the next real turn
@@ -1337,6 +1389,10 @@ export default function App() {
         lastActionText={lastActionText}
         onRetry={handleRetry}
         onDismissError={handleDismissError}
+        onEditLastTurn={handleEditLastTurn}
+        onRemoveLastTurn={handleRemoveLastTurn}
+        editLongText={editLongText}
+        confirmAction={confirm}
         onSend={sendAction}
         onBangCommand={handleBangCommand}
         slashCommands={[...Object.values(game.slashCommands ?? {}), ...Object.values(globalSlashCommands)]}

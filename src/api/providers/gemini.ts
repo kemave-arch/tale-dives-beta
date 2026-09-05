@@ -10,7 +10,9 @@ export class GeminiApiError extends Error {
 }
 
 // Stage 1 (Regex Sanitizer): strip markdown fences / trailing commas before parsing.
-function sanitize(raw: string): string {
+// Exported for App.tsx's turn-edit CRUD — patching just the `nar` field inside
+// an already-stored raw payload needs the same tolerant re-parse.
+export function sanitize(raw: string): string {
   return raw
     .trim()
     .replace(/^```(?:json)?/i, '')

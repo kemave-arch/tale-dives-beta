@@ -16,6 +16,11 @@ export function applyQuestUpdate(quests: Dict<QuestEntry> | undefined, update: Q
   const { dict } = ensureEntry(quests, id, () => ({ name: titleCaseId(update.quest_id) }))
   return {
     ...dict,
-    [id]: { ...dict[id], status: update.status, note: update.note ?? dict[id].note },
+    [id]: {
+      ...dict[id],
+      status: update.status,
+      note: update.note ?? dict[id].note,
+      description: update.description ?? dict[id].description,
+    },
   }
 }

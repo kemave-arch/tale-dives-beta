@@ -456,6 +456,7 @@ export interface QuestUpdate {
   quest_id: string
   status: 'advanced' | 'completed' | 'failed'
   note?: string
+  description?: string // the quest's premise/objective — only sent the turn it's first introduced or its scope changes; see QuestEntry.description
 }
 
 export interface NpcMemoryUpdate {

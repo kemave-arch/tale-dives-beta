@@ -1,5 +1,25 @@
 # Tale Dives — Project Revision Notes
 
+**Last updated:** 2026-09-05, Claude Code on the web — enforced the "basic" subset
+(double quotes, single quotes, italics, capitals) of the rich-text dialogue table
+proposed and then deliberately trimmed down earlier this session. Turned up a real,
+pre-existing bug while doing it: `SYSTEM_INSTRUCTIONS` rule 6's dialogue bullet
+conflated "spoken whispers" together with inner monologue under one single-quote/
+italic treatment — exactly the inconsistency visible in an earlier real payload,
+where plainly-spoken dialogue (`'Hi, Mira.'`) got single-quoted and rendered as
+italicized interior thought instead of plain speech. Rewrote the bullet: double
+quotes for anything audible to others (including whispers — a whisper is still
+speech, just quiet), single quotes reserved for genuinely unspoken interiority
+(inner monologue, silent telepathy) — already auto-italicized client-side by
+`richText.tsx`, so the rule explicitly says never to also wrap it in literal
+asterisks — and CAPITAL LETTERS on the words themselves for a shout or a panicked/
+mental-scream line, in whichever quote style matches how it's delivered. Pure
+`SYSTEM_INSTRUCTIONS` text again, no client-side parsing changes: double-quoted
+text was never specially handled by `richText.tsx` to begin with (it only parses
+`[skill]`/`>item<`/`'thought'`), and neither is capitalization — both are just
+prose-level conventions for the model to apply, not new markup for the client to
+detect.
+
 **Last updated:** 2026-09-05, Claude Code on the web — resolved the open question from
 the `stat_grant` NaN investigation (should a player's own claimed exact number, like
 "+100 HP", be honored verbatim or moderated?) with a new convention rather than a

@@ -346,6 +346,11 @@ export interface LogEntry {
   // turns logged before this field existed.
   requestPayload?: string
   rawPayload?: string
+  // Gemini's own `finishReason` (STOP/MAX_TOKENS/SAFETY/...) for this turn's
+  // call — the single fastest way to tell a genuine mid-sentence cutoff
+  // (MAX_TOKENS) apart from every other failure mode, so it rides along
+  // with the payload above rather than requiring a fresh repro to check.
+  finishReason?: string
 }
 
 // §6.6 Slash Commands — an in-fiction shortcut: selecting one sends `prompt`

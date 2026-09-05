@@ -147,7 +147,12 @@ function DebugPayloadButton({ entry }: { entry: LogEntry }) {
   const [copied, setCopied] = useState(false)
   if (!entry.rawPayload) return null
 
-  const payloadText = `### REQUEST (context sent)\n${entry.requestPayload ?? '(not recorded)'}\n\n### RESPONSE (raw model output)\n${entry.rawPayload}`
+  // MAX_TOKENS on a real narrated turn means the model got cut off
+  // mid-response — flagged right on the collapsed toggle, not just buried
+  // inside the expanded payload, since that's the one finishReason value
+  // that means "this turn is visibly broken," not just "here's some info."
+  const truncated = entry.finishReason === 'MAX_TOKENS'
+  const payloadText = `### REQUEST (context sent)\n${entry.requestPayload ?? '(not recorded)'}\n\n### RESPONSE (raw model output)\n${entry.rawPayload}\n\n### finishReason: ${entry.finishReason ?? '(not recorded)'}`
 
   function handleCopy() {
     navigator.clipboard.writeText(payloadText).then(() => {
@@ -160,14 +165,19 @@ function DebugPayloadButton({ entry }: { entry: LogEntry }) {
     <div>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1 text-[10px] font-mono text-ink-muted/70 hover:text-ink-muted uppercase tracking-wide"
+        className={`inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wide ${
+          truncated ? 'text-rose hover:text-rose' : 'text-ink-muted/70 hover:text-ink-muted'
+        }`}
       >
         <Bug size={11} /> {open ? 'Hide Payload' : 'View Payload'}
+        {truncated && !open && ' — cut off (MAX_TOKENS)'}
       </button>
       {open && (
         <div className="mt-1.5 rounded-lg border border-ink-muted/25 bg-black/[0.04] overflow-hidden">
           <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-ink-muted/20">
-            <span className="text-[10px] font-mono uppercase tracking-wide text-ink-muted">Debug Payload</span>
+            <span className={`text-[10px] font-mono uppercase tracking-wide ${truncated ? 'text-rose' : 'text-ink-muted'}`}>
+              Debug Payload{entry.finishReason ? ` · ${entry.finishReason}` : ''}
+            </span>
             <button
               onClick={handleCopy}
               className="inline-flex items-center gap-1 text-[10px] font-mono text-ink-muted hover:text-ink"

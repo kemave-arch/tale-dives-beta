@@ -1,5 +1,76 @@
 # Tale Dives — Project Revision Notes
 
+**Last updated:** 2026-09-05, Claude Code on the web — migrated the live turn
+pipeline off JSON-schema structured output onto the XML prototype from
+earlier this session, per the user's explicit go-ahead ("go with the XML
+migration... overhaul the whole thing in the app"). This is now what the app
+actually runs, not a side prototype:
+- `gemini.ts`'s `runTurn` no longer sends `responseMimeType`/`responseSchema`
+  — `system_instruction` is `buildXmlSystemInstructions()` (the real
+  narrative rules, unchanged, plus the XML `<sync>` grammar), and the
+  response is parsed with `parseXmlTurnResponse` instead of `JSON.parse`.
+  Kept the same 3-stage self-healing shape: sanitize (strip ```xml fences)
+  → parse → a Stage 3 fallback (`extractXmlNarrative`) that pulls whatever
+  prose made it into `<nar>` even if `<sync>` is broken or the response was
+  cut off mid-generation by MAX_TOKENS before the closing tag arrived.
+- **Item markup moved from `>Item<` to `[[Item]]`** (`richText.tsx`,
+  `turnContract.ts` rule 6, `xmlTurnContract.ts`) — this was the collision
+  flagged earlier in the session: a literal `>`/`<` in narration is a genuine
+  parse hazard now that the model's raw output also carries real XML tags.
+  `[[Double brackets]]` never collide with XML and sit naturally alongside
+  the existing `[Skill]` single-bracket convention; the double-bracket
+  alternative has to come first in `richText.tsx`'s regex alternation or
+  `[Skill]`'s pattern would wrongly eat into `[[Item`'s second bracket.
+- **Compacted the grammar further** per explicit request: merged
+  `inv_add`/`inv_rem` into one `<item>` tag (`rem="1"` signals removal).
+  Deliberately did NOT chase cryptic 2-3 letter tag names beyond that — the
+  measured ~25% saving came from switching JSON `key:"value"` to XML
+  `attribute="value"`, not from shaving tag-name characters, and unlike a
+  verified token count, "shorter tag = fewer tokens" for names this short
+  isn't something this session could verify at all, while raising real
+  correctness risk (the model has to hold more cryptic mnemonics exactly
+  right). Documented that reasoning in `xmlTurnContract.ts` rather than
+  silently ignoring the request.
+- **Found and fixed a real bug during this pass**: `<nar>` is deliberately
+  extracted with a raw regex (not run through the XML parser) so a
+  MAX_TOKENS-truncated response still yields partial prose — but that means
+  it never gets entity-decoded the way `<sync>`'s real XML attributes do.
+  Without a fix, a model-escaped `&amp;` would have shown up as literal
+  "&amp;" text to the player. Added `decodeXmlEntities` (handles the 5
+  predefined XML entities plus numeric character references) and applied it
+  to both the main parse path and the fallback extractor.
+- `App.tsx`'s Edit Turn CRUD (`patchNarInRawPayload`) now tries the XML
+  `<nar>...</nar>` pattern first, falling back to the old JSON-parse logic
+  — so a save with turns from before this migration can still be edited.
+  Chronicle.tsx needed no changes at all: its debug payload view just
+  displays `rawPayload` as plain text, format-agnostic already.
+- Also caught a real bug in my own edit: writing `` `>Item<` `` (backticks)
+  inside `turnContract.ts`'s outer template-literal string terminated that
+  string early, corrupting the rest of the file into a cascade of unrelated
+  syntax errors — a good reminder that a large prompt-text string is still
+  live code, not inert content.
+- **Live-verified the complete pipeline**, not just the parser in isolation:
+  intercepted the actual `generateContent` network call (Playwright
+  `page.route`, matching `**:generateContent` — the real endpoint uses
+  `MODEL:generateContent`, colon not slash, which the first attempt at this
+  pattern missed) with a realistic XML response, seeded a campaign, and
+  submitted a real player action through the live UI. Confirmed: HP/ST/
+  copper deltas applied correctly, an item acquired AND a different item
+  removed in the same turn via the merged `<item>` tag, NPC trust/memory/
+  held-weapon updated, a world flag added, turn state and mood rendered
+  correctly, and — visually — `[[Item]]` and `{{Term|npc}}` render exactly
+  like they always did (icon-decorated italic gold / tappable underline)
+  with zero stray raw markup leaking into the display. No live Gemini API
+  key is available in this environment, so this is the most rigorous
+  verification possible here short of a real model call; a real-world
+  session is still the final proof once the user plays with it.
+- Not done, and deliberately out of scope for this pass: the "Novel App Tier
+  Architecture" (a 3-tier prose-length/paragraph-template system) the user
+  also surfaced from a chat session — see this session's actual response for
+  why it wasn't adopted as proposed (mostly duplicates this app's existing
+  Prose Depth mechanism, and its rigid fixed-paragraph template would cut
+  against the per-turn-state craft directions already in place).
+
 **Last updated:** 2026-09-05, Claude Code on the web — a "Gemini Runtime XML
 Manual" the user got from a chat session claimed a full XML rewrite of Tale
 Dives (a fabricated 4-tier currency ladder, a buff/debuff system that doesn't

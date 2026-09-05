@@ -1,5 +1,6 @@
 // Gemini provider adapter — Blueprint §7.1 (call shape) and §3.3 (self-healing pipeline).
-import { SYSTEM_INSTRUCTIONS, TURN_SCHEMA } from '../turnContract.ts'
+import { buildXmlSystemInstructions } from '../xmlTurnContract.ts'
+import { decodeXmlEntities, parseXmlTurnResponse } from '../../lib/xmlTurnParser.ts'
 import type { GameTime, HistoryTurn, RunTurnResult } from '../../types.ts'
 import type { Provider } from './types.ts'
 
@@ -9,9 +10,12 @@ export class GeminiApiError extends Error {
   status?: number
 }
 
-// Stage 1 (Regex Sanitizer): strip markdown fences / trailing commas before parsing.
-// Exported for App.tsx's turn-edit CRUD — patching just the `nar` field inside
-// an already-stored raw payload needs the same tolerant re-parse.
+// Stage 1 (Regex Sanitizer): strip markdown fences before parsing. Kept
+// distinct from the pre-2026-09-05 JSON-specific `sanitize` (trailing-comma
+// cleanup doesn't apply to XML) — that function no longer has a live caller
+// now runTurn parses XML, but App.tsx's Edit Turn CRUD still needs its exact
+// JSON-tolerant behavior for saves with a pre-migration (JSON) rawPayload,
+// so it stays exported rather than being deleted out from under old saves.
 export function sanitize(raw: string): string {
   return raw
     .trim()
@@ -21,34 +25,25 @@ export function sanitize(raw: string): string {
     .trim()
 }
 
-const NAR_ESCAPES: Record<string, string> = { n: '\n', t: '\t', r: '\r', '"': '"', '\\': '\\', '/': '/' }
+function sanitizeXml(raw: string): string {
+  return raw
+    .trim()
+    .replace(/^```(?:xml)?/i, '')
+    .replace(/```$/, '')
+    .trim()
+}
 
-// Stage 3 (Fallback Reader) helper — §3.3: "extracts pure prose between quotes
-// and renders it directly," not the raw JSON blob. Walks the "nar" field's
-// string content by hand (rather than a single regex) so a response cut off
-// mid-string by MAX_TOKENS still yields whatever prose made it out.
-function extractNarrative(raw: string): string | null {
-  const match = raw.match(/"nar"\s*:\s*"/)
-  if (!match || match.index === undefined) return null
-
-  let result = ''
-  for (let i = match.index + match[0].length; i < raw.length; i++) {
-    const ch = raw[i]
-    if (ch === '"') break // unescaped closing quote — end of the field
-    if (ch === '\\') {
-      const next = raw[i + 1]
-      if (next === 'u') {
-        result += String.fromCharCode(parseInt(raw.slice(i + 2, i + 6), 16))
-        i += 5
-      } else {
-        result += NAR_ESCAPES[next] ?? next
-        i += 1
-      }
-      continue
-    }
-    result += ch
-  }
-  return result || null
+// Stage 3 (Fallback Reader) — §3.3: "extracts pure prose and renders it
+// directly," not the raw XML blob, when <sync> is malformed or missing.
+// Tries the closed <nar>...</nar> pair first; if a response got cut off
+// mid-generation (MAX_TOKENS) before the closing tag ever arrived, falls
+// back to everything after the opening tag instead of yielding nothing.
+function extractXmlNarrative(raw: string): string | null {
+  const closed = raw.match(/<nar>([\s\S]*?)<\/nar>/)
+  if (closed) return decodeXmlEntities(closed[1].trim()) || null
+  const openOnly = raw.match(/<nar>([\s\S]*)$/)
+  if (openOnly) return decodeXmlEntities(openOnly[1].trim()) || null
+  return null
 }
 
 interface RequestParams {
@@ -83,14 +78,19 @@ async function requestOnce({ apiKey, model, temperature, maxOutputTokens, histor
   // Key goes in a header, not the URL — keeps it out of browser history and network logs.
   const url = `${BASE_URL}/${encodeURIComponent(model)}:generateContent`
 
+  // 2026-09-05: migrated off responseMimeType/responseSchema's JSON-schema
+  // structured output — a live token benchmark (PROJECT_REVISION_NOTES.md)
+  // showed the equivalent compact XML <sync> block (xmlTurnContract.ts) at
+  // ~25% fewer output tokens for the same turn. This trades the API's own
+  // schema validation for our own XML parser's validation (xmlTurnParser.ts)
+  // — the self-healing pipeline below (Stage 2/3) exists precisely because
+  // that trade isn't free.
   const body = {
-    system_instruction: { parts: [{ text: SYSTEM_INSTRUCTIONS }] },
+    system_instruction: { parts: [{ text: buildXmlSystemInstructions() }] },
     contents: history,
     generationConfig: {
       temperature,
       maxOutputTokens,
-      responseMimeType: 'application/json',
-      responseSchema: TURN_SCHEMA,
       ...thinkingBudgetOverride(model),
     },
   }
@@ -122,15 +122,19 @@ export async function runTurn({ apiKey, model, temperature, maxOutputTokens, his
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
       const { text, finishReason } = await requestOnce({ apiKey, model, temperature, maxOutputTokens, history })
-      const cleaned = sanitize(text)
+      const cleaned = sanitizeXml(text)
 
       try {
-        // Stage 2 (Schema Parser)
-        return { ok: true, turn: JSON.parse(cleaned), finishReason, raw: text }
+        // Stage 2 (XML Parser)
+        return { ok: true, turn: parseXmlTurnResponse(cleaned), finishReason, raw: text }
       } catch {
         // Stage 3 (Fallback Reader): surface the narrative prose rather than losing
-        // the turn — extracted "nar" text if possible, only the raw blob as a last resort.
-        return { ok: false, fallbackText: extractNarrative(text) ?? cleaned ?? text, finishReason, raw: text }
+        // the turn — extracted <nar> text if possible, only the raw blob as a last
+        // resort. A malformed <sync> block (bad attribute, mismatched tag) still
+        // throws here even when <nar> itself parsed fine, so this catches both
+        // "no <nar> at all" and "nar fine, sync broken" the same way the old
+        // JSON path's catch-all did.
+        return { ok: false, fallbackText: extractXmlNarrative(text) ?? cleaned ?? text, finishReason, raw: text }
       }
     } catch (err) {
       lastError = err
@@ -224,14 +228,16 @@ export const GEMINI_MODELS: import('./types.ts').ProviderModel[] = [
   { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
 ]
 
-// Capability flags reflect what this adapter actually does today (only
-// JSON-schema structured output is wired up) — not Gemini-the-platform's
-// full ceiling. See types.ts's Provider doc comment.
+// Capability flags reflect what this adapter actually does today — not
+// Gemini-the-platform's full ceiling. supportsJsonSchema flipped to false
+// 2026-09-05: runTurn moved off responseMimeType/responseSchema onto a
+// free-text XML grammar (xmlTurnContract.ts) for a real, measured ~25%
+// output-token reduction — see PROJECT_REVISION_NOTES.md.
 export const GEMINI_PROVIDER: Provider = {
   id: 'gemini',
   label: 'Google Gemini',
   models: GEMINI_MODELS,
-  capabilities: { supportsGrounding: false, supportsJsonSchema: true, supportsStreaming: false, supportsPromptCaching: false },
+  capabilities: { supportsGrounding: false, supportsJsonSchema: false, supportsStreaming: false, supportsPromptCaching: false },
   runTurn,
   runSummary,
 }

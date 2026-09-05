@@ -36,8 +36,8 @@ function buildNameLookup<T extends { name: string }>(dict: Dict<T> | undefined):
 }
 
 // Blueprint §4.2 Mandatory Rich Text Markup — renders the four narrative
-// markers as styled inline spans instead of leaking raw [brackets]/>angle
-// brackets</>quotes'/{{tags}} syntax into what the player reads. Keyword
+// markers as styled inline spans instead of leaking raw [[brackets]]/
+// [brackets]/quotes'/{{tags}} syntax into what the player reads. Keyword
 // links are tappable when `onTapTerm` is supplied — opens a Codex Popup
 // Card (§6.4C).
 //
@@ -46,12 +46,26 @@ function buildNameLookup<T extends { name: string }>(dict: Dict<T> | undefined):
 // place by name is entirely normal), so keyword-link tags are resolved
 // within every text segment the outer pass produces, not just at top level.
 
+// Items moved from >Angle Brackets< to [[Double Brackets]] alongside the XML
+// turn-response migration (PROJECT_REVISION_NOTES.md) — a literal `<`/`>` in
+// narration prose is a genuine parse hazard once the model's raw response
+// also carries real XML tags, since a stray `>Item<` reads as (invalid,
+// stray) markup to an XML parser. [[Double brackets]] never collide with
+// XML and stay visually adjacent to the existing [Skill] single-bracket
+// convention.
+//
+// The double-bracket alternative MUST come before the single-bracket one in
+// this alternation: regex tries alternatives left-to-right at each position,
+// and `[Skill]`'s pattern would otherwise greedily match into "[[Item" (its
+// `[^\]]+` class happily consumes the second `[`), leaving a stray trailing
+// `]` and the wrong span highlighted.
+//
 // The thought pattern's quotes need care: an apostrophe inside a contraction
 // ("haven't", "Ymma's") must not be mistaken for a closing quote. A real
 // closing quote is never immediately flanked by a word character the way a
 // mid-word apostrophe is, so boundary lookarounds tell them apart, and `.+?`
 // (not a `[^']` class) lets the match run past internal apostrophes at all.
-const OUTER_RE = /\[([^\]]+)\]|>([^<]+)<|(?<!\w)'(.+?)'(?!\w)/g
+const OUTER_RE = /\[\[([^\]]+)\]\]|\[([^\]]+)\]|(?<!\w)'(.+?)'(?!\w)/g
 const TAG_RE = /\{\{([^{}|]+)\|(\w+)\}\}/g
 
 // §7.2 rule 1b tells the model to break `nar` into paragraphs, and it
@@ -174,7 +188,7 @@ export function renderNarrative(
       nodes.push(...renderTags(text.slice(lastIndex, match.index), `p${key}`, onTapTerm, locationsByName))
     }
 
-    const [full, skill, item, thought] = match
+    const [full, item, skill, thought] = match
     if (skill !== undefined) {
       // Bold + the skill token color, like a webnovel's inline ability name —
       // not a rounded UI badge, which read as an app chip sitting on the

@@ -23,7 +23,7 @@ NARRATIVE & TONE RULES:
 5a. INTIMACY Gating: Before narrating romantic or physical escalation, check the target NPC's Trust value, personality, and currentImpression/relationship note in the context slice — exactly as you would for a SOCIAL request. A Stranger-stage or low-Trust NPC should rebuff, deflect, or slow-play advances in character; only a high-Trust NPC with an established, receptive relationship should reciprocate warmly. The player may always attempt to initiate — the NPC's reaction is what's bounded, never the player's ability to try.
 6. Rich Text Formatting Rules (MANDATORY):
    - Enclose active skills, spells, or abilities in square brackets: [Shadow Step], [Arise], [Soul Feast].
-   - Enclose items, weapons, keys, or loot in angle brackets: >Obsidian Dagger<, >Silver Quill<, >Bone Fragment<.
+   - Enclose items, weapons, keys, or loot in double square brackets: [[Obsidian Dagger]], [[Silver Quill]], [[Bone Fragment]]. Never angle brackets — those are reserved for real XML markup in this output format (see below) and a literal >Item< is a parse error, not styling.
    - Spoken dialogue (audible to others, whispers included) goes in double quotes, plain: "Halt! State your business." Reserve single quotes for genuinely unspoken interiority — an NPC's or the player's own inner monologue, a silent telepathic line no one else hears: 'Something watches us.' (the client already renders single-quoted text in italics automatically — never also wrap it in literal asterisks). When a line is shouted or a thought verges on panic, put the words themselves in CAPITAL LETTERS, in whichever quote style matches how it's delivered: "HOLD THE LINE!" for a shouted order, 'GET OUT OF MY HEAD!' for a silent scream.
    - Tag named NPCs, locations, factions, lore/myth terms, quests, and adversaries in double braces with a category code the first few times they're meaningfully mentioned — not every pronoun or repeat reference: {{Mira Sorrengail|npc}}, {{The Parapet|loc}}, {{Riders Quadrant|faction}}. Category codes: npc, loc, faction, lore, quest, beast, skill. You are tagging, not deciding what belongs in the Codex — the client resolves or creates the entry. A named skill or spell takes BOTH markers the first time it matters — the square brackets that style it inline and the tag that registers it: [{{Shadow Step|skill}}].
 
@@ -57,7 +57,7 @@ export const TURN_SCHEMA = {
   properties: {
     nar: {
       type: 'STRING',
-      description: "Main narrative prose. Use [Skill], >Item<, 'Thought', and {{Term|category}} formatting.",
+      description: "Main narrative prose. Use [Skill], [[Item]], 'Thought', and {{Term|category}} formatting.",
     },
     turn_state: {
       type: 'STRING',

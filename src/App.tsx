@@ -214,13 +214,21 @@ export default function App() {
   }
 
   // Turn CRUD (Edit/Retry/Delete on the last turn only, Chronicle.tsx) —
-  // patches just the `nar` field inside an already-stored raw payload,
+  // patches just the narrative content inside an already-stored raw payload,
   // leaving every other field (turn_state, deltas, loc_id, etc.) untouched,
   // so an edited turn's context for future API calls stays byte-consistent
-  // with what's actually displayed. Falls back to the raw text unchanged if
-  // it isn't valid JSON (a fallback-reader turn) — the caller still applies
-  // the display-only nar edit regardless.
+  // with what's actually displayed. Tries the current XML format first
+  // (<nar>...</nar>, migrated 2026-09-05), then falls back to the pre-
+  // migration JSON shape so a save with turns from before that date can
+  // still be edited — falls back to the raw text unchanged if neither
+  // pattern matches (a fallback-reader turn); the caller still applies the
+  // display-only nar edit regardless.
   function patchNarInRawPayload(raw: string, newNar: string): string {
+    const xmlMatch = raw.match(/<nar>[\s\S]*?<\/nar>/)
+    if (xmlMatch) {
+      const escaped = newNar.replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      return raw.replace(xmlMatch[0], `<nar>\n${escaped}\n</nar>`)
+    }
     try {
       const parsed = JSON.parse(sanitize(raw))
       return JSON.stringify({ ...parsed, nar: newNar })

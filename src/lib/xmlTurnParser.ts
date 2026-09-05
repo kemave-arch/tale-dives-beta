@@ -3,16 +3,37 @@ import type {
   NpcMemoryUpdate, QuestUpdate, SkillLearn, StatBonus, StatGrant, TurnDelta, TurnResponse, TurnState,
 } from '../types.ts'
 
-// PROTOTYPE — parses the XML grammar from xmlTurnContract.ts back into the
-// exact same TurnResponse shape gemini.ts's JSON path already produces, so
-// nothing downstream (applyTurn, App.tsx) needs to change to consume it —
-// this is a drop-in alternative parser, not a new pipeline.
+// Parses the live XML grammar from xmlTurnContract.ts back into the exact
+// same TurnResponse shape the old JSON path used to produce, so nothing
+// downstream (applyTurn, App.tsx) needed to change to consume it — this was
+// built as a drop-in alternative parser, then wired into gemini.ts's runTurn.
 //
-// Uses DOMParser (browser-native, no dependency) same as the reference
-// manual's own approach — but unlike that manual, every field mapped here
-// corresponds to a real TurnResponse field, checked against types.ts.
+// Uses DOMParser (browser-native, no dependency) for the <sync> block, where
+// attribute values are real XML and get entity-decoded automatically by the
+// parser. <nar> is deliberately extracted with a raw regex instead (see
+// parseXmlTurnResponse) rather than parsed as XML content, so a response cut
+// off mid-generation (MAX_TOKENS) still yields whatever prose made it out
+// even with an unclosed tag — the same "Fallback Reader" tolerance the old
+// JSON path's extractNarrative gave. That means <nar>'s extracted text needs
+// its own entity decode (decodeXmlEntities below) since it never passes
+// through the real parser the way <sync>'s attributes do.
 
 export class XmlTurnParseError extends Error {}
+
+const XML_ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }
+
+// Handles the 5 predefined XML entities plus numeric character references
+// (&#39; / &#x27;) — the model is only instructed to escape literal &, but
+// decoding the full set is defensive in case it over-escapes.
+export function decodeXmlEntities(text: string): string {
+  return text.replace(/&(#x?[0-9a-fA-F]+|\w+);/g, (full, code: string) => {
+    if (code[0] === '#') {
+      const codepoint = code[1] === 'x' || code[1] === 'X' ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10)
+      return Number.isFinite(codepoint) ? String.fromCodePoint(codepoint) : full
+    }
+    return XML_ENTITIES[code] ?? full
+  })
+}
 
 function num(v: string | null): number | undefined {
   if (v === null || v === '') return undefined
@@ -39,7 +60,7 @@ function reqStr(v: string | null, field: string): string {
 export function parseXmlTurnResponse(raw: string): TurnResponse {
   const narMatch = raw.match(/<nar>([\s\S]*?)<\/nar>/)
   if (!narMatch) throw new XmlTurnParseError('No <nar> block found')
-  const nar = narMatch[1].trim()
+  const nar = decodeXmlEntities(narMatch[1].trim())
 
   const syncMatch = raw.match(/<sync>([\s\S]*?)<\/sync>/)
   if (!syncMatch) throw new XmlTurnParseError('No <sync> block found')
@@ -70,22 +91,27 @@ export function parseXmlTurnResponse(raw: string): TurnResponse {
       }
     : undefined
 
-  const inv_add: InventoryAcquisition[] = Array.from(doc.querySelectorAll('inv_add')).map((el) => {
+  // <item> is unified for both add and remove — rem="1" (checked via
+  // hasAttribute, not the value, so any truthy marker works) signals a
+  // removal, in which case only id/qty are read; everything else assumes
+  // an acquisition and requires name/type/qty.
+  const inv_add: InventoryAcquisition[] = []
+  const inv_rem: InventoryChange[] = []
+  for (const el of Array.from(doc.querySelectorAll('item'))) {
+    if (el.hasAttribute('rem')) {
+      inv_rem.push({ id: reqStr(el.getAttribute('id'), 'item.id'), qty: reqNum(el.getAttribute('qty'), 'item.qty') })
+      continue
+    }
     const bonus = str(el.getAttribute('bonus'))
-    return {
-      id: reqStr(el.getAttribute('id'), 'inv_add.id'),
-      name: reqStr(el.getAttribute('name'), 'inv_add.name'),
-      type: reqStr(el.getAttribute('type'), 'inv_add.type') as ItemType,
-      qty: reqNum(el.getAttribute('qty'), 'inv_add.qty'),
+    inv_add.push({
+      id: reqStr(el.getAttribute('id'), 'item.id'),
+      name: reqStr(el.getAttribute('name'), 'item.name'),
+      type: reqStr(el.getAttribute('type'), 'item.type') as ItemType,
+      qty: reqNum(el.getAttribute('qty'), 'item.qty'),
       description: str(el.getAttribute('desc')),
       statBonus: bonus ? parseStatBonus(bonus) : undefined,
-    }
-  })
-
-  const inv_rem: InventoryChange[] = Array.from(doc.querySelectorAll('inv_rem')).map((el) => ({
-    id: reqStr(el.getAttribute('id'), 'inv_rem.id'),
-    qty: reqNum(el.getAttribute('qty'), 'inv_rem.qty'),
-  }))
+    })
+  }
 
   const corpse_add = Array.from(doc.querySelectorAll('corpse')).map((el) => reqStr(el.getAttribute('id'), 'corpse.id'))
 

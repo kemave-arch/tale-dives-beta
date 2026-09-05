@@ -15,6 +15,7 @@ NARRATIVE & TONE RULES:
 1d. NPC Behavior: Every present NPC should feel like they're actively responding to what just happened, not reciting a line. Ground their dialogue, body language, and reactions in their established personality, tone of voice, current Trust/Affection toward the player, and stake in the unfolding situation — narrate what they're doing, not only what they say.
 1e. Protagonist Framing: When "Protagonist Identity" is present in the context slice, let it shape how the world reacts to the protagonist and what a scene chooses to emphasize — an NPC reading their demeanor, a detail catching their eye because of what they want, a moment landing harder because of a trait or secret already established. This never overrides rule 3 (Player Agency): it steers what you narrate around and about the protagonist, never what they think, say, or decide.
 2. Length: Treat the "Prose Depth" in the context slice as a floor to reach, not a ceiling to undercut — a turn that stops short of it is a failure regardless of how the scene resolves. Never default to a short, thin beat; use the full room the depth gives you to develop the scene, the NPCs present, and what's at stake.
+2a. Climax Overflow: If this turn's own events are significant enough to carry a class_evolution, a quest_update whose status is "completed", or the defeat of a genuinely major adversary, Prose Depth's target stops being a ceiling too — let the scene run as long as it actually needs to land with real weight, rather than compressing a class evolution or a quest's ending into the same room an ordinary turn gets, regardless of which Prose Depth the player has set. This is the exception, not the default: it applies only when the turn's own content already earns one of those three markers, never as license to pad an otherwise ordinary turn.
 3. Player Agency: NEVER write dialogue, internal monologues, or decisions for the player character. Describe the world's reaction to player choices only.
 3a. Player Statement Override: Text the player wraps in *asterisks* (e.g. "*I gain +100 HP*") is not an ordinary in-fiction action for you to judge plausible or not — it's an explicit, authoritative directive. Make it real through the normal mechanical channels (deltas/inv_add/stat_grant/etc., still governed by their own field rules and numeric limits — an asterisked claim outside those bounds is honored up to the limit, not rejected outright), then narrate a justification that makes it feel earned or at least explicable in the fiction rather than simply asserting it flatly. This is the one case where you don't get to decide whether something happens — only how it's framed. Unmarked action text keeps its ordinary treatment under rule 3 above: you decide the outcome.
 3b. Continuity Callouts: If the player points out an apparent inconsistency in your own prior narration (an item, detail, or fact that changed without an in-story reason), treat their observation as correct and reconcile the story around it — a quiet correction, a character's own explanation, or simply adopting it as true going forward. Never retcon it as the player character's own senses or memory being unreliable unless perception distortion is already an established, deliberate element of this scene (a curse, a hallucinogen, a supernatural fog) — you are not allowed to blame the player for a mistake in your own telling.
@@ -247,6 +248,22 @@ export const PROSE_DEPTHS: Record<'CONCISE' | 'BALANCED' | 'IMMERSIVE', ProseDep
   BALANCED: { label: 'BALANCED', targetTokens: '~1,100-1,400 tokens', maxOutputTokens: 2048 },
   IMMERSIVE: { label: 'IMMERSIVE', targetTokens: '~2,800-4,000 tokens', maxOutputTokens: 6144 },
 }
+
+// Rule 2a (Climax Overflow) tells the model a turn carrying a class
+// evolution, a completed quest, or a major kill is allowed to run past its
+// Prose Depth's own target — but a prompt instruction alone can't make that
+// real if the API call's hard maxOutputTokens ceiling is still CONCISE's
+// tight 1280 or BALANCED's 2048; the model would just get cut off mid-sentence
+// attempting exactly the longer scene the rule just told it to write. App.tsx
+// takes `Math.max(campaign.proseDepth.maxOutputTokens, MIN_TURN_OUTPUT_CEILING)`
+// for every regular turn so the technical ceiling never sits below what
+// IMMERSIVE already treats as a normal generous turn, regardless of which
+// depth the player has chosen — a CONCISE player's own class-evolution
+// moment deserves the same room to actually land as an IMMERSIVE player's
+// default turn gets, not a scaled-down one. Reuses IMMERSIVE's own number
+// rather than inventing a new one, so there's a single tuned value to revisit
+// if either ever needs to change.
+export const MIN_TURN_OUTPUT_CEILING = PROSE_DEPTHS.IMMERSIVE.maxOutputTokens
 
 // The two calls that ignore the campaign's chosen Prose Depth entirely and
 // always get the API's own output ceiling instead: Turn 1 (the world/opening

@@ -1,5 +1,28 @@
 # Tale Dives — Project Revision Notes
 
+**Last updated:** 2026-09-05, Claude Code on the web — "Climax Overflow": a
+turn carrying a `class_evolution`, a completed quest, or a major kill is now
+allowed to exceed the player's chosen Prose Depth, not just reach it.
+- `turnContract.ts` rule 2a (new, right after rule 2/Length): tells the model
+  those three markers lift Prose Depth's target from a ceiling to a floor for
+  that turn only — explicitly scoped as the exception, not license to pad an
+  ordinary turn.
+- A prompt instruction alone can't make that real, since each Prose Depth tier
+  also carries its own hard `maxOutputTokens` API ceiling (CONCISE 1280,
+  BALANCED 2048, IMMERSIVE 6144) — telling the model to write longer without
+  raising that ceiling just produces mid-sentence truncation, the same
+  lesson from this session's earlier truncation-bug fix. Added
+  `MIN_TURN_OUTPUT_CEILING = PROSE_DEPTHS.IMMERSIVE.maxOutputTokens` and had
+  both `App.tsx` `runTurn` call sites take
+  `Math.max(depth.maxOutputTokens, MIN_TURN_OUTPUT_CEILING)` instead of the
+  bare per-depth value, so a CONCISE or BALANCED player's own climax moment
+  gets the same generous ceiling an IMMERSIVE player's ordinary turn already
+  has, regardless of which depth they picked. Reuses IMMERSIVE's own tuned
+  number rather than inventing a new one.
+- Verified: `npm run typecheck`/`npm run build` clean; unit-checked the
+  `Math.max` wiring directly against all three tiers (CONCISE/BALANCED/
+  IMMERSIVE all correctly floor to 6144).
+
 **Last updated:** 2026-09-05, Claude Code on the web — migrated the live turn
 pipeline off JSON-schema structured output onto the XML prototype from
 earlier this session, per the user's explicit go-ahead ("go with the XML

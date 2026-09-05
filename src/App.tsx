@@ -31,7 +31,7 @@ import { parseKeywordLinks } from './lib/keywordLinks.ts'
 import { slugify } from './lib/slug.ts'
 import { getProvider } from './api/providers/index.ts'
 import { sanitize } from './api/providers/gemini.ts'
-import { PROSE_DEPTHS, DEFAULT_NARRATION_STYLE, MAX_OUTPUT_TOKENS_CEILING } from './api/turnContract.ts'
+import { PROSE_DEPTHS, DEFAULT_NARRATION_STYLE, MAX_OUTPUT_TOKENS_CEILING, MIN_TURN_OUTPUT_CEILING } from './api/turnContract.ts'
 import { readJSONFile, saveJSON } from './lib/backup.ts'
 import { useConfirm } from './lib/useConfirm.tsx'
 import { useLongTextEditor } from './lib/useLongTextEditor.tsx'
@@ -574,7 +574,7 @@ export default function App() {
         apiKey: apiSettings.apiKey,
         model: apiSettings.model,
         temperature: apiSettings.temperature,
-        maxOutputTokens: isWorldSeedingTurn ? MAX_OUTPUT_TOKENS_CEILING : current.proseDepth.maxOutputTokens,
+        maxOutputTokens: isWorldSeedingTurn ? MAX_OUTPUT_TOKENS_CEILING : Math.max(current.proseDepth.maxOutputTokens, MIN_TURN_OUTPUT_CEILING),
         history: newHistory,
       })
 
@@ -890,7 +890,7 @@ export default function App() {
         apiKey: apiSettings.apiKey,
         model: apiSettings.model,
         temperature: apiSettings.temperature,
-        maxOutputTokens: campaign.proseDepth.maxOutputTokens,
+        maxOutputTokens: Math.max(campaign.proseDepth.maxOutputTokens, MIN_TURN_OUTPUT_CEILING),
         history: newHistory,
       })
 

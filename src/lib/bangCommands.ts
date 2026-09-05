@@ -33,9 +33,9 @@ export const BANG_COMMANDS: { name: string; usage: string; description: string }
   { name: 'recall', usage: '!recall', description: 'Full Codex snapshot — also reminds the AI' },
   { name: 'minions', usage: '!minions', description: 'Your current summoned army' },
   { name: 'corpses', usage: '!corpses', description: 'Harvestable slain-enemy essence (necromancer/Shadow Monarch)' },
-  { name: 'arise', usage: '!arise', description: 'Dark Monarch — extract a shadow from a slain corpse' },
+  { name: 'arise', usage: '!arise', description: 'Shadow Monarch — extract a shadow from a slain corpse' },
   { name: 'raise_skeleton', usage: '!raise_skeleton', description: 'Necromancer — reanimate skeletal infantry (1 Bone Dust)' },
-  { name: 'summon', usage: '!summon', description: 'Contract Gate Summoner — call a planar familiar' },
+  { name: 'summon', usage: '!summon', description: 'Summoner — call a planar familiar' },
 ]
 
 const RECALL_ROW_CAP = 60
@@ -229,7 +229,7 @@ export function resolveBangCommand(raw: string, campaign: Campaign): BangResult 
       return tableResult('Minions', rows, 'No minions summoned yet.')
     }
     // §5.3 — corpse_add tags accumulated on the Campaign, harvestable by
-    // `!arise` (Dark Monarch). Grouped by tag with a count since the same
+    // `!arise` (Shadow Monarch). Grouped by tag with a count since the same
     // adversary type is commonly slain more than once; cross-references the
     // Bestiary for a real name/threat tier where the tag matches one, since
     // corpse_add itself carries only a bare identifier tag, nothing richer.

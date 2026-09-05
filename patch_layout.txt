@@ -1,0 +1,130 @@
+  const basicsFields = (
+    <div className="flex flex-col gap-4">
+      <div className="flex gap-3 items-end">
+        <div className="flex-1 min-w-0">
+          <GlassField label="Name" hint="Protagonist's full name">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Katherine Vance..."
+              className={FIELD_CLASS}
+            />
+          </GlassField>
+        </div>
+        <div className="w-20 shrink-0">
+          <GlassField label="Age" hint="">
+            <input
+              type="number"
+              min="0"
+              max="999"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              placeholder="24"
+              className={FIELD_CLASS}
+            />
+          </GlassField>
+        </div>
+      </div>
+
+      <div className="flex gap-3 items-end">
+        <div className="flex-1 min-w-0">
+          <GlassField label="Archetype / Class" hint="Input custom class or pick preset">
+            <input
+              type="text"
+              value={customClassName}
+              onChange={(e) => handleCustomClassChange(e.target.value)}
+              placeholder="e.g. Sellsword, Spellblade..."
+              className={FIELD_CLASS}
+              list="preset-classes-list"
+            />
+            <datalist id="preset-classes-list">
+              {PRESET_CLASSES.map((c) => (
+                <option key={c.id} value={c.name} />
+              ))}
+            </datalist>
+          </GlassField>
+        </div>
+        <div className="w-32 shrink-0">
+          <GlassField label="Gender" hint="">
+            <input
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
+              placeholder="female, male..."
+              className={FIELD_CLASS}
+            />
+          </GlassField>
+        </div>
+      </div>
+
+      {/* Main Attributes Point Buy Block */}
+      <div className="flex flex-col gap-3 rounded-xl p-3.5 border border-[#e8ca8a]/25 bg-[#07050c]/50">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            <Zap size={15} className="text-[#f0ca65]" />
+            <span className="font-display font-bold text-xs uppercase tracking-wider text-[#f5dfa0]">
+              Attributes
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span
+              className={`font-mono text-[10px] px-2 py-0.5 rounded border font-normal ${
+                unassignedPoints > 0
+                  ? 'bg-[#f0ca65]/20 text-[#f5dfa0] border-[#f0ca65]/40 animate-pulse'
+                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+              }`}
+            >
+              {unassignedPoints > 0 ? `${unassignedPoints} Pts Available` : 'All Assigned'}
+            </span>
+            <button
+              type="button"
+              onClick={() => autoDistributeForClass(classId)}
+              className="p-1 text-[#e8ca8a]/60 hover:text-[#f5dfa0] rounded hover:bg-white/5 cursor-pointer"
+              title="Auto-Distribute for Class"
+            >
+              <RotateCcw size={16} />
+            </button>
+          </div>
+        </div>
+
+        {/* Compact Attribute Stepper Controls */}
+        <div className="grid grid-cols-3 gap-2">
+          {(['STR', 'INT', 'AGI'] as const).map((attr) => (
+            <div key={attr} className="flex flex-col items-center gap-2 p-2 rounded-lg border border-[#e8ca8a]/15 bg-[#120e1b]/70">
+              <div className="flex items-center gap-1">
+                <span className="font-display font-bold text-xs text-[#f5dfa0]">{attr}</span>
+                <button
+                  type="button"
+                  onClick={() => setActiveTooltip(activeTooltip === attr ? null : attr)}
+                  className="text-[#e8ca8a]/40 hover:text-[#f5dfa0] cursor-pointer"
+                >
+                  <HelpCircle size={10} />
+                </button>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <div className="flex flex-col items-center">
+                  <span className="font-mono font-bold text-lg text-[#f0ca65] leading-none">{attrs[attr]}</span>
+                  <span className="font-mono text-[10px] text-[#e8ca8a]/50">+{attrs[attr] - BASE_ATTR_VALUE}</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <button
+                    type="button"
+                    disabled={unassignedPoints <= 0}
+                    onClick={() => modifyAttr(attr, 1)}
+                    className="w-6 h-5 rounded bg-[#f0ca65]/20 hover:bg-[#f0ca65]/35 border border-[#f0ca65]/40 flex items-center justify-center text-[#f0ca65] disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                  >
+                    <ChevronUp size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={attrs[attr] <= BASE_ATTR_VALUE}
+                    onClick={() => modifyAttr(attr, -1)}
+                    className="w-6 h-5 rounded bg-[#e8ca8a]/10 hover:bg-[#e8ca8a]/25 border border-[#e8ca8a]/30 flex items-center justify-center text-[#f5dfa0] disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                  >
+                    <ChevronDown size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>

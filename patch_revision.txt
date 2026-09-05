@@ -1,0 +1,5 @@
+- **2026-09-05** — Further Protagonist Setup UI Fixes (`src/screens/NewGame.tsx`):
+  - Made the Gender field align nicely on the same line as Archetype/Class by applying bottom-alignment (`items-end`) to the flex container.
+  - Renamed "Attributes Point Buy" to simply "Attributes".
+  - Refactored the Attributes assignment component layout: rather than three rows of horizontal stepper inputs, transformed it into a dense 3-column table view (STR | INT | AGI). The attribute value and modifier sit side-by-side, with stacked compact ChevronUp/ChevronDown buttons to their right, saving significant vertical space.
+  - Increased the size of the auto-distribute/reset button icon for better visibility and tap targets.

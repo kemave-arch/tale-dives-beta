@@ -76,6 +76,8 @@ export function loadWorlds(): Dict<WorldData> {
       powerSystem: FOURTH_WING_WORLD.powerSystem,
       eraTechLevel: FOURTH_WING_WORLD.eraTechLevel,
       keyFactions: FOURTH_WING_WORLD.keyFactions,
+      factionsList: FOURTH_WING_WORLD.factionsList,
+      locationsList: FOURTH_WING_WORLD.locationsList,
       narrationStyle: FOURTH_WING_WORLD.narrationStyle,
     },
   }
@@ -113,6 +115,8 @@ export function loadProtagonists(): Dict<ProtagonistData> {
       physicalTrait: VIOLET_SORRENGAIL.physicalTrait,
       secret: VIOLET_SORRENGAIL.secret,
       opening: VIOLET_SORRENGAIL.opening,
+      customAttributes: VIOLET_SORRENGAIL.customAttributes,
+      startingSkills: VIOLET_SORRENGAIL.startingSkills,
     },
   }
   return merged

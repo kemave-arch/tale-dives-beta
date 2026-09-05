@@ -761,8 +761,82 @@ this line is what actually matters.
 
 New entries below, most recent first.
 
-- **2026-09-05** — Normal Font Weight for Master Tags on Cards (`src/screens/MainMenu.tsx`): Removed `font-semibold` from the "master" badge tags on all World and Protagonist cards in the main menu library/vault view so they display with normal font weight.
+- **2026-09-05** — Lore-Accurate Fourth Wing Starter Template Adjustments (`src/data/starterTemplates.ts`, `src/lib/store.ts`):
+  - **Violet Sorrengail Master Template**:
+    - **Attributes**: Configured custom point distribution (`STR: 10`, `INT: 18`, `AGI: 14`) reflecting Violet's frail bone density & physical stature paired with an exceptional scribe intellect and swift dagger reflexes.
+    - **Starter Skills**: Seeded lore-accurate abilities (*Poisoner's Edge*, *Anatomical Precision*, *Dagger Parry & Feint*).
+    - **Identity Parameters**: Normalized gender (`F`), class archetype (`apprentice_scribe`), class title (`Apprentice Scribe`), physical traits (hypermobile joints, silver-tipped hair), secret (hidden boots with poison daggers and instructor flaw notes), and background history.
+  - **Navarre World Master Template**:
+    - **Structured Factions**: Added 5 lore-accurate factions (*Riders Quadrant*, *Scribe Quadrant*, *Navarre High Command*, *Poromiel Gryphon Fliers*, *Shadow Venin & Wyvern*) with territories, attitudes, and descriptions.
+    - **World Systems**: Enriched background, power system (dragon signet magic & runic arrays), tech level, and narration style.
+  - **Store Synchronization**: Updated `src/lib/store.ts` to preserve `factionsList`, `customAttributes`, and `startingSkills` on master template load.
+- **2026-09-05** — Violet Sorrengail Template Adjustments (`src/data/starterTemplates.ts`, `src/screens/NewGame.tsx`):
+  - Updated preset protagonist Violet Sorrengail's starter template to map to the new field formats (`gender: 'F'`, `classId: 'apprentice_scribe'`, `className: 'Apprentice Scribe'`).
+  - Updated `NewGame.tsx` state initialization to normalize legacy gender values (`Female` / `Male`) to the dropdown options (`F` / `M`).
+- **2026-09-05** — Archetype / Class Enum Dropdown & Custom Class Setup Modal (`src/screens/NewGame.tsx`):
+  - **Archetype/Class Enum Dropdown**: Restored Archetype/Class as a standard `<select>` dropdown populated with all preset class archetypes (Warrior, Mage, Assassin, Paladin, Necromancer, etc.) plus a "Custom Class..." option.
+  - **Custom Class Modal**: Selecting "Custom Class..." opens a modal prompting for:
+    1. Custom Class Name (text input).
+    2. Base Archetype (Stat Curve) dropdown (selecting from the preset class enum values).
+  - **Vitals Curve Integration**: Sets `classId` to the chosen base archetype (supplying the vitals/attribute weight curve under the hood) while setting `className` to the user's custom class name. An adjacent "Edit" button allows re-configuring custom class details at any point.
+  - **Verification**: Verified clean TypeScript compilation (`compile_applet`).
+- **2026-09-05** — Class Preset Button Removal (`src/screens/NewGame.tsx`):
+  - Removed the browse/search button adjacent to the Archetype / Class input per focus mode request, allowing the text input to span the full width of its field.
+- **2026-09-05** — Protagonist & World Setup Refactor, Attribute Table, Preset Relocation, and "DIVE IN" Loading Flow:
+  - **Gender Enum Dropdown**: Converted Gender field in `NewGame.tsx` to a dropdown (`M`, `F`, `N/A`) aligned inline alongside the Archetype/Class input.
+  - **Dense Attribute Table**: Refactored Attributes in `NewGame.tsx` into a compact 3-column table (`STR`, `INT`, `AGI`) with stacked ▲/▼ buttons and removed gain values below stat numbers to conserve vertical space.
+  - **Compact Vitals**: Reduced vertical padding in Vitals, removed the "Shadow Referee Validated" text label, and cleaned up layout density.
+  - **World Setup Cleanup**: Removed redundant "Genre & Tone" and "Core Regional Conflict" inputs from `WorldSetup.tsx`, updating the "World Background" hint to incorporate genre, tone, and conflict guidance directly into the main background prompt.
+  - **Preset Action Row Relocation**: Moved the "Save Preset" and "Save as New Preset" buttons to the bottom of the scrollable form area in both `NewGame.tsx` and `WorldSetup.tsx`.
+  - **"DIVE IN" Flow**: Renamed the "Start" CTA button in `TaleBrief.tsx` to "DIVE IN". Created `DiveLoadingScreen.tsx` (using `m_title-bg2.webp` on mobile and `pc_title-bg2.webp` on desktop). Updated `App.tsx` state machine to immediately switch soundtrack to `TempestDive_ost03.opus`, display `DiveLoadingScreen`, and transition to `storymode` (Story Viewer) as soon as the first LLM turn response arrives.
+  - **Verification**: Verified via `compile_applet` (all TypeScript type checks and Vite build passed clean).
+- **2026-09-05** — Further Protagonist Setup UI Fixes (`src/screens/NewGame.tsx`):
+  - Made the Gender field align nicely on the same line as Archetype/Class by applying bottom-alignment (`items-end`) to the flex container.
+  - Renamed "Attributes Point Buy" to simply "Attributes".
+  - Refactored the Attributes assignment component layout: rather than three rows of horizontal stepper inputs, transformed it into a dense 3-column table view (STR | INT | AGI). The attribute value and modifier sit side-by-side, with stacked compact ChevronUp/ChevronDown buttons to their right, saving significant vertical space.
+  - Increased the size of the auto-distribute/reset button icon for better visibility and tap targets.
+
+
+- **2026-09-05** — Setup Flow UI Compacting & Restructuring (`src/screens/WorldSetup.tsx`, `src/screens/NewGame.tsx`):
+  - **Scrollable Area Fix**: Restructured the flex layout in both setup screens so that the Mobile subtabs and the bottom Action bar (Continue) remain sticky, and only the form fields themselves are scrollable.
+  - **World Setup Cleanup**: Removed redundant "Genre & Tone" and "Core Regional Conflict" inputs as they overlapped conceptually. Their hints and expected inputs were combined into a more comprehensive "World Background" field.
+  - **Protagonist Setup Redesign**:
+    - Renamed subtabs to a cleaner "Identity", "Origin", and "Skills".
+    - Consolidated Name and Age into a single row, minimizing the width of the Age input. Removed "Optional" hints.
+    - Consolidated Archetype/Class and Gender into a single row.
+    - Simplified the Archetype/Class input by combining the previous text input and `<select>` dropdown into a single `<input>` field with a `<datalist>`, retaining auto-distribution behavior.
+    - Fully refactored the Attributes Point Buy section for maximum mobile compactness: converted the previous 3-column tall grid into a dense, vertical list of single-line rows for STR, INT, and AGI, stripping out unneeded header space.
+    - Removed redundant section headers ("Hero Identity & Attributes", "Narrative Identity & Secret", "Turn-1 Memory Grounding") to maximize screen space for actual inputs.
+    - Renamed "Background & Origin" to "Origin Story" and cleaned up its hint.
+
+- **2026-09-05** — Power System UI Adjustments (`src/screens/WorldSetup.tsx`): Adjusted the "Power System" text area in the World Setup screen to default to 2 lines of text instead of 4, keeping the UI tighter and more consistent. Additionally, removed the secondary "Lore & Rules" sub-header from the setup views.
+
+- **2026-09-05** — Add Faction & Add Ability Modal Mobile Layouts (`src/screens/WorldSetup.tsx`, `src/screens/NewGame.tsx`): Refactored the internal forms for "Add Key Faction" and "Add Starting Ability" to use responsive grid layouts (`grid-cols-1 sm:grid-cols-2`), fixing mobile crowding where elements like "Attitude / Alignment" and "Territory / Domain" were squeezed into a 2-column layout. Simplified form labels to "Attitude", "Territory", "MP Cost", and "ST Cost" to ensure they fit cleanly in standard viewports.
   - **Verification**: Verified via `lint_applet` and `compile_applet`.
+
+- **2026-09-05** — Factions CRUD Cleanup (`src/screens/WorldSetup.tsx`): Removed the redundant "Quick Factions Summary" comma-separated text field, simplified the header to "Key Factions", and streamlined the fast CRUD list to a compact one-row display per faction containing only the faction name and its edit control, with the Add Faction action transitioning to a circular icon button.
+
+- **2026-09-05** — Gateway Screen Header Cleanup (`src/screens/WorldSetup.tsx`, `src/screens/NewGame.tsx`): Removed redundant intermediate title/subtitle text blocks ("Seeding & Architecture" / "Hero Forge & Attributes") from both World Setup and Protagonist Setup gateway screens, allowing the two selection cards to sit cleanly directly below the main GlassHeader matching StoryMode.
+  - **Verification**: Verified via `lint_applet` and `compile_applet`.
+
+- **2026-09-05** — Story Creation & World Seeding UX Overhaul: Gateway Selection, PC Multi-Column Layout, Attribute Point-Buy, and Faction/Skill CRUD (`src/screens/WorldSetup.tsx`, `src/screens/NewGame.tsx`, `src/types.ts`, `src/App.tsx`):
+  - **Gateway Choice Architecture (`WorldSetup.tsx`, `NewGame.tsx`)**: Replaced initial auto-loaded master preset state with an intentional 2-card Gateway screen ("New World" / "New Protagonist" vs "Load Preset"). Players can start with a clean canvas or explore presets without having unrequested preset fields preloaded.
+  - **PC Multi-Column Layout vs Mobile Subtabs (`WorldSetup.tsx`, `NewGame.tsx`)**:
+    - On PC/large screens (`lg:` and up), eliminated subtabs in favor of a balanced two-column layout with a subtle ornate gold vertical divider, utilizing available screen estate efficiently.
+    - On mobile/tablet (`< lg`), preserved clean touch-friendly subtabs (`Overview` / `Depth` for World Setup; `Basics` / `Identity` / `Skills` for Protagonist Setup).
+  - **World Setup Restructuring & Factions CRUD (`WorldSetup.tsx`)**:
+    - Widened Genre & Tone and Core Regional Conflict to 3-line vertical textareas and moved Conflict to the Overview column.
+    - Expanded Power System to 4 vertical lines.
+    - Added a structured Key Factions CRUD table allowing players to add, edit, and delete named factions with alignment badges (Allied, Friendly, Neutral, Hostile, Rival), territory, and agendas, which automatically seed the Factions Codex on Turn 1.
+  - **Protagonist Attributes Point-Buy & Live Vitals HUD (`NewGame.tsx`)**:
+    - Implemented a 12-point allocation system over base 10 STR, INT, and AGI with stepper controls `[-]` and `[+]`, unassigned points counter, and auto-distribute helper.
+    - Added live derived vitals preview HUD cards (HP Max, MP Max, ST Max) calculated via `derivedPools` formulas validated by the Shadow Referee.
+    - Integrated interactive info tooltips for STR, INT, AGI, and derived vitals formulas.
+  - **Starting Abilities CRUD & Codex Seeding (`NewGame.tsx`, `App.tsx`)**:
+    - Added a Starting Abilities CRUD table with type/tier tags and MP/ST costs, auto-suggest for class archetypes, and modal editing.
+    - Updated `beginCampaign` in `App.tsx` to automatically seed user-configured custom attributes, vitals, starting skills, and factions into game memory and Codex registries.
+  - **Master Tag Font-Weight Normalization**: Harmonized all "Master" badges across cards and modals to use `font-normal` weight.
+  - **Verification**: Verified clean TypeScript compilation (`tsc --noEmit` via `lint_applet`) and production compilation (`compile_applet`).
 
 - **2026-09-05** — UI Polish: Protagonist Preset Card Typography, Header Subtitle Sizing, World Preset Tag Removal, and GlassField Layout Optimization (`src/screens/NewGame.tsx`, `src/lib/glassChrome.tsx`, `src/components/PresetDetailModal.tsx`):
   - **Protagonist Preset Typography (`src/screens/NewGame.tsx`)**: Refined protagonist preset card descriptions and details to use `font-sans` (`Plus Jakarta Sans`) and a compact `text-[13px]` font size.
@@ -823,3 +897,28 @@ New entries below, most recent first.
   - **Title & Chronicle Refinements** (`src/screens/Title.tsx`, `src/screens/Chronicle.tsx`): Modernized Title CTA button to "START" with synchronous fullscreen toggle. Centered Chronicle's parchment reading column, removed typewriter character-by-character delay for instant narrative rendering, and added a responsive desktop sidebar layout.
   - **Defensive Safeguards & Blueprint v3.0** (`src/App.tsx`, `src/api/providers/gemini.ts`, `Tale-Dives-Blueprint-v3_0.md`): Clamped `stat_grant` to prevent `NaN` pool max mutations. Anchored `startTime`/`endTime` in `recapChapter` to eliminate temporal hallucinations during chapter summaries. Scoped bang-command turn controls strictly to the last narrated turn. Documented full system architecture in `Tale-Dives-Blueprint-v3_0.md`.
   - **Verification**: Verified clean TypeScript compilation (`tsc --noEmit`) and Vite production build (`vite build`). Live XML turn cycle verified against Gemini API, confirming state synchronization and narrative rendering.
+
+- **2026-09-05** — Locations Subtab & Fast CRUD Table for World Setup, Codex Auto-Seeding, and Preset Lore Alignment (`src/types.ts`, `src/screens/WorldSetup.tsx`, `src/data/starterTemplates.ts`, `src/lib/store.ts`, `src/App.tsx`):
+  - **Locations Subtab in World Setup (`src/screens/WorldSetup.tsx`)**: Added "Locations" as the 3rd subtab (`Overview`, `Depth`, `Locations`) using `GlassTabs` across the World Setup screen.
+  - **Key Locations Fast CRUD Table & Modal**: Implemented structured `locationsList` state and an interactive Fast CRUD Table in `WorldSetup.tsx` with full Add/Edit/Delete capabilities. Added an interactive modal supporting Name, Region, Location Type, Danger Level, Faction Owner, and Description fields.
+  - **Starter Templates Location Seeding (`src/data/starterTemplates.ts`)**: Seeding lore-accurate key locations for the Navarre starter world template (`Basgiath War College`, `The Parapet`, `Threshing Grounds`, `Aretia`) with accurate danger levels, regions, types, and faction owners.
+  - **Codex Auto-Seeding on Turn 1 (`src/App.tsx`, `src/lib/store.ts`)**: Updated campaign initialization in `App.tsx` so all structured locations created/loaded in World Setup are seeded directly into `campaign.locations` in the Story's Locations Codex on Turn 1.
+  - **Verification**: Verified with `lint_applet` and `compile_applet`. Production build compiled cleanly without errors.
+
+- **2026-09-05** — Save Presets Confirmation Prompts for World and Protagonist Setup (`src/screens/WorldSetup.tsx`, `src/screens/NewGame.tsx`, `src/lib/useConfirm.tsx`):
+  - **In-App Confirmation Dialog Integration**: Added confirmation prompts when clicking "Save Preset" or "Save as New Preset" in both World Setup (`src/screens/WorldSetup.tsx`) and Protagonist Setup (`src/screens/NewGame.tsx`), using the exact same `useConfirm` modal component and styling as the "Exit to Title Screen" dialog.
+  - **Modal Structure**: Renders a glass panel backdrop with `AlertTriangle` icon, custom prompt text ("Save changes to this World preset?", "Save current world as a new World preset?", "Save changes to this Protagonist preset?", "Save current hero as a new Protagonist preset?"), and explicit **Cancel** / **Confirm** action buttons.
+  - **Preset Deletion Prompt Normalization**: Converted native `confirm()` dialogs on preset detail deletion cards to `await confirm(...)` using the same in-app modal, ensuring reliable behavior inside iframe sandbox environments.
+  - **Verification**: Verified via `lint_applet` (`tsc --noEmit`) and `compile_applet` (`vite build`). All builds passed cleanly.
+
+- **2026-09-05** — Location Enums & Class Preset Renames (`src/types.ts`, `src/data/classes.ts`, `src/data/starterTemplates.ts`, `src/lib/bangCommands.ts`, `src/screens/WorldSetup.tsx`, `src/screens/Codex.tsx`):
+  - **Simplified Location Danger Levels**: Streamlined location danger level options to 4 concise tiers (`Safe`, `Low`, `High`, `Lethal`), eliminating token redundancy across LLM context generation headers and Codex records while preserving UI warning badge styling in `WorldSetup.tsx` and `Codex.tsx`.
+  - **Simplified Location Types**: Streamlined location types to 6 concise single-word RPG categories (`Settlement`, `Fortress`, `Wilds`, `Dungeon`, `Ruins`, `Landmark`), reducing token consumption on every turn's JIT context slice and Codex entry listings.
+  - **Class Preset Renames & Connections**: Renamed class presets:
+    - `"Dark Monarch"` → `"Shadow Monarch"`
+    - `"Classic Necromancer"` → `"Necromancer"`
+    - `"Contract Gate Summoner"` → `"Summoner"`
+    - `"Apprentice Scribe"` → `"Scribe"`
+    Updated all dependencies across `PRESET_CLASSES` (`src/data/classes.ts`), `getClassById`/`findClassById` lookup helpers, starter templates (`src/data/starterTemplates.ts`), bang command descriptions (`src/lib/bangCommands.ts`), and Codex help copy (`src/screens/Codex.tsx`).
+  - **Verification**: Verified via `lint_applet` (`tsc --noEmit`) and `compile_applet` (`vite build`). All builds compiled cleanly with 0 errors.
+

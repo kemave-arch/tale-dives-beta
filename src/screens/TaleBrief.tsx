@@ -179,7 +179,7 @@ export default function TaleBrief({
         style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
       >
         <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl flex justify-center">
-          <GlassCTAButton onClick={() => onBegin({ opening, narrationStyle, temperature, combatMode })}>Start</GlassCTAButton>
+          <GlassCTAButton onClick={() => onBegin({ opening, narrationStyle, temperature, combatMode })}>DIVE IN</GlassCTAButton>
         </div>
       </div>
     </GlassScreen>

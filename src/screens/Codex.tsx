@@ -15,7 +15,7 @@ import { hoursRemaining } from '../lib/gameTime.ts'
 import { deriveStanding, effectiveStanding, repTierLabel } from '../lib/factions.ts'
 import { useConfirm } from '../lib/useConfirm.tsx'
 import { useLongTextEditor } from '../lib/useLongTextEditor.tsx'
-import { EQUIPPABLE_TYPES } from '../types.ts'
+import { EQUIPPABLE_TYPES, LOCATION_DANGER_LEVELS, LOCATION_TYPES } from '../types.ts'
 import type {
   BestiaryEntry, CraftingJob, Discovery, EquipSlot, FactionEntry, ItemEntry, ItemType, LocationEntry, LogEntry, LoreEntry, NpcEntry, Player,
   QuestEntry, RevealTrigger, SkillEntry, StatBonus, WorldData,
@@ -1541,7 +1541,7 @@ export default function Codex({
       {category === 'corpses' && (
         <div className="flex flex-col gap-3">
           <p className="font-narrative text-xs text-ink-muted">
-            Harvestable essence from the slain — extracted via <span className="font-mono">!arise</span> (Dark Monarch), most recently fallen first.
+            Harvestable essence from the slain — extracted via <span className="font-mono">!arise</span> (Shadow Monarch), most recently fallen first.
           </p>
           {corpseCounts.length === 0 ? (
             <p className="font-narrative italic text-sm text-ink-muted">No harvestable corpses yet — defeat an enemy first.</p>
@@ -1867,9 +1867,33 @@ export default function Codex({
           {editing ? (
             <DetailPanel>
               <TextField label="Name" value={draft.name ?? ''} onChange={(v) => setDraft((d) => ({ ...d, name: v }))} />
-              <TextField label="Location Type" value={draft.locationType ?? ''} onChange={(v) => setDraft((d) => ({ ...d, locationType: v }))} placeholder="City, Dungeon, Wilderness, Landmark…" />
+              <label className="block">
+                <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Location Type</span>
+                <select
+                  value={draft.locationType ?? ''}
+                  onChange={(e) => setDraft((d) => ({ ...d, locationType: e.target.value }))}
+                  className={SELECT_CLASS}
+                >
+                  <option value="">(Select Type)</option>
+                  {LOCATION_TYPES.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </label>
               <TextField label="Region" value={draft.region ?? ''} onChange={(v) => setDraft((d) => ({ ...d, region: v }))} />
-              <TextField label="Danger Level" value={draft.dangerLevel ?? ''} onChange={(v) => setDraft((d) => ({ ...d, dangerLevel: v }))} />
+              <label className="block">
+                <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Danger Level</span>
+                <select
+                  value={draft.dangerLevel ?? ''}
+                  onChange={(e) => setDraft((d) => ({ ...d, dangerLevel: e.target.value }))}
+                  className={SELECT_CLASS}
+                >
+                  <option value="">(Select Danger)</option>
+                  {LOCATION_DANGER_LEVELS.map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </label>
               <label className="block">
                 <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Faction Owner (§5.11)</span>
                 <select

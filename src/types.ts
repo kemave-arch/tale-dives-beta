@@ -53,9 +53,9 @@ export interface CraftingJob {
 
 // §5.3 Three-Branch Summoning & Minion Engine — a class-gated, 0-token,
 // client-resolved mechanic (same "!" bang-command family as the read-only
-// dossiers, just with a real state-mutating side effect): `!arise` (Dark
-// Monarch), `!raise_skeleton` (Classic Necromancer), `!summon` (Contract
-// Gate Summoner). A minion persists on the Campaign until dismissed or (for
+// dossiers, just with a real state-mutating side effect): `!arise` (Shadow
+// Monarch), `!raise_skeleton` (Necromancer), `!summon` (Summoner).
+// A minion persists on the Campaign until dismissed or (for
 // a `familiar`) its upkeep can no longer be paid.
 export type SummonBranch = 'shadow' | 'skeleton' | 'familiar'
 
@@ -144,15 +144,22 @@ export interface Discovery {
   teaser?: string // shown in place of real content while hidden
 }
 
+// Location Enums & Constants
+export const LOCATION_DANGER_LEVELS = ['Safe', 'Low', 'High', 'Lethal'] as const
+export type LocationDangerLevel = (typeof LOCATION_DANGER_LEVELS)[number]
+
+export const LOCATION_TYPES = ['Settlement', 'Fortress', 'Wilds', 'Dungeon', 'Ruins', 'Landmark'] as const
+export type LocationType = (typeof LOCATION_TYPES)[number]
+
 // §5.10 Locations Codex entry.
 export interface LocationEntry {
   name: string
   region: string
   description: string
-  dangerLevel: string
+  dangerLevel: LocationDangerLevel | string
   factionOwner: string | null
   standing: string
-  locationType?: string // freeform, e.g. "City"/"Dungeon"/"Wilderness"/"Landmark"
+  locationType?: LocationType | string // e.g. "Settlement" / "Fortress" / "Wilds" / "Dungeon" / "Ruins" / "Landmark"
   notableFeatures?: string // freeform — what stands out about the place
   inhabitants?: string // freeform — who/what lives or lurks here
   firstVisitedTime?: GameTime // set once, at stub creation — an explicit anchor against invented "it's been weeks" narration drift
@@ -281,6 +288,24 @@ export interface ProseDepthConfig {
 export type CombatMode = 'TACTICAL' | 'NARRATIVE'
 
 // §Phase A World Setup — also the World Library's stored shape (§6.4B).
+export interface WorldFaction {
+  id?: string
+  name: string
+  attitude?: 'allied' | 'friendly' | 'neutral' | 'hostile' | 'rival'
+  description?: string
+  territory?: string
+}
+
+export interface WorldLocation {
+  id?: string
+  name: string
+  region?: string
+  description?: string
+  dangerLevel?: string
+  locationType?: string
+  factionOwner?: string
+}
+
 export interface WorldData {
   id?: string | null
   name: string
@@ -292,6 +317,8 @@ export interface WorldData {
   powerSystem?: string // how power works here at all — magic, cultivation/cores, tech, or pure skill; deliberately not magic-only
   eraTechLevel?: string // free-form, e.g. "Medieval high fantasy", "Magitech steampunk"
   keyFactions?: string // 1-2 named factions/nations up front — context only, not yet auto-seeded into the Faction Codex
+  factionsList?: WorldFaction[] // Structured factions list for fast CRUD & direct Codex seeding
+  locationsList?: WorldLocation[] // Structured locations list for fast CRUD & direct Codex seeding
   sourceTitle?: string // Appendix A.1 "Title" — attribution only when adapted from existing work; never sent to the model
   sourceAuthor?: string // Appendix A.1 "Author" — same caveat as sourceTitle
   isDefault?: boolean
@@ -313,6 +340,8 @@ export interface ProtagonistData {
   physicalTrait?: string // a distinguishing feature or flaw
   secret?: string // something the narrator can quietly plant hooks around
   opening: string
+  customAttributes?: Attributes // Optional custom point-buy distributed STR, INT, AGI
+  startingSkills?: SkillEntry[] // Optional custom starting abilities for Codex seeding
   isDefault?: boolean
   isMaster?: boolean // Immutable master preset (cannot be deleted)
   savedAt?: number // Timestamp when saved/updated in the library

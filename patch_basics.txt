@@ -1,0 +1,203 @@
+  const basicsFields = (
+    <div className="flex flex-col gap-4">
+      <div className="flex gap-3">
+        <div className="flex-1 min-w-0">
+          <GlassField label="Name" hint="Protagonist's full name">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Katherine Vance..."
+              className={FIELD_CLASS}
+            />
+          </GlassField>
+        </div>
+        <div className="w-20 shrink-0">
+          <GlassField label="Age" hint="">
+            <input
+              type="number"
+              min="0"
+              max="999"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              placeholder="24"
+              className={FIELD_CLASS}
+            />
+          </GlassField>
+        </div>
+      </div>
+
+      <div className="flex gap-3">
+        <div className="flex-1 min-w-0">
+          <GlassField label="Archetype / Class" hint="Input custom class or pick preset">
+            <input
+              type="text"
+              value={customClassName}
+              onChange={(e) => handleCustomClassChange(e.target.value)}
+              placeholder="e.g. Sellsword, Spellblade..."
+              className={FIELD_CLASS}
+              list="preset-classes-list"
+            />
+            <datalist id="preset-classes-list">
+              {PRESET_CLASSES.map((c) => (
+                <option key={c.id} value={c.name} />
+              ))}
+            </datalist>
+          </GlassField>
+        </div>
+        <div className="w-32 shrink-0">
+          <GlassField label="Gender" hint="">
+            <input
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
+              placeholder="female, male..."
+              className={FIELD_CLASS}
+            />
+          </GlassField>
+        </div>
+      </div>
+
+      {/* Main Attributes Point Buy Block */}
+      <div className="flex flex-col gap-3 rounded-xl p-3.5 border border-[#e8ca8a]/25 bg-[#07050c]/50">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            <Zap size={15} className="text-[#f0ca65]" />
+            <span className="font-display font-bold text-xs uppercase tracking-wider text-[#f5dfa0]">
+              Attributes Point Buy
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span
+              className={`font-mono text-[10px] px-2 py-0.5 rounded border font-normal ${
+                unassignedPoints > 0
+                  ? 'bg-[#f0ca65]/20 text-[#f5dfa0] border-[#f0ca65]/40 animate-pulse'
+                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+              }`}
+            >
+              {unassignedPoints > 0 ? `${unassignedPoints} Pts Available` : 'All Assigned'}
+            </span>
+            <button
+              type="button"
+              onClick={() => autoDistributeForClass(classId)}
+              className="p-1 text-[#e8ca8a]/60 hover:text-[#f5dfa0] rounded hover:bg-white/5"
+              title="Auto-Distribute for Class"
+            >
+              <RotateCcw size={12} />
+            </button>
+          </div>
+        </div>
+
+        {/* Compact Attribute Stepper Controls */}
+        <div className="flex flex-col gap-1.5">
+          {(['STR', 'INT', 'AGI'] as const).map((attr) => (
+            <div key={attr} className="flex items-center justify-between p-2 rounded-lg border border-[#e8ca8a]/15 bg-[#120e1b]/70">
+              <div className="flex items-center gap-2">
+                <span className="font-display font-bold text-xs text-[#f5dfa0]">{attr}</span>
+                <span className="font-mono text-[10px] text-[#e8ca8a]/50">+{attrs[attr] - BASE_ATTR_VALUE}</span>
+                <button
+                  type="button"
+                  onClick={() => setActiveTooltip(activeTooltip === attr ? null : attr)}
+                  className="text-[#e8ca8a]/40 hover:text-[#f5dfa0]"
+                >
+                  <HelpCircle size={10} />
+                </button>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  disabled={attrs[attr] <= BASE_ATTR_VALUE}
+                  onClick={() => modifyAttr(attr, -1)}
+                  className="w-6 h-6 rounded bg-[#e8ca8a]/10 hover:bg-[#e8ca8a]/25 border border-[#e8ca8a]/30 flex items-center justify-center text-[#f5dfa0] disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                >
+                  <Minus size={12} />
+                </button>
+                <span className="font-mono font-bold text-sm w-5 text-center text-[#f0ca65]">{attrs[attr]}</span>
+                <button
+                  type="button"
+                  disabled={unassignedPoints <= 0}
+                  onClick={() => modifyAttr(attr, 1)}
+                  className="w-6 h-6 rounded bg-[#f0ca65]/20 hover:bg-[#f0ca65]/35 border border-[#f0ca65]/40 flex items-center justify-center text-[#f0ca65] disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                >
+                  <Plus size={12} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Active Tooltip explanation banner */}
+        {activeTooltip && (
+          <div className="p-2.5 rounded-lg border border-[#f0ca65]/30 bg-[#190d29]/90 text-[11px] font-narrative text-[#f5dfa0] flex items-start justify-between gap-2">
+            <div>
+              {activeTooltip === 'STR' && (
+                <p>
+                  <strong>Strength (STR):</strong> Governs raw physical power, weapon damage, and carry capacity. Directly increases Health pool (+2.5 HP / STR point).
+                </p>
+              )}
+              {activeTooltip === 'INT' && (
+                <p>
+                  <strong>Intelligence (INT):</strong> Governs spell potency, magical affinity, and arcane knowledge. Directly increases Mana pool (+2.0 MP / INT point).
+                </p>
+              )}
+              {activeTooltip === 'AGI' && (
+                <p>
+                  <strong>Agility (AGI):</strong> Governs speed, reflexes, stealth, and evasion. Directly increases Stamina pool (+1.5 ST / AGI point).
+                </p>
+              )}
+              {activeTooltip === 'VITALS' && (
+                <p>
+                  <strong>Derived Vitals:</strong> Calculated using the universal engine formulas (HP = 20 + 2.5×STR, MP = 10 + 2×INT, ST = 15 + 1×STR + 1.5×AGI).
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveTooltip(null)}
+              className="text-[#e8ca8a]/50 hover:text-white shrink-0"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        )}
+
+        {/* Derived Vitals Live Preview */}
+        <div className="pt-2 border-t border-[#e8ca8a]/15 flex flex-col gap-1.5">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-[#e8ca8a]/70 flex items-center gap-1">
+              Derived Vitals Preview
+              <button
+                type="button"
+                onClick={() => setActiveTooltip(activeTooltip === 'VITALS' ? null : 'VITALS')}
+                className="text-[#e8ca8a]/50 hover:text-[#f5dfa0]"
+              >
+                <HelpCircle size={10} />
+              </button>
+            </span>
+            <span className="font-mono text-[10px] text-[#e8ca8a]/50">Shadow Referee Validated</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-rose-950/30 border border-rose-500/30">
+              <Heart size={14} className="text-rose-400 shrink-0" />
+              <div className="min-w-0">
+                <span className="block font-mono text-[9px] uppercase tracking-wider text-rose-300/80">HP Max</span>
+                <span className="font-mono font-bold text-sm text-rose-200">{vitals.hpMax}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-sky-950/30 border border-sky-500/30">
+              <Wand2 size={14} className="text-sky-400 shrink-0" />
+              <div className="min-w-0">
+                <span className="block font-mono text-[9px] uppercase tracking-wider text-sky-300/80">MP Max</span>
+                <span className="font-mono font-bold text-sm text-sky-200">{vitals.mpMax}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-950/30 border border-emerald-500/30">
+              <Wind size={14} className="text-emerald-400 shrink-0" />
+              <div className="min-w-0">
+                <span className="block font-mono text-[9px] uppercase tracking-wider text-emerald-300/80">ST Max</span>
+                <span className="font-mono font-bold text-sm text-emerald-200">{vitals.stMax}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )

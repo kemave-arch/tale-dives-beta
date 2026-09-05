@@ -7,6 +7,7 @@ import StoryMode from './screens/StoryMode.tsx'
 import WorldSetup from './screens/WorldSetup.tsx'
 import NewGame from './screens/NewGame.tsx'
 import TaleBrief from './screens/TaleBrief.tsx'
+import DiveLoadingScreen from './screens/DiveLoadingScreen.tsx'
 import Chronicle from './screens/Chronicle.tsx'
 import Codex, { type CategoryId } from './screens/Codex.tsx'
 import SlashCommandManager from './screens/SlashCommandManager.tsx'
@@ -59,16 +60,12 @@ const KEYWORD_CATEGORY_TO_CODEX: Record<KeywordLink['category'], CategoryId> = {
 // screen is current (same as SlashCommandManager), not a screen that replaces
 // it — that's what lets its glass read against the live Chronicle parchment or
 // the Title artwork behind it rather than a flat ground.
-type Screen = 'title' | 'mainmenu' | 'storymode' | 'worldsetup' | 'newgame' | 'talebrief' | 'chronicle' | 'codex'
+type Screen = 'title' | 'mainmenu' | 'storymode' | 'worldsetup' | 'newgame' | 'talebrief' | 'chronicle' | 'codex' | 'diveloading'
 type CreationMode = 'tale' | 'library'
 
 // §5.7 Player Defeat State — soft-fail recovery, client-owned.
 const DEFEAT_HP_RESTORE_FRACTION = 0.4
 const DEFEAT_CURRENCY_PENALTY_FRACTION = 0.15
-
-function findDefault<T extends { isDefault?: boolean }>(dict: Dict<T>): T | null {
-  return Object.values(dict).find((e) => e.isDefault) ?? null
-}
 
 function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err)
@@ -180,6 +177,12 @@ export default function App() {
   // Dive Brief steps.
   const [pendingWorld, setPendingWorld] = useState<WorldData | null>(null)
   const [pendingProtagonist, setPendingProtagonist] = useState<ProtagonistData | null>(null)
+
+  useEffect(() => {
+    if (screen === 'diveloading' && game && game.log.length > 0) {
+      navigateTo('storymode', true)
+    }
+  }, [screen, game])
   const [worldSetupMode, setWorldSetupMode] = useState<CreationMode>('tale')
   const [worldSetupInitial, setWorldSetupInitial] = useState<WorldData | null>(null)
   const [newGameMode, setNewGameMode] = useState<CreationMode>('tale')
@@ -351,6 +354,23 @@ export default function App() {
     setCampaigns((c) => ({ ...c, [game.id]: game }))
   }, [game])
 
+  
+  function deleteWorld(id: string) {
+    setWorlds((w) => {
+      const copy = { ...w }
+      delete copy[id]
+      return copy
+    })
+  }
+
+  function deleteProtagonist(id: string) {
+    setProtagonists((p) => {
+      const copy = { ...p }
+      delete copy[id]
+      return copy
+    })
+  }
+
   function upsertWorld(worldData: WorldData, existingId?: string | null): WorldData {
     const id = existingId ?? store.newId('world')
     const entry: WorldData = {
@@ -380,7 +400,8 @@ export default function App() {
     setGame(campaigns[id])
     setActiveCampaignId(id)
     setHistory([])
-    navigateTo('chronicle')
+    navigateTo('diveloading')
+    onPlayTrack('TempestDive_ost03.opus')
   }
 
   // Title's "Continue" shortcut and Main Menu's Tales tab both want the same
@@ -391,7 +412,7 @@ export default function App() {
 
   function beginCampaign(protagonistData: ProtagonistData, combatMode: CombatMode = 'NARRATIVE', worldOverride?: Partial<WorldData>) {
     const cls = getClassById(protagonistData.classId)
-    const attrs = startingAttributes(cls.weights)
+    const attrs = protagonistData.customAttributes ?? startingAttributes(cls.weights)
     const { hpMax, mpMax, stMax } = derivedPools(attrs)
 
     const player = {
@@ -431,6 +452,62 @@ export default function App() {
       ...worldOverride,
     }
 
+    // Seed initial factions from world into Codex
+    const initialFactions: Dict<FactionEntry> = {}
+    if (world.factionsList && Array.isArray(world.factionsList)) {
+      world.factionsList.forEach((f) => {
+        if (!f.name?.trim()) return
+        const id = 'fac_' + slugify(f.name)
+        const repTier = f.attitude === 'allied' ? 2 : f.attitude === 'friendly' ? 1 : f.attitude === 'hostile' || f.attitude === 'rival' ? -1 : 0
+        initialFactions[id] = {
+          name: f.name.trim(),
+          repTier,
+          description: f.description?.trim() || undefined,
+          territory: f.territory?.trim() || undefined,
+          tags: [f.attitude || 'neutral'],
+          discovery: { state: 'known' },
+        }
+      })
+    }
+
+    // Seed initial locations from world into Codex
+    const initialLocations: Dict<LocationEntry> = {}
+    if (world.locationsList && Array.isArray(world.locationsList)) {
+      world.locationsList.forEach((loc) => {
+        if (!loc.name?.trim()) return
+        const id = 'loc_' + slugify(loc.name)
+        initialLocations[id] = {
+          name: loc.name.trim(),
+          region: loc.region?.trim() || 'Known World',
+          description: loc.description?.trim() || '',
+          dangerLevel: loc.dangerLevel || 'Safe',
+          factionOwner: loc.factionOwner?.trim() || null,
+          standing: 'neutral',
+          locationType: loc.locationType || 'Landmark',
+          discovery: { state: 'known' },
+        }
+      })
+    }
+
+    // Seed initial skills from protagonist into Codex
+    const initialSkills: Dict<SkillEntry> = {}
+    if (protagonistData.startingSkills && Array.isArray(protagonistData.startingSkills)) {
+      protagonistData.startingSkills.forEach((s) => {
+        if (!s.name?.trim()) return
+        const id = 'skill_' + slugify(s.name)
+        initialSkills[id] = {
+          name: s.name.trim(),
+          skillType: s.skillType || 'Active',
+          tier: s.tier || 'Novice',
+          mpCost: s.mpCost ?? 0,
+          stCost: s.stCost ?? 0,
+          description: s.description?.trim() || undefined,
+          classId: cls.id,
+          discovery: { state: 'known' },
+        }
+      })
+    }
+
     // Both land in their libraries the moment a Tale begins (§6.4B) —
     // creation IS how the World/Protagonist Library gets populated.
     const worldEntry = upsertWorld(world, world.id)
@@ -449,13 +526,13 @@ export default function App() {
       combatMode, // §5.1d — defaults to NARRATIVE (see the Tale Dive Brief screen's toggle)
       proseDepth: PROSE_DEPTHS.IMMERSIVE, // default changed 2026-09-04 per explicit request for the most immersive prose by default; still overridable per-campaign in Settings
       narrationStyle: world.narrationStyle || DEFAULT_NARRATION_STYLE,
-      locations: {}, // §5.10 Locations Codex — populated by auto-registration
+      locations: initialLocations, // §5.10 Locations Codex — populated by seeded locations and auto-registration
       npcs: {}, // §5.5/§5.14 NPC Codex — populated by auto-registration
-      factions: {}, // §5.14 — populated by {{Term|faction}} keyword links
+      factions: initialFactions, // §5.14 — populated by seeded factions and {{Term|faction}} keyword links
       lore: {}, // §5.14 — populated by {{Term|lore}} keyword links
       quests: {}, // §5.14 — populated by {{Term|quest}} keyword links (quest_update integration is still pending)
       bestiary: {}, // §5.13/§5.14 — populated by {{Term|beast}} keyword links, full stat blocks once combat begins
-      skills: {}, // §6.4D — populated by {{Term|skill}} keyword links and skill_learn
+      skills: initialSkills, // §6.4D — populated by seeded skills and {{Term|skill}} keyword links
       combat: { active: false }, // §2 Phase D.2/§5.13 — ephemeral, reset each encounter
       flags: [], // §5.6 World Impact Ledger
       inventory: {}, // §5.9
@@ -1258,8 +1335,8 @@ export default function App() {
   }
 
   function startNewStory(worldId?: string, protagonistId?: string) {
-    const world = worldId ? worlds[worldId] : findDefault(worlds)
-    const protagonist = protagonistId ? protagonists[protagonistId] : findDefault(protagonists)
+    const world = worldId ? worlds[worldId] : null
+    const protagonist = protagonistId ? protagonists[protagonistId] : null
     setWorldSetupMode('tale')
     setWorldSetupInitial(world ?? null)
     setNewGameMode('tale')
@@ -1381,6 +1458,8 @@ export default function App() {
         onResumeSoundtrack={onResumeSoundtrack}
       />
     )
+  } else if (screen === 'diveloading') {
+    content = <DiveLoadingScreen />
   } else if (screen === 'storymode') {
     content = (
       <StoryMode onBack={() => goBack('mainmenu')} onSelectOriginal={() => navigateTo('worldsetup')} />
@@ -1403,6 +1482,7 @@ export default function App() {
         }}
         onSavePreset={(worldData) => upsertWorld(worldData, worldData.id)}
         onSaveAsNewPreset={(worldData) => upsertWorld(worldData, null)}
+        onDeletePreset={deleteWorld}
       />
     )
   } else if (screen === 'newgame') {
@@ -1425,6 +1505,7 @@ export default function App() {
         }}
         onSavePreset={(protagonistData) => upsertProtagonist(protagonistData, protagonistData.id, getClassById(protagonistData.classId).name)}
         onSaveAsNewPreset={(protagonistData) => upsertProtagonist(protagonistData, null, getClassById(protagonistData.classId).name)}
+        onDeletePreset={deleteProtagonist}
       />
     )
   } else if (screen === 'talebrief' && pendingWorld && pendingProtagonist) {

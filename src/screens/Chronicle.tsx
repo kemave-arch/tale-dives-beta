@@ -270,6 +270,7 @@ const BANG_DISPLAY: Record<string, { icon: LucideIcon; label: string }> = {
   skills: { icon: Sparkles, label: 'Skill Codex' },
   recall: { icon: BookOpen, label: 'Codex Recall' },
   minions: { icon: Users, label: 'Minion Roster' },
+  corpses: { icon: Ghost, label: 'Harvestable Corpses' },
   arise: { icon: Ghost, label: 'Shadow Extraction' },
   raise_skeleton: { icon: Skull, label: 'Reanimation' },
   summon: { icon: Sparkle, label: 'Planar Gate' },

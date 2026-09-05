@@ -2,10 +2,10 @@ import { createContext, useState, useMemo, useEffect, useContext } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
   Globe, BookOpen, Users, ShieldCheck, Map, ScrollText, Target, Skull, Backpack,
-  Pencil, Save, X, Trash2, Plus, Lock, User, Hammer, Clock, Sparkles, CheckCircle2, XCircle, ArrowRight,
+  Pencil, Save, X, Trash2, Plus, Lock, User, Hammer, Clock, Sparkles, CheckCircle2, XCircle, ArrowRight, Ghost,
 } from 'lucide-react'
 import { DASHED_ROW_CLASS, GLASS_SURFACE_LIST, GlassHeader, GlassIconButton, GlassScreen, SELECT_CLASS } from '../lib/glassChrome.tsx'
-import { slugify } from '../lib/slug.ts'
+import { slugify, titleCaseId } from '../lib/slug.ts'
 import { isHidden } from '../lib/discovery.ts'
 import { checkAffordability } from '../lib/skills.ts'
 import { PRESET_CLASSES } from '../data/classes.ts'
@@ -33,7 +33,7 @@ function statBonusText(bonus: StatBonus | undefined): string | null {
 }
 
 export type CategoryId =
-  | 'realm' | 'character' | 'crafting' | 'chapters' | 'npcs' | 'factions' | 'locations' | 'lore' | 'quests' | 'bestiary' | 'items' | 'skills'
+  | 'realm' | 'character' | 'crafting' | 'chapters' | 'npcs' | 'factions' | 'locations' | 'lore' | 'quests' | 'bestiary' | 'items' | 'skills' | 'corpses'
 
 interface CodexProps {
   world: WorldData
@@ -50,6 +50,7 @@ interface CodexProps {
   inventory: Record<string, number>
   items: Record<string, ItemEntry>
   crafting: CraftingJob[]
+  corpses: string[]
   onUpdateNpc: (id: string, patch: Partial<NpcEntry> | null) => void
   onUpdateFaction: (id: string, patch: Partial<FactionEntry> | null) => void
   onUpdateLocation: (id: string, patch: Partial<LocationEntry> | null) => void
@@ -710,6 +711,7 @@ export default function Codex({
   inventory,
   items,
   crafting,
+  corpses,
   onUpdateNpc,
   onUpdateFaction,
   onUpdateLocation,
@@ -1059,7 +1061,7 @@ export default function Codex({
       )
     }
 
-    if (category === 'character' || category === 'realm' || category === 'crafting' || category === 'chapters') {
+    if (category === 'character' || category === 'realm' || category === 'crafting' || category === 'chapters' || category === 'corpses') {
       return null
     }
 
@@ -1097,6 +1099,14 @@ export default function Codex({
 
   const chapters = log.filter((e) => e.chapterSummary)
 
+  // Grouped by tag with a count — the same adversary type is commonly slain
+  // more than once, and corpse_add's bare tag carries no identity of its own
+  // to key a Dict by. A plain object, not a Map — this file imports `Map`
+  // as the Locations category icon (lucide-react), shadowing the built-in.
+  const corpseCountsRecord: Record<string, number> = {}
+  for (const tag of corpses) corpseCountsRecord[tag] = (corpseCountsRecord[tag] ?? 0) + 1
+  const corpseCounts = Object.entries(corpseCountsRecord)
+
   // Ordered by how often a player actually opens each category during play —
   // quests/NPCs/items/locations/bestiary are live-reference lookups made mid-turn,
   // faction/lore are occasional check-ins, chapters/realm are read once and rarely revisited.
@@ -1107,6 +1117,7 @@ export default function Codex({
     { id: 'items', label: 'Items', description: 'Equipment, relics & carried goods', icon: Backpack, count: Object.keys(inventory).length },
     { id: 'locations', label: 'Locations', description: 'Regions, danger levels & standing', icon: Map, count: Object.keys(locations).length },
     { id: 'bestiary', label: 'Bestiary', description: 'Adversaries encountered in the field', icon: Skull, count: Object.keys(bestiary).length },
+    { id: 'corpses', label: 'Corpses', description: 'Harvestable essence — necromancy & Shadow Monarch', icon: Ghost, count: corpses.length },
     { id: 'factions', label: 'Faction', description: 'Political groups, guilds & reputation', icon: ShieldCheck, count: Object.keys(factions).length },
     { id: 'lore', label: 'Lore', description: 'Legends, myths & discovered secrets', icon: ScrollText, count: Object.keys(lore).length },
     { id: 'chapters', label: 'Chapters', description: 'Chronological recap of the tale so far', icon: BookOpen, count: chapters.length },
@@ -1506,6 +1517,37 @@ export default function Codex({
               })}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Corpses — read-only, array-backed like Crafting: corpse_add tags have
+          no CRUD identity of their own (a player doesn't author/edit a slain
+          enemy), just a bare identifier tag consumed LIFO by `!arise`. Grouped
+          by tag with a count, cross-referencing the Bestiary for a real name/
+          threat tier where the tag matches one already registered there. */}
+      {category === 'corpses' && (
+        <div className="flex flex-col gap-3">
+          <p className="font-narrative text-xs text-ink-muted">
+            Harvestable essence from the slain — extracted via <span className="font-mono">!arise</span> (Dark Monarch), most recently fallen first.
+          </p>
+          {corpseCounts.length === 0 ? (
+            <p className="font-narrative italic text-sm text-ink-muted">No harvestable corpses yet — defeat an enemy first.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {corpseCounts.map(([tag, qty]) => {
+                const beast = bestiary[slugify(tag)]
+                return (
+                  <div key={tag} className="rounded-xl p-3 flex flex-col gap-1 border border-[#e8ca8a]/25 bg-transparent backdrop-blur-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="font-display font-bold text-sm text-[#e8ca8a]">{beast?.name ?? titleCaseId(tag)}</h3>
+                      <span className="font-mono text-xs text-ink-muted">×{qty}</span>
+                    </div>
+                    {beast?.threatTier && <p className="font-narrative text-[11px] text-ink-muted">{beast.threatTier}</p>}
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
 

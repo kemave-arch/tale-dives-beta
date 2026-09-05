@@ -1,4 +1,4 @@
-import { slugify } from './slug.ts'
+import { slugify, titleCaseId } from './slug.ts'
 import { effectiveStanding, repTierLabel } from './factions.ts'
 import { checkAffordability } from './skills.ts'
 import type {
@@ -32,6 +32,7 @@ export const BANG_COMMANDS: { name: string; usage: string; description: string }
   { name: 'skills', usage: '!skills [name]', description: 'Spells & abilities you have learned' },
   { name: 'recall', usage: '!recall', description: 'Full Codex snapshot — also reminds the AI' },
   { name: 'minions', usage: '!minions', description: 'Your current summoned army' },
+  { name: 'corpses', usage: '!corpses', description: 'Harvestable slain-enemy essence (necromancer/Shadow Monarch)' },
   { name: 'arise', usage: '!arise', description: 'Dark Monarch — extract a shadow from a slain corpse' },
   { name: 'raise_skeleton', usage: '!raise_skeleton', description: 'Necromancer — reanimate skeletal infantry (1 Bone Dust)' },
   { name: 'summon', usage: '!summon', description: 'Contract Gate Summoner — call a planar familiar' },
@@ -226,6 +227,25 @@ export function resolveBangCommand(raw: string, campaign: Campaign): BangResult 
         fields: [m.branch, `${m.hpMax} HP`, ...(m.mpUpkeep ? [`${m.mpUpkeep} MP/turn upkeep`] : [])],
       }))
       return tableResult('Minions', rows, 'No minions summoned yet.')
+    }
+    // §5.3 — corpse_add tags accumulated on the Campaign, harvestable by
+    // `!arise` (Dark Monarch). Grouped by tag with a count since the same
+    // adversary type is commonly slain more than once; cross-references the
+    // Bestiary for a real name/threat tier where the tag matches one, since
+    // corpse_add itself carries only a bare identifier tag, nothing richer.
+    case 'corpses': {
+      const corpses = campaign.corpses ?? []
+      const counts = new Map<string, number>()
+      for (const tag of corpses) counts.set(tag, (counts.get(tag) ?? 0) + 1)
+      const rows = Array.from(counts.entries()).map(([tag, qty]) => {
+        const beast = campaign.bestiary?.[slugify(tag)]
+        return {
+          name: beast?.name ?? titleCaseId(tag),
+          id: tag,
+          fields: [`×${qty}`, ...(beast?.threatTier ? [beast.threatTier] : [])],
+        }
+      })
+      return tableResult('Corpses', rows, 'No harvestable corpses yet — defeat an enemy first.')
     }
     case 'recall': {
       const npcRows = capped(Object.entries(campaign.npcs ?? {}).map(([id, n]) => npcRow(id, n)))

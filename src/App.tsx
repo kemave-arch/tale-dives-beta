@@ -1362,6 +1362,7 @@ export default function App() {
         inventory={game.inventory}
         items={game.items ?? {}}
         crafting={game.crafting ?? []}
+        corpses={game.corpses ?? []}
         onUpdateNpc={(id: string, patch: Partial<NpcEntry> | null) => patchCodexDict('npcs', id, patch as Record<string, unknown> | null)}
         onUpdateFaction={(id: string, patch: Partial<FactionEntry> | null) => patchCodexDict('factions', id, patch as Record<string, unknown> | null)}
         onUpdateLocation={(id: string, patch: Partial<LocationEntry> | null) => patchCodexDict('locations', id, patch as Record<string, unknown> | null)}

@@ -1,5 +1,28 @@
 # Tale Dives — Project Revision Notes
 
+**Last updated:** 2026-09-05, Claude Code on the web — `corpses` (harvestable
+slain-enemy essence, consumed LIFO by `!arise` for necromancer/Shadow Monarch
+archetypes) existed in Campaign state via `corpse_add` but had zero visibility
+anywhere — no bang command, no Codex entry. Added both: (1) `!corpses` in
+`lib/bangCommands.ts`, following the exact `!minions` pattern — groups the flat
+`corpses: string[]` by tag with a count (the same adversary is commonly slain more
+than once) and cross-references the Bestiary for a real name/threat tier where the
+bare tag matches a registered adversary, falling back to a title-cased tag
+otherwise; (2) a new read-only "Corpses" Codex category (`Codex.tsx`), following the
+`crafting` category's template (array-backed, no CRUD — a slain enemy isn't
+something a player manually authors/edits) rather than inventing a new Dict-keyed
+data model just for this. Hit and fixed a real gotcha along the way: `new
+Map<string, number>()` failed to compile inside `Codex.tsx` specifically — this file
+imports `Map` from `lucide-react` as the Locations category icon, shadowing the
+built-in constructor file-wide, so the grouping there uses a plain object instead
+(bangCommands.ts, a plain .ts file with no such import, uses a real `Map` and is
+unaffected). Verified live in Chromium: `!corpses` renders "Orc Vanguard Captain ×2
+· standard" / "Uruk Hai Grunt ×1" (bestiary-matched vs. fallback-named), and the
+Codex category shows identical grouped content with the correct count on its
+category-grid card. Also gave the bang command a proper dossier icon/label
+(`Ghost`, "Harvestable Corpses") in Chronicle.tsx's `BANG_DISPLAY` map — without it,
+it fell back to a generic "Unclear Reference" label despite resolving correctly.
+
 **Last updated:** 2026-09-05, Claude Code on the web — a live user test of the
 `deltas` fix below surfaced a worse, active bug: testing with "+100 HP" produced
 `"stat_grant": {"pool": "hp"}` with **no `amount`** — the model picked `stat_grant`

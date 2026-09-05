@@ -281,19 +281,19 @@ export default function NewGame({
                           </div>
 
                           {details && (
-                            <p className="font-narrative italic text-xs text-[#e9d5ff]/85">
+                            <p className="font-sans italic text-[13px] text-[#e9d5ff]/85">
                               {details}
                             </p>
                           )}
 
                           {(t.personality || t.motivation || t.physicalTrait) && (
-                            <p className="font-narrative text-xs text-[#f3e8ff]/85 line-clamp-2 leading-relaxed">
+                            <p className="font-sans text-[13px] text-[#f3e8ff]/85 line-clamp-2 leading-relaxed">
                               {t.personality || t.motivation || t.physicalTrait}
                             </p>
                           )}
 
                           {t.background && (
-                            <p className="font-narrative text-xs text-[#d8b4fe]/75 line-clamp-1">
+                            <p className="font-sans text-[13px] text-[#d8b4fe]/75 line-clamp-1">
                               {t.background}
                             </p>
                           )}
@@ -382,7 +382,7 @@ export default function NewGame({
                       type="text"
                       value={customClassName}
                       onChange={(e) => handleCustomClassChange(e.target.value)}
-                      placeholder="e.g. Shadow Assassin, Arcane Scholar, Runesmith, Dragon Rider, Wandering Sellsword..."
+                      placeholder="e.g. Sellsword, Spellblade, Dragon Rider, Rogue, Arcane Scholar, Paladin..."
                       className={FIELD_CLASS}
                       list="preset-classes-list"
                     />
@@ -438,11 +438,11 @@ export default function NewGame({
                       'Background & Origin',
                       background,
                       'Origin, upbringing, lineage, and history the Narrator should know from Turn 1.',
-                      'e.g. Disgraced scion of a fallen noble house, former arena gladiator who bought freedom, exiled arcane scholar...',
+                      'e.g. Veteran frontline sellsword, elite dragon rider academy cadet, disgraced noble scion, or street-smart undercity rogue...',
                     )
                     if (result !== null) setBackground(result)
                   }}
-                  placeholder="e.g. Disgraced scion of a fallen noble house, former arena gladiator who bought freedom, exiled arcane scholar..."
+                  placeholder="e.g. Veteran frontline sellsword, elite dragon rider academy cadet, disgraced noble scion, or street-smart undercity rogue..."
                   rows={3}
                 />
               </GlassField>
@@ -456,7 +456,7 @@ export default function NewGame({
                 <input
                   value={personality}
                   onChange={(e) => setPersonality(e.target.value)}
-                  placeholder="e.g. Sharp and calculating, guarded with strangers, wry sense of humor under pressure"
+                  placeholder="e.g. Calculating and disciplined, guarded with strangers, wry sense of humor under pressure, fiercely loyal"
                   className={FIELD_CLASS}
                 />
               </GlassField>
@@ -470,7 +470,7 @@ export default function NewGame({
                 <input
                   value={motivation}
                   onChange={(e) => setMotivation(e.target.value)}
-                  placeholder="e.g. Uncover the truth behind family execution, reach the apex of sword mastery, protect a younger sibling"
+                  placeholder="e.g. Protect a younger sibling, reach the pinnacle of sword mastery, avenge fallen comrades, earn absolute freedom"
                   className={FIELD_CLASS}
                 />
               </GlassField>
@@ -485,7 +485,7 @@ export default function NewGame({
                   <input
                     value={physicalTrait}
                     onChange={(e) => setPhysicalTrait(e.target.value)}
-                    placeholder="e.g. Piercing heterochromia eyes, limp from an old duel wound, scarred hands, agile slight frame"
+                    placeholder="e.g. Piercing heterochromia eyes, duel scars across face and hands, agile lightweight frame"
                     className={FIELD_CLASS}
                   />
                 </GlassField>
@@ -499,7 +499,7 @@ export default function NewGame({
                   <input
                     value={secret}
                     onChange={(e) => setSecret(e.target.value)}
-                    placeholder="e.g. Possesses a stolen forbidden seal, secretly a royal bastard, carrier of an unmanifested ancient curse"
+                    placeholder="e.g. Harbors a stolen forbidden seal, secretly a lost royal heir, unmanifested dragon bloodline"
                     className={FIELD_CLASS}
                   />
                 </GlassField>

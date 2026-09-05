@@ -339,7 +339,7 @@ export default function WorldSetup({
                 <input
                   value={genreTone}
                   onChange={(e) => setGenreTone(e.target.value)}
-                  placeholder="e.g. Grimdark low fantasy, Xianxia cultivation, High-stakes romantasy, Cyberpunk noir"
+                  placeholder="e.g. Epic High Fantasy, Grimdark Low Fantasy, High-Stakes Romantasy, LitRPG, Cultivation"
                   className={FIELD_CLASS}
                 />
               </GlassField>
@@ -357,14 +357,14 @@ export default function WorldSetup({
                 <input
                   value={conflict}
                   onChange={(e) => setConflict(e.target.value)}
-                  placeholder="e.g. An ancient sealed god awakening, a succession civil war between noble houses, border rebellions"
+                  placeholder="e.g. Ancient sealed evil awakening, monster horde incursion, imperial war vs rebels, succession crisis"
                   className={FIELD_CLASS}
                 />
               </GlassField>
 
               <GlassField
                 label="Power System"
-                hint="Magic, cultivation, tech, or pure skill"
+                hint="Combat skills, magic, beast bonding, mana cores, game levels, or cultivation"
                 examples={POWER_SYSTEM_EXAMPLES}
                 onPickExample={(val) => setPowerSystem(val)}
               >
@@ -374,12 +374,12 @@ export default function WorldSetup({
                     const result = await editLongText(
                       'Power System',
                       powerSystem,
-                      'Magic, cultivation, tech, divine pacts, or pure skill — however power operates.',
-                      'e.g. Hard elemental alchemy with equivalent exchange, Qi meridian cultivation and core condensation, or cybernetic neural augmentations with neural-strain limits...',
+                      'Combat skills, elemental magic, beast/dragon bonding, mana cores, game levels, or cultivation.',
+                      'e.g. Grounded combat skill & martial stamina, elemental magic with mana pools, dragon/beast bonding with signet abilities, mana cores, or litRPG status system...',
                     )
                     if (result !== null) setPowerSystem(result)
                   }}
-                  placeholder="e.g. Hard elemental alchemy with equivalent exchange, Qi meridian cultivation, or cybernetic neural implants..."
+                  placeholder="e.g. Grounded combat skill & martial stamina, elemental magic with mana pools, dragon/beast bonding with signet abilities, mana cores, or litRPG status system..."
                   rows={3}
                 />
               </GlassField>
@@ -394,7 +394,7 @@ export default function WorldSetup({
                   <input
                     value={eraTechLevel}
                     onChange={(e) => setEraTechLevel(e.target.value)}
-                    placeholder="e.g. Medieval high fantasy, Early modern flintlock, Victorian gaslamp, Dystopian cyberpunk"
+                    placeholder="e.g. Medieval High Fantasy (swords & sorcery), Early Modern Flintlock, Victorian Gaslamp, Cyberpunk"
                     className={FIELD_CLASS}
                   />
                 </GlassField>
@@ -408,7 +408,7 @@ export default function WorldSetup({
                   <input
                     value={keyFactions}
                     onChange={(e) => setKeyFactions(e.target.value)}
-                    placeholder="e.g. The Iron Crown Imperium vs. Whispering Coven rebels, Rival martial sects, Megacorp syndicates"
+                    placeholder="e.g. Crown Imperium vs. Rebel Insurgents, Mages' Guild vs. Templar Inquisitors, Rival Rider Squadrons"
                     className={FIELD_CLASS}
                   />
                 </GlassField>

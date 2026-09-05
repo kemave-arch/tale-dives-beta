@@ -254,7 +254,7 @@ export default function MainMenu({
 
                             <div className="flex items-center gap-1 shrink-0">
                               {world.isMaster && (
-                                <span className="rounded bg-amber-400/20 text-amber-200 border border-amber-400/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0 font-semibold">
+                                <span className="rounded bg-amber-400/20 text-amber-200 border border-amber-400/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0">
                                   master
                                 </span>
                               )}
@@ -339,7 +339,7 @@ export default function MainMenu({
 
                               <div className="flex items-center gap-1 shrink-0">
                                 {p.isMaster && (
-                                  <span className="rounded bg-amber-400/20 text-amber-200 border border-amber-400/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0 font-semibold">
+                                  <span className="rounded bg-amber-400/20 text-amber-200 border border-amber-400/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0">
                                     master
                                   </span>
                                 )}

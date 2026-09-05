@@ -99,26 +99,9 @@ export function WorldDetailModal({
               <Globe size={20} />
             </span>
             <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="font-display text-base sm:text-xl font-bold tracking-wide text-[#fae5b5]">
-                  {world.name}
-                </h2>
-                {world.isMaster && (
-                  <span className="rounded bg-amber-400/20 text-amber-200 px-2 py-0.5 text-[10px] font-mono border border-amber-400/35 font-semibold">
-                    master
-                  </span>
-                )}
-                {isDefault && (
-                  <span className="rounded bg-[#f0ca65]/20 text-[#f5dfa0] px-2 py-0.5 text-[10px] font-mono border border-[#f0ca65]/30">
-                    default world
-                  </span>
-                )}
-                {world.mode === 'inspired' && (
-                  <span className="rounded bg-[#e8ca8a]/15 text-[#fae5b5] px-2 py-0.5 text-[10px] font-mono border border-[#e8ca8a]/25">
-                    inspired
-                  </span>
-                )}
-              </div>
+              <h2 className="font-display text-base sm:text-xl font-bold tracking-wide text-[#fae5b5]">
+                {world.name}
+              </h2>
               <p className="font-narrative italic text-[10px] text-[#d8c49e] mt-1 line-clamp-1">
                 {world.sourceTitle ? (
                   <>
@@ -250,7 +233,7 @@ export function WorldDetailModal({
                   </div>
                   {world.genreTone && (
                     <div>
-                      <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block">
+                      <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] block">
                         Genre &amp; Tone
                       </span>
                       <p className="font-sans text-xs text-[#fbf4e2] mt-0.5">{world.genreTone}</p>
@@ -258,7 +241,7 @@ export function WorldDetailModal({
                   )}
                   {world.eraTechLevel && (
                     <div>
-                      <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block">
+                      <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] block">
                         Era &amp; Tech Level
                       </span>
                       <p className="font-sans text-xs text-[#fbf4e2] mt-0.5">{world.eraTechLevel}</p>
@@ -266,7 +249,7 @@ export function WorldDetailModal({
                   )}
                   {world.sourceTitle && (
                     <div className="pt-2 border-t border-[#e8ca8a]/15">
-                      <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block flex items-center gap-1">
+                      <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] block flex items-center gap-1">
                         <BookMarked size={11} className="text-[#f0ca65]" />
                         Source Material
                       </span>
@@ -381,7 +364,7 @@ export function WorldDetailModal({
 
                 {world.genreTone && (
                   <div>
-                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block">
+                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] block">
                       Genre &amp; Tone
                     </span>
                     <p className="font-sans text-xs text-[#fbf4e2] mt-0.5 leading-relaxed">{world.genreTone}</p>
@@ -390,7 +373,7 @@ export function WorldDetailModal({
 
                 {world.eraTechLevel && (
                   <div>
-                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block">
+                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] block">
                       Era &amp; Tech Level
                     </span>
                     <p className="font-sans text-xs text-[#fbf4e2] mt-0.5 leading-relaxed">{world.eraTechLevel}</p>
@@ -399,7 +382,7 @@ export function WorldDetailModal({
 
                 {world.powerSystem && (
                   <div>
-                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block flex items-center gap-1">
+                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] block flex items-center gap-1">
                       <Zap size={11} className="text-[#f0ca65]" />
                       Power System
                     </span>
@@ -409,7 +392,7 @@ export function WorldDetailModal({
 
                 {world.keyFactions && (
                   <div>
-                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block flex items-center gap-1">
+                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] block flex items-center gap-1">
                       <Shield size={11} className="text-[#f0ca65]" />
                       Key Factions
                     </span>
@@ -623,26 +606,9 @@ export function ProtagonistDetailModal({
               <UserCircle size={22} />
             </span>
             <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="font-display text-base sm:text-xl font-bold tracking-wide text-[#fae5b5]">
-                  {protagonist.name}
-                </h2>
-                {protagonist.isMaster && (
-                  <span className="rounded bg-amber-400/20 text-amber-200 px-2 py-0.5 text-[10px] font-mono border border-amber-400/35 font-semibold">
-                    master
-                  </span>
-                )}
-                {isDefault && (
-                  <span className="rounded bg-[#f0ca65]/20 text-[#f5dfa0] px-2 py-0.5 text-[10px] font-mono border border-[#f0ca65]/30">
-                    default protagonist
-                  </span>
-                )}
-                {className && (
-                  <span className="rounded bg-[#e8ca8a]/15 text-[#fae5b5] px-2 py-0.5 text-[10px] font-mono border border-[#e8ca8a]/25">
-                    {className}
-                  </span>
-                )}
-              </div>
+              <h2 className="font-display text-base sm:text-xl font-bold tracking-wide text-[#fae5b5]">
+                {protagonist.name}
+              </h2>
               <p className="font-narrative italic text-[10px] text-[#d8c49e] mt-1 line-clamp-1">
                 {demographics || 'Adventurer'}
               </p>
@@ -712,13 +678,13 @@ export function ProtagonistDetailModal({
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div>
-                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block">
+                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] block">
                       Class
                     </span>
                     <p className="font-sans text-xs text-[#fbf4e2] mt-0.5">{className}</p>
                   </div>
                   <div>
-                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block">
+                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] block">
                       Age &amp; Gender
                     </span>
                     <p className="font-sans text-xs text-[#fbf4e2] mt-0.5">
@@ -730,7 +696,7 @@ export function ProtagonistDetailModal({
                 </div>
                 {protagonist.physicalTrait && (
                   <div className="pt-2 border-t border-[#e8ca8a]/15">
-                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block flex items-center gap-1">
+                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] block flex items-center gap-1">
                       <Eye size={11} className="text-[#f0ca65]" />
                       Physical Trait / Distinguishing Feature
                     </span>
@@ -810,7 +776,7 @@ export function ProtagonistDetailModal({
                 </div>
 
                 <div>
-                  <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block">
+                  <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] block">
                     Starting Class
                   </span>
                   <p className="font-sans text-xs text-[#fbf4e2] mt-0.5 leading-relaxed font-medium text-[#f5dfa0]">{className}</p>
@@ -818,13 +784,13 @@ export function ProtagonistDetailModal({
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block">
+                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] block">
                       Gender
                     </span>
                     <p className="font-sans text-xs text-[#fbf4e2] mt-0.5">{protagonist.gender || '—'}</p>
                   </div>
                   <div>
-                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block">
+                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] block">
                       Age
                     </span>
                     <p className="font-sans text-xs text-[#fbf4e2] mt-0.5">
@@ -835,7 +801,7 @@ export function ProtagonistDetailModal({
 
                 {protagonist.physicalTrait && (
                   <div>
-                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block flex items-center gap-1">
+                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] block flex items-center gap-1">
                       <Eye size={11} className="text-[#f0ca65]" />
                       Physical Trait
                     </span>
@@ -855,7 +821,7 @@ export function ProtagonistDetailModal({
 
                 {protagonist.personality && (
                   <div>
-                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block flex items-center gap-1">
+                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] block flex items-center gap-1">
                       <Heart size={11} className="text-[#f0ca65]" />
                       Personality
                     </span>
@@ -865,7 +831,7 @@ export function ProtagonistDetailModal({
 
                 {protagonist.motivation && (
                   <div>
-                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block flex items-center gap-1">
+                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] block flex items-center gap-1">
                       <Target size={11} className="text-[#f0ca65]" />
                       Core Motivation
                     </span>
@@ -875,7 +841,7 @@ export function ProtagonistDetailModal({
 
                 {protagonist.secret && (
                   <div className="p-2.5 rounded-lg bg-[#e8ca8a]/[0.05] border border-amber-400/30">
-                    <span className="font-display text-[10px] uppercase tracking-wider text-amber-300 font-semibold block flex items-center gap-1">
+                    <span className="font-display text-[10px] uppercase tracking-wider text-amber-300 block flex items-center gap-1">
                       <Key size={11} className="text-amber-400" />
                       Concealed Secret
                     </span>

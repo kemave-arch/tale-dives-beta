@@ -233,7 +233,7 @@ function TextField({
   placeholder?: string
 }) {
   const editLongText = useContext(LongTextEditorContext)
-  const cls = 'mt-1 w-full rounded-lg border border-[#e8ca8a]/25 bg-[#e8ca8a]/[0.04] backdrop-blur-sm px-3 py-2 font-narrative text-sm text-ink placeholder:text-[#e8ca8a]/35'
+  const cls = 'mt-1 w-full rounded-lg border border-[#e8ca8a]/25 bg-[#e8ca8a]/[0.04] backdrop-blur-sm px-3 py-2 font-sans text-sm text-ink placeholder:text-[#e8ca8a]/35'
   return (
     <label className="block">
       <span className="flex items-center gap-2">

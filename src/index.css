@@ -143,12 +143,32 @@
   color: var(--td-ink);
 }
 
+html,
 body {
   margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100dvh;
   background: var(--td-canvas);
   color: var(--td-ink);
   font-family: var(--font-narrative);
   overscroll-behavior: none;
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+#root {
+  min-height: 100dvh;
+  width: 100%;
+  overscroll-behavior: none;
+  overscroll-behavior-y: none;
+}
+
+input,
+textarea,
+select,
+button {
+  font-family: var(--font-sans);
 }
 
 /* Standard glass surface — Blueprint §6.1a, now border-only to match the

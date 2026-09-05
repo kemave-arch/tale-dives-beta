@@ -104,6 +104,11 @@ export default function App() {
       window.history.pushState({ screen: nextScreen, depth: nextDepth }, '')
     }
 
+    try {
+      window.scrollTo(0, 0)
+    } catch {
+      // ignore in environments without scrollTo
+    }
     setScreen(nextScreen)
   }
 
@@ -1538,16 +1543,17 @@ export default function App() {
     )
   }
 
-  // §6.0 Motion System — cross-fade + slight vertical slide between screens.
+  // §6.0 Motion System — pure cross-fade between screens to avoid vertical bounce on mobile.
   return (
     <>
       <AnimatePresence mode="wait">
         <motion.div
           key={screen}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -12 }}
-          transition={{ duration: 0.2 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          className="w-full min-h-dvh flex flex-col"
         >
           {content}
         </motion.div>

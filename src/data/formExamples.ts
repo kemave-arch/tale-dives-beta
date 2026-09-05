@@ -15,14 +15,14 @@ export const GENRE_TONE_EXAMPLES: FormExamplesConfig = {
   subtitle: 'Select an example to populate your setting tone, or use them as inspiration:',
   items: [
     {
+      name: 'Epic High Fantasy',
+      description: 'Ancient prophecies, sweeping realm-wide wars, mythical beasts, lost kingdoms, wondrous artifacts.',
+      value: 'Epic High Fantasy, grand realms & mythical wonders',
+    },
+    {
       name: 'Grimdark Low Fantasy',
       description: 'Bleak moral ambiguity, visceral combat consequences, mud and blood, unforgiving human conflict.',
       value: 'Grimdark low fantasy, morally grey stakes & visceral survival',
-    },
-    {
-      name: 'Cultivation & Xianxia',
-      description: 'Qi circulation, sect politics, heavenly tribulations, martial dao breakthroughs, immortal realms.',
-      value: 'Xianxia Cultivation, martial dao & realm ascension',
     },
     {
       name: 'Romance Fantasy / Romantasy',
@@ -30,9 +30,24 @@ export const GENRE_TONE_EXAMPLES: FormExamplesConfig = {
       value: 'Romance fantasy, high-stakes passion & slow-burn tension',
     },
     {
-      name: 'Epic High Fantasy',
-      description: 'Ancient prophecies, sweeping realm-wide wars, mythical beasts, lost kingdoms, wondrous artifacts.',
-      value: 'Epic High Fantasy, grand realms & mythical wonders',
+      name: 'LitRPG & Progression Fantasy',
+      description: 'System prompts, level-ups, skill trees, dungeon dives, quantifiable power progression.',
+      value: 'Progression Fantasy & LitRPG, dungeon crawling & clear power tiers',
+    },
+    {
+      name: 'Cultivation & Xianxia',
+      description: 'Qi circulation, sect politics, heavenly tribulations, martial dao breakthroughs, immortal realms.',
+      value: 'Xianxia Cultivation, martial dao & realm ascension',
+    },
+    {
+      name: 'Military & Tactical Warfare',
+      description: 'Frontline battalion clashes, siege logistics, martial formations, clashing banners and empires.',
+      value: 'Military Fantasy, tactical warfare & gritty battlefield logistics',
+    },
+    {
+      name: 'Courtly & Political Intrigue',
+      description: 'Noble houses, shifting loyalties, whispered conspiracies, high-stakes diplomacy, subtle poisoncraft.',
+      value: 'Courtly Intrigue, whispered conspiracies & power politics',
     },
     {
       name: 'Cyberpunk Noir & Future Tech',
@@ -54,16 +69,6 @@ export const GENRE_TONE_EXAMPLES: FormExamplesConfig = {
       description: 'Low-stress daily routine, tavern keeping, village warmth, gentle progress, culinary and craft joys.',
       value: 'Cozy Fantasy, warm hearthside & low-stress exploration',
     },
-    {
-      name: 'Military & Tactical Warfare',
-      description: 'Frontline battalion clashes, siege logistics, martial formations, clashing banners and empires.',
-      value: 'Military Fantasy, tactical warfare & gritty battlefield logistics',
-    },
-    {
-      name: 'Courtly & Political Intrigue',
-      description: 'Noble houses, shifting loyalties, whispered conspiracies, high-stakes diplomacy, subtle poisoncraft.',
-      value: 'Courtly Intrigue, whispered conspiracies & power politics',
-    },
   ],
 }
 
@@ -77,6 +82,11 @@ export const CONFLICT_EXAMPLES: FormExamplesConfig = {
       value: 'An ancient slumbering god begins to awaken beneath the world crust, triggering seismic cataclysms and cultist rebellions.',
     },
     {
+      name: 'Monster Incursion & Dark Blight',
+      description: 'A spreading dark blight mutates wildlife, breeds savage monsters, and breaches frontier border defenses.',
+      value: 'A creeping abyssal taint breaches ancient border fortifications, mutating beasts and unleashing relentless monster hordes.',
+    },
+    {
       name: 'Empire vs. Rebel Insurgency',
       description: 'An iron-fisted imperium ruthlessly suppresses underground freedom fighters and outlawed magic users.',
       value: 'An oppressive solar empire hunts down the last underground resistance while draining regional ley-lines.',
@@ -87,14 +97,9 @@ export const CONFLICT_EXAMPLES: FormExamplesConfig = {
       value: 'A fractured succession crisis pitting three royal siblings and their mercenary legions against one another.',
     },
     {
-      name: 'Resource Depletion & Fading Magic',
+      name: 'Resource Depletion & Fading Mana',
       description: 'The world’s primary mana source or life-giving crystal is dimming, sparking desperate border invasions.',
       value: 'The central World-Tree is withering, forcing neighboring kingdoms into desperate resource wars over the remaining fertile valleys.',
-    },
-    {
-      name: 'Corrupting Plague / Taint Incursion',
-      description: 'A spreading dark blight mutates wildlife, corrupts magic users, and breaches the frontier borders.',
-      value: 'A creeping abyssal taint breaches ancient border fortifications, mutating beasts and corrupting the minds of spellcasters.',
     },
     {
       name: 'Rival Martial Sects Blood Feud',
@@ -109,39 +114,49 @@ export const POWER_SYSTEM_EXAMPLES: FormExamplesConfig = {
   subtitle: 'Select an example to populate how powers operate in this realm:',
   items: [
     {
-      name: 'Hard Elemental Alchemy',
-      description: 'Strict elemental laws, measurable fuel or stamina costs, rigid affinities, severe backlash on overdraw.',
+      name: 'Combat Skill & Martial Mastery',
+      description: 'Zero supernatural cheat codes — peak physical conditioning, stance mastery, ruthless tactical discipline, weapon arts.',
+      value: 'Grounded mortal combat where weapon mastery, tactical footing, stamina, and battle discipline dictate survival.',
+    },
+    {
+      name: 'Elemental Magic & Spellcraft',
+      description: 'Strict elemental laws, incantations, measurable mana pools, casting circles, and severe exhaustion backlash.',
       value: 'Hard magic system with strict elemental laws, measurable mana cost, and severe physical backlash on exhaustion.',
     },
     {
-      name: 'Cultivation & Qi Cores',
+      name: 'Beast & Dragon Bonding',
+      description: 'Telepathic resonance with mythic creatures granting shared senses, flight, and unique channeled signet abilities.',
+      value: 'Beast bonding: telepathic links with bonded creatures granting unique manifest abilities, signet magic, and channeled power.',
+    },
+    {
+      name: 'Mana Cores & Spell Circles',
+      description: 'Internal mana heart condensation, rotating elemental spell rings, and structured tier ascension.',
+      value: 'Mana core cultivation: refining heart mana cores and forming tiered spell circles to unlock greater arcana.',
+    },
+    {
+      name: 'LitRPG & Game Level-Up System',
+      description: 'Quantified status screens, level progression, XP from monster kills, unlocked skill trees, and quest rewards.',
+      value: 'LitRPG system: status attributes, class level-ups, skill points, and quantifiable dungeon reward drops.',
+    },
+    {
+      name: 'Qi Cultivation & Xianxia Dantian',
       description: 'Dantian energy centers, Qi meridians, spiritual roots, martial breakthroughs, and realm ascension.',
       value: 'Cultivation system with dantian core condensation, spiritual root affinities, and perilous realm breakthroughs.',
     },
     {
-      name: 'Cyberware & Nanotech Augments',
-      description: 'Nanotech blood infusions, cybernetic neural links, overclocked reflexes with neural burnout risk.',
-      value: 'Cybernetic augmentation: sub-dermal neural processors, nanite healing suites, and overclocked kinetic servos.',
-    },
-    {
-      name: 'Divine Pacts & Patronage',
-      description: 'Power channeled directly from celestial or abyssal patrons, subject to strict sacred vows and tithes.',
+      name: 'Divine Pacts & Sacred Patronage',
+      description: 'Power channeled directly from celestial or abyssal patrons, subject to strict sacred vows, tithes, and domains.',
       value: 'Divine pacts: powers granted by capricious gods and entity covenants, requiring constant devotion and sacrifice.',
-    },
-    {
-      name: 'Mythic Beast & Dragon Bonding',
-      description: 'Telepathic resonance with mythical creatures granting shared senses and unique channeled abilities.',
-      value: 'Beast bonding: telepathic links with bonded creatures granting unique manifest abilities and elemental channeling.',
-    },
-    {
-      name: 'Pure Skill & Mortal Steel',
-      description: 'Zero supernatural phenomena — peak physical conditioning, ruthless tactical discipline, master weaponsmanship.',
-      value: 'No supernatural powers — grounded mortal combat where tactical terrain, stamina, and weapon mastery dictate survival.',
     },
     {
       name: 'Rune Inscription & Artifact Crafting',
       description: 'Carving geometric glyphs into flesh, stone, or steel to channel dormant environmental ley-lines.',
       value: 'Rune inscription: geometric glyphs etched onto gear and skin to harness latent ambient leylines.',
+    },
+    {
+      name: 'Cyberware & Nanotech Augments',
+      description: 'Nanotech blood infusions, cybernetic neural links, overclocked reflexes with neural burnout risk.',
+      value: 'Cybernetic augmentation: sub-dermal neural processors, nanite healing suites, and overclocked kinetic servos.',
     },
   ],
 }
@@ -264,19 +279,24 @@ export const PROTAGONIST_BACKGROUND_EXAMPLES: FormExamplesConfig = {
   subtitle: 'Select an origin story and past history:',
   items: [
     {
+      name: 'Battlefield Veteran / Sellsword',
+      description: 'Hardened by years of frontline combat; carries lethal weapon discipline, tactical instincts, and quiet scars.',
+      value: 'Decorated former frontline sellsword who walked away from an unjust war, carrying lethal weapon discipline and scars.',
+    },
+    {
+      name: 'Academy Cadet / Dragon Rider Initiate',
+      description: 'Recruited or conscripted into an elite military academy or dragon rider quadrant where only the strong survive.',
+      value: 'Striving cadet at an elite military war college, fighting to survive cutthroat trials and forge a bonded companion link.',
+    },
+    {
       name: 'Disgraced Noble Scion',
       description: 'Stripped of ancestral title and lands following a political setup; now surviving on the margins.',
       value: 'Disgraced scion of a fallen aristocratic dynasty, stripped of family inheritance and forced to rebuild from exile.',
     },
     {
-      name: 'Street-Smart Undercity Thief',
-      description: 'Raised in back alleys and pickpocket rings, relying on agile wits and keen reflexes to survive.',
+      name: 'Street-Smart Undercity Rogue',
+      description: 'Raised in back alleys and thieves’ dens, relying on agile wits, lockpicks, and keen reflexes to survive.',
       value: 'Orphaned street survivor raised in the cutthroat undercity, possessing an intimate knowledge of locks, poisons, and shadows.',
-    },
-    {
-      name: 'Battlefield Veteran / Ex-Soldier',
-      description: 'Hardened by years of frontline campaigns; carries combat experience and quiet trauma.',
-      value: 'Decorated former squad sergeant who walked away from an unjust war, carrying lethal weapon discipline and scars.',
     },
     {
       name: 'Reclusive Arcane Scholar',
@@ -284,8 +304,8 @@ export const PROTAGONIST_BACKGROUND_EXAMPLES: FormExamplesConfig = {
       value: 'Former archive curator exiled for translating forbidden occult texts, seeking ancient relics to prove their theories.',
     },
     {
-      name: 'Escaped Gladiator / Thrall',
-      description: 'Fought for survival in blood arenas before breaking their chains, skilled in brutal weapon arts.',
+      name: 'Escaped Gladiator / Arena Fighter',
+      description: 'Fought for survival in blood arenas before breaking their chains, skilled in brutal close-quarters combat.',
       value: 'Former pit fighter who won their freedom in the arena sands, possessing formidable pain tolerance and instinct.',
     },
   ],

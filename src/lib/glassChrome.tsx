@@ -281,7 +281,7 @@ export function GlassHeader({ title, subtitle, onBack, right, className = '' }: 
       {onBack && <GlassIconButton icon={ArrowLeft} label="Back" onClick={onBack} />}
       <div className="flex-1 min-w-0">
         {title && <h2 className="font-display font-bold text-lg text-[#e8ca8a] truncate">{title}</h2>}
-        {subtitle && <p className="font-narrative italic text-xs text-[#e8ca8a]/95 truncate">{subtitle}</p>}
+        {subtitle && <p className="font-narrative italic text-[15px] text-[#e8ca8a]/95 truncate">{subtitle}</p>}
       </div>
       {right && <div className="flex items-center gap-1 shrink-0">{right}</div>}
     </header>
@@ -371,7 +371,7 @@ export function GlassTabs<T extends string>({
                 className={`shrink-0 ${responsiveScale ? 'sm:w-[17px] sm:h-[17px]' : ''} ${isSelected ? activeIconClass : 'text-[#e8ca8a]/80'}`}
               />
             )}
-            <span className={vertical ? '' : 'truncate'}>{label}</span>
+            <span className={`${vertical ? '' : 'truncate'} font-display`}>{label}</span>
           </button>
         )
       })}
@@ -514,25 +514,31 @@ export function GlassField({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
         <span className="flex flex-wrap items-baseline gap-x-2">
           <span className={LABEL_CLASS}>{label}</span>
           {hint && <span className="font-narrative italic text-xs text-[#d8c49e]">{hint}</span>}
         </span>
-        {examples && (
-          <button
-            type="button"
-            onClick={() => setShowExamples(true)}
-            className="inline-flex items-center justify-center rounded-full border border-[#e8ca8a]/35 bg-[#181324]/80 p-1 text-[#fae5b5] hover:border-[#f0ca65] hover:bg-[#f0ca65]/20 hover:text-white transition-colors duration-150 active:scale-95 shrink-0"
-            title={`View ${examples.title}`}
-            aria-label={`View ${examples.title}`}
-          >
-            <Bookmark size={12} className="text-[#f0ca65]" />
-          </button>
-        )}
-        {action}
       </div>
-      {children}
+      <div className="relative">
+        {children}
+        {(examples || action) && (
+          <div className="absolute right-2 top-2 flex items-center gap-1">
+            {examples && (
+              <button
+                type="button"
+                onClick={() => setShowExamples(true)}
+                className="inline-flex items-center justify-center rounded-full border border-[#e8ca8a]/35 bg-[#181324]/80 p-1 text-[#fae5b5] hover:border-[#f0ca65] hover:bg-[#f0ca65]/20 hover:text-white transition-colors duration-150 active:scale-95 shrink-0"
+                title={`View ${examples.title}`}
+                aria-label={`View ${examples.title}`}
+              >
+                <Bookmark size={12} className="text-[#f0ca65]" />
+              </button>
+            )}
+            {action}
+          </div>
+        )}
+      </div>
 
       {showExamples && examples && (
         <ExamplesHelpModal

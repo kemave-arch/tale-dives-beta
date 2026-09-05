@@ -1,5 +1,30 @@
 # Tale Dives — Project Revision Notes
 
+**Last updated:** 2026-09-05, Claude Code on the web — a real, upsetting live payload:
+an NPC's established weapon (`>Rust-Pitted Spear<`, turns 0-1) silently became a
+different one (`>Iron-Tipped Halberd<`, turn 4) with zero in-story explanation — a
+genuine narrative continuity drift, not user error. Worse, when the player asked
+about it (turn 5), the model in-fiction blamed the player character's own senses
+("The cold plays tricks on the eyes of the uninitiated... you see what you expect to
+see") rather than owning the inconsistency — using its narrative authority to
+deflect its own mistake onto the player. Root cause for the drift itself: unlike the
+player's own gear (restated every turn via `describeEquipped` in `jitContext.ts`),
+nothing tracks what an NPC is currently holding — the model has only the raw
+conversation history to "remember" it from, with no anchor, so a long IMMERSIVE-depth
+turn re-describing a scene from memory can drift. Added two `SYSTEM_INSTRUCTIONS`
+rules (both pure prompt text, no schema change): 2a "Established Detail Consistency"
+— once an NPC's held weapon/gear/physical detail is established, never silently
+swap or reinvent it without an in-story reason; 3b "Continuity Callouts" — when the
+player flags an apparent inconsistency, treat it as correct and reconcile the story
+around it, never retcon it as the player character's senses being unreliable unless
+perception distortion is already an established element of the scene. Flagged to the
+user, not yet built: a real structural fix — giving NPCs an actual tracked
+"currently holding" field, restated every turn the way the player's own equipment
+already is — would prevent this class of bug rather than just discourage it via
+prompt instruction; that's a real schema change (new `NpcEntry` field, a channel for
+the model to set it, a context-slice line) left for a future session pending the
+user's go-ahead.
+
 **Last updated:** 2026-09-05, Claude Code on the web — enforced the "basic" subset
 (double quotes, single quotes, italics, capitals) of the rich-text dialogue table
 proposed and then deliberately trimmed down earlier this session. Turned up a real,

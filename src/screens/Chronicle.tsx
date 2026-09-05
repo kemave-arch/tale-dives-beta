@@ -302,6 +302,8 @@ interface TurnBlockProps {
   editLongText?: (label: string, value: string, hint?: string, placeholder?: string) => Promise<string | null>
   confirmAction?: (message: string) => Promise<boolean>
   setInput?: (val: string) => void
+  items?: Record<string, ItemEntry>
+  locations?: Record<string, LocationEntry>
 }
 
 // Debugging tool — every real narrated turn's request/response/finishReason
@@ -507,6 +509,8 @@ const TurnBlock = memo(function TurnBlock({
   editLongText,
   confirmAction,
   setInput,
+  items,
+  locations,
 }: TurnBlockProps) {
   const setRef = useCallback((el: HTMLDivElement | null) => registerRef(globalIndex, el), [globalIndex, registerRef])
 
@@ -619,7 +623,7 @@ const TurnBlock = memo(function TurnBlock({
             font-mono "> " console-prompt prefix, which read like a terminal
             echo rather than part of the story); gold-primary is what still
             marks it as a different voice from the narration beneath it. */}
-        {entry.action && <p className="font-narrative italic text-sm text-gold-primary text-left">{entry.action}</p>}
+        {entry.action && <p className="font-narrative italic text-sm text-gold-primary text-left whitespace-pre-wrap">{entry.action}</p>}
         {StateIcon && stateMeta && (
           <span className="inline-flex items-center gap-1 text-[10px] font-display" style={{ color: stateMeta.accent }}>
             <StateIcon size={11} /> {stateMeta.label}
@@ -632,7 +636,7 @@ const TurnBlock = memo(function TurnBlock({
         </p>
       )}
       <div className="font-narrative text-sm leading-relaxed whitespace-pre-wrap text-left">
-        {renderNarrative(entry.nar, onTapTerm)}
+        {renderNarrative(entry.nar, onTapTerm, items, locations)}
       </div>
       {entry.levelUp && (
         <p className="inline-flex items-center gap-1.5 rounded-full bg-gold-accent/15 border border-gold-accent/40 px-3 py-1 font-display text-xs text-gold-primary">
@@ -1304,6 +1308,8 @@ export default function Chronicle({
                 editLongText={editLongText}
                 confirmAction={confirmAction}
                 setInput={setInput}
+                items={items}
+                locations={locations}
               />
             ))}
             {busy && <p className="font-narrative italic text-sm opacity-50 text-left">The thread of fate is being woven...</p>}

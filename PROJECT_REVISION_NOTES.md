@@ -1,5 +1,32 @@
 # Tale Dives — Project Revision Notes
 
+**Last updated:** 2026-09-05, Claude Code on the web — three small changes plus one
+real bug fix, all in response to a live payload report (a player narrated healing/mana
+restoration outside combat, but `deltas` was silently omitted). (1) Strengthened
+`turnContract.ts`'s `deltas` field description to explicitly cover non-combat stat
+changes (resting, healing, potions, poison, currency) — previously the description
+only ever talked about combat, so the model had no instruction connecting narrated
+non-combat vitals changes to a mechanical obligation to emit them. (2) Added lean,
+purely client-side icon decoration for item/location mentions in narration
+(`richText.tsx`): `ITEM_TYPE_ICONS` keyed off the already-tracked `ItemEntry.type`,
+and a keyword-match `locationIcon()` off the already-freeform `LocationEntry.locationType`
+— zero schema/prompt changes, zero added output tokens, matched by name against the
+Codex dicts (now threaded into `renderNarrative`/`renderTags`) with silent fallback
+to no icon if nothing matches. Considered (and rejected, per the user's own
+instinct) a much larger emoji-based rich-text overhaul — token-costly, ambiguous for
+a Romantasy-leaning game where symbols like ❤️ already carry narrative weight, and
+duplicative of the existing `{{Term|category}}`/bracket tagging system. (3) Fixed
+the player's own typed action text losing line breaks — `entry.action` rendered
+without `whitespace-pre-wrap`, so a multi-line action (Shift+Enter in the input)
+collapsed into one run-on line; now matches the narration's own treatment. Also
+noted but not yet fixed: world-seeding's auto-registered starting Location Codex
+entry gets a hardcoded placeholder description (`lib/locations.ts`'s `ensureLocation`),
+never anything LLM-authored — the same underlying gap already fixed for Quests
+in the entry below, confirmed to also affect NPCs and Skills' auto-register paths.
+This is the concrete case for a proposed (not yet built) pre-dive Codex-seeding
+pass — discussed at length but intentionally not scoped into a plan yet, pending
+further to-do items the user wants to add first.
+
 **Last updated:** 2026-09-05 — Typewriter Narration Removal:
 - **Removed Typewriter Narration**: Removed `TypewriterText` component and character-by-character animation logic from `Chronicle.tsx`. Narration now renders immediately upon turn generation.
 - **Verification**: Verified via `lint_applet` (clean `tsc --noEmit`) and `compile_applet` (clean build).

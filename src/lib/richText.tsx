@@ -1,5 +1,39 @@
 import type { ReactNode } from 'react'
-import type { KeywordLink } from '../types.ts'
+import type { Dict, ItemEntry, ItemType, KeywordLink, LocationEntry } from '../types.ts'
+
+// Lean, purely client-side icon decoration — zero schema/prompt changes, zero
+// added output tokens. Keyed off data the game already tracks (ItemEntry.type,
+// LocationEntry.locationType), never something the model has to type out
+// itself, so it can never drift into narrative ambiguity (see
+// PROJECT_REVISION_NOTES.md) and never fails worse than "no icon shown."
+const ITEM_TYPE_ICONS: Record<ItemType, string> = {
+  weapon: '🗡️',
+  armor: '🛡️',
+  accessory: '💍',
+  consumable: '🧪',
+  key: '🗝️',
+  tool: '🔧',
+  material: '📦',
+}
+
+// `locationType` is a freeform string (WorldSetup/Codex CRUD), not an enum —
+// a best-effort keyword match, always falling back to a generic pin rather
+// than requiring an exact category name.
+function locationIcon(locationType: string | undefined): string {
+  const t = (locationType ?? '').toLowerCase()
+  if (t.includes('city')) return '🏙️'
+  if (t.includes('empire') || t.includes('capital')) return '🏰'
+  if (t.includes('town') || t.includes('village')) return '🏘️'
+  if (t.includes('mountain')) return '⛰️'
+  if (t.includes('wild') || t.includes('forest') || t.includes('wood')) return '🏞️'
+  return '📍'
+}
+
+function buildNameLookup<T extends { name: string }>(dict: Dict<T> | undefined): Map<string, T> {
+  const map = new Map<string, T>()
+  for (const entry of Object.values(dict ?? {})) map.set(entry.name.toLowerCase(), entry)
+  return map
+}
 
 // Blueprint §4.2 Mandatory Rich Text Markup — renders the four narrative
 // markers as styled inline spans instead of leaking raw [brackets]/>angle
@@ -87,7 +121,12 @@ export function ensureParagraphBreaks(text: string): string {
 
 export type TapTermHandler = (term: string, category: KeywordLink['category']) => void
 
-function renderTags(text: string, keyPrefix: string, onTapTerm?: TapTermHandler): ReactNode[] {
+function renderTags(
+  text: string,
+  keyPrefix: string,
+  onTapTerm?: TapTermHandler,
+  locationsByName?: Map<string, LocationEntry>,
+): ReactNode[] {
   const nodes: ReactNode[] = []
   let lastIndex = 0
   let key = 0
@@ -98,13 +137,14 @@ function renderTags(text: string, keyPrefix: string, onTapTerm?: TapTermHandler)
     if (match.index > lastIndex) nodes.push(text.slice(lastIndex, match.index))
     const term = match[1]
     const category = match[2] as KeywordLink['category']
+    const icon = category === 'loc' ? locationIcon(locationsByName?.get(term.toLowerCase())?.locationType) : null
     nodes.push(
       <span
         key={`${keyPrefix}-tag${key++}`}
         onClick={onTapTerm ? () => onTapTerm(term, category) : undefined}
         className={`underline decoration-dotted decoration-gold-accent/50 underline-offset-2 ${onTapTerm ? 'cursor-pointer hover:text-gold-primary' : ''}`}
       >
-        {term}
+        {icon ? `${icon} ` : ''}{term}
       </span>,
     )
     lastIndex = match.index + match[0].length
@@ -113,9 +153,16 @@ function renderTags(text: string, keyPrefix: string, onTapTerm?: TapTermHandler)
   return nodes
 }
 
-export function renderNarrative(rawText: string | undefined, onTapTerm?: TapTermHandler): ReactNode[] | null {
+export function renderNarrative(
+  rawText: string | undefined,
+  onTapTerm?: TapTermHandler,
+  items?: Dict<ItemEntry>,
+  locations?: Dict<LocationEntry>,
+): ReactNode[] | null {
   if (!rawText) return null
   const text = ensureParagraphBreaks(rawText)
+  const itemsByName = buildNameLookup(items)
+  const locationsByName = buildNameLookup(locations)
   const nodes: ReactNode[] = []
   let lastIndex = 0
   let key = 0
@@ -124,7 +171,7 @@ export function renderNarrative(rawText: string | undefined, onTapTerm?: TapTerm
   OUTER_RE.lastIndex = 0
   while ((match = OUTER_RE.exec(text))) {
     if (match.index > lastIndex) {
-      nodes.push(...renderTags(text.slice(lastIndex, match.index), `p${key}`, onTapTerm))
+      nodes.push(...renderTags(text.slice(lastIndex, match.index), `p${key}`, onTapTerm, locationsByName))
     }
 
     const [full, skill, item, thought] = match
@@ -134,22 +181,27 @@ export function renderNarrative(rawText: string | undefined, onTapTerm?: TapTerm
       // parchment rather than part of the printed page.
       nodes.push(
         <strong key={`s${key}`} className="font-semibold text-skill">
-          {renderTags(skill, `s${key}`, onTapTerm)}
+          {renderTags(skill, `s${key}`, onTapTerm, locationsByName)}
         </strong>,
       )
     } else if (item !== undefined) {
       // Italic + the gold ink color, the same "named proper noun" treatment
       // fantasy prose gives artifacts and titles — distinct from the
-      // thought/dialogue italic below by color, not by another badge.
+      // thought/dialogue italic below by color, not by another badge. Icon
+      // prefix is best-effort (matched by name against the Codex item dict)
+      // and silently omitted if nothing matches — decoration only, never load-bearing.
+      const matchedItemType = itemsByName.get(item.trim().toLowerCase())?.type
+      const itemIcon = matchedItemType ? ITEM_TYPE_ICONS[matchedItemType] : undefined
       nodes.push(
         <em key={`i${key}`} className="font-semibold italic text-gold-primary">
-          {renderTags(item, `i${key}`, onTapTerm)}
+          {itemIcon ? `${itemIcon} ` : ''}
+          {renderTags(item, `i${key}`, onTapTerm, locationsByName)}
         </em>,
       )
     } else if (thought !== undefined) {
       nodes.push(
         <em key={`th${key}`} className="text-ink-muted">
-          '{renderTags(thought, `th${key}`, onTapTerm)}'
+          '{renderTags(thought, `th${key}`, onTapTerm, locationsByName)}'
         </em>,
       )
     }
@@ -158,6 +210,6 @@ export function renderNarrative(rawText: string | undefined, onTapTerm?: TapTerm
     key++
   }
 
-  if (lastIndex < text.length) nodes.push(...renderTags(text.slice(lastIndex), `p${key}`, onTapTerm))
+  if (lastIndex < text.length) nodes.push(...renderTags(text.slice(lastIndex), `p${key}`, onTapTerm, locationsByName))
   return nodes
 }

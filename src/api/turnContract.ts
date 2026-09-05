@@ -1,9 +1,10 @@
 import { PRESET_CLASSES } from '../data/classes.ts'
 import type { ProseDepthConfig } from '../types.ts'
 
-// Gemini call contract — Blueprint §7.2 (System Instructions) and §7.3 (JSON Schema).
-// Kept byte-identical to the spec text; this is the single biggest lever for
-// prompt caching (§3.4) since only the JIT context slice changes turn to turn.
+// Gemini call contract — Blueprint §7.2 (System Instructions) and §7.3 (XML
+// Output Grammar). Kept byte-identical to the spec text; this is the single
+// biggest lever for prompt caching (§3.4) since only the JIT context slice
+// changes turn to turn.
 
 export const SYSTEM_INSTRUCTIONS = `You are the Dungeon Master engine for Tale Dives, an atmospheric fantasy RPG (mature violence and romance themes) set in a reactive, high-stakes world.
 
@@ -51,7 +52,7 @@ MECHANICS & GROUNDING DEFENSE:
 7. Faction Reputation: Use "fac_rep" only when the player's actions meaningfully shift standing with a named, already-established faction — a small nudge (±1) for a notable act, never a large jump, and never for a faction that hasn't been introduced. Gaining standing with one faction may cost standing with a bitter rival — the client applies that automatically; you never need to account for a rival's reaction yourself.
 8. Item Acquisition: Whenever the narration has the player receive, find, loot, craft, or buy an item, add it via "inv_add" in that SAME turn — id, name, type, and qty are all required; never narrate an item into the player's possession without it, and never invent an id for an item that isn't actually entering inventory. Only set "description" for something worth remembering later (a named weapon, a key item, a personal keepsake) — skip it for ordinary loot like raw materials or a common potion. Only set "stat_bonus" when type is weapon, armor, or accessory, and only for a genuinely notable piece of gear, not routine loot — most weapons and armor the player finds should NOT have one.
 8a. Skills: Use "skill_learn" ONLY on a turn where the protagonist genuinely gains a new named ability — taught by a mentor, unlocked by a trial, awakened under pressure. Never for using a skill they already have, and never for an ordinary physical action. Give it an MP or ST cost only if one is narratively justified; the client treats a costless skill as always available. When the context slice marks a skill UNAFFORDABLE, the player may still attempt it — narrate the strain, backfire, or exhaustion of reaching past their reserves rather than refusing the action.
-9. JSON Strictness: Output ONLY valid, parsable JSON matching the defined response schema. Do NOT wrap output in markdown code blocks.`
+9. Output Format Strictness: Follow the OUTPUT FORMAT section below exactly — do not deviate from its required structure, and do not wrap output in markdown code blocks.`
 
 export const TURN_SCHEMA = {
   type: 'OBJECT',

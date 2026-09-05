@@ -1,4 +1,4 @@
-# Tale Dives — Master Game Blueprint & System Architecture Specification (v2.4)
+# Tale Dives — Master Game Blueprint & System Architecture Specification (v3.0)
 
 **Project Title:** Tale Dives
 
@@ -9,9 +9,6 @@
 **Architecture:** Single Page Application (SPA) — Vite + React | Local-First Engine + Provider-Agnostic LLM API (Player-Configured Model/Provider)
 
 **Target Atmosphere:** Authorial High-Sensory Fantasy RPG (mature violence & romance themes) / Interactive Web Novel
-
-**v2.4 Changelog (this revision):**
-* **New §1.1 Technical Stack & Build Setup** — the build tooling was implied throughout (React, Tailwind, Framer Motion, Lucide all named in §6) but never pinned down as an explicit stack. Now stated plainly: Vite + React, client-only SPA, no backend. Includes the core dependency list with blueprint tie-ins, a suggested folder structure mapped to this document's own section terminology, npm scripts, and a deployment note (any static host, since there's nothing but static files to ship).
 
 ---
 
@@ -196,15 +193,17 @@ Gemini handles creativity; React handles ground truth.
 * **Turn State Consistency**: When the client has precomputed a Combat Result (§2 Phase D.2, Tactical Mode only) and sent it in the context slice, `turn_state` is forced to `COMBAT` regardless of what Gemini emits — the client already knows this is a combat turn before the prompt goes out, so it isn't left to the model to independently (and possibly incorrectly) label. In Narrative Mode, `turn_state: COMBAT` is Gemini's judgment call like any other state, since there's no client precondition to check it against.
 * **Reputation-Gated Social Outcomes**: For SOCIAL-tier turns (no numeric resolution), NPC willingness is bounded by their Trust tier (§5.4/§5.5) rather than by a check — e.g. a Tier -1 "Suspicious" NPC should refuse requests a Tier +2 "Allied" NPC would grant. This is enforced via system instruction, not client math, since social outcomes remain narrative.
 
-### 3.3 Three-Stage Self-Healing JSON Pipeline
+### 3.3 Three-Stage Self-Healing Turn-Response Pipeline
 
 ```
-[Raw Gemini Response] --> [Stage 1: Regex Sanitizer] --> [Stage 2: Schema Parser] --> [Stage 3: Parchment Fallback]
+[Raw Model Response] --> [Stage 1: Fence Sanitizer] --> [Stage 2: XML Parser] --> [Stage 3: Parchment Fallback]
 ```
 
-1. **Stage 1 (Regex Sanitizer)**: Strips Markdown code fences, fixes trailing commas, unescapes rogue quotes inside narrative text.
-2. **Stage 2 (Schema Parser)**: Executes `JSON.parse()`. On success, commits state deltas (after Shadow Referee validation).
-3. **Stage 3 (Fallback Reader)**: If parsing fails, extracts pure prose between quotes and renders it directly in the parchment viewer, displaying a discreet `[Repairing State]` indicator while keeping gameplay smooth.
+The turn response format is a **hybrid**: `<nar>` stays plain prose carrying the existing markup rules unchanged (§4.2), while a second top-level `<sync>` element carries every mechanical field as self-closing XML tags/attributes (§7.3) — not JSON. This shipped after a live token benchmark against the real Gemini tokenizer showed the equivalent XML output running ~25% smaller than the old JSON-schema response for the same turn content, with no change to any field the client actually consumes.
+
+1. **Stage 1 (Fence Sanitizer)**: Strips a stray ```` ```xml ```` code fence if the model wraps output in one anyway, despite the system instructions saying not to.
+2. **Stage 2 (XML Parser)**: `<nar>` is extracted with a targeted regex (not the full XML parser) specifically so a response cut off mid-generation by `MAX_TOKENS` still yields whatever prose made it out before the cutoff, with its own entity-decode pass (a model-escaped `&amp;` still needs unescaping even though it never passes through a DOM parser). `<sync>` is parsed as real XML and mapped tag-by-tag onto the same internal `TurnResponse` shape the old JSON schema (§7.3) produced — every downstream consumer (Shadow Referee, state commit) is unchanged, since the wire format changed but the parsed shape didn't.
+3. **Stage 3 (Fallback Reader)**: If `<sync>` fails to parse (malformed XML, a field the model got wrong), Stage 2's already-extracted `<nar>` prose still renders in the parchment viewer, displaying a discreet `[Repairing State]` indicator while keeping gameplay smooth — the fallback no longer depends on `<sync>` succeeding at all, since narration is parsed independently of it in Stage 2.
 
 **Stage 0 (Request Failure Handling)** — new: if the API call itself fails (timeout, rate limit, safety block), retry once silently. On second failure, freeze the turn in a `PAUSE`-equivalent state and surface an in-fiction "The thread of fate falters..." message rather than a raw error, preserving immersion while the player retries. If the failure persists, the player can expand this message into the API Failure Diagnostics Panel (§3.5) rather than being stuck guessing.
 
@@ -214,8 +213,8 @@ No step in Tale Dives is pinned to a specific vendor or model. **API Settings** 
 
 * **Fields**: Provider (e.g., Gemini / OpenAI / Anthropic / OpenAI-compatible custom endpoint), Model ID (free-text or dropdown, since providers ship new point-releases faster than any hardcoded list can track — see the note at the end of §7.1), API Key (stored locally only, never sent anywhere but the provider's endpoint), Temperature, and the per-Prose-Depth `max_output_tokens` table (§4.4/§7.1) which remains overridable per provider since token accounting differs slightly across APIs.
 * **One config, every call type.** Turn narration (§2 Phase D), Inspired Mode world seeding (§Phase A.2), Chapter Milestone summaries (§2 Phase E), and Class Grounding (§Phase B.2a) all read from this same configuration at call time. There is no separate "creation model" or "narration model" hardcoded anywhere in the app — if the player changes their model in Settings mid-session, the very next call of any kind uses it.
-* **Capability flags, not hardcoded assumptions.** Because grounding/search-tool support, native structured-output/JSON-schema support, streaming behavior, and prompt/context caching all vary by provider, the client keeps a small local capability map per provider (`supportsGrounding`, `supportsJsonSchema`, `supportsStreaming`, `supportsPromptCaching`) so features like §Phase B.2a's grounded class call, §9.1's partial-JSON streaming parser, and the caching bullet below degrade gracefully — never silently fail — on providers that lack a given capability, and any degraded state (e.g., ungrounded class assignment) is surfaced to the player rather than hidden.
-* **Static payload caching, where supported.** §7.2's System Instructions and §7.3's JSON Schema are byte-identical on every turn of a session — only the JIT Context Slice (§3.1) actually changes turn to turn — which makes them the single biggest lever for reducing per-turn cost, well beyond trimming the field-level text either block contains. On a provider whose `supportsPromptCaching` flag is true (e.g. Gemini context caching, Anthropic prompt caching, OpenAI's automatic prefix caching), the client caches the System Instructions + Schema pair once at session start and sends only the JIT Context Slice plus the cache reference each turn thereafter, rather than re-transmitting ~800–1,200 static tokens on every single exchange. Where unsupported, the client falls back to sending both in full every turn, exactly as every prior revision of this spec already assumed — this is a pure optimization, never a behavior change the model needs to know about.
+* **Capability flags, not hardcoded assumptions.** Because grounding/search-tool support, native structured-output/JSON-schema support, streaming behavior, and prompt/context caching all vary by provider, the client keeps a small local capability map per provider (`supportsGrounding`, `supportsJsonSchema`, `supportsStreaming`, `supportsPromptCaching`) so features like §Phase B.2a's grounded class call, §9.1's partial-JSON streaming parser, and the caching bullet below degrade gracefully — never silently fail — on providers that lack a given capability, and any degraded state (e.g., ungrounded class assignment) is surfaced to the player rather than hidden. **`supportsJsonSchema` describes the provider's own native structured-output mechanism, not which wire format Tale Dives actually sends it** — the live Gemini integration (§7) currently sends the hybrid XML format (§7.3) regardless of this flag, since a real token benchmark showed it costing meaningfully fewer output tokens than Gemini's own JSON-schema mode for the same turn content. A provider without a comparable win from switching formats can keep using its native JSON-schema mode; the capability map is what lets that decision be per-provider rather than hardcoded.
+* **Static payload caching, where supported.** §7.2's System Instructions and §7.3's XML Output Grammar are byte-identical on every turn of a session — only the JIT Context Slice (§3.1) actually changes turn to turn — which makes them the single biggest lever for reducing per-turn cost, well beyond trimming the field-level text either block contains. On a provider whose `supportsPromptCaching` flag is true (e.g. Gemini context caching, Anthropic prompt caching, OpenAI's automatic prefix caching), the client caches the System Instructions + Grammar pair once at session start and sends only the JIT Context Slice plus the cache reference each turn thereafter, rather than re-transmitting ~800–1,200 static tokens on every single exchange. Where unsupported, the client falls back to sending both in full every turn, exactly as every prior revision of this spec already assumed — this is a pure optimization, never a behavior change the model needs to know about.
 * **Optimization commitment.** Every multi-field task in this spec (class grounding, world seeding, turn resolution) is scoped to be resolvable in a **single request** wherever the target provider allows it — tool use (search grounding) and structured output are requested together in the same call rather than as sequential round trips, since sequential calls double latency and cost for no benefit the player can see.
 
 ### 3.5 API Failure Diagnostics Panel
@@ -247,7 +246,7 @@ A standing design law, restated explicitly here now that the schema has grown (N
 * **Every other field is a mechanism, not prose, and stays compact.** `deltas`, `inv_add`/`inv_rem`, `flag_add`, `corpse_add`, `npc_mem_up`, `quest_update`, `stat_grant` (§5.1c), and the discovery-reveal fields (§5.12) use short snake_case IDs and the shortest field names that stay unambiguous (`c` for currency, `d`/`h` for day/hour) — never a sentence where an ID suffices, and never restating in a delta field something already fully expressed in `nar`.
 * **Non-LLM logic stays 0-token by construction.** This was already true for currency (§5.2), crafting (§5.8), and faction rivalry (§5.4) — every new client-side system since (Location Auto-Registration §5.10, Faction Standing derivation §5.11, and Codex Discovery reveals §5.12) follows the same rule: state changes that can be computed or checked locally are computed or checked locally, never round-tripped through the model to confirm.
 * **New features are held to this by default**, not by special-case review — any future schema addition should ask "does this belong in `nar` (lush, player-facing) or in a delta field (compact, mechanism-only)" before it ships, rather than growing a third, ambiguous category.
-* **Schema `description` fields are payload, not documentation.** §7.3's JSON Schema and §7.2's System Instructions are sent to the model on every single turn (or cached whole, §3.4) — a `description` string bloated with multi-sentence rationale or, worse, a `(§5.1c)`-style cross-reference into *this blueprint* is pure waste: the model never sees this document's section numbers, so a reference to one teaches it nothing and just costs tokens. Keep schema descriptions to the minimum needed to fill the field correctly; put the "why" here in the blueprint, not in the payload. Watch specifically for the same explanation appearing twice across the System Instructions and the Schema (or twice within the System Instructions itself, e.g. a turn-state guideline and a mechanics rule both re-explaining the same branch) — state it once, in whichever spot the model would naturally consult first, and have the other spot point at it briefly rather than repeat it.
+* **Schema `description` fields are payload, not documentation.** §7.3's XML Output Grammar and §7.2's System Instructions are sent to the model on every single turn (or cached whole, §3.4) — a `description` string bloated with multi-sentence rationale or, worse, a `(§5.1c)`-style cross-reference into *this blueprint* is pure waste: the model never sees this document's section numbers, so a reference to one teaches it nothing and just costs tokens. Keep schema descriptions to the minimum needed to fill the field correctly; put the "why" here in the blueprint, not in the payload. Watch specifically for the same explanation appearing twice across the System Instructions and the Schema (or twice within the System Instructions itself, e.g. a turn-state guideline and a mechanics rule both re-explaining the same branch) — state it once, in whichever spot the model would naturally consult first, and have the other spot point at it briefly rather than repeat it.
 
 ---
 
@@ -264,7 +263,7 @@ A standing design law, restated explicitly here now that the schema has grown (N
 Narrative output must wrap key elements in special delimiters for client-side visual highlighting:
 
 * **`[Active Skill]`**: Soft indigo pill (`bg-[#e8eefb] border-[#5b7fc7]/40 text-[#31456e]`) — a cool accent against the warm gold/ivory palette so skills read as a distinct category from items at a glance, no glow (per §6.1d, glow is a sci-fi tell this app avoids). Tapping opens a Codex Popup Card (§6.4C) for that skill.
-* **`>Item / Equipment<`**: Warm metallic gold pill (`bg-[#e2c275]/15 border-[#9c7a2e]/40 text-[#5a4d3e]`). Tapping opens a Codex Popup Card (§6.4C) for that item.
+* **`[[Item / Equipment]]`**: Warm metallic gold pill (`bg-[#e2c275]/15 border-[#9c7a2e]/40 text-[#5a4d3e]`). Tapping opens a Codex Popup Card (§6.4C) for that item. **Double square brackets, not angle brackets** — angle brackets are reserved for the real XML markup the turn response now carries (§3.3/§7.3), so a literal `>Item<` would be a parse hazard rather than styling. `[[Double brackets]]` never collide with XML and sit naturally next to the `[Skill]` single-bracket convention.
 * **`'Inner Thoughts / Whispers'`**: Muted ink-toned serif italics, no pill or background — text treatment only, since interiority should feel quieter than an interactive element. Not Codex-linked; thoughts don't have entries.
 * **`{{Term|category}}`** *(new, v2.2)*: Codex keyword link, for the entity categories the first two markers don't already cover — proper nouns worth cross-referencing. `category` is a short code: `npc`, `loc`, `faction`, `quest`, or `beast`, e.g. `{{Mira Sorrengail|npc}}`, `{{The Parapet|loc}}`, `{{Riders Quadrant|faction}}`. Rendered as a subtle dotted underline in Ink on Gold Accent (`underline decoration-dotted decoration-[#9c7a2e]/50 underline-offset-2`) — a literary in-text cross-reference, not another colored pill, consistent with §6.1d's "annotated manuscript" register. Tapping opens a Codex Popup Card the same way a Skill or Item does (§6.4C). Full mechanics — including what happens when the term doesn't match an existing Codex entry — in §5.14.
 
@@ -292,20 +291,22 @@ Prose length is player-selectable per session (or per turn, via a quick toggle) 
 
 **This table controls length only — never model choice.** Earlier revisions auto-paired each Prose Depth Mode with a different suggested model (§9.4), which turned out to be the source of recurring bugs: switching models mid-session changes JSON-schema adherence, grounding support, and latency behavior out from under the Shadow Referee's assumptions (§3.2/§3.4). As of v1.7, Prose Depth Mode is purely a **token-ceiling and target-length control**. The model stays exactly whatever's configured once in API Settings (§3.4) for the whole session, no matter which depth the player picks turn to turn.
 
-| Prose Depth Mode | Target Token Output | Target Word Range (after JSON overhead) | `max_output_tokens` (generous headroom) | Operational Focus & Narrative Output |
+| Prose Depth Mode | Target Token Output | Target Word Range (after XML overhead) | `max_output_tokens` (generous headroom) | Operational Focus & Narrative Output |
 | --- | --- | --- | --- | --- |
-| **CONCISE** | ~600–800 tokens | ~420–570 words | **1,280** | Direct, action-oriented narration. Quick spatial updates, core tactical outcomes, minimal fluff. Best for combat-heavy or high-frequency mobile sessions. |
-| **BALANCED** *(Default)* | ~1,100–1,400 tokens | ~800–1,035 words | **2,048** | Standard novel cadence. Rich environmental texture, tactical strike weight, balanced NPC dialogue. |
-| **IMMERSIVE (DEEP)** | ~1,800–2,600 tokens | ~1,340–1,955 words | **3,584** | Full authorial fantasy prose. Multi-paragraph sensory density, deep body language, atmosphere, room geometry. |
+| **CONCISE** | ~600–800 tokens | ~460–615 words | **1,280** | Direct, action-oriented narration. Quick spatial updates, core tactical outcomes, minimal fluff. Best for combat-heavy or high-frequency mobile sessions. |
+| **BALANCED** *(Default)* | ~1,100–1,400 tokens | ~845–1,075 words | **2,048** | Standard novel cadence. Rich environmental texture, tactical strike weight, balanced NPC dialogue. |
+| **IMMERSIVE (DEEP)** | ~2,800–4,000 tokens | ~2,155–3,075 words | **6,144** | Full authorial fantasy prose. Multi-paragraph sensory density, deep body language, atmosphere, room geometry. |
 
-Word ranges assume ~1.3 tokens/word and subtract ~50–60 tokens of unavoidable JSON structural overhead (field names, punctuation, delta objects) from the raw token target. The `max_output_tokens` column is intentionally generous — roughly 60–70% headroom over the top of the target range rather than a tight ceiling — because a truncated `MAX_TOKENS` cutoff is a worse player-facing bug than a slightly higher per-turn cost, and it's the single biggest source of the "bugs" this system was previously producing. §7.1 and §9.4 use these exact same three numbers; there is only one token-ceiling table in the app, referenced from all three places.
+Word ranges assume ~1.3 tokens/word, with less structural overhead to subtract than the old JSON format carried (the `<sync>` block's attribute="value" pairs cost fewer tokens than JSON's `"key":"value"` for the same field, per the live benchmark in §3.3/§7.3). The `max_output_tokens` column is intentionally generous — because a truncated `MAX_TOKENS` cutoff is a worse player-facing bug than a slightly higher per-turn cost, and it's the single biggest source of the "bugs" this system was previously producing. §7.1 and §9.4 use these exact same three numbers; there is only one token-ceiling table in the app, referenced from all three places. IMMERSIVE's own ceiling was raised specifically to give genuinely novel-length turns real room — both the target-length guidance text and the hard `max_output_tokens` ceiling have to move together, since raising the ceiling alone doesn't make the model write longer if it's still being told the old, shorter target.
+
+**Climax Overflow — the one exception to "pick a depth, get that length."** A turn whose own events carry a Class Evolution (§5.1b), a completed quest, or the defeat of a genuinely major adversary is allowed to exceed the player's chosen Prose Depth's target for that turn only (§7.2 rule 2a) — the target stops being a ceiling, not just a floor, so a class-defining moment or a quest's ending isn't compressed into the same room an ordinary turn gets regardless of which depth the player happens to have set. This is backed by a real technical floor, not just a prompt instruction: every turn's `max_output_tokens` is `max(chosen depth's ceiling, IMMERSIVE's ceiling)`, so even a CONCISE or BALANCED player's own climax turn gets IMMERSIVE's full 6,144-token ceiling to actually write into, rather than truncating mid-sentence against a tighter tier's own cap. This is the exception, not the default — it only fires when the turn's own content already earns one of those three markers, never as license to pad an otherwise ordinary turn.
 
 **Context slice addition (every turn):**
 ```
 Target Prose Depth: BALANCED (~1,100-1,400 tokens)
 ```
 
-Recommend defaulting new players to BALANCED, auto-suggesting CONCISE on detected mobile/cellular conditions (see §9), and reserving IMMERSIVE for chapter climaxes or player-toggled "deep scenes" given its latency cost. §3.3's continuation-recovery path (re-requesting a cut-off JSON object) remains as a safety net, but with this much headroom it should trigger rarely.
+Recommend defaulting new players to BALANCED, auto-suggesting CONCISE on detected mobile/cellular conditions (see §9), and reserving IMMERSIVE for chapter climaxes or player-toggled "deep scenes" given its latency cost. §3.3's continuation-recovery path (re-requesting a cut-off response from exactly where it left off) remains as a safety net, but with this much headroom it should trigger rarely.
 
 ### 4.5 Narration Style Profile
 
@@ -503,15 +504,15 @@ Earlier drafts used a loose free-text `category` field on inventory entries. Thi
 
 | Type | Slot Behavior | Examples |
 | --- | --- | --- |
-| **Weapon** | Equippable, 1 active at a time (or per-hand if dual-wield is enabled later) | `>Obsidian Dagger<`, `>Rift Stalker Fang<` |
-| **Armor** | Equippable, one per body region (head/chest/hands/feet — start with a single "armor" slot and split later if needed) | `>Ashgate Plate<`, `>Wraithveil Cloak<` |
-| **Accessory** | Equippable, 1–2 slots (rings/amulets/trinkets) | `>Obsidian Signet<`, `>Pendant of Quiet Steps<` |
-| **Tool** | Non-combat equippable/usable; enables an action class rather than dealing damage (lockpicks, climbing gear, a crafting instrument) | `>Thieves' Picks<`, `>Surveyor's Lens<` |
-| **Key Item** | Non-stackable, cannot be sold or discarded, tied to quest/story logic | `>Ashgate Vault Sigil<` |
-| **Consumable** | Stackable, single-use, applies an immediate effect and is removed on use | `>Elixir of Vigor<`, `>Bone Dust Pouch<` |
+| **Weapon** | Equippable, 1 active at a time (or per-hand if dual-wield is enabled later) | `[[Obsidian Dagger]]`, `[[Rift Stalker Fang]]` |
+| **Armor** | Equippable, one per body region (head/chest/hands/feet — start with a single "armor" slot and split later if needed) | `[[Ashgate Plate]]`, `[[Wraithveil Cloak]]` |
+| **Accessory** | Equippable, 1–2 slots (rings/amulets/trinkets) | `[[Obsidian Signet]]`, `[[Pendant of Quiet Steps]]` |
+| **Tool** | Non-combat equippable/usable; enables an action class rather than dealing damage (lockpicks, climbing gear, a crafting instrument) | `[[Thieves' Picks]]`, `[[Surveyor's Lens]]` |
+| **Key Item** | Non-stackable, cannot be sold or discarded, tied to quest/story logic | `[[Ashgate Vault Sigil]]` |
+| **Consumable** | Stackable, single-use, applies an immediate effect and is removed on use | `[[Elixir of Vigor]]`, `[[Bone Dust Pouch]]` |
 | **Material** | Stackable, used only as crafting input (§5.8); never equippable | `iron_ore`, `bone_dust` |
 
-**Schema note**: `inv_add` / `inv_rem` entries (§7.3) gain an implicit type via the item's Codex definition, not a per-turn field — Gemini still only emits `{ "id", "qty" }`, keeping the JSON schema unchanged. The client resolves `id → type` against the Codex's Items dictionary (or flags it as an ungrounded item for Shadow Referee review if the `id` is new — same pattern as Location Auto-Registration in §5.11).
+**Schema note**: `inv_add` / `inv_rem` entries (§7.3) gain an implicit type via the item's Codex definition, not a per-turn field. The client resolves `id → type` against the Codex's Items dictionary (or flags it as an ungrounded item for Shadow Referee review if the `id` is new — same pattern as Location Auto-Registration in §5.11).
 
 **Stat bonus note**: Weapon, Armor, and Accessory entries may additionally carry an optional `stat_bonus` object in their Codex definition — `{"STR":2}` or `{"hp_flat":15}` — per §5.1c. This lives on the item, not the turn schema; the client applies/removes it purely by comparing equipped-item state before and after, at equip/unequip time, at zero API cost.
 
@@ -578,7 +579,7 @@ Two trigger surfaces feed this, and a turn can use either or both:
 
 * **Implicit, via required schema fields already sent every turn.** `loc_id`/`loc_disp` for Locations (§5.10); `corpse_add` and combat context for Adversaries (§5.13). Nothing new here — this is what those two sections already specify.
 * **Explicit, via `{{Term|category}}` keyword links in `nar` (§4.2, new in v2.2).** This is what makes NPCs, Factions, Lore, and Quests work the same way Locations and Adversaries always have, and it's what powers the tappable Codex Popup Card (§6.4C):
-  1. The client scans the streamed `nar` string for `{{Term|category}}` matches — pure client-side string parsing, the same free operation already required to render `[Skill]`/`>Item<`/`'Thought'` markup, so this adds no API cost (§3.6).
+  1. The client scans the streamed `nar` string for `{{Term|category}}` matches — pure client-side string parsing, the same free operation already required to render `[Skill]`/`[[Item]]`/`'Thought'` markup, so this adds no API cost (§3.6).
   2. For each match, the client resolves `Term` against that `category`'s Codex dictionary. A hit renders the tap target linked to the existing entry — respecting Codex Discovery masking (§5.12): if that entry is currently `hidden`, the popup shows the same `???`/teaser treatment the Codex Entry Grid would, never the real content early.
   3. A miss auto-registers a stub in that category, exactly like a Location or Adversary stub — reasonable inferred defaults, `autoLogged: true`, correctable via CRUD (§6.4D).
 * **The model's only job is tagging, not deciding what belongs in the Codex.** §7.2's Rich Text Formatting rule tells Gemini to wrap a proper noun the first few times it's mentioned meaningfully (not every pronoun or repeat reference) — the client owns whether that becomes a new entry, an existing one, or gets left alone, the same "model proposes text, client owns state" split used everywhere else in this system.
@@ -751,7 +752,7 @@ Reached from the Title Screen's `ENTER`. This is the hub for everything that isn
   * Parchment scroll view (`#e5d9c3`) with custom amber scrollbars (`.parchment-scroll`).
   * Turn Header Tags: `TURN #1 (Day 1 - 08:15)` plus environmental mood pills (`Cold mountain mist with swirling ash motes`).
   * Action Suggestion Pills: clickable choices (`➢ Inspect the keystone seal...`) rendered below narration.
-  * **Codex Popup Card** *(new, v2.2)*: tapping any `[Skill]`, `>Item<`, or `{{Term|category}}` link (§4.2) opens a small glassmorphic (§6.1a) card anchored near the tap point — scale/fade in via Framer Motion (§6.0), never a full-screen navigation. It reuses the matching category's Entry Card fields from §6.4D (so an NPC popup shows the same Trust/Affection bars an NPC Entry Card would, a Location popup shows the same Danger/Standing badges, etc.) plus an **"Open in Codex →"** button that drills into the full Entry Detail (§6.4D) for anyone who wants more. A tap on a still-`hidden` entry (§5.12) shows the masked `???`/teaser card instead — the popup never spoils what the Entry Grid wouldn't show yet. Dismisses on outside-tap or a close affordance; the parchment scroll position is preserved underneath.
+  * **Codex Popup Card** *(new, v2.2)*: tapping any `[Skill]`, `[[Item]]`, or `{{Term|category}}` link (§4.2) opens a small glassmorphic (§6.1a) card anchored near the tap point — scale/fade in via Framer Motion (§6.0), never a full-screen navigation. It reuses the matching category's Entry Card fields from §6.4D (so an NPC popup shows the same Trust/Affection bars an NPC Entry Card would, a Location popup shows the same Danger/Standing badges, etc.) plus an **"Open in Codex →"** button that drills into the full Entry Detail (§6.4D) for anyone who wants more. A tap on a still-`hidden` entry (§5.12) shows the masked `???`/teaser card instead — the popup never spoils what the Entry Grid wouldn't show yet. Dismisses on outside-tap or a close affordance; the parchment scroll position is preserved underneath.
 * **Right Drawer Vertical Icon Dock**: Card Surface styling (`#fdfaf0`, §6.1), positioned alongside the parchment reader. Features an `INFO` toggle, a Turns-in-page count badge, a Chapter Summaries count badge, and World DB / NPC Directory shortcuts.
 * **Quick-Slot Tray** *(new, v1.7)*: [CUT BY USER] a persistent, always-visible horizontal row of the 3 equipped active skills (§Phase B.3), docked directly above the floating action-input prompt. This is deliberately **not** inside the Radial Menu (§6.5) — quick-slots are the single highest-frequency action in a turn loop, so they get a permanent one-tap surface rather than an extra tap through an expandable menu. Each slot shows its icon, name, and MP/ST cost, and dims (not hides) when unaffordable per the Shadow Referee's affordability check (§3.2).
 * **Floating Action-Input Prompt**: the decorated bottom input bar (§6.1 Prompt Input Tray tokens) — this is where the player types actions, and where `/` and `!` (§6.6) trigger their respective command palettes. The Fantasy Radial Menu's FAB (§6.5) is centered directly above/on this prompt.
@@ -860,178 +861,122 @@ To run Tale Dives directly inside [Google AI Studio](https://aistudio.google.com
 | **Gemini 3 Flash Preview** | `gemini-3-flash-preview` | Legacy preview; keep only for back-compat testing, not recommended for new sessions. |
 | **Gemini 3.1 Pro Preview** *(High Reasoning)* | `gemini-3.1-pro-preview` | Highest reasoning depth and cost. Best reserved for **Inspired Mode** world-generation (one-time faction/lore seeding) rather than routine turns, given per-token cost. |
 
-**Response Format**: `application/json`
+**Response Format**: plain text (`system_instruction` only — no `responseMimeType`/`responseSchema`). The turn response is the hybrid format from §3.3/§7.2/§7.3: a `<nar>` block of plain prose followed by a `<sync>` block of self-closing XML tags, not a JSON object. This is a deliberate departure from Gemini's native JSON-schema structured-output mode (`application/json` + `responseSchema`) — a live token benchmark run against the real Gemini tokenizer this project measured the equivalent XML output at ~25% fewer tokens than the JSON-schema response for the same turn content, so the JSON-schema path was dropped for the live Gemini integration in favor of parsing the plain-text XML response client-side (§3.3). `supportsJsonSchema` in the provider capability map (§3.4) still reflects whether *Gemini itself* supports schema mode — it does — this is a Tale-Dives-side choice to not use it, not a provider limitation.
 **Temperature**: `0.7`
 
-**Max Output Tokens — set per Prose Depth Mode, not globally** (see §4.4 — this is the same table, not a second one). A single flat cap either truncates IMMERSIVE turns mid-JSON or wastes budget on CONCISE ones:
+**Max Output Tokens — set per Prose Depth Mode, not globally** (see §4.4 — this is the same table, not a second one). A single flat cap either truncates IMMERSIVE turns mid-response or wastes budget on CONCISE ones:
 
 | Prose Depth Mode | Narrative Target | `max_output_tokens` (generous headroom) |
 | --- | --- | --- |
 | CONCISE | ~600–800 tokens | 1,280 |
 | BALANCED | ~1,100–1,400 tokens | 2,048 |
-| IMMERSIVE | ~1,800–2,600 tokens | 3,584 |
+| IMMERSIVE | ~2,800–4,000 tokens | 6,144 |
+
+**Climax Overflow floor (§4.4/§7.2 rule 2a)**: every *actual* API call's `max_output_tokens` is `max(chosen Prose Depth's ceiling, IMMERSIVE's ceiling)`, not the bare per-depth value above — so a CONCISE or BALANCED turn that ends up carrying a Class Evolution, a completed quest, or a major kill still gets IMMERSIVE's full 6,144-token ceiling to write into, rather than truncating against its own tier's tighter cap. The table above is the *per-tier* target; the floor is what's actually sent to the API on every single turn.
 
 **Model choice is manual and session-wide, not per-turn-type.** The table in §7.1 above lists what each Gemini variant is good at so the player can make one informed pick in API Settings (§3.4) — it is not an instruction to switch models automatically per Prose Depth or turn state. That auto-switching behavior existed in pre-1.7 drafts of §9.4 and was removed for reliability; see §9.4 for why.
 
 **Thinking Level**: set `minimal`–`low` for routine turn narration (this is a creative-writing task, not multi-step reasoning, and thinking tokens are spent from the same budget before visible output appears). Reserve `medium`–`high` for the one-time Inspired Mode world-generation call in §7.1 (which now also carries the Narration Style grounding field, §4.5), where deeper reasoning genuinely helps quality.
 
-**Truncation Recovery**: check `finish_reason` on every response. If it returns `MAX_TOKENS` even with the headroom above, do not treat the cut-off JSON as a Stage 3 parse failure — issue one short continuation request ("continue the JSON object from exactly where it left off") and stitch the result together before rendering. The token headroom keeps this rare; this path guarantees no scene is ever visibly cut off when it does happen.
+**Truncation Recovery**: check `finish_reason` on every response. If it returns `MAX_TOKENS` even with the headroom above, do not treat the cut-off response as a Stage 3 parse failure — Stage 2 (§3.3) already extracts whatever `<nar>` prose made it out before the cutoff independently of whether `<sync>` parses, so a mid-generation cutoff degrades gracefully rather than losing the whole turn. The token headroom (and the Climax Overflow floor above) keep an actual cutoff rare in practice.
 
 > Note: Google revises the Gemini model lineup frequently (new Flash point-releases have shipped roughly every 4–6 weeks through 2026). Treat this table as a snapshot — re-verify exact model IDs and pricing in AI Studio before each release rather than hardcoding assumptions long-term.
 
 ### 7.2 System Instructions
 
-Paste the text block below into the **System Instructions** field:
+Paste the text block below into the **System Instructions** field. This is the byte-identical text the live client sends (`turnContract.ts`'s `SYSTEM_INSTRUCTIONS`) — the narrative/craft rules are format-agnostic and unchanged by the XML migration in §7.3 below:
 
 ```text
 You are the Dungeon Master engine for Tale Dives, an atmospheric fantasy RPG (mature violence and romance themes) set in a reactive, high-stakes world.
 
 NARRATIVE & TONE RULES:
 1. Writing Style: Write elaborate, novel-quality third-person prose grounded in sensory detail, distinct NPC voices, and real narrative stakes. Emphasize body language, environmental textures, physical strain, and lighting.
-1a. Narration Style Profile: Apply the voice described in "Narration Style" in the context slice for this turn — sentence rhythm, point of view, diction, and pacing. This governs HOW rules 1–6 are executed; it never overrides rule 3 (Player Agency) or rule 5 (Mature Themes boundary).
-2. Length: Match your narrative length to the "Target Prose Depth" specified in the context slice for this turn. Do not default to a fixed length regardless of what the slice requests.
+1a. Narration Style Profile: Apply the voice described in "Narration Style" in the context slice for this turn — sentence rhythm, point of view, diction, and pacing. This governs HOW rules 1-6 are executed; it never overrides rule 3 (Player Agency) or rule 5 (Mature Themes boundary).
+1b. Paragraph Breaks: Never write "nar" as one dense unbroken block, and never string more than 2-3 sentences together without a line break — break within a paragraph, not just between paragraphs, whenever a beat, focus, or breath shifts. Roughly 2-4 paragraphs for BALANCED depth, more for IMMERSIVE, fewer for CONCISE; vary paragraph length for pacing, the way a novel would.
+1c. Thought/Dialogue Isolation: Give any inner thought or spoken/whispered line (the single-quoted material from rule 6) its own line, set apart from the surrounding narration — don't bury it mid-paragraph. A run of several consecutive thoughts or dialogue lines may stay grouped together, one per line, rather than each being forced apart with narration in between.
+1d. NPC Behavior: Every present NPC should feel like they're actively responding to what just happened, not reciting a line. Ground their dialogue, body language, and reactions in their established personality, tone of voice, current Trust/Affection toward the player, and stake in the unfolding situation — narrate what they're doing, not only what they say.
+1e. Protagonist Framing: When "Protagonist Identity" is present in the context slice, let it shape how the world reacts to the protagonist and what a scene chooses to emphasize — an NPC reading their demeanor, a detail catching their eye because of what they want, a moment landing harder because of a trait or secret already established. This never overrides rule 3 (Player Agency): it steers what you narrate around and about the protagonist, never what they think, say, or decide.
+2. Length: Treat the "Prose Depth" in the context slice as a floor to reach, not a ceiling to undercut — a turn that stops short of it is a failure regardless of how the scene resolves. Never default to a short, thin beat; use the full room the depth gives you to develop the scene, the NPCs present, and what's at stake.
+2a. Climax Overflow: If this turn's own events are significant enough to carry a class_evolution, a quest_update whose status is "completed", or the defeat of a genuinely major adversary, Prose Depth's target stops being a ceiling too — let the scene run as long as it actually needs to land with real weight, rather than compressing a class evolution or a quest's ending into the same room an ordinary turn gets, regardless of which Prose Depth the player has set. This is the exception, not the default: it applies only when the turn's own content already earns one of those three markers, never as license to pad an otherwise ordinary turn.
 3. Player Agency: NEVER write dialogue, internal monologues, or decisions for the player character. Describe the world's reaction to player choices only.
-4. End most turns on a hook or open decision point rather than a fully resolved beat.
-5. Mature Themes: Violence, moral ambiguity, romance, and tension are welcome and should be written with real narrative weight. All characters are adults. For content beyond kissing/embrace, use a clear scene-break transition and resume afterward rather than writing it graphically — this boundary is fixed and does not flex with Trust tier or Prose Depth Mode.
-5a. INTIMACY Gating: Before narrating romantic or physical escalation, check the target NPC's Trust value, personality, and `currentImpression`/relationship note in the context slice — exactly as you would for a SOCIAL request. A Stranger-stage or low-Trust NPC should rebuff, deflect, or slow-play advances in character; only a high-Trust NPC with an established, receptive relationship should reciprocate warmly. The player may always attempt to initiate — the NPC's reaction is what's bounded, never the player's ability to try.
+3a. Player Statement Override: Text the player wraps in *asterisks* (e.g. "*I gain +100 HP*") is not an ordinary in-fiction action for you to judge plausible or not — it's an explicit, authoritative directive. Make it real through the normal mechanical channels (deltas/inv_add/stat_grant/etc., still governed by their own field rules and numeric limits — an asterisked claim outside those bounds is honored up to the limit, not rejected outright), then narrate a justification that makes it feel earned or at least explicable in the fiction rather than simply asserting it flatly. This is the one case where you don't get to decide whether something happens — only how it's framed. Unmarked action text keeps its ordinary treatment under rule 3 above: you decide the outcome.
+3b. Continuity Callouts: If the player points out an apparent inconsistency in your own prior narration (an item, detail, or fact that changed without an in-story reason), treat their observation as correct and reconcile the story around it — a quiet correction, a character's own explanation, or simply adopting it as true going forward. Never retcon it as the player character's own senses or memory being unreliable unless perception distortion is already an established, deliberate element of this scene (a curse, a hallucinogen, a supernatural fog) — you are not allowed to blame the player for a mistake in your own telling.
+4. End most turns on a hook or open decision point rather than a fully resolved beat — make the live options concrete enough (what's in front of the player, what just changed, who's watching) that a plausible next move is legible, even though you never enumerate it as a list.
+5. Mature Themes: Violence, moral ambiguity, romance, and tension are welcome and should be written with real narrative weight. All characters are adults. Violence may be graphic and uncensored — do not soften or cut away from it (see the COMBAT guideline below). For romantic/sexual content beyond kissing/embrace, use a clear scene-break transition and resume afterward rather than writing it graphically — this boundary is fixed and does not flex with Trust tier or Prose Depth Mode.
+5a. INTIMACY Gating: Before narrating romantic or physical escalation, check the target NPC's Trust value, personality, and currentImpression/relationship note in the context slice — exactly as you would for a SOCIAL request. A Stranger-stage or low-Trust NPC should rebuff, deflect, or slow-play advances in character; only a high-Trust NPC with an established, receptive relationship should reciprocate warmly. The player may always attempt to initiate — the NPC's reaction is what's bounded, never the player's ability to try.
 6. Rich Text Formatting Rules (MANDATORY):
    - Enclose active skills, spells, or abilities in square brackets: [Shadow Step], [Arise], [Soul Feast].
-   - Enclose items, weapons, keys, or loot in angle brackets: >Obsidian Dagger<, >Silver Quill<, >Bone Fragment<.
-   - Enclose NPC inner monologues, spoken whispers, or player internal monologues in single quotes: 'Something watches us.'
-   - Tag named NPCs, locations, factions, quests, and adversaries in double braces with a category code the first few times they're meaningfully mentioned — not every pronoun or repeat reference: {{Mira Sorrengail|npc}}, {{The Parapet|loc}}, {{Riders Quadrant|faction}}. Category codes: npc, loc, faction, lore, quest, beast. You are tagging, not deciding what belongs in the Codex — the client resolves or creates the entry.
+   - Enclose items, weapons, keys, or loot in double square brackets: [[Obsidian Dagger]], [[Silver Quill]], [[Bone Fragment]]. Never angle brackets — those are reserved for real XML markup in this output format (see below) and a literal >Item< is a parse error, not styling.
+   - Spoken dialogue (audible to others, whispers included) goes in double quotes, plain: "Halt! State your business." Reserve single quotes for genuinely unspoken interiority — an NPC's or the player's own inner monologue, a silent telepathic line no one else hears: 'Something watches us.' (the client already renders single-quoted text in italics automatically — never also wrap it in literal asterisks). When a line is shouted or a thought verges on panic, put the words themselves in CAPITAL LETTERS, in whichever quote style matches how it's delivered: "HOLD THE LINE!" for a shouted order, 'GET OUT OF MY HEAD!' for a silent scream.
+   - Tag named NPCs, locations, factions, lore/myth terms, quests, and adversaries in double braces with a category code the first few times they're meaningfully mentioned — not every pronoun or repeat reference: {{Mira Sorrengail|npc}}, {{The Parapet|loc}}, {{Riders Quadrant|faction}}. Category codes: npc, loc, faction, lore, quest, beast, skill. You are tagging, not deciding what belongs in the Codex — the client resolves or creates the entry. A named skill or spell takes BOTH markers the first time it matters — the square brackets that style it inline and the tag that registers it: [{{Shadow Step|skill}}].
 
-9-TIER TURN STATE GUIDELINES:
-- PEACE: Ambient travel, town interaction, downtime, environmental sensory detail.
-- COMBAT: Check "Combat Resolution Mode." TACTICAL: narrate the exact "Combat Result" given — no invented misses, crits, or damage. NARRATIVE: no Combat Result is given; resolve the exchange yourself from context (stakes, stated tactics, target's actual defenses) — same discipline as SOCIAL/EXPLORE, not an auto-win.
-- STEALTH: High-tension shadow navigation. Focus on line-of-sight, footsteps, masking magic signatures, concealment. Resolve narratively — there is no hidden check.
-- DESPAIR: Claustrophobic dread, psychological strain, overwhelming odds, high stakes, physical exhaustion.
-- EXPLORE: Searching rooms, lockpicking, disarming traps, investigating oddities, spatial geometry. Resolve narratively — there is no hidden check.
-- INSIGHT: Monarch visions, memory recalls, ancient lore revelations, deciphering arcana.
-- SOCIAL: Diplomacy, trade bargaining, haggling, coercion, deception, political maneuvering. Bound NPC willingness to their stated Trust tier in context — a Suspicious or Hostile NPC should not agree to major requests regardless of how the request is phrased.
-- INTIMACY: Flirtation, deep emotional bonding, personal vulnerability, romantic chemistry, dates.
-- PAUSE: Freeze narrative output (System command processing).
+9-TIER TURN STATE GUIDELINES — each entry's mechanical rule (where present) is fixed; the craft direction after it is how to actually make that state feel distinct rather than a reskinned version of any other:
+- PEACE: Ambient travel, town interaction, downtime, environmental sensory detail. Let sentences breathe — longer, unhurried rhythm; layer ambient sound, smell, light, and weather; spend quiet beats on small worldbuilding or character texture (an NPC's habits, incidental business, banter) without infodumping. Warmth and dry humor belong here more than in any other state.
+- COMBAT: Check "Combat Mode." TACTICAL: narrate the exact "Combat Result" given — no invented misses, crits, or damage; treat this mode as the optional, mechanical layer, not where combat's real texture lives. NARRATIVE: no Combat Result is given; resolve the exchange yourself from context (stakes, target's actual defenses) — same discipline as SOCIAL/EXPLORE, not an auto-win, but this is where combat is meant to actually live: honor exactly what the player described (weapon, angle, footwork, improvisation) and let a genuinely clever or creative action earn a better outcome than a generic "I attack," the way a skilled human GM would reward inventive play. Either mode: write it as epic, dramatic, action-packed prose — weapon strikes, spell effects, footwork, and every combatant's hostile intent described in motion, with the actual physical effect of each blow or skill landing on whoever it hits (player, NPC, or beast alike). This is graphic, uncensored violence, not a fade-to-black — commit to it. Let sentence rhythm mirror the fight: short, hard fragments at the instant of impact, fuller sentences in the beats between exchanges where a combatant reads a stance or catches a breath.
+- STEALTH: High-tension shadow navigation. Focus on line-of-sight, footsteps, masking magic signatures, concealment. Resolve narratively — there is no hidden check. Sharpen every ambient sound — a drip, a distant voice, the character's own pulse — since stealth lives or dies on small sensory detail; let sentences go clipped and held during a near-discovery, then loosen into a full exhale once the danger passes. Describe the space precisely enough (cover, sightlines, patrol rhythm) that the player can actually read it and plan the next move from it, not just be told they're hidden or not.
+- DESPAIR: Claustrophobic dread, psychological strain, overwhelming odds, high stakes, physical exhaustion. Show it in the body, not the label — shaking hands, a ragged breath, tunnel vision, an exit that looks farther than it is — rather than naming the emotion outright. Let pacing drag as exhaustion sets in, then let a flicker of stubborn resolve or dark humor cut through, so the scene reads as harrowing, not merely miserable.
+- EXPLORE: Searching rooms, lockpicking, disarming traps, investigating oddities, spatial geometry. Resolve narratively — there is no hidden check. Ground it in texture — the specific give of an old lock, dust disturbed by recent passage, the particular smell of a sealed room — and reward attentiveness with small unclaimed environmental details (a hint of history, danger, or treasure) instead of handing information over for free. Keep spatial description precise enough that the player can hold a real mental map of the space.
+- INSIGHT: Visions, memory recalls, ancient lore revelations, deciphering arcana. Let perception itself distort — color, sound, and time behaving unnaturally — rather than simply stating what's learned; weave any revealed lore into imagery instead of exposition-dumping it. Ground the return to the present in the body (a headache, a nosebleed, a beat of disorientation) so the mystical stays felt, not just informational.
+- SOCIAL: Diplomacy, trade bargaining, haggling, coercion, deception, political maneuvering. Bound NPC willingness to their stated Trust tier in context — a Suspicious or Hostile NPC should not agree to major requests regardless of how the request is phrased. Play the subtext — what's implied, withheld, or contradicted by body language — alongside the literal dialogue; give the NPC their own stake in the exchange and let them push back, counter-offer, or redirect rather than just react to the player.
+- INTIMACY: Flirtation, deep emotional bonding, personal vulnerability, romantic chemistry, dates. Let the prose slow down and stay in specific physical/sensory detail — a held glance, closing distance, an unsteady laugh, the immediate heat of proximity — rather than reaching for generic romance language; what's emotionally risked by being open matters as much as what's said. Give the dialogue itself real charge — teasing, wanting, vulnerable admissions spoken aloud between the two of them — rather than letting the moment carry entirely on narrated description; both partners get real voice here, not just the player's partner reacting to unspoken narration. Keep it grounded in the NPC's actual personality and established relationship stage (per the INTIMACY Gating rule below) so warmth reads as earned, not default — and still governed by rule 5's fixed scene-break boundary for anything beyond kissing/embrace.
+- PAUSE: Freeze narrative output entirely (system command processing) — no prose, no scene continuation, until the state changes back.
 
 MECHANICS & GROUNDING DEFENSE:
 1. Numeric Fidelity: No dice, checks, or hidden randomness anywhere. Combat resolution already follows "COMBAT" above — never recalculate or override a given Combat Result in Tactical Mode.
 2. Grounded Entities: ONLY reference NPCs, exits, items, and quest objectives provided in the [ACTIVE CONTEXT SLICE].
+2a. Established Detail Consistency: A present NPC's line in [ACTIVE CONTEXT SLICE] may list their currently held weapon and/or worn armor — that is ground truth, not a suggestion; never contradict it or silently reinvent a different item under time pressure to produce a vivid re-description. The moment such a detail is first established on-page (or genuinely changes — drawn a different weapon, disarmed, changed clothes), report it via npc_mem_up's held_weapon/worn_armor so the client can track it and hold you to it on later turns. Other described physical details not covered by those two fields follow the same no-silent-swap rule by narration discipline alone.
+2b. Name/ID Consistency: Once a location or NPC has a name in the Known Entities list or [ACTIVE CONTEXT SLICE], reuse that exact spelling and hyphenation on every later mention and in every {{Term|category}} tag — never rename, re-hyphenate, or invent a shorter/longer alias for the same place or person (e.g. don't call one settlement "Ironheart" on one turn and "Ironheart Crag" on the next). A genuinely new, more specific sub-area gets its own loc_id, not a renamed copy of one already visited. Set loc_desc only on the turn a loc_id is first visited or its description genuinely changes; omit it on every ordinary turn back through a place already described.
 3. Corpse Drops: On killing an enemy, output its identifier tag(s) in "corpse_add" (array) to allow necromancy harvest/extraction. Include every enemy killed this turn, not just one.
 4. Currency Storage: Deduct or reward currency in base copper ("c" delta field).
 5. Permanent Stat Grants: Only use "stat_grant" for a genuine permanent boost (a blessing, a hard-won transformation) — never for ordinary damage/healing, which belongs in "deltas". Supply only the attribute/pool and the amount; never compute or state a resulting HP/MP/ST max yourself, the client derives that.
-6. JSON Strictness: Output ONLY valid, parsable JSON matching the defined response schema. Do NOT wrap output in markdown code blocks.
+6. Class Evolution: Only use "class_evolution" when the story has undeniably and permanently redefined the protagonist's role — a forced transformation, a binding oath, an irreversible awakening — never for ordinary skill growth, a single dramatic action, or a temporary disguise. This should be rare, at most once or twice in a whole campaign. "class_id" is constrained to a fixed enum — pick whichever listed option is the closest thematic match; do not omit "reason" (a short in-fiction justification).
+7. Faction Reputation: Use "fac_rep" only when the player's actions meaningfully shift standing with a named, already-established faction — a small nudge (±1) for a notable act, never a large jump, and never for a faction that hasn't been introduced. Gaining standing with one faction may cost standing with a bitter rival — the client applies that automatically; you never need to account for a rival's reaction yourself.
+8. Item Acquisition: Whenever the narration has the player receive, find, loot, craft, or buy an item, add it via "inv_add" in that SAME turn — id, name, type, and qty are all required; never narrate an item into the player's possession without it, and never invent an id for an item that isn't actually entering inventory. Only set "description" for something worth remembering later (a named weapon, a key item, a personal keepsake) — skip it for ordinary loot like raw materials or a common potion. Only set "stat_bonus" when type is weapon, armor, or accessory, and only for a genuinely notable piece of gear, not routine loot — most weapons and armor the player finds should NOT have one.
+8a. Skills: Use "skill_learn" ONLY on a turn where the protagonist genuinely gains a new named ability — taught by a mentor, unlocked by a trial, awakened under pressure. Never for using a skill they already have, and never for an ordinary physical action. Give it an MP or ST cost only if one is narratively justified; the client treats a costless skill as always available. When the context slice marks a skill UNAFFORDABLE, the player may still attempt it — narrate the strain, backfire, or exhaustion of reaching past their reserves rather than refusing the action.
+9. Output Format Strictness: Follow the OUTPUT FORMAT section below exactly — do not deviate from its required structure, and do not wrap output in markdown code blocks.
 ```
 
-### 7.3 JSON Schema
+### 7.3 XML Output Grammar
 
-Paste the JSON structure below into the **JSON Schema** box:
+**No separate schema field.** Unlike the pre-v3.0 JSON-schema approach (a `responseSchema` object configured separately from System Instructions), the XML output format is entirely prompt-driven — there is nothing to paste into a "JSON Schema" box, because AI Studio's structured-output box only accepts JSON schemas and this format isn't one. Instead, append the grammar block below directly onto the end of the §7.2 System Instructions text (the live client does this by simple string concatenation — `turnContract.ts`'s `SYSTEM_INSTRUCTIONS` + `xmlTurnContract.ts`'s `XML_OUTPUT_GRAMMAR`, joined with a blank line), and leave AI Studio's Response Format on plain text:
 
-```json
-{
-  "type": "OBJECT",
-  "properties": {
-    "nar": {
-      "type": "STRING",
-      "description": "Main narrative prose. Use [Skill], >Item<, 'Thought', and {{Term|category}} formatting."
-    },
-    "turn_state": {
-      "type": "STRING",
-      "enum": ["PEACE", "COMBAT", "STEALTH", "DESPAIR", "EXPLORE", "INSIGHT", "SOCIAL", "INTIMACY", "PAUSE"]
-    },
-    "time": {
-      "type": "OBJECT",
-      "properties": {
-        "d": { "type": "INTEGER" },
-        "h": { "type": "STRING" }
-      },
-      "required": ["d", "h"]
-    },
-    "loc_disp": { "type": "STRING" },
-    "loc_id": { "type": "STRING" },
-    "dist": {
-      "type": "STRING",
-      "enum": ["c", "m", "f", "none"]
-    },
-    "deltas": {
-      "type": "OBJECT",
-      "description": "Tactical Mode: must match the given Combat Result exactly. Narrative Mode: your own bounded amount (no Combat Result given).",
-      "properties": {
-        "hp": { "type": "INTEGER" },
-        "mp": { "type": "INTEGER" },
-        "st": { "type": "INTEGER" },
-        "c": { "type": "INTEGER" }
-      }
-    },
-    "inv_add": {
-      "type": "ARRAY",
-      "items": {
-        "type": "OBJECT",
-        "properties": {
-          "id": { "type": "STRING" },
-          "qty": { "type": "INTEGER" }
-        },
-        "required": ["id", "qty"]
-      }
-    },
-    "inv_rem": {
-      "type": "ARRAY",
-      "items": {
-        "type": "OBJECT",
-        "properties": {
-          "id": { "type": "STRING" },
-          "qty": { "type": "INTEGER" }
-        },
-        "required": ["id", "qty"]
-      }
-    },
-    "corpse_add": {
-      "type": "ARRAY",
-      "items": { "type": "STRING" },
-      "description": "One entry per enemy killed this turn."
-    },
-    "stat_grant": {
-      "type": "OBJECT",
-      "description": "Permanent attribute/pool bonus only — not ordinary damage/healing (use deltas for that). Set exactly one of attr or pool, plus amount.",
-      "properties": {
-        "attr": { "type": "STRING", "enum": ["STR", "INT", "AGI"] },
-        "pool": { "type": "STRING", "enum": ["hp", "mp", "st"] },
-        "amount": { "type": "INTEGER" }
-      }
-    },
-    "act": {
-      "type": "ARRAY",
-      "items": { "type": "STRING" },
-      "description": "2-4 short suggested next actions. Flavor only, not a restrictive menu — the player can always type something else."
-    },
-    "flag_add": {
-      "type": "ARRAY",
-      "items": { "type": "STRING" }
-    },
-    "quest_update": {
-      "type": "OBJECT",
-      "description": "Optional. Present only when this turn advances or completes a tracked objective.",
-      "properties": {
-        "quest_id": { "type": "STRING" },
-        "status": { "type": "STRING", "enum": ["advanced", "completed", "failed"] },
-        "note": { "type": "STRING" }
-      }
-    },
-    "npc_mem_up": {
-      "type": "ARRAY",
-      "items": {
-        "type": "OBJECT",
-        "properties": {
-          "npc_id": { "type": "STRING" },
-          "aff_delta": { "type": "INTEGER" },
-          "trust_delta": { "type": "INTEGER" },
-          "deed": { "type": "STRING" },
-          "mem_summary": { "type": "STRING" }
-        }
-      },
-      "description": "One entry per present NPC affected this turn."
-    }
-  },
-  "required": ["nar", "turn_state", "time", "loc_disp", "loc_id", "act"]
-}
+```text
+OUTPUT FORMAT (read carefully — this replaces JSON output entirely):
+Respond with exactly two top-level elements, in this order, and nothing else — no markdown fences, no prose outside these tags:
+
+<nar>
+...your narrative prose, using the existing markup rules above unchanged (double/single quotes, [Skill], [[Item]], {{Term|category}}, CAPITAL LETTERS for shouts)...
+</nar>
+<sync>
+  <turn state="TURN_STATE" d="DAY_INT" h="TIME_STR" loc="LOC_ID" locdisp="LOC_DISPLAY_NAME" desc="LOC_DESC" dist="c|m|f|none" mood="MOOD_TAG" />
+  <deltas hp="±N" mp="±N" st="±N" c="±N" />
+  <item id="ITEM_ID" name="NAME" type="weapon|armor|accessory|tool|key|consumable|material" qty="N" desc="DESC" bonus="+N STR, +N hp, ..." />
+  <item id="ITEM_ID" rem="1" qty="N" />
+  <corpse id="ENEMY_ID" />
+  <stat_grant attr="STR|INT|AGI" pool="hp|mp|st" amount="N" />
+  <act>SUGGESTED ACTION TEXT</act>
+  <flag add="FLAG_NAME" />
+  <quest id="QUEST_ID" status="advanced|completed|failed" note="NOTE" desc="DESC" />
+  <npc id="NPC_ID" aff="±N" trust="±N" deed="DEED_TEXT" mem="MEM_SUMMARY" wld="HELD_WEAPON" armor="WORN_ARMOR" />
+  <class_evo id="CLASS_ID" reason="REASON" />
+  <fac id="FACTION_ID" delta="±N" />
+  <skill id="SKILL_ID" name="NAME" desc="DESC" class="CLASS_ID" mp="N" st="N" />
+</sync>
+
+Rules for <sync>:
+- <turn> is the only always-required tag — attributes state/d/h/loc/locdisp are always present; desc/dist/mood are omitted when not applicable, matching the same "only send loc desc on first visit or genuine change" rule as the JSON field it replaces (loc_desc).
+- Every other tag is OMITTED ENTIRELY when that turn has nothing to report for it — do not emit an empty tag as a placeholder. This mirrors each field's own optionality in the schema below; the same "only when it actually changed" rules apply per field exactly as described there.
+- <act> repeats 2-4 times (required, same as the JSON schema's "act" array).
+- <item> covers BOTH acquiring and losing an item: an acquired item gets id/name/type/qty (desc/bonus optional); a lost/consumed item gets id, rem="1", and qty only — omit name/type/desc/bonus on a removal.
+- <item>, <corpse>, <flag>, <npc>, <fac>, <skill> may each repeat 0 or more times — one tag per item/enemy/flag/NPC/faction/skill affected this turn.
+- <stat_grant>, <quest>, <class_evo> each appear at most once per turn (or omitted).
+- Numeric deltas are written with an explicit sign (+6, -14), never bare.
+- Escape literal & as &amp; inside attribute values and narration text; XML requires this even for narration prose.
 ```
+
+**Why `<item>` merges acquisition and removal into one tag** rather than two (the JSON schema's old `inv_add`/`inv_rem` split): one fewer tag name to hold in mind for the same field coverage, distinguished by the presence of `rem="1"`. **Why tag/attribute names are left readable** rather than squeezed to 2-3 letter mnemonics: the measured ~25% saving (§3.3) came from switching JSON `"key":"value"` to XML `attribute="value"`, not from shaving tag-name characters — those cost a handful of tokens each either way, and cryptic names raise the model's own error rate for a saving that doesn't show up in a real token count.
+
+**Internal field-shape reference (unchanged by the XML migration).** Every `<sync>` tag/attribute above maps 1:1 onto the same internal turn-response shape the pre-v3.0 JSON schema defined — `nar`, `turn_state`, `time` (`d`/`h`), `loc_disp`, `loc_id`, `loc_desc`, `dist`, `mood`, `deltas` (`hp`/`mp`/`st`/`c`), `inv_add`/`inv_rem` (now the unified `<item>` tag), `corpse_add`, `stat_grant`, `act`, `flag_add`, `quest_update`, `npc_mem_up` (including `held_weapon`/`worn_armor`, §3.2/rule 2a above), `class_evolution`, `fac_rep`, and `skill_learn`. Every cross-reference elsewhere in this document to one of those field names (e.g. "`inv_add`/`inv_rem` (§7.3)") refers to this same internal shape — the client-side representation didn't change, only the wire format the model actually emits it in. A provider whose capability map (§3.4) has no reason to prefer XML can still be sent this exact same shape as a native JSON schema instead; the two are equivalent, just encoded differently.
 
 ---
 

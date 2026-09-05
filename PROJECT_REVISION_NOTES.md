@@ -182,9 +182,11 @@ stand-in available here for Safari/iOS, which are the browsers most likely to re
 A single-player, browser-only (no backend) AI-narrated text RPG. Vite + React 19 +
 TypeScript + Tailwind v4. All state lives in `localStorage` via `src/lib/store.ts` — no
 server, no accounts. The player narrates actions in free text; Google Gemini (currently
-the only wired provider) returns structured JSON turns (narration + state deltas) per
-`src/api/turnContract.ts`'s schema, applied client-side by `src/App.tsx`'s `sendAction`.
-The full intended design lives in `Tale-Dives-Blueprint-v2_4.md` in the repo root — it is
+the only wired provider) returns a hybrid turn response — a `<nar>` prose block plus a
+`<sync>` block of XML tags for state deltas, per `src/api/xmlTurnContract.ts`'s grammar
+(narrative rules live in `src/api/turnContract.ts`'s `SYSTEM_INSTRUCTIONS`, format-agnostic
+and reused unchanged) — applied client-side by `src/App.tsx`'s `sendAction`.
+The full intended design lives in `Tale-Dives-Blueprint-v3_0.md` in the repo root — it is
 a design document, not a status report. Treat every `§` reference below as "see that
 section of the blueprint for the full spec," not "this is built."
 

@@ -1,5 +1,37 @@
 # Tale Dives — Project Revision Notes
 
+**Last updated:** 2026-09-05, Claude Code on the web — added Turn State-triggered
+soundtrack switching with crossfade. Filenames can now opt out of the ambient
+rotation and into a per-Turn-State pool via a `ts-<state>_` prefix (e.g.
+`ts-combat_ironclash_ost00.opus`), parsed by `parseTurnState()`
+(`soundtrackManifest.ts`) the same way the `_ostNN` order suffix already was
+— still hand-added to the manifest like every other track, since browsers
+still can't list `public/tracks/` themselves. `backgroundMusic.tsx`'s
+discovery now partitions found tracks into the ambient list plus a
+`Partial<Record<TurnState, string[]>>` of pools; a new `setTurnState()`
+(exposed from `useBackgroundMusic`) fades the current track out, swaps to
+the target pool (or back to ambient rotation) once the fade completes, and
+fades the new one in — a single-track pool loops in place, a multi-track one
+rotates on `ended` the same way ambient rotation does. `App.tsx` wires this
+to the game: an effect computes the last *narrated* turn's `turnState`
+(reusing `findLastNarratedIndex`) and calls `setTurnState` whenever it
+changes, so combat (or any other tagged state) music kicks in automatically
+without an explicit player action, and a no-op when the state hasn't
+actually changed. Manual OST controls (`playTrack`/`nextTrack`/`prevTrack`)
+always win over an active state pool if the player uses them mid-combat.
+Live-verified against real audio: temporarily copied an existing track to a
+`ts-combat_testcue_ost00.opus` test asset, seeded campaigns with a last
+narrated `turnState` of `null`/`PEACE`/`COMBAT`, and confirmed via the real
+`<audio>` element that `PEACE`/no-turn correctly stayed on ambient rotation
+(`loop: false`) while `COMBAT` correctly switched to the pool track with
+`loop: true` (a single-track pool loops in place rather than rotating) —
+then removed the test asset and its manifest entry. The live mid-session
+fade-out/fade-in transition itself (as opposed to which track loads on
+mount) reuses the same `fadeTo`/`startTrack` helpers the pre-existing
+ambient rotation already exercises every loop, so it wasn't separately
+re-verified — flagging that as the one piece still worth a real ear-check
+once actual `ts-combat_*` tracks are in `public/tracks/`.
+
 **Last updated:** 2026-09-05, Claude Code on the web — built the structural fix
 flagged (but not yet built) in the previous entry: NPCs now have real, tracked
 gear. Added `heldWeapon`/`wornArmor` to `NpcEntry` (`types.ts`), a matching

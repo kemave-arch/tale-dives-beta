@@ -301,7 +301,24 @@ export default function App() {
     nextTrack: onNextTrack,
     prevTrack: onPrevTrack,
     resumeSoundtrack: onResumeSoundtrack,
+    setTurnState: setMusicTurnState,
   } = useBackgroundMusic()
+
+  // Drives combat (etc.) music: whenever the last *narrated* turn's state
+  // changes, crossfade into that Turn State's track pool (backgroundMusic.tsx)
+  // — or back to ambient rotation once none applies. Keyed off game.log so a
+  // fresh turn, a !recall-driven rewrite, or switching to a different
+  // campaign entirely (game.log itself points at a different array) all
+  // re-evaluate; a bang command with no turnState of its own just re-confirms
+  // whatever the last real narration left active.
+  useEffect(() => {
+    if (!game) {
+      setMusicTurnState(null)
+      return
+    }
+    const idx = findLastNarratedIndex(game.log)
+    setMusicTurnState(idx >= 0 ? game.log[idx].turnState ?? null : null)
+  }, [game?.log])
 
   useEffect(() => { store.saveApiSettings(apiSettings) }, [apiSettings])
   useEffect(() => { store.saveUiPrefs(uiPrefs) }, [uiPrefs])

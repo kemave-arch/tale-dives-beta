@@ -1,5 +1,6 @@
 import { FOURTH_WING_WORLD, VIOLET_SORRENGAIL } from '../data/starterTemplates.ts'
 import { CURRENT_SCHEMA_VERSION } from '../types.ts'
+import { derivedPools } from './derivedStats.ts'
 import type { ApiSettings, Campaign, Dict, ProtagonistData, SlashCommand, UiPrefs, WorldData } from '../types.ts'
 
 // Centralized localStorage persistence. Splits the old single-save shape
@@ -93,6 +94,25 @@ export function loadCampaigns(): Dict<Campaign> {
         c.schemaVersion = CURRENT_SCHEMA_VERSION
         touched = true
       }
+    }
+    // Repair a NaN-corrupted vitals pool — caused by a since-fixed bug where
+    // a stat_grant with no `amount` produced `hpMax + undefined = NaN`.
+    // Nothing downstream self-heals this: Math.min/max(NaN, x) is always
+    // NaN, and NaN round-trips through JSON.stringify/parse as `null`, which
+    // Number.isFinite also rejects — so this check catches it either way.
+    // Falls back to the attribute-derived base pool, full — not a
+    // reconstruction of what was actually granted, just a safe recovery so
+    // the player isn't stuck at NaN/NaN forever.
+    for (const c of Object.values(campaigns)) {
+      const p = c.player
+      if (!p) continue
+      const pools = derivedPools(p.attrs)
+      if (!Number.isFinite(p.hpMax)) { p.hpMax = pools.hpMax; touched = true }
+      if (!Number.isFinite(p.mpMax)) { p.mpMax = pools.mpMax; touched = true }
+      if (!Number.isFinite(p.stMax)) { p.stMax = pools.stMax; touched = true }
+      if (!Number.isFinite(p.hp)) { p.hp = p.hpMax; touched = true }
+      if (!Number.isFinite(p.mp)) { p.mp = p.mpMax; touched = true }
+      if (!Number.isFinite(p.st)) { p.st = p.stMax; touched = true }
     }
     if (touched) save(KEYS.campaigns, campaigns)
     return campaigns

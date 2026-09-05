@@ -129,12 +129,13 @@ export const TURN_SCHEMA = {
     stat_grant: {
       type: 'OBJECT',
       description:
-        'Permanent attribute/pool bonus only — not ordinary damage/healing (use deltas for that). Set exactly one of attr or pool, plus amount.',
+        "Permanent attribute/pool bonus only — never for a temporary in-the-moment surge (a combat power spike, a drug/potion effect, a spell's duration), which belongs in \"deltas\" instead even when the player's own phrasing sounds dramatic (\"overloading myself with power\"). Only for a change that outlasts this scene. Set exactly one of attr or pool, and always include amount — omitting it produces a grant with no actual effect.",
       properties: {
         attr: { type: 'STRING', enum: ['STR', 'INT', 'AGI'] },
         pool: { type: 'STRING', enum: ['hp', 'mp', 'st'] },
         amount: { type: 'INTEGER', minimum: 0, maximum: 50 },
       },
+      required: ['amount'],
     },
     act: {
       type: 'ARRAY',

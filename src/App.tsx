@@ -696,10 +696,16 @@ export default function App() {
       // `stat_grant` path — the Equipment source (item `stat_bonus`, §5.1c)
       // has no equip system to hang off yet and isn't implemented.
       let grantedPlayer = upkeepPlayer
-      if (turn.stat_grant) {
+      // Guard against a schema-valid but incomplete grant (no `amount` —
+      // the field isn't marked required) doing `x + undefined = NaN`, which
+      // nothing downstream catches: Math.min/max(NaN, ...) is always NaN, so
+      // it silently poisons hp/hpMax forever once saved. A missing/invalid
+      // amount is treated as no grant at all, not a corrupt one.
+      const grantAmount = Number.isFinite(turn.stat_grant?.amount) ? turn.stat_grant!.amount : 0
+      if (turn.stat_grant && grantAmount > 0) {
         const grant = turn.stat_grant
         if (grant.attr) {
-          const nextAttrs = { ...grantedPlayer.attrs, [grant.attr]: grantedPlayer.attrs[grant.attr] + grant.amount }
+          const nextAttrs = { ...grantedPlayer.attrs, [grant.attr]: grantedPlayer.attrs[grant.attr] + grantAmount }
           const pools = derivedPools(nextAttrs)
           grantedPlayer = {
             ...grantedPlayer,
@@ -713,7 +719,7 @@ export default function App() {
           }
         } else if (grant.pool) {
           const maxKey = `${grant.pool}Max` as 'hpMax' | 'mpMax' | 'stMax'
-          grantedPlayer = { ...grantedPlayer, [maxKey]: grantedPlayer[maxKey] + grant.amount, [grant.pool]: grantedPlayer[grant.pool] + grant.amount }
+          grantedPlayer = { ...grantedPlayer, [maxKey]: grantedPlayer[maxKey] + grantAmount, [grant.pool]: grantedPlayer[grant.pool] + grantAmount }
         }
       }
 
@@ -722,11 +728,22 @@ export default function App() {
       // individual mutation above already clamps correctly in isolation, but
       // this guarantees the invariant holds regardless of which path ran,
       // rather than trusting each one to compose correctly forever.
+      // Math.min/max(NaN, x) is always NaN, so a genuinely NaN max or current
+      // value (from any future bug, not just the stat_grant one already
+      // guarded above) falls back to the attribute-derived base pool — full,
+      // not zero — rather than silently passing NaN through as if clamped.
+      const basePools = derivedPools(grantedPlayer.attrs)
+      const safeHpMax = Number.isFinite(grantedPlayer.hpMax) ? grantedPlayer.hpMax : basePools.hpMax
+      const safeMpMax = Number.isFinite(grantedPlayer.mpMax) ? grantedPlayer.mpMax : basePools.mpMax
+      const safeStMax = Number.isFinite(grantedPlayer.stMax) ? grantedPlayer.stMax : basePools.stMax
       const finalPlayer: Player = {
         ...grantedPlayer,
-        hp: Math.max(0, Math.min(grantedPlayer.hpMax, grantedPlayer.hp)),
-        mp: Math.max(0, Math.min(grantedPlayer.mpMax, grantedPlayer.mp)),
-        st: Math.max(0, Math.min(grantedPlayer.stMax, grantedPlayer.st)),
+        hpMax: safeHpMax,
+        mpMax: safeMpMax,
+        stMax: safeStMax,
+        hp: Number.isFinite(grantedPlayer.hp) ? Math.max(0, Math.min(safeHpMax, grantedPlayer.hp)) : safeHpMax,
+        mp: Number.isFinite(grantedPlayer.mp) ? Math.max(0, Math.min(safeMpMax, grantedPlayer.mp)) : safeMpMax,
+        st: Number.isFinite(grantedPlayer.st) ? Math.max(0, Math.min(safeStMax, grantedPlayer.st)) : safeStMax,
       }
 
       const nextCampaign: Campaign = {

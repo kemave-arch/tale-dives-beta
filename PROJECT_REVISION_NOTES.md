@@ -1,5 +1,33 @@
 # Tale Dives — Project Revision Notes
 
+**Last updated:** 2026-09-05, Claude Code on the web — a live user test of the
+`deltas` fix below surfaced a worse, active bug: testing with "+100 HP" produced
+`"stat_grant": {"pool": "hp"}` with **no `amount`** — the model picked `stat_grant`
+(the permanent-boost mechanic, arguably reasonably given the dramatic "overloading
+myself with power" phrasing) over `deltas`, and then left it incomplete, since
+`amount` was never marked `required` on that schema object. `App.tsx`'s apply logic
+did `hpMax + grant.amount` with `amount === undefined`, producing `hp: NaN, hpMax:
+NaN` — confirmed live via a screenshot showing "HEALTH: NaN/NaN". Worse, the existing
+"defensive final clamp" didn't catch it: `Math.min/max(NaN, x)` is always `NaN` in
+JS, so it wasn't actually a safety net against this failure mode, just against
+out-of-range numbers. Three-part fix: (1) `App.tsx` now guards `grant.amount` at the
+point of use — a missing/non-finite amount is treated as no grant at all, not a
+corrupt one; (2) the final clamp itself is now genuinely NaN-safe, falling back to
+the attribute-derived base pool (via `derivedPools`) for any of hp/mp/st *or* their
+max, rather than silently passing NaN through as if clamped; (3) `store.ts`'s
+`loadCampaigns()` backfill loop (same pattern as its existing schemaVersion
+backfill) now repairs any already-corrupted save on load — verified live that a
+seeded `hp: null, hpMax: null` (NaN round-trips through JSON as `null`, which
+`Number.isFinite` also correctly rejects) repairs to a real number the moment the
+campaign loads, no player action needed. Also strengthened `TURN_SCHEMA`'s
+`stat_grant` description to explicitly rule out temporary/in-the-moment surges
+(combat power spikes, potion effects) even when the player's own phrasing sounds
+dramatic — those belong in `deltas` — and added `required: ['amount']` so this
+specific incomplete-grant shape can't recur. The underlying judgment call (does a
+player's own claimed exact number, like "+100 HP", get honored verbatim, or does the
+model treat it as a proposal to moderate?) is flagged to the user as still open,
+not decided here.
+
 **Last updated:** 2026-09-05, Claude Code on the web — three small changes plus one
 real bug fix, all in response to a live payload report (a player narrated healing/mana
 restoration outside combat, but `deltas` was silently omitted). (1) Strengthened

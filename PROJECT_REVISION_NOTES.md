@@ -1,8 +1,24 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-05, Claude Code on the web — a live diagnostic report from
-the user (`gemini-2.0-flash-lite` had actually been sunset server-side, confirming the
-older-models addition below was already needed as a fallback) surfaced a real, separate
+**Last updated:** 2026-09-05, Claude Code on the web — removed the sub-3.0 Gemini
+models (`gemini-2.5-flash`, `2.5-flash-lite`, `2.0-flash`, `2.0-flash-lite`) from
+`GEMINI_MODELS` per the user's call, after a long side investigation (see below)
+into whether the Interactions API — the newer, stateful Gemini endpoint the
+`gemini-2.0-flash-lite` deprecation error kept pointing at — was worth migrating to.
+Verdict, after actually confirming the endpoint is real and reading its full API
+reference: not worth it right now. It would save on re-uploaded history for long
+campaigns, but the truncation bug that started this is already fixed by the
+`thinkingBudgetOverride` change below, and migrating would trade away the one thing
+Chronicle's debug tooling exists for — visibility into exactly what the model sees
+each turn — since the Interactions API's "story memory" lives opaquely server-side
+via `previous_interaction_id`, distinct from Tale Dives's own deliberately-curated
+`buildContextSlice` (which would still be needed either way). `thinkingBudgetOverride`
+in `gemini.ts` stays as-is (its `!model.startsWith('gemini-2.0')` guard is now
+unreachable via the model picker, but is left alone as a harmless defensive check for
+anyone whose saved settings still reference a since-deprecated model). Earlier: a live
+diagnostic report from the user (`gemini-2.0-flash-lite` had actually been sunset
+server-side, confirming the older-models addition below was already needed as a
+fallback, before being removed again per this same entry) surfaced a real, separate
 bug: `ApiErrorPanel` (Chronicle's "FATE THREAD FALTERED" card) rendered almost
 illegibly — labels and secondary buttons washed out to near-invisible pale gray-pink.
 Root cause: the panel used the semantic `text-ink`/`text-ink-muted`/`text-gold-primary`

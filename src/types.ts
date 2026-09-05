@@ -342,6 +342,7 @@ export interface ProtagonistData {
   opening: string
   customAttributes?: Attributes // Optional custom point-buy distributed STR, INT, AGI
   startingSkills?: SkillEntry[] // Optional custom starting abilities for Codex seeding
+  keyItem?: string // Optional special item name the protagonist brings into the world — fleshed out into a real ItemEntry by world seeding
   isDefault?: boolean
   isMaster?: boolean // Immutable master preset (cannot be deleted)
   savedAt?: number // Timestamp when saved/updated in the library

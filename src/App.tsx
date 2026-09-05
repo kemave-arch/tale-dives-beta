@@ -180,7 +180,7 @@ export default function App() {
 
   useEffect(() => {
     if (screen === 'diveloading' && game && game.log.length > 0) {
-      navigateTo('storymode', true)
+      navigateTo('chronicle', true)
     }
   }, [screen, game])
   const [worldSetupMode, setWorldSetupMode] = useState<CreationMode>('tale')
@@ -434,7 +434,7 @@ export default function App() {
       mpMax,
       st: stMax,
       stMax,
-      copper: 14580,
+      copper: 10_000, // flat 1 Gold starting wealth (§5.2 Four-Tier Currency Engine, 1G = 10,000 base copper)
       locId: 'loc_start',
       locDisp: 'An Unwritten Place',
       time: { d: 1, h: '08:00 AM' },

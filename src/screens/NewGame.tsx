@@ -174,7 +174,7 @@ export default function NewGame({
 
   // Starting Skills CRUD State
   const [startingSkills, setStartingSkills] = useState<SkillEntry[]>(() => {
-    if (initial?.startingSkills && initial.startingSkills.length > 0) return initial.startingSkills
+    if (initial?.startingSkills && initial.startingSkills.length > 0) return initial.startingSkills.slice(0, 3)
     const baseClassId = initial?.classId ?? 'warrior'
     return CLASS_STARTER_SKILLS[baseClassId] || CLASS_STARTER_SKILLS['warrior']
   })
@@ -193,6 +193,10 @@ export default function NewGame({
   const [skillDraftMp, setSkillDraftMp] = useState(0)
   const [skillDraftSt, setSkillDraftSt] = useState(0)
   const [skillDraftDesc, setSkillDraftDesc] = useState('')
+
+  // Special Key Item — one optional item name the protagonist brings into
+  // the world; world seeding (not this form) fleshes it into a real ItemEntry.
+  const [keyItem, setKeyItem] = useState(initial?.keyItem ?? '')
 
   // Tooltip / Popover state for stat explanations
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null)
@@ -269,7 +273,7 @@ export default function NewGame({
   }
 
   function openAddSkill() {
-    if (startingSkills.length >= 4) return
+    if (startingSkills.length >= 3) return
     setSkillDraftName('')
     setSkillDraftType('Active')
     setSkillDraftTier('Novice')
@@ -330,6 +334,7 @@ export default function NewGame({
     setPhysicalTrait(t.physicalTrait ?? '')
     setSecret(t.secret ?? '')
     setOpening(t.opening ?? '')
+    setKeyItem(t.keyItem ?? '')
 
     if (t.customAttributes) {
       setAttrs(t.customAttributes)
@@ -359,8 +364,9 @@ export default function NewGame({
     setPhysicalTrait('')
     setSecret('')
     setOpening('')
+    setKeyItem('')
     resetAttributes()
-    setStartingSkills(CLASS_STARTER_SKILLS['warrior'] || [])
+    setStartingSkills((CLASS_STARTER_SKILLS['warrior'] || []).slice(0, 3))
     setViewMode('editor')
   }
 
@@ -384,6 +390,7 @@ export default function NewGame({
       opening,
       customAttributes: attrs,
       startingSkills: startingSkills.length > 0 ? startingSkills : undefined,
+      keyItem: keyItem.trim() || undefined,
     }
   }
 
@@ -1007,13 +1014,13 @@ export default function NewGame({
       <div className="flex flex-col gap-2 rounded-xl p-3.5 border border-[#e8ca8a]/25 bg-[#07050c]/50">
         <div className="flex items-center justify-between gap-2">
           <span className="font-narrative text-xs text-[#e8ca8a]/80">
-            Initial abilities in your Codex ({startingSkills.length}/4).
+            Initial abilities in your Codex ({startingSkills.length}/3).
           </span>
           <div className="flex items-center gap-3">
             {CLASS_STARTER_SKILLS[classId] && (
               <button
                 type="button"
-                onClick={() => setStartingSkills(CLASS_STARTER_SKILLS[classId] || [])}
+                onClick={() => setStartingSkills((CLASS_STARTER_SKILLS[classId] || []).slice(0, 3))}
                 className="font-mono text-[10px] text-[#f0ca65] hover:underline"
               >
                 Suggest for {customClassName}
@@ -1021,7 +1028,7 @@ export default function NewGame({
             )}
             <button
               type="button"
-              disabled={startingSkills.length >= 4}
+              disabled={startingSkills.length >= 3}
               onClick={openAddSkill}
               className="flex items-center gap-1 text-[11px] font-display text-[#f0ca65] hover:text-white px-2.5 py-1 rounded-lg border border-[#f0ca65]/35 bg-[#f0ca65]/10 hover:bg-[#f0ca65]/25 transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
             >
@@ -1029,6 +1036,12 @@ export default function NewGame({
             </button>
           </div>
         </div>
+
+        <p className="font-narrative italic text-[11px] text-[#e8ca8a]/60 leading-relaxed">
+          Optional — and every skill you start with is one the world already expects of you.
+          Great power invites great responsibility: stronger starting skills mean tougher
+          opposition and higher stakes from Turn 1, not a free advantage.
+        </p>
 
         {startingSkills.length === 0 ? (
           <div className="rounded-lg border border-dashed border-[#e8ca8a]/20 p-4 text-center">
@@ -1089,6 +1102,21 @@ export default function NewGame({
             ))}
           </div>
         )}
+      </div>
+
+      <div className="flex flex-col gap-1.5 rounded-xl p-3.5 border border-[#e8ca8a]/25 bg-[#07050c]/50">
+        <span className="font-narrative text-xs text-[#e8ca8a]/80">Special Key Item (optional)</span>
+        <input
+          type="text"
+          value={keyItem}
+          onChange={(e) => setKeyItem(e.target.value)}
+          placeholder="e.g. a late brother's signet ring, a cracked mana core, a family blade"
+          className={FIELD_CLASS}
+        />
+        <p className="font-narrative italic text-[11px] text-[#e8ca8a]/60 leading-relaxed">
+          One item the protagonist brings into the world — a keepsake, a weapon, a strange
+          artifact. Just name it; the world seeding pass fleshes out its full description.
+        </p>
       </div>
 
       {(onSavePreset || onSaveAsNewPreset) && (

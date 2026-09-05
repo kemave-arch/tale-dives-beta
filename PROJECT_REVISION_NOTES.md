@@ -1,5 +1,22 @@
 # Tale Dives — Project Revision Notes
 
+**Last updated:** 2026-09-05, Claude Code on the web — resolved the open question from
+the `stat_grant` NaN investigation (should a player's own claimed exact number, like
+"+100 HP", be honored verbatim or moderated?) with a new convention rather than a
+blanket policy either way: added rule 3a "Player Statement Override" to
+`SYSTEM_INSTRUCTIONS` — text the player wraps in `*asterisks*` is now an explicit,
+authoritative directive the model must make real through the normal mechanical
+channels (still bounded by each field's own schema limits, e.g. deltas' ±500), then
+narrate a justification for, rather than simply asserting flatly. Unmarked action
+text is unaffected — ordinary prose still gets the model's normal narrative judgment
+under rule 3 (Player Agency). Deliberately a pure prompt-text change with no schema
+or client-side parsing involved: `richText.tsx` doesn't use `*` for anything (checked
+before adding this, to rule out a collision), and the player's own action text
+already passes through to the model as plain, unprocessed text either way, so no
+code changes were needed on the client side. Not independently verifiable without a
+live API call — build is clean, but there's nothing to click-test in the app itself
+for a pure system-instruction change.
+
 **Last updated:** 2026-09-05, Claude Code on the web — fixed a real usability gap in
 last round's Edit/Retry/Delete turn controls (see below): a bang command (`!arise`,
 `!inventory`, ...) is its own log entry with no `nar`/`rawPayload`, so running one

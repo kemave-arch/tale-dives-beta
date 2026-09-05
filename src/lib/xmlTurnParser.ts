@@ -1,7 +1,8 @@
 import type {
   ClassEvolutionUpdate, FactionRepChange, InventoryAcquisition, InventoryChange, ItemType,
-  NpcMemoryUpdate, QuestUpdate, SkillLearn, StatBonus, StatGrant, TurnDelta, TurnResponse, TurnState,
+  NpcMemoryUpdate, QuestUpdate, SkillLearn, StatGrant, TurnDelta, TurnResponse, TurnState,
 } from '../types.ts'
+import { XmlParseError, decodeXmlEntities, num, reqNum, str, reqStr, parseXmlBlock, parseStatBonus } from './xmlHelpers.ts'
 
 // Parses the live XML grammar from xmlTurnContract.ts back into the exact
 // same TurnResponse shape the old JSON path used to produce, so nothing
@@ -17,57 +18,20 @@ import type {
 // JSON path's extractNarrative gave. That means <nar>'s extracted text needs
 // its own entity decode (decodeXmlEntities below) since it never passes
 // through the real parser the way <sync>'s attributes do.
+//
+// The shared attribute-reader/entity-decode primitives used here now live in
+// xmlHelpers.ts, alongside worldSeedParser.ts's use of the same primitives
+// for the one-time world-seeding call's own <seed> grammar.
 
-export class XmlTurnParseError extends Error {}
-
-const XML_ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }
-
-// Handles the 5 predefined XML entities plus numeric character references
-// (&#39; / &#x27;) — the model is only instructed to escape literal &, but
-// decoding the full set is defensive in case it over-escapes.
-export function decodeXmlEntities(text: string): string {
-  return text.replace(/&(#x?[0-9a-fA-F]+|\w+);/g, (full, code: string) => {
-    if (code[0] === '#') {
-      const codepoint = code[1] === 'x' || code[1] === 'X' ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10)
-      return Number.isFinite(codepoint) ? String.fromCodePoint(codepoint) : full
-    }
-    return XML_ENTITIES[code] ?? full
-  })
-}
-
-function num(v: string | null): number | undefined {
-  if (v === null || v === '') return undefined
-  const n = Number(v)
-  return Number.isFinite(n) ? n : undefined
-}
-
-function reqNum(v: string | null, field: string): number {
-  const n = num(v)
-  if (n === undefined) throw new XmlTurnParseError(`Missing/invalid required numeric attribute: ${field}`)
-  return n
-}
-
-function str(v: string | null): string | undefined {
-  return v === null || v === '' ? undefined : v
-}
-
-function reqStr(v: string | null, field: string): string {
-  const s = str(v)
-  if (s === undefined) throw new XmlTurnParseError(`Missing required attribute: ${field}`)
-  return s
-}
+export const XmlTurnParseError = XmlParseError
+export { decodeXmlEntities }
 
 export function parseXmlTurnResponse(raw: string): TurnResponse {
   const narMatch = raw.match(/<nar>([\s\S]*?)<\/nar>/)
   if (!narMatch) throw new XmlTurnParseError('No <nar> block found')
   const nar = decodeXmlEntities(narMatch[1].trim())
 
-  const syncMatch = raw.match(/<sync>([\s\S]*?)<\/sync>/)
-  if (!syncMatch) throw new XmlTurnParseError('No <sync> block found')
-
-  const doc = new DOMParser().parseFromString(`<root>${syncMatch[1]}</root>`, 'text/xml')
-  const parseError = doc.querySelector('parsererror')
-  if (parseError) throw new XmlTurnParseError(`Malformed <sync> XML: ${parseError.textContent}`)
+  const doc = parseXmlBlock(raw, 'sync')
 
   const turnEl = doc.querySelector('turn')
   if (!turnEl) throw new XmlTurnParseError('No <turn> tag found inside <sync>')
@@ -134,6 +98,7 @@ export function parseXmlTurnResponse(raw: string): TurnResponse {
     ? {
         quest_id: reqStr(questEl.getAttribute('id'), 'quest.id'),
         status: reqStr(questEl.getAttribute('status'), 'quest.status') as QuestUpdate['status'],
+        type: str(questEl.getAttribute('type')) as QuestUpdate['type'],
         note: str(questEl.getAttribute('note')),
         description: str(questEl.getAttribute('desc')),
       }
@@ -190,19 +155,4 @@ export function parseXmlTurnResponse(raw: string): TurnResponse {
     fac_rep: fac_rep.length ? fac_rep : undefined,
     skill_learn: skill_learn.length ? skill_learn : undefined,
   }
-}
-
-// "+2 AGI, +5 MP" -> { AGI: 2, mp: 5 }. Same freeform format the JSON path's
-// stat_bonus already normalizes case for (STR/INT/AGI uppercase, hp/mp/st lowercase).
-function parseStatBonus(text: string): StatBonus {
-  const bonus: StatBonus = {}
-  const attrKeys: (keyof StatBonus)[] = ['STR', 'INT', 'AGI', 'hp', 'mp', 'st']
-  for (const part of text.split(',')) {
-    const match = part.trim().match(/^([+-]?\d+)\s*(\w+)$/)
-    if (!match) continue
-    const [, amountStr, key] = match
-    const found = attrKeys.find((k) => k.toLowerCase() === key.toLowerCase())
-    if (found) bonus[found] = Number(amountStr)
-  }
-  return bonus
 }

@@ -17,6 +17,13 @@ export function repTierLabel(tier: number): string {
   return REP_TIER_LABELS[clampTier(tier)] ?? 'Neutral'
 }
 
+// Shared by App.tsx's player-authored Key Factions seeding and the one-time
+// world-seeding pass (lib/seeding.ts) for any faction the LLM proposes —
+// one mapping, not two copies of the same allied/friendly/hostile/rival ladder.
+export function attitudeToRepTier(attitude: string | undefined): number {
+  return attitude === 'allied' ? 2 : attitude === 'friendly' ? 1 : attitude === 'hostile' || attitude === 'rival' ? -1 : 0
+}
+
 // §5.4 App-Side Rivalry — gaining standing with a faction costs its `rivalId`
 // counterpart the same amount, purely in local state, 0 API tokens. An
 // unrecognized faction_id is ignored rather than fabricating an entry with

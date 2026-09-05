@@ -48,7 +48,7 @@ Respond with exactly two top-level elements, in this order, and nothing else —
   <stat_grant attr="STR|INT|AGI" pool="hp|mp|st" amount="N" />
   <act>SUGGESTED ACTION TEXT</act>
   <flag add="FLAG_NAME" />
-  <quest id="QUEST_ID" status="advanced|completed|failed" note="NOTE" desc="DESC" />
+  <quest id="QUEST_ID" status="advanced|completed|failed" type="main|side|ambition|secret_ambition" note="NOTE" desc="DESC" />
   <npc id="NPC_ID" aff="±N" trust="±N" deed="DEED_TEXT" mem="MEM_SUMMARY" wld="HELD_WEAPON" armor="WORN_ARMOR" />
   <class_evo id="CLASS_ID" reason="REASON" />
   <fac id="FACTION_ID" delta="±N" />
@@ -62,6 +62,7 @@ Rules for <sync>:
 - <item> covers BOTH acquiring and losing an item: an acquired item gets id/name/type/qty (desc/bonus optional); a lost/consumed item gets id, rem="1", and qty only — omit name/type/desc/bonus on a removal.
 - <item>, <corpse>, <flag>, <npc>, <fac>, <skill> may each repeat 0 or more times — one tag per item/enemy/flag/NPC/faction/skill affected this turn.
 - <stat_grant>, <quest>, <class_evo> each appear at most once per turn (or omitted).
+- <quest>'s type (main|side|ambition|secret_ambition) follows the same "only on first introduction" economy as desc — omit it on an ordinary advancement turn for a quest already introduced. A secret_ambition quest only ever originates or advances on a turn whose <turn> state is INSIGHT or EXPLORE.
 - Numeric deltas are written with an explicit sign (+6, -14), never bare.
 - Escape literal & as &amp; inside attribute values and narration text; XML requires this even for narration prose.
 `.trim()

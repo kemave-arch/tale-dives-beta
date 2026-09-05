@@ -214,6 +214,45 @@ export async function runSummary({ apiKey, model, temperature, maxOutputTokens, 
   return text.trim()
 }
 
+interface SeedParams {
+  apiKey: string
+  model: string
+  temperature: number
+  maxOutputTokens: number
+  systemInstructions: string
+  prompt: string
+}
+
+// The one-time World Seeding call (api/worldSeedContract.ts, lib/seeding.ts)
+// — unlike runTurn/runSummary, there's no existing chat history to continue;
+// this is a single one-shot request with its own system_instruction and a
+// single user turn. Mirrors runSummary's shape (own inline fetch body, no
+// shared parsing — the caller parses the raw text via worldSeedParser.ts).
+export async function runSeed({ apiKey, model, temperature, maxOutputTokens, systemInstructions, prompt }: SeedParams): Promise<string> {
+  const url = `${BASE_URL}/${encodeURIComponent(model)}:generateContent`
+
+  const body = {
+    system_instruction: { parts: [{ text: systemInstructions }] },
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    generationConfig: { temperature, maxOutputTokens, ...thinkingBudgetOverride(model) },
+  }
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+    body: JSON.stringify(body),
+  })
+
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({}))
+    throw new GeminiApiError(errBody?.error?.message ?? `HTTP ${res.status}`)
+  }
+
+  const data = await res.json()
+  const text = data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? '').join('') ?? ''
+  return text.trim()
+}
+
 // §3.4 — the single source of truth for Gemini's model list; Settings.tsx
 // reads this rather than keeping its own copy now that the provider
 // registry (api/providers/index.ts) exists.
@@ -240,4 +279,5 @@ export const GEMINI_PROVIDER: Provider = {
   capabilities: { supportsGrounding: false, supportsJsonSchema: false, supportsStreaming: false, supportsPromptCaching: false },
   runTurn,
   runSummary,
+  runSeed,
 }

@@ -220,9 +220,18 @@ export interface LoreEntry {
   discovery?: Discovery
 }
 
+// Main: world/story-driven, the game world imposes these on the protagonist.
+// Side: guild/NPC/tactical support missions alongside the main story.
+// Ambition: a player-driven personal goal (founding an order, an empire, ...).
+// Secret Ambition: a hidden high-risk/high-reward personal quest, meant to
+// surface only when the current turn state is INSIGHT or EXPLORE (§ turn
+// state gating is prompt-side, see turnContract.ts — not client-enforced).
+export type QuestType = 'main' | 'side' | 'ambition' | 'secret_ambition'
+
 export interface QuestEntry {
   name: string
   status?: 'advanced' | 'completed' | 'failed'
+  type?: QuestType
   note?: string
   description?: string // the quest's actual premise/objective, distinct from `note`'s short status update
   questGiver?: string // freeform NPC name/reference
@@ -442,6 +451,10 @@ export interface Campaign {
   log: LogEntry[]
   lastPlayed: number
   turnCount: number // real narrated turns only — decoupled from log.length, which also holds synthetic chapter-recap entries
+  // One-time World Seeding call's raw request/response (or failure reason) —
+  // there's no turn/log entry to attach this to since seeding isn't a turn.
+  // Surfaced only under Debug Mode; never re-sent to the model.
+  seedDebug?: { prompt: string; response?: string; error?: string }
 }
 
 export interface ApiSettings {
@@ -493,6 +506,7 @@ export interface StatGrant {
 export interface QuestUpdate {
   quest_id: string
   status: 'advanced' | 'completed' | 'failed'
+  type?: QuestType // only sent the turn it's first introduced, same economy as description below
   note?: string
   description?: string // the quest's premise/objective — only sent the turn it's first introduced or its scope changes; see QuestEntry.description
 }

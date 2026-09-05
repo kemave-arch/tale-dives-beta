@@ -19,6 +19,7 @@ export function applyQuestUpdate(quests: Dict<QuestEntry> | undefined, update: Q
     [id]: {
       ...dict[id],
       status: update.status,
+      type: update.type ?? dict[id].type,
       note: update.note ?? dict[id].note,
       description: update.description ?? dict[id].description,
     },

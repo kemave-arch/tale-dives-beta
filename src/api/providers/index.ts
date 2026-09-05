@@ -1,7 +1,7 @@
 import { GEMINI_PROVIDER } from './gemini.ts'
 import type { Provider } from './types.ts'
 
-export type { Provider, ProviderCapabilities, ProviderModel, RunSummaryParams, RunTurnParams } from './types.ts'
+export type { Provider, ProviderCapabilities, ProviderModel, RunSeedParams, RunSummaryParams, RunTurnParams } from './types.ts'
 
 // §3.4 — the production app is provider-agnostic: every call (turn
 // narration, chapter summaries, and eventually Class Grounding/Inspired

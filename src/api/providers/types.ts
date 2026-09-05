@@ -40,9 +40,23 @@ export interface RunSummaryParams {
   endTime?: GameTime
 }
 
+// The one-time World Seeding call (api/worldSeedContract.ts, lib/seeding.ts)
+// — a single one-shot request, no chat history at all (unlike runTurn/
+// runSummary, which both continue an existing conversation). systemInstructions
+// carries the seed grammar (built by buildWorldSeedSystemInstructions()) and
+// prompt carries the actual world/protagonist-specific ask for this campaign.
+export interface RunSeedParams {
+  apiKey: string
+  model: string
+  temperature: number
+  maxOutputTokens: number
+  systemInstructions: string
+  prompt: string
+}
+
 // One config, every call type (§3.4) — Turn narration, Chapter Milestone
-// summaries, and (eventually) Class Grounding/Inspired Mode world seeding
-// all read from whichever Provider the player picked in API Settings.
+// summaries, and World Seeding all read from whichever Provider the player
+// picked in API Settings.
 export interface Provider {
   id: string
   label: string
@@ -50,4 +64,5 @@ export interface Provider {
   capabilities: ProviderCapabilities
   runTurn: (params: RunTurnParams) => Promise<RunTurnResult>
   runSummary: (params: RunSummaryParams) => Promise<string>
+  runSeed: (params: RunSeedParams) => Promise<string>
 }

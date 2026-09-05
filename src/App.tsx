@@ -23,9 +23,10 @@ import { applySkillLearn } from './lib/skills.ts'
 import { applyInventoryChanges, equipItem, unequipSlot } from './lib/inventory.ts'
 import { resolveBangCommand, findEntry } from './lib/bangCommands.ts'
 import { checkCodexReveals } from './lib/discovery.ts'
+import { seedCampaign } from './lib/seeding.ts'
 import { queueCraftingJob, resolveCraftingJobs } from './lib/crafting.ts'
 import { applyMinionUpkeep, attemptSummon, type SummonCommand } from './lib/summoning.ts'
-import { applyFactionRepDeltas } from './lib/factions.ts'
+import { applyFactionRepDeltas, attitudeToRepTier } from './lib/factions.ts'
 import { computePlayerAttack, isDisengaging, describeCombatResult, ensureAdversary } from './lib/combat.ts'
 import { applyLevelUps, isChapterBoundary, CHAPTER_TURN_INTERVAL } from './lib/leveling.ts'
 import { parseKeywordLinks } from './lib/keywordLinks.ts'
@@ -60,7 +61,7 @@ const KEYWORD_CATEGORY_TO_CODEX: Record<KeywordLink['category'], CategoryId> = {
 // screen is current (same as SlashCommandManager), not a screen that replaces
 // it — that's what lets its glass read against the live Chronicle parchment or
 // the Title artwork behind it rather than a flat ground.
-type Screen = 'title' | 'mainmenu' | 'storymode' | 'worldsetup' | 'newgame' | 'talebrief' | 'chronicle' | 'codex' | 'diveloading'
+type Screen = 'title' | 'mainmenu' | 'storymode' | 'worldsetup' | 'newgame' | 'talebrief' | 'chronicle' | 'codex' | 'diveloading' | 'seedingreview'
 type CreationMode = 'tale' | 'library'
 
 // §5.7 Player Defeat State — soft-fail recovery, client-owned.
@@ -177,6 +178,9 @@ export default function App() {
   // Dive Brief steps.
   const [pendingWorld, setPendingWorld] = useState<WorldData | null>(null)
   const [pendingProtagonist, setPendingProtagonist] = useState<ProtagonistData | null>(null)
+  // The Prologue turn's action text, built in beginCampaign alongside World
+  // Seeding but not fired until the player confirms the Seeding Review screen.
+  const [pendingFirstAction, setPendingFirstAction] = useState<string | null>(null)
 
   useEffect(() => {
     if (screen === 'diveloading' && game && game.log.length > 0) {
@@ -410,7 +414,7 @@ export default function App() {
     return Object.values(campaigns).sort((a, b) => (b.lastPlayed ?? 0) - (a.lastPlayed ?? 0))[0]?.id
   }
 
-  function beginCampaign(protagonistData: ProtagonistData, combatMode: CombatMode = 'NARRATIVE', worldOverride?: Partial<WorldData>) {
+  async function beginCampaign(protagonistData: ProtagonistData, combatMode: CombatMode = 'NARRATIVE', worldOverride?: Partial<WorldData>) {
     const cls = getClassById(protagonistData.classId)
     const attrs = protagonistData.customAttributes ?? startingAttributes(cls.weights)
     const { hpMax, mpMax, stMax } = derivedPools(attrs)
@@ -458,7 +462,7 @@ export default function App() {
       world.factionsList.forEach((f) => {
         if (!f.name?.trim()) return
         const id = 'fac_' + slugify(f.name)
-        const repTier = f.attitude === 'allied' ? 2 : f.attitude === 'friendly' ? 1 : f.attitude === 'hostile' || f.attitude === 'rival' ? -1 : 0
+        const repTier = attitudeToRepTier(f.attitude)
         initialFactions[id] = {
           name: f.name.trim(),
           repTier,
@@ -508,50 +512,11 @@ export default function App() {
       })
     }
 
-    // Both land in their libraries the moment a Tale begins (§6.4B) —
-    // creation IS how the World/Protagonist Library gets populated.
-    const worldEntry = upsertWorld(world, world.id)
-    const protagonistEntry = upsertProtagonist(protagonistData, protagonistData.id, cls.name)
-
-    const campaignId = store.newId('campaign')
-    const campaign: Campaign = {
-      id: campaignId,
-      schemaVersion: CURRENT_SCHEMA_VERSION,
-      title: `${player.name}'s Tale`,
-      synopsis: (protagonistData.opening || world.background || '').slice(0, 140),
-      worldId: worldEntry.id!,
-      protagonistId: protagonistEntry.id!,
-      world, // §Phase A — kept for reference until the Codex Realm Overview exists
-      player,
-      combatMode, // §5.1d — defaults to NARRATIVE (see the Tale Dive Brief screen's toggle)
-      proseDepth: PROSE_DEPTHS.IMMERSIVE, // default changed 2026-09-04 per explicit request for the most immersive prose by default; still overridable per-campaign in Settings
-      narrationStyle: world.narrationStyle || DEFAULT_NARRATION_STYLE,
-      locations: initialLocations, // §5.10 Locations Codex — populated by seeded locations and auto-registration
-      npcs: {}, // §5.5/§5.14 NPC Codex — populated by auto-registration
-      factions: initialFactions, // §5.14 — populated by seeded factions and {{Term|faction}} keyword links
-      lore: {}, // §5.14 — populated by {{Term|lore}} keyword links
-      quests: {}, // §5.14 — populated by {{Term|quest}} keyword links (quest_update integration is still pending)
-      bestiary: {}, // §5.13/§5.14 — populated by {{Term|beast}} keyword links, full stat blocks once combat begins
-      skills: initialSkills, // §6.4D — populated by seeded skills and {{Term|skill}} keyword links
-      combat: { active: false }, // §2 Phase D.2/§5.13 — ephemeral, reset each encounter
-      flags: [], // §5.6 World Impact Ledger
-      inventory: {}, // §5.9
-      log: [],
-      lastPlayed: Date.now(),
-      turnCount: 0,
-    }
-
-    setGame(campaign)
-    setActiveCampaignId(campaignId)
-    setHistory([])
-    setError(null)
-    setPendingWorld(null)
-    navigateTo('chronicle')
-
-    // §Phase B.4 — the Tale Dive Brief fires Turn 1, folding in the World
-    // Background/Genre/Conflict/Power System/Era/Key Factions from Phase A so
-    // the opening is actually grounded in what was set up rather than
-    // fabricated from nothing.
+    // §Phase B.4 — the Prologue turn folds in the World Background/Genre/
+    // Conflict/Power System/Era/Key Factions from Phase A so the opening is
+    // actually grounded in what was set up rather than fabricated from
+    // nothing. Built here, before World Seeding fires below, since the same
+    // lines double as the seeding call's own prompt context.
     const worldLines = [
       world.background?.trim() && `World Background: ${world.background.trim()}`,
       world.genreTone?.trim() && `Genre & Tone: ${world.genreTone.trim()}`,
@@ -574,12 +539,77 @@ export default function App() {
       ? `Tale Dive Brief — open Turn 1 here: ${protagonistData.opening.trim()}`
       : 'No Tale Dive Brief given — invent a fitting, evocative opening scene consistent with the world above.'
 
-    const firstAction = [...worldLines, backgroundLine, ...identityLines, briefLine].filter(Boolean).join('\n')
+    // World Seeding — a one-time call, before Turn 1, covering what the
+    // player-authored CRUD above (Key Factions/Locations/Starting Abilities)
+    // leaves optional and empty by default: Lore, starting NPC relations, an
+    // optional personal Ambition quest, and (only when the lists above came
+    // back empty) a small Location/Faction fallback plus a named key item's
+    // full content. Never blocks campaign creation — a failed/malformed call
+    // just means no enrichment this campaign (lib/seeding.ts never throws).
+    navigateTo('diveloading')
+    const seeded = await seedCampaign({
+      apiSettings,
+      worldLines,
+      protagonistLines: [backgroundLine, ...identityLines].filter(Boolean) as string[],
+      briefLine,
+      existingFactions: world.factionsList ?? [],
+      existingLocations: world.locationsList ?? [],
+      startingSkillNames: Object.values(initialSkills).map((s) => s.name),
+      keyItemName: protagonistData.keyItem,
+    })
 
-    // Pass campaign + a fresh history directly — setGame/setHistory above
-    // haven't flushed into this closure yet, so sendAction needs both handed
-    // to it explicitly rather than reading stale `game`/`history` state.
-    sendAction(firstAction, false, campaign, [])
+    // Both land in their libraries the moment a Tale begins (§6.4B) —
+    // creation IS how the World/Protagonist Library gets populated.
+    const worldEntry = upsertWorld(world, world.id)
+    const protagonistEntry = upsertProtagonist(protagonistData, protagonistData.id, cls.name)
+
+    const campaignId = store.newId('campaign')
+    const campaign: Campaign = {
+      id: campaignId,
+      schemaVersion: CURRENT_SCHEMA_VERSION,
+      title: `${player.name}'s Tale`,
+      synopsis: (protagonistData.opening || world.background || '').slice(0, 140),
+      worldId: worldEntry.id!,
+      protagonistId: protagonistEntry.id!,
+      world, // §Phase A — kept for reference until the Codex Realm Overview exists
+      player,
+      combatMode, // §5.1d — defaults to NARRATIVE (see the Tale Dive Brief screen's toggle)
+      proseDepth: PROSE_DEPTHS.IMMERSIVE, // default changed 2026-09-04 per explicit request for the most immersive prose by default; still overridable per-campaign in Settings
+      narrationStyle: world.narrationStyle || DEFAULT_NARRATION_STYLE,
+      locations: { ...initialLocations, ...seeded.locations }, // §5.10 — player-authored + World Seeding fallback + later auto-registration
+      npcs: seeded.npcs, // §5.5/§5.14 — World Seeding's starting relations, then auto-registration
+      factions: { ...initialFactions, ...seeded.factions }, // §5.14 — player-authored + World Seeding fallback + later keyword links
+      lore: seeded.lore, // §5.14 — World Seeding, then {{Term|lore}} keyword links
+      quests: seeded.quests, // §5.14 — World Seeding's optional Ambition quest, then quest_update/keyword links
+      bestiary: {}, // §5.13/§5.14 — populated by {{Term|beast}} keyword links, full stat blocks once combat begins
+      skills: initialSkills, // §6.4D — populated by seeded skills and {{Term|skill}} keyword links
+      items: Object.keys(seeded.items).length > 0 ? seeded.items : undefined, // §5.9 — World Seeding's key item, if any
+      combat: { active: false }, // §2 Phase D.2/§5.13 — ephemeral, reset each encounter
+      flags: [], // §5.6 World Impact Ledger
+      inventory: seeded.inventory, // §5.9
+      log: [],
+      lastPlayed: Date.now(),
+      turnCount: 0,
+      seedDebug: seeded.debug,
+    }
+
+    // The Prologue's own framing — Turn 1 is explicitly the opening chapter,
+    // instructed to draw on whatever World Seeding and the player's own setup
+    // just populated the Codex with (already sitting in campaign.locations/
+    // npcs/factions/lore/quests/skills by the time this fires, so it flows
+    // straight into jitContext.ts's existing hooks with no changes there).
+    const prologueLine =
+      "This is the Prologue — the opening chapter. Alongside narrating the opening scene, establish the protagonist's starting NPC/faction relations (npc_mem_up/fac_rep) for anyone from the Codex context below who is actually present or relevant, and make the protagonist's starting goal or challenge clear. Draw on the Codex context below rather than contradicting it."
+
+    const firstAction = [prologueLine, ...worldLines, backgroundLine, ...identityLines, briefLine].filter(Boolean).join('\n')
+
+    setGame(campaign)
+    setActiveCampaignId(campaignId)
+    setHistory([])
+    setError(null)
+    setPendingWorld(null)
+    setPendingFirstAction(firstAction)
+    navigateTo('seedingreview')
   }
 
   async function sendAction(actionText: string, forcePauseState?: boolean, overrideGame?: Campaign, overrideHistory?: HistoryTurn[]) {
@@ -1519,6 +1549,53 @@ export default function App() {
         onBegin={({ opening, narrationStyle, temperature, combatMode }) => {
           setApiSettings((a) => ({ ...a, temperature }))
           beginCampaign({ ...pendingProtagonist, opening }, combatMode, { narrationStyle })
+        }}
+      />
+    )
+  } else if (screen === 'seedingreview' && game) {
+    // World Seeding review — reuses Codex verbatim (it's a pure props-in/
+    // callbacks-out view, no in-progress-campaign coupling) so the player
+    // can look over everything just populated (player-authored setup +
+    // World Seeding's Lore/NPCs/optional Ambition quest/key item) before the
+    // Prologue turn fires. The one behavioral difference from the ordinary
+    // Codex screen: its single "back" action confirms and begins the dive
+    // instead of returning to Chronicle, since there's no Chronicle to
+    // return to yet.
+    content = (
+      <Codex
+        world={game.world}
+        player={game.player}
+        log={game.log}
+        npcs={game.npcs}
+        factions={game.factions}
+        locations={game.locations}
+        lore={game.lore}
+        quests={game.quests}
+        bestiary={game.bestiary}
+        flags={game.flags}
+        inventory={game.inventory}
+        items={game.items ?? {}}
+        crafting={game.crafting ?? []}
+        corpses={game.corpses ?? []}
+        onUpdateNpc={(id: string, patch: Partial<NpcEntry> | null) => patchCodexDict('npcs', id, patch as Record<string, unknown> | null)}
+        onUpdateFaction={(id: string, patch: Partial<FactionEntry> | null) => patchCodexDict('factions', id, patch as Record<string, unknown> | null)}
+        onUpdateLocation={(id: string, patch: Partial<LocationEntry> | null) => patchCodexDict('locations', id, patch as Record<string, unknown> | null)}
+        onUpdateLore={(id: string, patch: Partial<LoreEntry> | null) => patchCodexDict('lore', id, patch as Record<string, unknown> | null)}
+        onUpdateQuest={(id: string, patch: Partial<QuestEntry> | null) => patchCodexDict('quests', id, patch as Record<string, unknown> | null)}
+        onUpdateBestiary={(id: string, patch: Partial<BestiaryEntry> | null) => patchCodexDict('bestiary', id, patch as Record<string, unknown> | null)}
+        skills={game.skills ?? {}}
+        onUpdateSkill={(id: string, patch: Partial<SkillEntry> | null) => patchCodexDict('skills', id, patch as Record<string, unknown> | null)}
+        onUpdateItem={updateItem}
+        onEquipItem={equipFromCodex}
+        onUnequipSlot={unequipFromCodex}
+        onUpdateWorld={updateWorld}
+        onEvolveClass={evolveClass}
+        onStartCraft={startCraftingJob}
+        onBack={() => {
+          const action = pendingFirstAction
+          setPendingFirstAction(null)
+          navigateTo('chronicle')
+          if (action) sendAction(action, false, game, [])
         }}
       />
     )

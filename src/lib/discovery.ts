@@ -16,6 +16,27 @@ export function isHidden(entry: { discovery?: Discovery }): boolean {
   return entry.discovery?.state === 'hidden'
 }
 
+// Fails a hidden entry open to `known` if its own revealCondition doesn't
+// actually reference a real id in the seeded/current dicts — an unreachable
+// hidden entry (a typo'd loc_id, a quest_id nothing ever creates) is a worse
+// bug than one revealed a little early. Shared by the manual Codex CRUD
+// editor and the one-time world-seeding pass (lib/seeding.ts), since both
+// can propose a `discovery` block that references an id the other hasn't
+// necessarily created yet.
+export function validateDiscovery(
+  discovery: Discovery | undefined,
+  dicts: { locations: Record<string, unknown>; npcs: Record<string, unknown>; quests: Record<string, unknown> },
+): Discovery | undefined {
+  if (!discovery || discovery.state !== 'hidden' || !discovery.revealCondition) return discovery
+  const dict =
+    discovery.revealTrigger === 'location_visit' ? dicts.locations :
+    discovery.revealTrigger === 'npc_met' ? dicts.npcs :
+    discovery.revealTrigger === 'quest_complete' ? dicts.quests :
+    null
+  if (!dict || dict[discovery.revealCondition]) return discovery
+  return { ...discovery, state: 'known' }
+}
+
 function matchesReveal(discovery: Discovery, turn: TurnResponse, nextFlags: string[]): boolean {
   if (!discovery.revealTrigger || !discovery.revealCondition) return false
   switch (discovery.revealTrigger) {

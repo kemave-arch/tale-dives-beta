@@ -3,10 +3,11 @@ import type { LucideIcon } from 'lucide-react'
 import {
   Globe, BookOpen, Users, ShieldCheck, Map, ScrollText, Target, Skull, Backpack,
   Pencil, Save, X, Trash2, Plus, Lock, User, Hammer, Clock, Sparkles, CheckCircle2, XCircle, ArrowRight, Ghost,
+  Swords, Star, EyeOff,
 } from 'lucide-react'
 import { DASHED_ROW_CLASS, GLASS_SURFACE_LIST, GlassHeader, GlassIconButton, GlassScreen, SELECT_CLASS } from '../lib/glassChrome.tsx'
 import { slugify, titleCaseId } from '../lib/slug.ts'
-import { isHidden } from '../lib/discovery.ts'
+import { isHidden, validateDiscovery } from '../lib/discovery.ts'
 import { checkAffordability } from '../lib/skills.ts'
 import { PRESET_CLASSES } from '../data/classes.ts'
 import { RECIPES } from '../data/recipes.ts'
@@ -77,20 +78,6 @@ const NEW_ID = '__new__'
 // rather than shipping an entry the player can never unlock." Only checks
 // triggers with a real dict to check against; `flag` conditions are freeform
 // strings the model may not have produced yet, so those are trusted as-is.
-function validateDiscovery(
-  discovery: Discovery | undefined,
-  dicts: { locations: Record<string, unknown>; npcs: Record<string, unknown>; quests: Record<string, unknown> },
-): Discovery | undefined {
-  if (!discovery || discovery.state !== 'hidden' || !discovery.revealCondition) return discovery
-  const dict =
-    discovery.revealTrigger === 'location_visit' ? dicts.locations :
-    discovery.revealTrigger === 'npc_met' ? dicts.npcs :
-    discovery.revealTrigger === 'quest_complete' ? dicts.quests :
-    null
-  if (!dict || dict[discovery.revealCondition]) return discovery
-  return { ...discovery, state: 'known' }
-}
-
 function genId(name: string, existing: Record<string, unknown>): string {
   const base = slugify(name) || 'entry'
   if (!existing[base]) return base
@@ -537,6 +524,26 @@ const QUEST_STATUS_META: Record<string, { label: string; icon: LucideIcon; class
 }
 function QuestStatusBadge({ status }: { status?: string }) {
   const meta = QUEST_STATUS_META[status ?? ''] ?? { label: status || 'Active', icon: Target, className: 'bg-[#34d399]/15 text-[#6ee7b7] border-[#34d399]/40' }
+  const Icon = meta.icon
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase tracking-wide shrink-0 ${meta.className}`}>
+      <Icon size={11} /> {meta.label}
+    </span>
+  )
+}
+
+// Main/Side/Ambition/Secret Ambition — a second, independent badge alongside
+// status: status tracks progress, type tracks who the quest belongs to
+// (the game world, a guild, or the player's own personal goals).
+const QUEST_TYPE_META: Record<string, { label: string; icon: LucideIcon; className: string }> = {
+  main: { label: 'Main', icon: Swords, className: 'bg-[#e8ca8a]/15 text-[#f5dfa0] border-[#e8ca8a]/40' },
+  side: { label: 'Side', icon: Users, className: 'bg-sky-500/15 text-sky-300 border-sky-500/40' },
+  ambition: { label: 'Ambition', icon: Star, className: 'bg-violet-500/15 text-violet-300 border-violet-500/40' },
+  secret_ambition: { label: 'Secret Ambition', icon: EyeOff, className: 'bg-rose-500/15 text-rose-300 border-rose-500/40' },
+}
+function QuestTypeBadge({ type }: { type?: string }) {
+  const meta = type ? QUEST_TYPE_META[type] : undefined
+  if (!meta) return null
   const Icon = meta.icon
   return (
     <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase tracking-wide shrink-0 ${meta.className}`}>
@@ -1243,6 +1250,7 @@ export default function Codex({
     onUpdateQuest(id, {
       name: draft.name,
       status: draft.status || undefined,
+      type: draft.type || undefined,
       note: draft.note,
       description: draft.description?.trim() || undefined,
       questGiver: draft.questGiver?.trim() || undefined,
@@ -2017,7 +2025,7 @@ export default function Codex({
               key={id}
               accent={CATEGORY_ACCENTS.quests}
               title={isHidden(q) ? '???' : q.name}
-              statusBadge={isHidden(q) ? undefined : <QuestStatusBadge status={q.status} />}
+              statusBadge={isHidden(q) ? undefined : <><QuestStatusBadge status={q.status} /><QuestTypeBadge type={q.type} /></>}
               subtitle={isHidden(q) ? (q.discovery?.teaser || 'Not yet discovered.') : (q.description || q.note)}
               badge={isHidden(q) ? <LockBadge /> : <AutoBadge shown={q.autoLogged} />}
               tags={isHidden(q) ? undefined : q.tags}
@@ -2040,6 +2048,7 @@ export default function Codex({
             <DetailPanel>
               <TextField label="Name" value={draft.name ?? ''} onChange={(v) => setDraft((d) => ({ ...d, name: v }))} />
               <TextField label="Status" value={draft.status ?? ''} onChange={(v) => setDraft((d) => ({ ...d, status: v }))} placeholder="advanced, completed, failed" />
+              <TextField label="Type" value={draft.type ?? ''} onChange={(v) => setDraft((d) => ({ ...d, type: v }))} placeholder="main, side, ambition, secret_ambition" />
               <TextField label="Description" value={draft.description ?? ''} onChange={(v) => setDraft((d) => ({ ...d, description: v }))} textarea placeholder="The quest's actual premise/objective…" />
               <TextField label="Quest Giver" value={draft.questGiver ?? ''} onChange={(v) => setDraft((d) => ({ ...d, questGiver: v }))} placeholder="A named NPC, if any" />
               <TextField label="Reward" value={draft.reward ?? ''} onChange={(v) => setDraft((d) => ({ ...d, reward: v }))} />
@@ -2057,6 +2066,7 @@ export default function Codex({
                 badges={
                   <>
                     <QuestStatusBadge status={quests[entryId].status} />
+                    <QuestTypeBadge type={quests[entryId].type} />
                     <AutoBadge shown={quests[entryId].autoLogged} />
                   </>
                 }

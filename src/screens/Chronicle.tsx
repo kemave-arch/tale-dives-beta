@@ -1659,32 +1659,39 @@ export default function Chronicle({
               <div className="space-y-3">
                 {/* Attribute Badges Row */}
                 <div className="flex items-center gap-2 flex-wrap">
-                  {popup.category === 'item' && 'type' in popupEntry && (
-                    <>
-                      <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
-                        <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Type</span>
-                        <span className="font-sans font-bold text-xs text-[#f5ebd7] capitalize">{popupEntry.type}</span>
-                      </div>
-                      {popupEntry.rarity && (
+                  {popup.category === 'item' && 'type' in popupEntry && (() => {
+                    // QuestEntry also carries an optional `type` (Main/Side/Ambition/
+                    // Secret Ambition) now, so `'type' in popupEntry` alone no longer
+                    // narrows the union down to just ItemEntry — popup.category === 'item'
+                    // is the real discriminant here, so cast explicitly instead.
+                    const item = popupEntry as ItemEntry
+                    return (
+                      <>
                         <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
-                          <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Rarity</span>
-                          <span className="font-sans font-bold text-xs text-[#f5ebd7]">{popupEntry.rarity}</span>
+                          <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Type</span>
+                          <span className="font-sans font-bold text-xs text-[#f5ebd7] capitalize">{item.type}</span>
                         </div>
-                      )}
-                      {popupEntry.statBonus && statBonusText(popupEntry.statBonus) && (
-                        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
-                          <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Bonus</span>
-                          <span className="font-sans font-bold text-xs text-[#f5ebd7]">{statBonusText(popupEntry.statBonus)}</span>
-                        </div>
-                      )}
-                      {popupEntry.value !== undefined && (
-                        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
-                          <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Worth</span>
-                          <span className="font-sans font-bold text-xs text-[#f5ebd7]">{popupEntry.value} C</span>
-                        </div>
-                      )}
-                    </>
-                  )}
+                        {item.rarity && (
+                          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
+                            <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Rarity</span>
+                            <span className="font-sans font-bold text-xs text-[#f5ebd7]">{item.rarity}</span>
+                          </div>
+                        )}
+                        {item.statBonus && statBonusText(item.statBonus) && (
+                          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
+                            <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Bonus</span>
+                            <span className="font-sans font-bold text-xs text-[#f5ebd7]">{statBonusText(item.statBonus)}</span>
+                          </div>
+                        )}
+                        {item.value !== undefined && (
+                          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
+                            <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Worth</span>
+                            <span className="font-sans font-bold text-xs text-[#f5ebd7]">{item.value} C</span>
+                          </div>
+                        )}
+                      </>
+                    )
+                  })()}
 
                   {popup.category === 'npc' && 'stage' in popupEntry && (
                     <>

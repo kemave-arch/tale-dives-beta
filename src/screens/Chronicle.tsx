@@ -4,7 +4,7 @@ import {
   Menu, Settings as SettingsIcon, Send, Star, BookOpen, Library, Sparkle, X, ExternalLink,
   ChevronUp, ChevronDown, ChevronsDown, History, Pause, Users, Backpack, Map as MapIcon, ShieldCheck, Target, Skull, HelpCircle,
   Unlock, Lock, Repeat, Hammer, Ghost, Compass, ScrollText, User, Swords, Sparkles,
-  AlertTriangle, Copy, Check, RotateCcw, Bug,
+  AlertTriangle, Copy, Check, RotateCcw, Bug, Download,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { renderNarrative, type TapTermHandler } from '../lib/richText.tsx'
@@ -13,6 +13,7 @@ import { formatCurrency } from '../lib/currency.ts'
 import { slugify } from '../lib/slug.ts'
 import { BANG_COMMANDS } from '../lib/bangCommands.ts'
 import { isHidden } from '../lib/discovery.ts'
+import { downloadText } from '../lib/backup.ts'
 import type { CategoryId } from './Codex.tsx'
 import type {
   ApiSettings, BestiaryEntry, CombatState, CraftingJob, FactionEntry, GameTime, KeywordLink, LocationEntry, LogEntry, LoreEntry, NpcEntry, Player,
@@ -134,6 +135,43 @@ interface TurnBlockProps {
   globalIndex: number
   onTapTerm: TapTermHandler
   registerRef: (index: number, el: HTMLDivElement | null) => void
+}
+
+// Debugging tool — every real narrated turn's request/response/finishReason
+// since turn 0, one file, for reporting a pattern across a whole session
+// rather than one turn at a time (DebugPayloadButton below covers the
+// single-turn case). Synthetic entries (bang/chapter-recap/class-evolution)
+// carry no `rawPayload` and are skipped — there's no API call to show.
+function buildSessionPayloadExport(log: LogEntry[], title: string): string {
+  const withPayload = log
+    .map((entry, index) => ({ entry, index }))
+    .filter(({ entry }) => entry.rawPayload)
+
+  const header = [
+    '# Tale Dives — Session Payload Export',
+    `# Tale: ${title}`,
+    `# Exported: ${new Date().toISOString()}`,
+    `# Total log entries: ${log.length}, narrated turns with a recorded payload: ${withPayload.length}`,
+    '',
+  ].join('\n')
+
+  const turns = withPayload.map(({ entry, index }) => {
+    const when = [entry.time ? `${entry.time.d}d ${entry.time.h}` : null, entry.locDisp].filter(Boolean).join(' @ ')
+    return [
+      '='.repeat(80),
+      `Turn #${index}${when ? ` — ${when}` : ''}`,
+      `Action: ${entry.action ?? '(none recorded)'}`,
+      `finishReason: ${entry.finishReason ?? '(not recorded)'}`,
+      '-'.repeat(80),
+      '### REQUEST (context sent)',
+      entry.requestPayload ?? '(not recorded)',
+      '',
+      '### RESPONSE (raw model output)',
+      entry.rawPayload,
+    ].join('\n')
+  })
+
+  return [header, ...turns, '='.repeat(80)].join('\n\n')
 }
 
 // Debugging tool — a turn's exact request context and the model's raw
@@ -857,6 +895,14 @@ export default function Chronicle({
         <div className="font-display text-xs font-semibold tracking-wide text-center flex-1 truncate px-2 text-[#e8ca8a]">
           {title}
         </div>
+        <button
+          onClick={() => downloadText(`tale-dives-session-payloads-${slugify(title)}-${Date.now()}.txt`, buildSessionPayloadExport(log, title))}
+          aria-label="Export Session Payloads"
+          title="Export every turn's request/response payload since turn 0, for debugging"
+          className="w-7 h-7 rounded-full inline-flex items-center justify-center text-[#e8ca8a] hover:bg-white/10"
+        >
+          <Download size={16} />
+        </button>
         <button onClick={onOpenCodex} aria-label="Codex" className="w-7 h-7 rounded-full inline-flex items-center justify-center text-[#e8ca8a] hover:bg-white/10">
           <Library size={16} />
         </button>

@@ -1,6 +1,20 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-04, Claude Code on the web — a follow-up pass on the Codex
+**Last updated:** 2026-09-05, Claude Code on the web — the user hit a real, concerning
+truncation live (a BALANCED-depth turn cut off after ~60 words, nowhere near its
+2,048-token ceiling) and started pasting Chronicle's debug payloads to investigate.
+Two additions to that debug tooling in response: `LogEntry`/the debug panel now
+surface Gemini's own `finishReason` (STOP/MAX_TOKENS/...) — previously computed by
+`runTurn` but silently discarded — with the per-turn toggle turning rose and
+labeling itself when a turn actually hit `MAX_TOKENS`; and a new header button
+exports every real narrated turn's request/response/finishReason since turn 0 as one
+`.txt` file, for reporting a pattern across a whole session rather than one turn at a
+time. The actual truncation root cause (working theory: a thinking-capable Gemini
+model spending the `maxOutputTokens` budget on invisible reasoning before any visible
+narration) is **not yet confirmed** — waiting on the user's next payload, now that
+`finishReason` is actually recorded, to check whether it really reads `MAX_TOKENS`
+before changing anything about the actual request. See the log entry below for the
+implementation. Earlier: a follow-up pass on the Codex
 overhaul: 4 categories whose data genuinely differs in shape from the rest got their
 own visual treatment instead of the shared accent-card template alone — Items now
 carry a real RPG loot-rarity border/glow (grey/green/blue/purple/gold), Bestiary shows
@@ -104,6 +118,48 @@ rule applies to music.
 > still unbuilt, but no longer blocked on "there's nothing to seed from."
 
 Recent shipped work, most recent first: 
+- **Surface `finishReason` + a whole-session payload export (`types.ts`, `App.tsx`,
+  `Chronicle.tsx`, `lib/backup.ts`)**: 2026-09-05 (Claude Code on the web). The user
+  pasted a live turn's debug payload (from the debug-payload feature two entries
+  below) that showed narration cut off mid-sentence after roughly 60 words on a
+  BALANCED-depth turn (`maxOutputTokens: 2048`) — a real, live symptom, not a
+  hypothetical. Two fixes to the debug tooling itself so the actual cause can be
+  confirmed rather than guessed at:
+  - `runTurn` (`api/providers/gemini.ts`) already computed Gemini's own
+    `finishReason` (STOP/MAX_TOKENS/SAFETY/...) but nothing in `App.tsx` ever read
+    it — silently discarded on every turn. `LogEntry` gained a `finishReason` field,
+    threaded through both `sendAction`'s success and fallback branches. The
+    per-turn `DebugPayloadButton` (Chronicle.tsx) now includes it in the copyable
+    text and, when the value is exactly `MAX_TOKENS`, turns the collapsed toggle
+    itself rose and appends "— cut off (MAX_TOKENS)" so a truncated turn is visible
+    without even expanding the panel.
+  - New "Export Session Payloads" header button (`Download` icon, next to Codex/
+    Settings) — new `buildSessionPayloadExport(log, title)` walks every `LogEntry`
+    since turn 0, skips synthetic entries with no `rawPayload` (bang commands,
+    chapter recaps — nothing to show), and formats each real turn's real log index,
+    action, `finishReason`, request, and raw response into one plain-text file via a
+    new `downloadText()` (`lib/backup.ts`, the same Blob/`<a download>` mechanism
+    `downloadJSON` already uses, just `text/plain` instead of JSON). Lets the user
+    hand over a whole session's pattern in one file instead of pasting turns
+    one at a time.
+  - `npm run typecheck`/`npm run build` clean. Verified live: seeded a synthetic
+    campaign with one normal turn (`finishReason: 'STOP'`), one synthetic bang
+    entry, and one deliberately-truncated turn (`finishReason: 'MAX_TOKENS'`),
+    triggered the export via headless Chromium's download event, and confirmed the
+    downloaded file's exact content — correct turn numbering by real log index
+    (the bang entry is skipped, not renumbered around), both payloads present,
+    both finish reasons present.
+  - **Root cause still unconfirmed** — this session doesn't have a live Gemini API
+    key to reproduce against, so the truncation itself couldn't be fixed yet, only
+    made diagnosable. Leading theory: a thinking-capable Gemini model in the
+    `GEMINI_MODELS` list (`api/providers/gemini.ts`) may run extended reasoning by
+    default that counts against the same `maxOutputTokens` budget as the visible
+    `nar` text — consistent with a response that stops barely into its budget. The
+    request body (`requestOnce` in `gemini.ts`) sets no `thinkingConfig` at all
+    today. **Do not add `thinkingConfig: { thinkingBudget: 0 }` speculatively** —
+    confirm `finishReason: 'MAX_TOKENS'` on a real fresh payload first (the tooling
+    above now makes that a one-look check), since guessing wrong on an unfamiliar
+    model family risks a 400 on every turn instead of fixing the real problem.
 - **Codex per-category visual differentiation (`Codex.tsx`)**: 2026-09-04 (Claude Code
   on the web), a direct follow-up to the Codex overhaul below. The user's correction:
   "due to the differing nature of data of entries in Codex, you're allowed to make

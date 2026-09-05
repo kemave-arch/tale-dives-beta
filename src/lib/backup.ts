@@ -11,6 +11,19 @@ export function downloadJSON(filename: string, data: unknown): void {
   URL.revokeObjectURL(url)
 }
 
+// Same download mechanism as downloadJSON, for plain-text exports (the
+// session payload dump) where a human/another LLM reads the file directly
+// rather than re-importing it as app state.
+export function downloadText(filename: string, text: string): void {
+  const blob = new Blob([text], { type: 'text/plain' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export function readJSONFile(file: File): Promise<any> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()

@@ -40,7 +40,7 @@ import NowPlayingBanner from './components/NowPlayingBanner.tsx'
 import * as store from './lib/store.ts'
 import { CURRENT_SCHEMA_VERSION, EQUIPPABLE_TYPES } from './types.ts'
 import type {
-  BestiaryEntry, Campaign, CombatMode, CombatState, Dict, EquipSlot, FactionEntry, HistoryTurn, ItemEntry, KeywordLink, LocationEntry, LoreEntry,
+  BestiaryEntry, Campaign, CombatMode, CombatState, Dict, EquipSlot, FactionEntry, HistoryTurn, ItemEntry, KeywordLink, LocationEntry, LogEntry, LoreEntry,
   NpcEntry, Player, ProtagonistData, QuestEntry, SkillEntry, SlashCommand, TurnState, WorldData,
 } from './types.ts'
 
@@ -229,14 +229,25 @@ export default function App() {
     }
   }
 
+  // A bang command (!inventory, !arise, ...) is its own log entry with no
+  // `nar`/`rawPayload` — matches Chronicle.tsx's own eligibility check for
+  // Edit/Retry/Delete, so "the last turn" means the last *narrated* one,
+  // even if read-only (or state-mutating) bang commands follow it in the log.
+  function findLastNarratedIndex(log: LogEntry[]): number {
+    for (let i = log.length - 1; i >= 0; i--) {
+      if (log[i].nar && log[i].rawPayload) return i
+    }
+    return -1
+  }
+
   function handleEditLastTurn(newNar: string) {
     setGame((g) => {
-      if (!g || g.log.length === 0) return g
+      if (!g) return g
+      const index = findLastNarratedIndex(g.log)
+      if (index === -1) return g
       const log = [...g.log]
-      const lastIndex = log.length - 1
-      const entry = log[lastIndex]
-      if (!entry.nar || !entry.rawPayload) return g
-      log[lastIndex] = { ...entry, nar: newNar, rawPayload: patchNarInRawPayload(entry.rawPayload, newNar) }
+      const entry = log[index]
+      log[index] = { ...entry, nar: newNar, rawPayload: patchNarInRawPayload(entry.rawPayload!, newNar) }
       return { ...g, log }
     })
     setHistory((h) => {
@@ -248,18 +259,25 @@ export default function App() {
     })
   }
 
-  // Retry and Delete both boil down to this: drop the last turn from the
-  // displayed record (log) and from the conversational context the API sees
-  // next turn (history — a user+model pair per turn, so the last 2 entries).
-  // This corrects the *context*, not game mechanics — HP/inventory/quest
-  // deltas that turn already applied are NOT rolled back, same as this app
-  // has never had a general undo system. Retry additionally re-seeds the
-  // input box with the original action text (Chronicle.tsx) for the player
-  // to revise and resend.
+  // Retry and Delete both boil down to this: drop the last *narrated* turn,
+  // and everything after it (bang commands included — anything since was
+  // looked up or acted on against state that's about to change), from both
+  // the displayed record (log) and the conversational context the API sees
+  // next turn (history — bang commands never touch history at all, so
+  // exactly one narrated turn's own user+model pair, the last 2 entries,
+  // is ever removed regardless of how many trailing bang entries get cut
+  // from log). This corrects the *context*, not game mechanics — HP/
+  // inventory/quest deltas (including ones a trailing bang command like
+  // !arise already applied) are NOT rolled back, same as this app has never
+  // had a general undo system. Retry additionally re-seeds the input box
+  // with the original action text (Chronicle.tsx) for the player to revise
+  // and resend.
   function handleRemoveLastTurn() {
     setGame((g) => {
-      if (!g || g.log.length === 0) return g
-      return { ...g, log: g.log.slice(0, -1), turnCount: Math.max(0, (g.turnCount ?? 0) - 1) }
+      if (!g) return g
+      const index = findLastNarratedIndex(g.log)
+      if (index === -1) return g
+      return { ...g, log: g.log.slice(0, index), turnCount: Math.max(0, (g.turnCount ?? 0) - 1) }
     })
     setHistory((h) => h.slice(0, Math.max(0, h.length - 2)))
   }

@@ -701,7 +701,9 @@ const TurnBlock = memo(function TurnBlock({
           }}
           onRetry={async () => {
             if (!confirmAction || !onRemoveLastTurn) return
-            const ok = await confirmAction('Retry this turn? It will be removed so you can revise and resend your action.')
+            const ok = await confirmAction(
+              'Retry this turn? It — and anything since, like a bang command lookup — will be removed so you can revise and resend your action.',
+            )
             if (ok) {
               onRemoveLastTurn()
               setInput?.(entry.action ?? '')
@@ -709,7 +711,9 @@ const TurnBlock = memo(function TurnBlock({
           }}
           onDelete={async () => {
             if (!confirmAction || !onRemoveLastTurn) return
-            const ok = await confirmAction("Delete this turn? It will be removed from the tale and the AI's memory.")
+            const ok = await confirmAction(
+              "Delete this turn? It — and anything since, like a bang command lookup — will be removed from the tale and the AI's memory.",
+            )
             if (ok) onRemoveLastTurn()
           }}
         />
@@ -958,6 +962,20 @@ export default function Chronicle({
   const windowStart = Math.max(0, log.length - visibleCount)
   const visibleLog = log.slice(windowStart)
   const hasEarlierTurns = windowStart > 0
+
+  // Edit/Retry/Delete eligibility (TurnBlock's isLastTurn prop): the last
+  // *narrated* entry, not necessarily the literal last log entry — a bang
+  // command (!inventory, !arise, ...) is its own entry with no nar/
+  // rawPayload, and shouldn't make the real turn before it uneditable just
+  // because the player looked something up afterward. App.tsx's
+  // onRemoveLastTurn mirrors this same "last narrated" search.
+  let lastNarratedIndex = -1
+  for (let i = log.length - 1; i >= 0; i--) {
+    if (log[i].nar && log[i].rawPayload) {
+      lastNarratedIndex = i
+      break
+    }
+  }
 
   // §6.0 — the chrome (header/frame/input/motes) uses a fixed gold accent; it
   // no longer retints per turn state. Per-entry turn-state badges in the log
@@ -1303,7 +1321,7 @@ export default function Chronicle({
                 onTapTerm={onTapTerm}
                 registerRef={registerRef}
                 debugMode={debugMode}
-                isLastTurn={windowStart + i === log.length - 1}
+                isLastTurn={windowStart + i === lastNarratedIndex}
                 onEditLastTurn={onEditLastTurn}
                 onRemoveLastTurn={onRemoveLastTurn}
                 editLongText={editLongText}

@@ -1,5 +1,27 @@
 # Tale Dives — Project Revision Notes
 
+**Last updated:** 2026-09-05, Claude Code on the web — fixed a real usability gap in
+last round's Edit/Retry/Delete turn controls (see below): a bang command (`!arise`,
+`!inventory`, ...) is its own log entry with no `nar`/`rawPayload`, so running one
+after a narrated turn made that turn's CRUD row vanish entirely — it was scoped to
+"the literal last log entry," and a bang command becoming that entry knocked the
+real turn before it out of eligibility even though nothing about it had changed.
+Fixed by re-scoping eligibility to "the last *narrated* entry" (`findLastNarratedIndex`
+in `App.tsx`, mirrored in `Chronicle.tsx`'s own `lastNarratedIndex` computation for
+the `isLastTurn` prop) — bang commands trailing a narrated turn no longer hide its
+controls. Retry/Delete now remove that turn *and everything after it* (narrated or
+bang), not just one entry, since anything since was looked up or acted on against
+state that's about to change — including a state-mutating bang command like `!arise`
+(which the confirm-dialog wording now flags: "It — and anything since, like a bang
+command lookup — will be removed..."). `history` removal is unaffected (still exactly
+the last 2 entries): bang commands never touch `history` at all, so by construction
+there's only ever one real API-backed turn between "the last narrated entry" and the
+end of the log. Verified live in headless Chromium: seeded a narrated turn followed
+by a `!items` bang-command dossier — Edit/Retry correctly stayed attached to the
+narrated turn instead of disappearing, and Retry correctly removed both the bang
+entry and the turn, re-seeding the input with the turn's original action, leaving
+the *previous* turn as the new last-narrated one with its own working controls.
+
 **Last updated:** 2026-09-05, Claude Code on the web — `corpses` (harvestable
 slain-enemy essence, consumed LIFO by `!arise` for necromancer/Shadow Monarch
 archetypes) existed in Campaign state via `corpse_add` but had zero visibility

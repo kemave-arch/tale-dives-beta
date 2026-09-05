@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Menu, Settings as SettingsIcon, Send, Star, BookOpen, Library, Sparkle, X, ExternalLink,
+  Home, Settings as SettingsIcon, Send, Star, BookOpen, Library, Sparkle, X, ExternalLink,
   ChevronUp, ChevronDown, ChevronsDown, History, Pause, Users, Backpack, Map as MapIcon, ShieldCheck, Target, Skull, HelpCircle,
   Unlock, Lock, Repeat, Hammer, Ghost, ScrollText, Swords, Sparkles, LayoutGrid,
   AlertTriangle, Copy, Check, RotateCcw, Bug, Pencil, MoreHorizontal, Trash2, Heart, Zap, Activity, Coins,
@@ -1233,8 +1233,8 @@ export default function Chronicle({
             className="flex items-center justify-between px-3 py-1.5"
             style={{ paddingTop: 'max(0.375rem, env(safe-area-inset-top))' }}
           >
-            <button onClick={onOpenMenu} aria-label="Menu" className="w-8 h-8 rounded-xl inline-flex items-center justify-center text-[#e8ca8a] hover:bg-white/10">
-              <Menu size={16} />
+            <button onClick={onOpenMenu} aria-label="Home" title="Main Menu" className="w-8 h-8 rounded-xl inline-flex items-center justify-center text-[#e8ca8a] hover:bg-white/10">
+              <Home size={16} />
             </button>
             <div className="font-display text-xs font-semibold tracking-wide text-center flex-1 truncate px-2 text-[#e8ca8a]">
               {title}

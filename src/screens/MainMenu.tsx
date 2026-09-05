@@ -1,11 +1,12 @@
 import { useRef, useState } from 'react'
 import {
   BookOpen, Globe, UserCircle, Plus, Upload, Download, Trash2, Play, Sparkles, Star, Settings as SettingsIcon, Pencil,
-  ArrowLeft, Volume2, VolumeX, Archive, Music2, Image as ImageIcon,
+  LogOut, Volume2, VolumeX, Archive, Music2, Image as ImageIcon,
 } from 'lucide-react'
 import type { Campaign, Dict, ProtagonistData, WorldData } from '../types.ts'
 import type { TrackMetadata } from '../data/soundtrackManifest.ts'
 import { CyclingBackground } from '../lib/cyclingBackground.tsx'
+import { useConfirm } from '../lib/useConfirm.tsx'
 // DashedCard/DASHED_ROW_CLASS started here and now live in glassChrome, so
 // the Codex and Slash manager share the same add-affordance rather than each
 // growing a near-copy.
@@ -95,7 +96,15 @@ export default function MainMenu({
   const [vaultTab, setVaultTab] = useState<(typeof VAULT_SUBTABS)[number]['id']>('worlds')
   const [selectedWorld, setSelectedWorld] = useState<WorldData | null>(null)
   const [selectedProtagonist, setSelectedProtagonist] = useState<ProtagonistData | null>(null)
+  const { confirm, dialog: confirmDialog } = useConfirm()
   const importRef = useRef<HTMLInputElement>(null)
+
+  const handleExitToTitle = async () => {
+    const ok = await confirm('Exit to the title screen?')
+    if (ok) {
+      onBackToTitle()
+    }
+  }
 
   const taleList = Object.values(campaigns).sort((a, b) => (b.lastPlayed ?? 0) - (a.lastPlayed ?? 0))
   const worldList = Object.values(worlds)
@@ -125,11 +134,10 @@ export default function MainMenu({
         className="relative z-10 px-4 pb-3 flex-1 flex flex-col min-h-0 overflow-hidden max-w-7xl mx-auto w-full"
         style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
       >
-        {/* Back on the left, soundtrack + Settings on the right */}
-        <header className="shrink-0 flex items-center gap-3 mb-2.5">
-          <GlassIconButton icon={ArrowLeft} label="Back to title" onClick={onBackToTitle} />
+        {/* Header: Title on the left, soundtrack + Settings + Exit to Title on the right */}
+        <header className="shrink-0 flex items-center justify-between gap-3 mb-2.5">
           <div className="flex-1 min-w-0">
-            <h1 className="font-display font-bold text-sm sm:text-base text-[#fae5b5] tracking-wider uppercase">
+            <h1 className="font-display font-bold text-[19px] text-[#fae5b5] tracking-wider uppercase">
               Tale Dives
             </h1>
           </div>
@@ -140,6 +148,7 @@ export default function MainMenu({
               onClick={onToggleMusicMute}
             />
             <GlassIconButton icon={SettingsIcon} label="Settings" onClick={onOpenSettings} />
+            <GlassIconButton icon={LogOut} label="Exit to title" onClick={handleExitToTitle} />
           </div>
         </header>
 
@@ -165,7 +174,7 @@ export default function MainMenu({
         <div className="flex-1 min-h-0 flex flex-col">
           {tab === 'tales' && (
             <div className="flex-1 min-h-0 overflow-y-auto pr-1">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1.5 pb-4 px-1">
                 {taleList.map((tale, index) => (
                   <div key={tale.id} className={`${GLASS_SURFACE_LIST} ${index === 0 || index === 1 ? 'bg-[#120e1b]/95' : 'bg-[#120e1b]/80'} border-[#e8ca8a]/30 rounded-2xl p-4 flex flex-col gap-2.5 transition-colors hover:border-[#f0ca65]/50`}>
                     <h3 className="font-display font-bold text-base text-[#fae5b5] tracking-wide">{tale.title}</h3>
@@ -220,7 +229,7 @@ export default function MainMenu({
 
               {vaultTab === 'worlds' && (
                 <div className="flex-1 min-h-0 overflow-y-auto pr-1">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 pb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 pt-1.5 pb-4 px-1">
                     {worldList.map((world, index) => (
                       <div
                         key={world.id}
@@ -294,7 +303,7 @@ export default function MainMenu({
 
               {vaultTab === 'protagonists' && (
                 <div className="flex-1 min-h-0 overflow-y-auto pr-1">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 pb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 pt-1.5 pb-4 px-1">
                     {protagonistList.map((p, index) => {
                       const details = [p.className, p.gender, p.age !== undefined ? `Age ${p.age}` : null].filter(Boolean).join(' • ')
                       return (
@@ -444,6 +453,9 @@ export default function MainMenu({
           } : undefined}
         />
       )}
+
+      {/* Confirmation dialog for exiting to Title */}
+      {confirmDialog}
     </div>
   )
 }

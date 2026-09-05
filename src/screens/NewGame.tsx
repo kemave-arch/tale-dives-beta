@@ -30,6 +30,19 @@ const TABS = [
 // a protagonist onto the board and prove the turn loop. Grounded/free-form
 // classes (§Phase B.2a) aren't built yet. Also doubles as the Protagonist
 // Library's create/edit form (§6.4B).
+function getInitialClassName(data?: ProtagonistData | null): string {
+  if (!data) return PRESET_CLASSES[0].name
+  if (data.className) return data.className
+  const found = PRESET_CLASSES.find((c) => c.id === data.classId)
+  if (found) return found.name
+  if (data.classId) {
+    return data.classId.includes('_')
+      ? data.classId.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+      : data.classId
+  }
+  return PRESET_CLASSES[0].name
+}
+
 export default function NewGame({
   protagonistTemplates = [],
   initial,
@@ -49,12 +62,32 @@ export default function NewGame({
   const [gender, setGender] = useState(initial?.gender ?? '')
   const [age, setAge] = useState(initial?.age !== undefined ? String(initial.age) : '')
   const [classId, setClassId] = useState(initial?.classId ?? PRESET_CLASSES[0].id)
+  const [customClassName, setCustomClassName] = useState(() => getInitialClassName(initial))
   const [background, setBackground] = useState(initial?.background ?? '')
   const [personality, setPersonality] = useState(initial?.personality ?? '')
   const [motivation, setMotivation] = useState(initial?.motivation ?? '')
   const [physicalTrait, setPhysicalTrait] = useState(initial?.physicalTrait ?? '')
   const [secret, setSecret] = useState(initial?.secret ?? '')
   const [opening, setOpening] = useState(initial?.opening ?? '')
+
+  function handleCustomClassChange(typed: string) {
+    setCustomClassName(typed)
+    const matched = PRESET_CLASSES.find((c) => c.name.toLowerCase() === typed.trim().toLowerCase())
+    if (matched) {
+      setClassId(matched.id)
+    } else {
+      setClassId(typed.trim().toLowerCase().replace(/\s+/g, '_') || 'adventurer')
+    }
+  }
+
+  function handlePresetSelect(selectedId: string) {
+    if (selectedId === 'custom') return
+    const preset = PRESET_CLASSES.find((c) => c.id === selectedId)
+    if (preset) {
+      setClassId(preset.id)
+      setCustomClassName(preset.name)
+    }
+  }
 
   function applyTemplate(t: ProtagonistData) {
     setTab('basics')
@@ -63,6 +96,7 @@ export default function NewGame({
     setGender(t.gender ?? '')
     setAge(t.age !== undefined ? String(t.age) : '')
     setClassId(t.classId)
+    setCustomClassName(getInitialClassName(t))
     setBackground(t.background ?? '')
     setPersonality(t.personality ?? '')
     setMotivation(t.motivation ?? '')
@@ -72,12 +106,20 @@ export default function NewGame({
   }
 
   function currentData(): ProtagonistData {
+    const trimmedName = customClassName.trim()
+    const matched = PRESET_CLASSES.find(
+      (c) => c.name.toLowerCase() === trimmedName.toLowerCase() || c.id === classId,
+    )
+    const finalClassId = matched ? matched.id : (trimmedName.toLowerCase().replace(/\s+/g, '_') || 'adventurer')
+    const finalClassName = matched ? matched.name : (trimmedName || 'Adventurer')
+
     return {
       id: templateId,
       name: name || 'The Wanderer',
       gender: gender.trim() || undefined,
       age: age.trim() ? Number(age) : undefined,
-      classId,
+      classId: finalClassId,
+      className: finalClassName,
       background,
       personality: personality.trim() || undefined,
       motivation: motivation.trim() || undefined,
@@ -113,7 +155,7 @@ export default function NewGame({
   const q = presetSearch.trim().toLowerCase()
   const matchedTemplates = q
     ? protagonistTemplates.filter((t) => {
-        const className = PRESET_CLASSES.find((c) => c.id === t.classId)?.name || t.classId
+        const className = t.className || PRESET_CLASSES.find((c) => c.id === t.classId)?.name || t.classId
         return (
           t.name.toLowerCase().includes(q) ||
           className.toLowerCase().includes(q) ||
@@ -132,7 +174,7 @@ export default function NewGame({
       <GlassHeader title="Protagonist Setup" subtitle="Step 3 — who the tale follows" onBack={onBack} />
 
       <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
-        <div className="max-w-md mx-auto flex flex-col gap-4">
+        <div className="max-w-md md:max-w-2xl lg:max-w-3xl mx-auto flex flex-col gap-4">
           <GlassTabs tabs={TABS} value={tab} onChange={setTab} className="w-full" />
 
           {tab === 'presets' && (
@@ -173,12 +215,12 @@ export default function NewGame({
                   <p className="font-narrative italic text-xs text-[#d8c49e]">
                     Select a protagonist card and confirm to load their identity and background into this setup.
                   </p>
-                  <div className="flex flex-col gap-2.5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                     {sortedTemplates.map((t) => {
                       const isCurrent = templateId === t.id
                       const isSelected = selectedDeckId === t.id
                       const ts = getPresetTimestamp(t)
-                      const className = PRESET_CLASSES.find((c) => c.id === t.classId)?.name || t.classId
+                      const className = t.className || PRESET_CLASSES.find((c) => c.id === t.classId)?.name || t.classId
                       const details = [t.gender, t.age !== undefined ? `Age ${t.age}` : null].filter(Boolean).join(' • ')
 
                       return (
@@ -300,8 +342,8 @@ export default function NewGame({
                 />
               </GlassField>
 
-              <div className="flex gap-2">
-                <div className="flex-1">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
                   <GlassField label="Gender" hint="Optional">
                     <input
                       value={gender}
@@ -311,7 +353,7 @@ export default function NewGame({
                     />
                   </GlassField>
                 </div>
-                <div className="w-28 shrink-0">
+                <div>
                   <GlassField label="Age" hint="Optional">
                     <input
                       type="number"
@@ -326,14 +368,50 @@ export default function NewGame({
                 </div>
               </div>
 
-              <GlassField label="Archetype / Class" hint="Starting skillset & abilities">
-                <select value={classId} onChange={(e) => setClassId(e.target.value)} className={SELECT_CLASS}>
-                  {PRESET_CLASSES.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+              <GlassField label="Archetype / Class" hint="Type any custom class or pick a preset archetype">
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="flex-1 relative">
+                    <input
+                      type="text"
+                      value={customClassName}
+                      onChange={(e) => handleCustomClassChange(e.target.value)}
+                      placeholder="e.g. Warrior, Dragon Rider, Spellsword..."
+                      className={FIELD_CLASS}
+                      list="preset-classes-list"
+                    />
+                    <datalist id="preset-classes-list">
+                      {PRESET_CLASSES.map((c) => (
+                        <option key={c.id} value={c.name} />
+                      ))}
+                    </datalist>
+                  </div>
+                  <div className="w-full sm:w-52 shrink-0">
+                    <select
+                      value={
+                        PRESET_CLASSES.some(
+                          (c) =>
+                            c.name.toLowerCase() === customClassName.trim().toLowerCase() ||
+                            c.id === classId,
+                        )
+                          ? (PRESET_CLASSES.find(
+                              (c) =>
+                                c.name.toLowerCase() === customClassName.trim().toLowerCase() ||
+                                c.id === classId,
+                            )?.id ?? 'custom')
+                          : 'custom'
+                      }
+                      onChange={(e) => handlePresetSelect(e.target.value)}
+                      className={SELECT_CLASS}
+                    >
+                      <option value="custom">✦ Custom Class...</option>
+                      {PRESET_CLASSES.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               </GlassField>
             </div>
           )}
@@ -351,11 +429,11 @@ export default function NewGame({
                       'Background & Origin',
                       background,
                       'Origin, family, and history the Narrator should know from Turn 1.',
-                      'e.g. Youngest child of General Lilith Sorrengail. Trained as a scholar for the Scribe Quadrant, but forced into the lethal Riders Quadrant at Basgiath War College on Conscription Day.',
+                      "e.g. General Sorrengail's daughter, trained as a scribe but forced into the lethal Riders Quadrant on Conscription Day.",
                     )
                     if (result !== null) setBackground(result)
                   }}
-                  placeholder="e.g. Trained for the Scribe Quadrant, forced into the lethal Riders Quadrant at Basgiath War College..."
+                  placeholder="e.g. Trained as a scribe, forced into the lethal Riders Quadrant on Conscription Day..."
                   rows={3}
                 />
               </GlassField>
@@ -369,7 +447,7 @@ export default function NewGame({
                 <input
                   value={personality}
                   onChange={(e) => setPersonality(e.target.value)}
-                  placeholder="e.g. Fiercely intelligent, relentlessly determined, compensates for frailty with tactical cunning and poison craft"
+                  placeholder="e.g. Stubborn and sharp-tongued, relying on tactical cunning and poison craft"
                   className={FIELD_CLASS}
                 />
               </GlassField>
@@ -383,28 +461,30 @@ export default function NewGame({
                 <input
                   value={motivation}
                   onChange={(e) => setMotivation(e.target.value)}
-                  placeholder="e.g. Survive the deadly Parapet, bond a dragon, and prove she belongs despite everyone expecting her to die"
+                  placeholder="e.g. Survive the Parapet, bond a dragon, and prove she belongs"
                   className={FIELD_CLASS}
                 />
               </GlassField>
 
-              <GlassField label="Physical Trait" hint="Distinguishing appearance or condition">
-                <input
-                  value={physicalTrait}
-                  onChange={(e) => setPhysicalTrait(e.target.value)}
-                  placeholder="e.g. Silver-tipped hair, hypermobile/fragile joints requiring braces, agile with twin daggers"
-                  className={FIELD_CLASS}
-                />
-              </GlassField>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <GlassField label="Physical Trait" hint="Distinguishing appearance or condition">
+                  <input
+                    value={physicalTrait}
+                    onChange={(e) => setPhysicalTrait(e.target.value)}
+                    placeholder="e.g. Slight frame, hypermobile joints, agile with daggers"
+                    className={FIELD_CLASS}
+                  />
+                </GlassField>
 
-              <GlassField label="Secret" hint="Concealed truth the world doesn't know yet">
-                <input
-                  value={secret}
-                  onChange={(e) => setSecret(e.target.value)}
-                  placeholder="e.g. Carries concealed poisoned daggers, knows classified military lore from her scribe archives that contradicts official Navarre records"
-                  className={FIELD_CLASS}
-                />
-              </GlassField>
+                <GlassField label="Secret" hint="Concealed truth the world doesn't know yet">
+                  <input
+                    value={secret}
+                    onChange={(e) => setSecret(e.target.value)}
+                    placeholder="e.g. Secret notes on fellow riders and professors' vulnerabilities"
+                    className={FIELD_CLASS}
+                  />
+                </GlassField>
+              </div>
 
               {showBriefField && (
                 <GlassField
@@ -418,11 +498,11 @@ export default function NewGame({
                         'Tale Dive Brief',
                         opening,
                         'Describe the exact scene, location, and characters present where Turn 1 should open.',
-                        'e.g. Standing atop the turret in torrential rain, staring across the narrow, slick stone Parapet suspended two hundred feet above the jagged gorge as the rider ahead slips into the abyss.',
+                        'e.g. Standing atop the turret in torrential rain before the slick stone Parapet high above the gorge as the cadet ahead falls.',
                       )
                       if (result !== null) setOpening(result)
                     }}
-                    placeholder="e.g. Standing atop the turret in torrential rain before the lethal stone Parapet suspended high above the gorge..."
+                    placeholder="e.g. Standing atop the turret in torrential rain before the slick stone Parapet high above the gorge..."
                     rows={4}
                   />
                 </GlassField>
@@ -451,7 +531,9 @@ export default function NewGame({
         className={`shrink-0 ${GLASS_SURFACE} border-x-0 border-b-0 bg-[#07050c]/50 px-4 py-3 flex justify-center`}
         style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
       >
-        <GlassCTAButton onClick={() => onBegin(currentData())}>Continue</GlassCTAButton>
+        <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl flex justify-center">
+          <GlassCTAButton onClick={() => onBegin(currentData())}>Continue</GlassCTAButton>
+        </div>
       </div>
     </GlassScreen>
   )

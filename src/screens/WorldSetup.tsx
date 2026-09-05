@@ -135,7 +135,7 @@ export default function WorldSetup({
       <GlassHeader title="Build a World" subtitle="Step 2 — the setting your tale grows from" onBack={onBack} />
 
       <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
-        <div className="max-w-md mx-auto flex flex-col gap-4">
+        <div className="max-w-md md:max-w-2xl lg:max-w-3xl mx-auto flex flex-col gap-4">
           <GlassTabs tabs={TABS} value={tab} onChange={setTab} className="w-full" />
 
           {tab === 'presets' && (
@@ -176,7 +176,7 @@ export default function WorldSetup({
                   <p className="font-narrative italic text-xs text-[#d8c49e]">
                     Select a world card and confirm to load its lore and power system into this setup.
                   </p>
-                  <div className="flex flex-col gap-2.5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                     {sortedTemplates.map((t) => {
                       const isCurrent = templateId === t.id
                       const isSelected = selectedDeckId === t.id
@@ -302,23 +302,25 @@ export default function WorldSetup({
                 />
               </GlassField>
 
-              <GlassField label="Adapted Novel / Work" hint="Optional — attribution only, never sent to the Narrator">
-                <input
-                  value={sourceTitle}
-                  onChange={(e) => setSourceTitle(e.target.value)}
-                  placeholder="e.g. Fourth Wing"
-                  className={FIELD_CLASS}
-                />
-              </GlassField>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <GlassField label="Adapted Novel / Work" hint="Optional attribution">
+                  <input
+                    value={sourceTitle}
+                    onChange={(e) => setSourceTitle(e.target.value)}
+                    placeholder="e.g. Fourth Wing"
+                    className={FIELD_CLASS}
+                  />
+                </GlassField>
 
-              <GlassField label="Original Author" hint="Optional — attribution only, never sent to the Narrator">
-                <input
-                  value={sourceAuthor}
-                  onChange={(e) => setSourceAuthor(e.target.value)}
-                  placeholder="e.g. Rebecca Yarros"
-                  className={FIELD_CLASS}
-                />
-              </GlassField>
+                <GlassField label="Original Author" hint="Optional attribution">
+                  <input
+                    value={sourceAuthor}
+                    onChange={(e) => setSourceAuthor(e.target.value)}
+                    placeholder="e.g. Rebecca Yarros"
+                    className={FIELD_CLASS}
+                  />
+                </GlassField>
+              </div>
 
               <GlassField
                 label="Genre & Tone"
@@ -329,7 +331,7 @@ export default function WorldSetup({
                 <input
                   value={genreTone}
                   onChange={(e) => setGenreTone(e.target.value)}
-                  placeholder="e.g. Dark fantasy romance, deadly dragon rider war academy, high-stakes & visceral"
+                  placeholder="e.g. Romantasy, lethal dragon rider war academy, high stakes & visceral"
                   className={FIELD_CLASS}
                 />
               </GlassField>
@@ -342,7 +344,7 @@ export default function WorldSetup({
                 <input
                   value={conflict}
                   onChange={(e) => setConflict(e.target.value)}
-                  placeholder="e.g. Navarre's centuries-long war with Poromiel and the secret resurgence of venin threatening the magical wards"
+                  placeholder="e.g. Lethal trials in the Riders Quadrant against border war and hidden venin threats"
                   className={FIELD_CLASS}
                 />
               </GlassField>
@@ -360,36 +362,33 @@ export default function WorldSetup({
                       'Power System',
                       powerSystem,
                       'Magic, cultivation, tech, or pure skill — however power works here.',
-                      'e.g. Signet magic channeled through bonded dragons (lightning wielding, shadows, dream walking) with severe burnout risk, plus lesser rune magic.',
+                      'e.g. Signet magic drawn from bonded dragons with severe physical burnout risk, plus runic wards.',
                     )
                     if (result !== null) setPowerSystem(result)
                   }}
-                  placeholder="e.g. Signet magic channeled through bonded dragons (lightning, shadows) with severe burnout risk, plus lesser runes..."
+                  placeholder="e.g. Signet magic drawn from bonded dragons with severe physical burnout risk, plus runic wards..."
                   rows={3}
                 />
               </GlassField>
 
-              <div className="flex flex-col sm:flex-row gap-4 sm:gap-2">
-                <div className="flex-1">
-                  <GlassField label="Era / Tech Level" hint="Setting tech or historical era">
-                    <input
-                      value={eraTechLevel}
-                      onChange={(e) => setEraTechLevel(e.target.value)}
-                      placeholder="e.g. Medieval high-fantasy war college, dragon-back aerial combat, ancient wards"
-                      className={FIELD_CLASS}
-                    />
-                  </GlassField>
-                </div>
-                <div className="flex-1">
-                  <GlassField label="Key Factions" hint="Named factions driving tension">
-                    <input
-                      value={keyFactions}
-                      onChange={(e) => setKeyFactions(e.target.value)}
-                      placeholder="e.g. Navarre (Riders Quadrant, Scribes, Infantry) vs. Poromiel fliers & hidden venin"
-                      className={FIELD_CLASS}
-                    />
-                  </GlassField>
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <GlassField label="Era / Tech Level" hint="Setting tech or historical era">
+                  <input
+                    value={eraTechLevel}
+                    onChange={(e) => setEraTechLevel(e.target.value)}
+                    placeholder="e.g. High fantasy war college, dragon aerial combat, ancient wards"
+                    className={FIELD_CLASS}
+                  />
+                </GlassField>
+
+                <GlassField label="Key Factions" hint="Named factions driving tension">
+                  <input
+                    value={keyFactions}
+                    onChange={(e) => setKeyFactions(e.target.value)}
+                    placeholder="e.g. Navarre (Riders, Scribes) vs. Poromiel fliers & hidden venin"
+                    className={FIELD_CLASS}
+                  />
+                </GlassField>
               </div>
 
               <GlassField label="World Background" hint="The setting's key backdrop & geography">
@@ -400,11 +399,11 @@ export default function WorldSetup({
                       'World Background',
                       background,
                       "The setting's key backdrop, e.g. the continent of Navarre.",
-                      "e.g. Navarre is shielded by dragon-powered wards centered at Basgiath War College. While cadet riders endure lethal trials, corrupted venin beyond the borders siphon raw magic directly from the earth.",
+                      'e.g. Navarre relies on dragon wards centered at Basgiath War College while cadet riders face lethal trials against encroaching venin.',
                     )
                     if (result !== null) setBackground(result)
                   }}
-                  placeholder="e.g. Navarre is shielded by dragon-powered wards at Basgiath War College..."
+                  placeholder="e.g. Navarre relies on dragon wards centered at Basgiath War College against encroaching venin..."
                   rows={3}
                 />
               </GlassField>
@@ -417,11 +416,11 @@ export default function WorldSetup({
                       'Narration Style',
                       narrationStyle,
                       'Custom narrator tone instructions or voice directives.',
-                      'e.g. Visceral, fast-paced prose with sharp tactical tension, simmering romantic undercurrents, and lethal consequences for every mistake.',
+                      'e.g. Visceral close POV with high-stakes urgency; short, breath-tight sentences during danger; sharp, banter-driven dialogue with simmering romantic tension; tactile physical strain over abstraction.',
                     )
                     if (result !== null) setNarrationStyle(result)
                   }}
-                  placeholder="e.g. Visceral, fast-paced prose with sharp tactical tension, simmering romantic undercurrents..."
+                  placeholder="e.g. Visceral close POV with high-stakes urgency, staccato tension during danger, and sharp banter..."
                   rows={4}
                 />
               </GlassField>
@@ -452,7 +451,9 @@ export default function WorldSetup({
         className={`shrink-0 ${GLASS_SURFACE} border-x-0 border-b-0 bg-[#07050c]/50 px-4 py-3 flex justify-center`}
         style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
       >
-        <GlassCTAButton onClick={() => onContinue(currentData())}>Continue</GlassCTAButton>
+        <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl flex justify-center">
+          <GlassCTAButton onClick={() => onContinue(currentData())}>Continue</GlassCTAButton>
+        </div>
       </div>
     </GlassScreen>
   )

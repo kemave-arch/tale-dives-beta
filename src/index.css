@@ -25,6 +25,7 @@
   --font-display: "Cinzel", serif;
   --font-narrative: "Lora", serif;
   --font-mono: "JetBrains Mono", monospace;
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
 }
 
 /* ONE theme — the dark "obsidian glass" language established by Title and

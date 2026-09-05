@@ -737,7 +737,18 @@ export default function Codex({
   const { confirm, dialog: confirmDialog } = useConfirm()
   const { edit: editLongText, dialog: longTextDialog } = useLongTextEditor()
 
-  const classNameFor = (id?: string) => (id ? PRESET_CLASSES.find((c) => c.id === id)?.name : undefined)
+  const classNameFor = (id?: string) =>
+    id
+      ? PRESET_CLASSES.find((c) => c.id === id)?.name ||
+        (id === player.classId && player.className
+          ? player.className
+          : id.includes('_')
+            ? id
+                .split('_')
+                .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                .join(' ')
+            : id)
+      : undefined
 
   function equippedSlotFor(itemId: string): EquipSlot | undefined {
     return (Object.entries(player.equipped ?? {}) as [EquipSlot, string][]).find(([, id]) => id === itemId)?.[0]

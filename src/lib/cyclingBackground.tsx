@@ -26,11 +26,17 @@ function probeImageExists(src: string): Promise<boolean> {
   })
 }
 
+// Module-level cache for mobile variant availability and preloaded state so
+// newly mounted cross-fade layers don't re-probe or flash fallbacks.
+const mobileAvailability = new Map<string, boolean>()
+
 // Probes public/img/pc_title-bg<N>.webp starting at 1, stopping at the
 // first gap (pc_ is the guaranteed file per useResponsiveBg below, so it's
 // the right one to probe). Starts from ['title-bg1'] so something renders
 // immediately rather than waiting on the probe round-trip; updates once
 // discovery finishes if there turn out to be more.
+// Also probes and preloads corresponding m_<stem>.webp files into the browser cache
+// so mobile portrait transitions never flicker or stall.
 export function useDiscoveredSlots(): string[] {
   const [slots, setSlots] = useState<string[]>(['title-bg1'])
 
@@ -41,8 +47,14 @@ export function useDiscoveredSlots(): string[] {
       const found: string[] = []
       for (let i = 1; i <= MAX_SLOT_PROBE; i++) {
         const stem = `title-bg${i}`
-        if (!(await probeImageExists(`${base}img/pc_${stem}.webp`))) break
+        const pcUrl = `${base}img/pc_${stem}.webp`
+        const mUrl = `${base}img/m_${stem}.webp`
+        if (!(await probeImageExists(pcUrl))) break
         found.push(stem)
+        // Probe and preload the mobile portrait variant in background:
+        probeImageExists(mUrl).then((hasMobile) => {
+          mobileAvailability.set(stem, hasMobile)
+        })
       }
       if (!cancelled && found.length > 0) setSlots(found)
     }
@@ -56,7 +68,9 @@ export function useDiscoveredSlots(): string[] {
 }
 
 function usePortrait(): boolean {
-  const [portrait, setPortrait] = useState(() => window.matchMedia(PORTRAIT_QUERY).matches)
+  const [portrait, setPortrait] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(PORTRAIT_QUERY).matches : false
+  )
   useEffect(() => {
     const mq = window.matchMedia(PORTRAIT_QUERY)
     const sync = () => setPortrait(mq.matches)
@@ -67,46 +81,61 @@ function usePortrait(): boolean {
   return portrait
 }
 
-// pc_ is the guaranteed default — a slot's m_ file is optional and can lag
-// behind. On a portrait viewport, try the m_ variant first and silently
-// fall back to pc_ if it 404s; in landscape, always use pc_ directly.
-// Paths are built off Vite's own BASE_URL rather than a hardcoded leading
-// slash — GitHub Pages serves this app from /tale-dives/, not the domain
-// root, so a literal `/img/...` request 404s there even though it works
-// fine against the dev server's root-mounted localhost:5173.
-function useResponsiveBg(stem: string): string {
+function getPreferredBg(stem: string, isPortrait: boolean): string {
   const base = import.meta.env.BASE_URL
   const pcSrc = `${base}img/pc_${stem}.webp`
   const mobileSrc = `${base}img/m_${stem}.webp`
-  const [src, setSrc] = useState(pcSrc)
+
+  if (!isPortrait) return pcSrc
+  // If explicitly confirmed that this stem lacks an m_ portrait file, use pcSrc
+  if (mobileAvailability.get(stem) === false) return pcSrc
+  // In portrait, always default to the mobile version so mobile viewports never flash pc art
+  return mobileSrc
+}
+
+// On a portrait viewport, use the m_ variant directly and silently fall back
+// to pc_ only if it 404s; in landscape, always use pc_ directly.
+// Initial state starts on mobileSrc for portrait viewports to prevent the PC
+// landscape photo from momentarily rendering or flickering during cross-fades.
+function useResponsiveBg(stem: string, portrait: boolean): string {
+  const base = import.meta.env.BASE_URL
+  const pcSrc = `${base}img/pc_${stem}.webp`
+  const mobileSrc = `${base}img/m_${stem}.webp`
+  const [src, setSrc] = useState(() => getPreferredBg(stem, portrait))
 
   useEffect(() => {
-    const mq = window.matchMedia(PORTRAIT_QUERY)
     let cancelled = false
 
-    function resolve() {
-      if (!mq.matches) {
-        /* landscape */
-        setSrc(pcSrc)
-        return
-      }
-      const probe = new Image()
-      probe.onload = () => {
-        if (!cancelled) setSrc(mobileSrc)
-      }
-      probe.onerror = () => {
-        if (!cancelled) setSrc(pcSrc)
-      }
-      probe.src = mobileSrc
+    if (!portrait) {
+      setSrc(pcSrc)
+      return
     }
 
-    resolve()
-    mq.addEventListener('change', resolve)
+    const known = mobileAvailability.get(stem)
+    if (known === true) {
+      setSrc(mobileSrc)
+      return
+    }
+    if (known === false) {
+      setSrc(pcSrc)
+      return
+    }
+
+    const probe = new Image()
+    probe.onload = () => {
+      mobileAvailability.set(stem, true)
+      if (!cancelled) setSrc(mobileSrc)
+    }
+    probe.onerror = () => {
+      mobileAvailability.set(stem, false)
+      if (!cancelled) setSrc(pcSrc)
+    }
+    probe.src = mobileSrc
+
     return () => {
       cancelled = true
-      mq.removeEventListener('change', resolve)
     }
-  }, [pcSrc, mobileSrc])
+  }, [stem, portrait, pcSrc, mobileSrc])
 
   return src
 }
@@ -114,47 +143,46 @@ function useResponsiveBg(stem: string): string {
 // Decorative (aria-hidden) rather than described per-slot — with more than
 // one slot cycling through, a single alt text would go stale the moment a
 // second image takes over.
-// Two stacked copies of the same image, because neither sizing mode is right
-// on its own:
-//   - `cover` (what this used to be) scales the illustration up until it fills
-//     the viewport and crops the rest, so the visible slice changed with every
-//     window aspect ratio — reading as "zoomed in" on one screen and "panned
-//     somewhere else" on the next, with the artwork's own wordmark drifting
-//     off-centre.
-//   - `contain` alone keeps the whole photo at its true aspect ratio (right),
-//     but the art is 16:9 while phones and portrait tablets are far taller, so
-//     it strands 31%-58% of the screen as dead black.
-// So: `contain` on top for the real, uncropped photo, over a blurred and
-// dimmed `cover` copy that fills the letterbox with the image's own colour
-// instead of a void. On a 16:9 desktop the top layer covers the screen exactly
-// and the blurred one never shows at all.
-function BackgroundLayer({ stem, active }: { stem: string; active: boolean }) {
-  const src = useResponsiveBg(stem)
+// Two stacked copies of the same image:
+//   - `contain` / `auto 100%` on top for the sharp, uncropped photo
+//   - blurred and dimmed `cover` copy beneath that fills the letterbox with
+//     the image's own colour rather than a void.
+function BackgroundLayer({
+  stem,
+  active,
+  fadeInOnMount = false,
+}: {
+  stem: string
+  active: boolean
+  fadeInOnMount?: boolean
+}) {
   const portrait = usePortrait()
+  const src = useResponsiveBg(stem, portrait)
   const image = `url(${src})`
 
-  // Different rules by orientation, because the two want different things:
-  //
-  // Landscape (PC/tablet) — `cover`, so the art scales responsively and fills
-  // the screen. `cover` is already the SMALLEST scale that fills, so it is by
-  // definition the least zoomed a filling background can be; what made the old
-  // version feel over-zoomed was a portrait screen being handed 16:9 art, which
-  // the orientation-matched pc_/m_ pick above now prevents. On a 16:9 display
-  // it crops nothing at all.
-  //
-  // Portrait (mobile) — `auto 100%` locks the image's HEIGHT to the viewport,
-  // so its top and bottom always touch the screen edges and it stays centred,
-  // with the sides running off rather than the composition being trimmed.
-  // `cover` cannot promise that: on a portrait tablet it scales to fill the
-  // width instead and slices the top and bottom off. Where the art is
-  // proportionally narrower than the screen this leaves side margins, which
-  // the blurred layer below fills.
+  // Landscape: `cover` so the art scales responsively and fills the screen.
+  // Portrait: `auto 100%` locks image height to viewport so top and bottom
+  // touch screen edges and remain centered.
   const size = portrait ? 'auto 100%' : 'cover'
+
+  // When fadeInOnMount is true, start at opacity 0 on mount and animate to 1
+  // on next frame so CSS transition executes smoothly instead of popping in.
+  const [opacity, setOpacity] = useState(() => (fadeInOnMount ? 0 : active ? 1 : 0))
+
+  useEffect(() => {
+    if (fadeInOnMount) {
+      const raf = requestAnimationFrame(() => {
+        setOpacity(active ? 1 : 0)
+      })
+      return () => cancelAnimationFrame(raf)
+    }
+    setOpacity(active ? 1 : 0)
+  }, [active, fadeInOnMount])
 
   return (
     <div
-      className="absolute inset-0"
-      style={{ opacity: active ? 1 : 0, transition: `opacity ${BG_FADE_MS}ms ease-in-out` }}
+      className="absolute inset-0 pointer-events-none"
+      style={{ opacity, transition: `opacity ${BG_FADE_MS}ms ease-in-out` }}
       aria-hidden="true"
     >
       {/* Fills whatever the sharp layer leaves over, with the image's own
@@ -164,62 +192,60 @@ function BackgroundLayer({ stem, active }: { stem: string; active: boolean }) {
       <div
         className="absolute inset-0 bg-center bg-cover bg-no-repeat"
         style={{ backgroundImage: image, filter: 'blur(36px) brightness(0.4) saturate(0.85)', transform: 'scale(1.15)' }}
+        aria-hidden="true"
       />
       <div
         className="absolute inset-0 bg-center bg-no-repeat"
         style={{ backgroundImage: image, backgroundSize: size }}
+        aria-hidden="true"
       />
     </div>
   )
 }
 
-// Crossfades through `stems`, but only ever mounts the active slot plus —
-// for the ~7s BG_FADE_MS window while a crossfade is actually in flight —
-// the one it's fading out from, not every discovered slot at once. Each
-// BackgroundLayer carries its own full-viewport `filter: blur(36px)` copy
-// (see below), which is real, sustained GPU/compositor cost on a phone;
-// with N slots always mounted that cost scaled with N even though at most
-// two are ever visible mid-dissolve and only one is ever visible at rest.
-// A no-op with a single slot — the interval never starts, so there's just
-// one static, correctly-picked background, one layer, nothing to crossfade.
-// `fixed` pins the art to the viewport regardless of the page's own scroll
-// (for a scrollable screen like MainMenu); Title, which never scrolls, uses
-// the cheaper `absolute`.
+// Crossfades through `stems`, keeping only the active slot plus the outgoing
+// slot mounted during the crossfade window (~7s BG_FADE_MS) to preserve mobile GPU.
 export function CyclingBackground({ fixed = false }: { fixed?: boolean }) {
   const stems = useDiscoveredSlots()
   const [active, setActive] = useState(0)
-  // Indices currently mounted — just `[active]` at rest; briefly gains the
-  // previous index for exactly one BG_FADE_MS window whenever `active`
-  // changes, then drops back to one.
-  const [mounted, setMounted] = useState<number[]>([0])
+  const [prev, setPrev] = useState<number | null>(null)
 
   useEffect(() => {
     if (stems.length < 2) return
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const id = setInterval(() => setActive((i) => (i + 1) % stems.length), BG_HOLD_MS + BG_FADE_MS)
+
+    const id = setInterval(() => {
+      setActive((curr) => {
+        setPrev(curr)
+        return (curr + 1) % stems.length
+      })
+    }, BG_HOLD_MS + BG_FADE_MS)
+
     return () => clearInterval(id)
   }, [stems.length])
 
+  // Clear outgoing slot once cross-fade completes so only 1 blurred layer remains at rest
   useEffect(() => {
-    setMounted((prev) => (prev.includes(active) ? prev : [...prev, active]))
-    const timer = window.setTimeout(() => setMounted([active]), BG_FADE_MS)
+    if (prev === null) return
+    const timer = window.setTimeout(() => {
+      setPrev(null)
+    }, BG_FADE_MS)
     return () => clearTimeout(timer)
-  }, [active])
+  }, [prev])
 
-  const layers = mounted.map((i) => <BackgroundLayer key={stems[i]} stem={stems[i]} active={i === active} />)
+  const mountedIndices = prev !== null && prev !== active ? [prev, active] : [active]
 
-  // `display: contents` (used for the non-fixed case, so Title's own
-  // `position: relative` root stays the containing block for these
-  // `absolute` layers) has a real, confirmed side effect here: it appears
-  // to interfere with framer-motion's AnimatePresence exit-tracking on the
-  // ancestor motion.div — every screen transition away from Title silently
-  // stopped completing (React state updated, DOM never followed) the moment
-  // this wrapper existed at all, even wrapping a Fragment's worth of
-  // children made no difference until it was a real Fragment. A plain
-  // Fragment carries no DOM node and sidesteps the problem entirely.
+  const layers = mountedIndices.map((i) => (
+    <BackgroundLayer
+      key={stems[i]}
+      stem={stems[i]}
+      active={i === active}
+      fadeInOnMount={i === active && prev !== null}
+    />
+  ))
+
   if (!fixed) return <>{layers}</>
 
-  // bg-canvas so `contain`'s letterbox bars are the app's own dark ground
-  // rather than whatever happens to sit behind this layer.
-  return <div className="fixed inset-0 z-0 bg-canvas">{layers}</div>
+  // bg-canvas so letterbox bars match dark ground
+  return <div className="fixed inset-0 z-0 bg-canvas pointer-events-none">{layers}</div>
 }

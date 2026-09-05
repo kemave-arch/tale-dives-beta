@@ -18,7 +18,16 @@ export const PRESET_CLASSES: ClassDef[] = [
 ]
 
 export function getClassById(id: string): ClassDef {
-  return PRESET_CLASSES.find((c) => c.id === id) ?? PRESET_CLASSES[0]
+  const found = PRESET_CLASSES.find((c) => c.id === id || c.name.toLowerCase() === id.toLowerCase())
+  if (found) return found
+  const displayName = id.includes('_')
+    ? id.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+    : (id.charAt(0).toUpperCase() + id.slice(1))
+  return {
+    id: id.toLowerCase().replace(/\s+/g, '_'),
+    name: displayName || 'Adventurer',
+    weights: { STR: 0.34, INT: 0.33, AGI: 0.33 },
+  }
 }
 
 // Strict lookup for §5.1b Class Evolution — unlike getClassById's lenient

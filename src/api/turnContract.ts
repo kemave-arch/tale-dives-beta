@@ -277,4 +277,4 @@ export const MIN_TURN_OUTPUT_CEILING = PROSE_DEPTHS.IMMERSIVE.maxOutputTokens
 export const MAX_OUTPUT_TOKENS_CEILING = 65536
 
 export const DEFAULT_NARRATION_STYLE =
-  'Third-person limited, past tense. Long, sensory sentences that build atmosphere through concrete physical detail — weight, temperature, texture, sound — periodically broken by short, blunt sentences at moments of violence or shock, so pacing itself carries tension. Occasional spare narratorial asides on cost, memory, or fate, never more than a line. Dialogue is economical and purposeful; characters are shown through action, restraint, and what they don\'t say rather than through exposition.'
+  'Visceral close POV with high-stakes urgency; short, breath-tight sentences during danger; sharp, banter-driven dialogue with simmering romantic tension; tactile physical strain over abstraction.'

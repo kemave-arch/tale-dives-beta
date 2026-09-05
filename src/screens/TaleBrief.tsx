@@ -80,7 +80,7 @@ export default function TaleBrief({
       <GlassHeader title="Tale Dive Brief" subtitle="Step 4 — where the first page opens" onBack={onBack} />
 
       <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
-        <div className="max-w-md mx-auto flex flex-col gap-4">
+        <div className="max-w-md md:max-w-2xl lg:max-w-3xl mx-auto flex flex-col gap-5">
           <GlassField
             label="Where do you dive in?"
             hint="Optional — leave blank and the Narrator decides."
@@ -92,11 +92,11 @@ export default function TaleBrief({
                   'Where do you dive in?',
                   opening,
                   'Describe the exact scene, location, and characters present where Turn 1 should open.',
-                  'e.g. Standing atop the turret in torrential rain, staring across the narrow, slick stone Parapet suspended two hundred feet above the jagged gorge as the rider ahead slips into the abyss.',
+                  'e.g. Standing atop the turret in torrential rain before the slick stone Parapet high above the gorge as the cadet ahead falls.',
                 )
                 if (result !== null) setOpening(result)
               }}
-              placeholder="e.g. Standing atop the turret in torrential rain before the lethal stone Parapet suspended high above the gorge..."
+              placeholder="e.g. Standing atop the turret in torrential rain before the slick stone Parapet high above the gorge..."
               rows={6}
             />
           </GlassField>
@@ -112,57 +112,59 @@ export default function TaleBrief({
                   'Narration Style',
                   narrationStyle,
                   'Custom narrator tone instructions or voice directives.',
-                  'e.g. Visceral, fast-paced prose with sharp tactical tension, simmering romantic undercurrents, and lethal consequences for every mistake.',
+                  'e.g. Visceral close POV with high-stakes urgency; short, breath-tight sentences during danger; sharp, banter-driven dialogue with simmering romantic tension; tactile physical strain over abstraction.',
                 )
                 if (result !== null) setNarrationStyle(result)
               }}
-              placeholder="e.g. Visceral, fast-paced prose with sharp tactical tension, simmering romantic undercurrents..."
+              placeholder="e.g. Visceral close POV with high-stakes urgency, staccato tension during danger, and sharp banter..."
               rows={4}
             />
           </GlassField>
 
-          <div>
-            <div className="flex items-baseline justify-between">
-              <span className={LABEL_CLASS}>Creativity Randomness</span>
-              <span className="font-mono text-xs font-semibold text-[#fae5b5]">{temperature.toFixed(1)}</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <div className="flex items-baseline justify-between">
+                <span className={LABEL_CLASS}>Creativity Randomness</span>
+                <span className="font-mono text-xs font-semibold text-[#fae5b5]">{temperature.toFixed(1)}</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="2"
+                step="0.1"
+                value={temperature}
+                onChange={(e) => setTemperature(Number(e.target.value))}
+                className="w-full mt-2 accent-[#f0ca65] cursor-pointer"
+              />
+              <p className="font-narrative italic text-xs text-[#d8c49e] mt-1">
+                How unpredictable the prose gets. Low keeps the Narrator steady; high adds more creative flourish.
+              </p>
             </div>
-            <input
-              type="range"
-              min="0"
-              max="2"
-              step="0.1"
-              value={temperature}
-              onChange={(e) => setTemperature(Number(e.target.value))}
-              className="w-full mt-2 accent-[#f0ca65] cursor-pointer"
-            />
-            <p className="font-narrative italic text-xs text-[#d8c49e] mt-1">
-              How unpredictable the prose gets. Low keeps the Narrator steady; high adds more creative flourish.
-            </p>
-          </div>
 
-          <div>
-            <p className={LABEL_CLASS}>Combat Resolution Mode</p>
-            {/* Not GlassSegmented: each option carries its own InfoTooltip, so
-                the row stays hand-rolled — but matched to GlassSegmented's
-                active/inactive treatment so it reads as the same control. */}
-            <div className="flex gap-2 mt-2">
-              {(['NARRATIVE', 'TACTICAL'] as const).map((m) => (
-                <div
-                  key={m}
-                  className={`flex-1 rounded-xl border px-3 py-2.5 flex items-center justify-center gap-1.5 transition-colors duration-150 ${
-                    combatMode === m
-                      ? 'border-[#f0ca65] bg-[#f0ca65]/20 text-[#fbf4e2] font-semibold shadow-[0_0_8px_rgba(240,202,101,0.2)]'
-                      : 'border-[#e8ca8a]/25 bg-[#181324]/60 text-[#d8c49e] hover:border-[#e8ca8a]/50 hover:text-[#fae5b5]'
-                  }`}
-                >
-                  <button onClick={() => setCombatMode(m)} className="font-display text-xs">
-                    {m === 'NARRATIVE' ? 'Narrative' : 'Tactical'}
-                  </button>
-                  <InfoTooltip text={COMBAT_MODE_INFO[m]} />
-                </div>
-              ))}
+            <div>
+              <p className={LABEL_CLASS}>Combat Resolution Mode</p>
+              {/* Not GlassSegmented: each option carries its own InfoTooltip, so
+                  the row stays hand-rolled — but matched to GlassSegmented's
+                  active/inactive treatment so it reads as the same control. */}
+              <div className="flex gap-2 mt-2">
+                {(['NARRATIVE', 'TACTICAL'] as const).map((m) => (
+                  <div
+                    key={m}
+                    className={`flex-1 rounded-xl border px-3 py-2.5 flex items-center justify-center gap-1.5 transition-colors duration-150 ${
+                      combatMode === m
+                        ? 'border-[#f0ca65] bg-[#f0ca65]/20 text-[#fbf4e2] font-semibold shadow-[0_0_8px_rgba(240,202,101,0.2)]'
+                        : 'border-[#e8ca8a]/25 bg-[#181324]/60 text-[#d8c49e] hover:border-[#e8ca8a]/50 hover:text-[#fae5b5]'
+                    }`}
+                  >
+                    <button onClick={() => setCombatMode(m)} className="font-display text-xs">
+                      {m === 'NARRATIVE' ? 'Narrative' : 'Tactical'}
+                    </button>
+                    <InfoTooltip text={COMBAT_MODE_INFO[m]} />
+                  </div>
+                ))}
+              </div>
+              <p className="font-narrative italic text-xs text-[#d8c49e] mt-1.5">Changeable anytime later from Settings.</p>
             </div>
-            <p className="font-narrative italic text-xs text-[#d8c49e] mt-1.5">Changeable anytime later from Settings.</p>
           </div>
         </div>
       </div>
@@ -171,7 +173,9 @@ export default function TaleBrief({
         className={`shrink-0 ${GLASS_SURFACE} border-x-0 border-b-0 bg-[#07050c]/50 px-4 py-3 flex justify-center`}
         style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
       >
-        <GlassCTAButton onClick={() => onBegin({ opening, narrationStyle, temperature, combatMode })}>Start</GlassCTAButton>
+        <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl flex justify-center">
+          <GlassCTAButton onClick={() => onBegin({ opening, narrationStyle, temperature, combatMode })}>Start</GlassCTAButton>
+        </div>
       </div>
     </GlassScreen>
   )

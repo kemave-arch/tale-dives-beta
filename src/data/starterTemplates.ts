@@ -15,16 +15,16 @@ export const FOURTH_WING_WORLD: WorldData = {
   id: 'world_fourth_wing',
   name: 'Fourth Wing',
   mode: 'inspired',
-  genreTone: 'Romantasy war-college — dark-academia tension, banter-forward dialogue, visceral physical danger.',
+  genreTone: 'Romantasy war college — dark-academia tension, banter-driven dialogue, visceral danger.',
   conflict:
-    "A brutal culling of the weak inside the Riders Quadrant, set against a border war with Poromiel and unrest among the continent's own dragons.",
-  background: 'The continent of Navarre.',
+    'Lethal trials in the Riders Quadrant against a border war with Poromiel and hidden venin threats.',
+  background: 'The dragon-shielded continent of Navarre.',
   narrationStyle:
-    'Close third person with a present-tense sense of urgency; short, breath-tight sentences during danger or physical strain; banter-forward dialogue that carries romantic tension through action rather than pausing for it; visceral, specific physical detail over abstraction.',
+    'Visceral close POV with high-stakes urgency; short, breath-tight sentences during danger; sharp, banter-driven dialogue with simmering romantic tension; tactile physical strain over abstraction.',
   powerSystem:
-    'Signet magic — every cadet who survives to bond a dragon gains a unique signet ability drawn from that bond. Channeling it without enough physical conditioning burns through the body fast, and going too long unbonded, or too far from a dragon, is dangerous on its own.',
-  eraTechLevel: 'Medieval high fantasy war-college',
-  keyFactions: 'Navarre vs. Poromiel',
+    'Signet magic drawn from bonded dragons with severe physical burnout risk, supplemented by runic wards.',
+  eraTechLevel: 'High fantasy war college, dragon aerial combat',
+  keyFactions: 'Navarre (Riders, Scribes) vs. Poromiel fliers & hidden venin',
   sourceTitle: 'Fourth Wing',
   sourceAuthor: 'Rebecca Yarros',
 }
@@ -35,11 +35,11 @@ export const VIOLET_SORRENGAIL: ProtagonistData = {
   classId: 'apprentice_scribe',
   className: 'Apprentice Scribe',
   background:
-    "Daughter of Lilith Sorrengail, general commander of Navarre's forces; her father was a scribe. Her late brother was a celebrated Dragon Rider; her surviving sister, Mira, also a Dragon Rider, dotes on her.",
-  personality: 'Quietly stubborn, sharp-tongued when scared, more comfortable with books than blades',
-  motivation: "Prove she belongs in the Riders Quadrant despite everyone — including her own mother — expecting her to wash out or die",
-  physicalTrait: "Hypermobile joints and a slight frame — strong grip and flexibility, but injures easily and can't out-muscle anyone",
-  secret: "Keeps notes on every rider and professor's weaknesses — a scribe's habit she's not ready to give up",
+    "General Lilith Sorrengail's daughter, trained as a scholar but forced into the lethal Riders Quadrant on Conscription Day.",
+  personality: 'Quietly stubborn, sharp-tongued when scared, relying on cunning and poisons over brute strength',
+  motivation: 'Survive the Parapet, bond a dragon, and prove she belongs despite everyone expecting her to die',
+  physicalTrait: 'Hypermobile joints and slight frame — agile and sharp, but injures easily under heavy force',
+  secret: 'Keeps hidden notes documenting the vulnerabilities of fellow cadets and professors',
   opening:
-    "The tale starts the morning of Conscription Day, when Violet is forced by her commanding-general mother to enter the deadly Riders Quadrant instead of the peaceful Scribes Quadrant she trained for all her life. The story opens in her mother's office for a tense final physical assessment and uniform fitting, while Violet quietly panics over her frailty and hypermobile joints — a serious liability given how easily she can be injured. Her sister Mira protests and tries to press protective gear on her; Violet accepts the situation, binds her joints, and prepares to cross the parapet, a narrow stone bridge that kills applicants before they even reach the quadrant, all while aware her visible weakness makes her a target. The dive begins while Violet is still on her way to her mother's office, where Mira and her mother are already waiting.",
+    "The dive opens on Conscription Day in General Sorrengail's office during a tense final physical assessment. Violet binds her hypermobile joints while her sister Mira protests her transfer to the lethal Riders Quadrant. Outside, the deadly Parapet awaits.",
 }

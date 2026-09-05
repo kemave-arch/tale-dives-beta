@@ -108,18 +108,19 @@ interface GlassIconButtonProps {
   tone?: IconTone
   compact?: boolean
   disabled?: boolean
+  className?: string
 }
 
 // Small circular border-only glass button — the cycling-background
 // equivalent of MainMenu's old skin-token IconButton.
-export function GlassIconButton({ icon: Icon, label, onClick, tone = 'default', compact = false, disabled = false }: GlassIconButtonProps) {
+export function GlassIconButton({ icon: Icon, label, onClick, tone = 'default', compact = false, disabled = false, className = '' }: GlassIconButtonProps) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       title={label}
       aria-label={label}
-      className={`inline-flex items-center justify-center shrink-0 rounded-full border bg-transparent backdrop-blur-sm transition-colors duration-150 disabled:opacity-35 disabled:pointer-events-none ${compact ? 'w-8 h-8' : 'w-10 h-10'} ${ICON_TONE_CLASS[tone]}`}
+      className={`inline-flex items-center justify-center shrink-0 rounded-full border bg-transparent backdrop-blur-sm transition-colors duration-150 disabled:opacity-35 disabled:pointer-events-none ${compact ? 'w-8 h-8' : 'w-10 h-10'} ${ICON_TONE_CLASS[tone]} ${className}`}
     >
       <Icon size={compact ? 15 : 18} />
     </button>
@@ -385,7 +386,7 @@ export function GlassTabs<T extends string>({
 // Shared by input/textarea. Has an opaque dark glass backing so text remains
 // crisp and legible regardless of which background artwork or scene is active.
 export const FIELD_CLASS =
-  'w-full rounded-xl border border-[#e8ca8a]/30 bg-[#120e1b]/80 backdrop-blur-sm px-3 py-2.5 font-narrative text-sm text-[#fbf4e2] placeholder:text-[#d4be88]/70 outline-none transition-colors duration-150 focus:border-[#f0ca65] focus:bg-[#181324]/90 focus:shadow-[0_0_12px_rgba(240,202,101,0.18)]'
+  'w-full rounded-xl border border-[#e8ca8a]/30 bg-[#120e1b]/80 backdrop-blur-sm px-3 py-2.5 font-sans text-[12px] leading-relaxed text-[#fbf4e2] placeholder:text-[#d4be88]/70 outline-none transition-colors duration-150 focus:border-[#f0ca65] focus:bg-[#181324]/90 focus:shadow-[0_0_12px_rgba(240,202,101,0.18)]'
 
 // A <select>'s dropdown list is painted by the OS, and it inherits the
 // element's own background — a near-transparent select gets an unreadable

@@ -192,53 +192,23 @@ section of the blueprint for the full spec," not "this is built."
 
 ## 2. Current file inventory (verified against actual `src/`, not assumed)
 
-**Screens** (`src/screens/*.tsx`): `Title` (redesigned this session — full-bleed cycling
-artwork, the entry-point screen), `StoryMode` (Original/Inspired mode picker, step 1 of the
-creation flow), `Settings`, `MainMenu` (redesigned same session as Title, later same day —
-same cycling background + border-only glass chrome, no more skin-token `glass-panel`),
-`WorldSetup` (step 2), `NewGame` (step 3, "Protagonist Setup" in UI copy), `TaleBrief`
-(step 4, opening scene + narration/creativity/combat-mode settings, the screen that
-actually calls `beginCampaign`), `Chronicle` (main gameplay), `Codex`
-(Locations/NPCs/Factions/Lore/Quests/Bestiary/Items browser + CRUD),
-`SlashCommandManager`.
+**Screens** (`src/screens/*.tsx`): `Title` (full-bleed cycling artwork, "START" CTA, synchronous fullscreen toggle), `StoryMode` (Original/Inspired mode picker, step 1 of the
+creation flow), `Settings`, `MainMenu` (cycling background + border-only glass chrome, Tales/Worlds/Protagonists libraries), `WorldSetup` (step 2), `NewGame` (step 3, "Protagonist Setup" in UI copy), `TaleBrief`
+(step 4, opening scene + narration/creativity/combat-mode settings, the screen that actually calls `beginCampaign`), `Chronicle` (main gameplay — centered Parchment log, responsive desktop sidebar), `Codex`
+("Codex Archives" browser with bespoke RPG child entry detail views across all categories + CRUD), `SlashCommandManager`.
+
+**Components** (`src/components/*.tsx`): `PresetDetailModal.tsx` (responsive World/Protagonist detail modal with tabs on mobile and multi-column grid on desktop), `NowPlayingBanner.tsx` (toast notification for soundtrack changes), `VaultArtGalleryView.tsx`, `VaultSoundtrackView.tsx`.
 
 **Lib** (`src/lib/*.ts`): `store.ts` (persistence), `jitContext.ts` (per-turn context
-slicing), `shadowReferee.ts` (client-side validation of model-proposed deltas), `codex.ts`
-+ `keywordLinks.ts` (`{{Term|category}}` auto-registration), `locations.ts`, `npcs.ts`,
-`quests.ts`, `inventory.ts` (per-domain state appliers — now also §5.9 Equipment:
-`applyInventoryChanges` upserts the item Codex alongside the qty ledger, `equipItem`/
-`unequipSlot` apply/reverse a `statBonus`), `combat.ts` (Tactical combat
-math), `leveling.ts` (milestone leveling + chapter boundaries), `bangCommands.ts` (`!`
-client-side commands), `discovery.ts` (§5.12 Codex Discovery reveal checks), `crafting.ts`
-+ `gameTime.ts` (§5.8 Crafting queue resolution + GameTime arithmetic), `summoning.ts`
-(§5.3 Summoning/Minion engine), `factions.ts` (§5.4/§5.11 rivalry + derived standing),
-`fsAccess.ts` (§6.4B File System Access API wrapper), `useConfirm.tsx` (an in-app confirm
-modal; see its Revision log entry for why `window.confirm()` had to go),
-`cyclingBackground.tsx` (the shared background-slot picker/crossfader — exports
-`CyclingBackground`; slots are discovered at runtime, there is no `BACKGROUND_SLOTS`
-array any more), `backgroundMusic.tsx` (`useBackgroundMusic` — the soundtrack hook:
-runtime track discovery, per-track fade in/out, wrap-around, and the mute toggle's state.
-Mounted once in `App.tsx`, deliberately **not** in a screen, so music survives navigation
-instead of restarting on every unmount. Read §0's muted-autoplay trap before editing it),
-`glassChrome.tsx` (the shared
-border-only-glassmorphism pieces — `TAPER_CLIP`, `GlassCTAButton`, `GlassIconButton`,
-`GLASS_SURFACE`), `currency.ts`, `derivedStats.ts`, `richText.tsx`, `slug.ts`,
-`autoRegister.ts`, `turnStates.ts`, `backup.ts` (`downloadJSON`/`readJSONFile` plus
-`saveJSON`, folder-aware).
+slicing), `shadowReferee.ts` (client-side validation of model-proposed deltas), `xmlTurnParser.ts` (DOMParser + regex fallback parser for `<nar>` and `<sync>` XML turn responses), `codex.ts` + `keywordLinks.ts` (`{{Term|category}}` auto-registration and deduplication), `locations.ts` (tracks `firstVisitedTime`/`lastVisitedTime`), `npcs.ts` (tracks `heldWeapon`, `wornArmor`, `firstSeenTime`/`lastSeenTime`),
+`quests.ts`, `inventory.ts` (item Codex + qty ledger, `equipItem`/`unequipSlot`), `combat.ts` (Tactical combat math), `leveling.ts` (milestone leveling + chapter boundaries), `bangCommands.ts` (`!` client-side commands), `discovery.ts` (§5.12 Codex Discovery reveal checks), `crafting.ts` + `gameTime.ts` (§5.8 Crafting queue resolution + GameTime arithmetic), `summoning.ts` (§5.3 Summoning/Minion engine), `factions.ts` (§5.4/§5.11 rivalry + derived standing), `skills.ts` (affordability and skill learning), `fsAccess.ts` (§6.4B File System Access API wrapper), `useConfirm.tsx` (in-app confirm modal), `useLongTextEditor.tsx` (auto-expanding modal for long textareas), `cyclingBackground.tsx` (responsive background-slot crossfader), `backgroundMusic.tsx` (ambient rotation + `ts-<state>_` turn-state pools with crossfader, mute toggle), `glassChrome.tsx` (shared border-only glassmorphism components), `currency.ts`, `derivedStats.ts`, `richText.tsx` (inline markup: `[Skill]`, `[[Item]]`, `'thought'`, `{{Term|cat}}`), `slug.ts`, `autoRegister.ts`, `turnStates.ts`, `backup.ts` (`saveJSON`, folder-aware).
 
-**API** (`src/api/`): `turnContract.ts` (system prompt + `TURN_SCHEMA`),
-`providers/types.ts` (the `Provider` interface, new this session),
-`providers/index.ts` (the provider registry — `getProvider`/`allProviders`, new this
-session), `providers/gemini.ts` (the only real provider implementation — exports both the
-raw `runTurn`/`runSummary` functions and the `GEMINI_PROVIDER` descriptor).
+**API** (`src/api/`): `turnContract.ts` (system prompt + narrative rules), `xmlTurnContract.ts` (XML grammar definition for `<sync>` tags/attributes), `providers/types.ts` (the `Provider` interface), `providers/index.ts` (the provider registry), `providers/gemini.ts` (Gemini provider implementing `runTurn` with XML instructions and parser, plus `runSummary`).
 
-**Data** (`src/data/`): `classes.ts` (Preset Class Dictionary, now including
-`apprentice_scribe`), `recipes.ts` (§5.8 Recipe Dictionary), `starterTemplates.ts` (new —
-the Fourth Wing World + Violet Sorrengail Protagonist starter template, Appendix A's worked
-example, seeded once into the Library on a genuinely first-ever load).
+**Data** (`src/data/`): `classes.ts` (Preset Class Dictionary), `recipes.ts` (§5.8 Recipe Dictionary), `soundtrackManifest.ts` (explicit manifest of OST tracks and `_ostNN` sort order), `starterTemplates.ts` (Fourth Wing + Violet Sorrengail starter template), `formExamples.ts`.
 
 **Deployment**: `.github/workflows/deploy.yml` — builds and deploys to GitHub Pages via
-Actions on every push to `master` (repo's Pages source is set to "GitHub Actions"). `vite.config.ts` uses `base: './'` (relative) so the build works from the project's Pages
+Actions on every push to `master`. `vite.config.ts` uses `base: './'` (relative).
 subpath without hardcoding the repo name — safe since there's no URL-based router, only
 in-app `screen` state.
 
@@ -511,6 +481,12 @@ the literal commit sequence; the summary here groups by feature, not commit.
   costless skills. **Two deliberate omissions**: the §Phase B.3 **Quick-Slot Tray**
   (user deprioritized it explicitly) and `suggested_quick_slots` from class grounding
   (that grounding system doesn't exist — it's bundled with Inspired Mode, item #5).
+- **Tale Dives v3.0 XML Turn Contract & Parser Migration** (2026-09-05) — Replaced the structured JSON turn schema with an XML wire grammar: `<nar>...</nar>` (pure prose with inline markup) followed by `<sync>...</sync>` (compact block of self-closing XML tags with shorthand attributes for turn state, vitals, inventory, NPCs, quests, and factions). Verified a ~25% reduction in output tokens on the real Gemini tokenizer. Implemented in `src/api/xmlTurnContract.ts` and `src/lib/xmlTurnParser.ts`. Parser combines `DOMParser` for the `<sync>` block with regex recovery for `<nar>` so incomplete turns never lose their narrative. Inline item markup transitioned from angle brackets (`>Item<`) to double brackets (`[[Item]]`) to prevent collisions with real XML tags.
+- **NPC & Location Ground Truth Anchoring & Deduplication** (2026-09-05) — Anchored entity state against model drift: added persistent `heldWeapon` and `wornArmor` to `NpcEntry` (populated and re-sent every turn in JIT context), and added temporal tracking (`firstSeenTime`/`lastSeenTime` on NPCs; `firstVisitedTime`/`lastVisitedTime` on Locations) to keep the timeline consistent. Solved Codex entity duplication by normalizing hyphens and underscores in `slugify()` and adding an `isKnownByName` fuzzy-match check in `locations.ts`.
+- **Codex Overhaul & Bespoke Child Entry Detail Views** (2026-09-05) — Rebranded header to "Codex Archives", harmonized typography (Cinzel display serif for entry titles, clean Sans for body and metadata), unified under the dark navy/charcoal palette (`bg-[#131622]/90` cards with `#e8ca8a` gold accents), and renamed "Workbenches & Recipes" to "Crafting". Rebuilt detail views with tailored modern RPG layouts for each category (Locations, NPCs, Factions, Lore, Quests, Bestiary, Items, Skills, Crafting).
+- **Adaptive Turn-State Soundtrack & Crossfading** (2026-09-05) — Extended `src/lib/backgroundMusic.tsx` to partition tracks into ambient rotation and per-Turn-State pools using a filename convention: tracks prefixed with `ts-<state>_` (e.g., `ts-combat_...`) dynamically crossfade in when that state becomes active, falling back smoothly to ambient music when the encounter ends. Reads explicit track list from `src/data/soundtrackManifest.ts`.
+- **Chronicle & Title Screen UX Refinements** (2026-09-05) — Title screen CTA modernized to "START" with synchronous fullscreen support. Chronicle narration log centered into an immersive reading column, typewriter letter delay removed for instant reading pace, and responsive desktop layout enhanced with a structured side-column.
+- **Defensive Invariant Hardening & Blueprint v3.0** (2026-09-05) — Fixed potential `NaN` in `stat_grant` through defensive parsing and clamping. Fixed temporal hallucination in chapter recaps by threading explicit `startTime` and `endTime` into `runSummary`. Scoped bang-command turn controls to the last narrated turn. Authored and published `Tale-Dives-Blueprint-v3_0.md` as the unified master specification.
 
 ## 4. What's NOT built yet — the Tier 3 priority list
 
@@ -757,33 +733,25 @@ Per the standing instruction this session was given:
    JS-exec tool) before concluding the underlying handler is broken. This cost real
    verification time on the Class Evolution manual-trigger flow this session.
 
-**Current priority list (2026-09-03, office session)**, folding in what's actually left
-after the additions below — items 7/8/9 above are unchanged and still the long pole:
+**Current priority list (2026-09-05, v3.0 milestone)**, folding in the v3.0 XML migration, Codex redesign, and state consistency overhaul:
 
-1. ~~Finish the verify-and-fix pass~~ — **done, completely.** Quests/Bestiary CRUD,
-   defeat/recovery, and chapter recap are all now verified live against a real Gemini turn
-   (see the revision log entries above). The only unverified item left anywhere in the app
-   is on-device folder saves (item 2 below), which needs a human, not more agent time.
-2. **Manually verify on-device folder saves** (§3's Multi-provider entry) — the one gap
-   that genuinely needs a human: click Settings → Backup → Choose Folder for real, since a
-   native OS picker dialog can't be driven by browser automation.
-3. ~~Continue the beautification pass to Title/Main Menu~~ — **checked, already clean**,
-   see the revision log entry just above this list. Every screen has now had a dedicated
-   look at least once.
-4. ~~Scope the radial quick-action menu~~ — **built and live-verified** (commits
-   `7ec0e36`, then `bfd8792` after feedback: smaller 40px buttons, Compass icon instead of
-   Wand2, layered gold border + hover/press glow, and the browser tool recovered enough
-   this same session to confirm the fan opens correctly and both a Settings and a
-   Codex-category shortcut navigate correctly). Nothing outstanding here.
-5. **Inspired Mode (item 7 above)** — stays parked until the Google Search grounding quota
-   resets or billing is enabled; don't re-spike more than once or twice a session.
+1. ~~Tale Dives v3.0 XML Turn Contract & Parser Migration~~ — **done**. Migrated to `<nar>` + `<sync>` wire format with DOMParser + regex fallback; verified ~25% output token reduction on real Gemini calls.
+2. ~~NPC & Location Ground Truth Anchoring & Deduplication~~ — **done**. Added `heldWeapon`, `wornArmor`, `firstSeenTime`/`lastSeenTime` on NPCs; `firstVisitedTime`/`lastVisitedTime` on locations; fixed slugify and `isKnownByName` duplicates.
+3. ~~Codex Archives Rebranding, Typography Harmonization & RPG Detail Views~~ — **done**. Rebranded to "Codex Archives", harmonized Cinzel titles with Sans metadata/body, dark navy styling (`bg-[#131622]/90`), and tailored modern RPG detail views for all 9 categories.
+4. ~~Soundtrack Turn-State Switching & Crossfading~~ — **done**. Auto-switches between ambient rotation and `ts-<state>_` pools on state changes with crossfade.
+5. ~~Title & Chronicle UX Polishing~~ — **done**. Modernized Title CTA to "START" with fullscreen support; centered Chronicle narrative reading log, eliminated typewriter animation delay, added responsive desktop sidebar.
+6. **Manually verify on-device folder saves** (§3's Multi-provider entry) — Still the one gap that genuinely needs a human: click Settings → Backup → Choose Folder in a real Chrome/Edge browser, since a native OS picker dialog can't be driven by automation.
+7. **Inspired Mode (item 7 above)** — Stays parked until the Google Search grounding quota resets or billing is enabled; don't re-spike more than once or twice a session.
+8. **Action Suggestion Pills** — High-value UX addition: `<sync>` and JIT context handle `turn.act` (2-4 suggested next actions), but `App.tsx` and `Chronicle.tsx` do not yet render the clickable action suggestion pills into the player's input bar.
+9. **API Failure Diagnostics Panel** — Replace generic error alert banner with a dedicated, polished error modal (masked API key, one-click copyable diagnostic report, Retry / Open Settings actions).
+10. **Campaign Seeding & Streaming Turn Rendering** — Deferred creation-flow enhancements (Phase 4-6) to be scoped once the current gameplay loop settles.
 
 ---
 
 
 ## Full revision history
 
-Every dated session entry through 2026-09-05 has been moved to
+Every dated session entry through 2026-09-04 has been moved to
 [`PROJECT_REVISION_NOTES_ARCHIVE.md`](./PROJECT_REVISION_NOTES_ARCHIVE.md) — this file
 was closing in on 2,400 lines, most of it historical log rather than current state.
 That file is a verbatim continuation of the same log; nothing was edited or
@@ -792,3 +760,42 @@ detail than the summary sections above give — for resuming work, everything ab
 this line is what actually matters.
 
 New entries below, most recent first.
+
+- **2026-09-05** — Concise Rebecca Yarros Narration Style & Form Placeholder Streamlining (`src/api/turnContract.ts`, `src/data/starterTemplates.ts`, `src/screens/WorldSetup.tsx`, `src/screens/NewGame.tsx`, `src/screens/TaleBrief.tsx`):
+  - **Narration Style Default & Fourth Wing Template**: Updated `DEFAULT_NARRATION_STYLE` and `FOURTH_WING_WORLD.narrationStyle` to concise, high-impact phrasing reflecting Rebecca Yarros' prose: *"Visceral close POV with high-stakes urgency; short, breath-tight sentences during danger; sharp, banter-driven dialogue with simmering romantic tension; tactile physical strain over abstraction."*
+  - **Starter Templates Conciseness**: Trimmed `FOURTH_WING_WORLD` and `VIOLET_SORRENGAIL` descriptions and opening briefs to be punchy, avoiding overly long paragraphs while retaining all critical lore and mechanical markers.
+  - **Form Placeholders & Modal Descriptions**: Streamlined input placeholders and modal guideline prompts across World Setup, Protagonist Setup, and Tale Dive Brief (Genre & Tone, Conflict, Power System, World Background, Demeanor/Personality, Motivation, Physical Trait, Secret, and Opening Dive Brief).
+  - **Verification**: Verified clean TypeScript compilation (`compile_applet`).
+
+- **2026-09-05** — Preset Detail Modal Metadata Styling & Typography Harmonization (`src/components/PresetDetailModal.tsx`):
+  - **Header Subtitle**: Reduced font size to 10px (`text-[10px]`) in Lora narrative italic for both World and Protagonist detail modals, keeping header metadata compact and secondary to titles.
+  - **Metadata Labels & Values**: Updated setting classification, identity, attribute, and demeanor labels to high-contrast warm gold (`text-[#fae5b5]`). Harmonized all metadata values (Genre & Tone, Era & Tech Level, Power System, Key Factions, Class, Gender, Age, Physical Traits, Personality, Motivation) to Plus Jakarta Sans (`font-sans text-xs`) across both mobile tabbed views and PC/tablet multi-column layouts.
+  - **Verification**: Verified clean TypeScript checks and production compilation (`compile_applet`).
+
+- **2026-09-05** — Free-Text Class Selection, Input Typography Harmonization, and PC Creation Flow Layout Refactor (`src/lib/glassChrome.tsx`, `src/screens/NewGame.tsx`, `src/screens/WorldSetup.tsx`, `src/screens/TaleBrief.tsx`, `src/data/classes.ts`, `src/screens/Codex.tsx`):
+  - **Free-Text Class Selection**: Players are no longer restricted to the preset classes dropdown. In `NewGame.tsx`, added a custom text input linked to a `<datalist>` of archetypes and an adjacent preset dropdown. Players can type any custom class name (e.g. "Dragon Rider", "Shadow Assassin", "Necromancer") or choose a preset archetype. `currentData()` generates a clean `classId` slug and stores the custom `className`. `src/data/classes.ts` was updated so `getClassById` gracefully handles custom class IDs without reverting to Warrior, and `Codex.tsx` reflects the custom player class title in the archives.
+  - **Input Typography Harmonization**: Updated `FIELD_CLASS` and `SELECT_CLASS` in `src/lib/glassChrome.tsx` to `font-sans text-[12px] leading-relaxed text-[#fbf4e2]`. All input and textarea elements across World Setup, Protagonist Setup, and New Story (Tale Brief) now render consistently in Plus Jakarta Sans at 12px with high contrast against the dark-glass background.
+  - **PC Viewport Layout & Field Sizing**: Refactored `WorldSetup.tsx`, `NewGame.tsx`, and `TaleBrief.tsx` with responsive widths (`max-w-md md:max-w-2xl lg:max-w-3xl mx-auto`). Presets cards now organize into a balanced 2-column grid (`grid grid-cols-1 md:grid-cols-2 gap-2.5`) on PC rather than an overly tall narrow column. Related fields (Adapted Novel & Author, Era & Factions, Gender & Age, Physical Trait & Secret, Creativity & Combat Mode) now sit side-by-side in responsive multi-column layouts on desktop while cleanly stacking on mobile.
+  - **Verification**: Verified clean TypeScript checking (`tsc --noEmit` via `lint_applet`) and production compilation (`compile_applet`). Tested typography, free-text class input, and responsive grid layouts across desktop and mobile breakpoints.
+
+- **2026-09-05** — Mobile Cycling Background Cross-Fade & Aspect Ratio Flicker Fix (`src/lib/cyclingBackground.tsx`):
+  - **Root Cause**: `useResponsiveBg` initialized with `useState(pcSrc)` on mount even on portrait/mobile viewports before probing `m_<stem>.webp`, causing every newly mounted slot to render the PC 16:9 landscape image for several frames before abruptly snapping to the mobile 2:3 portrait photo. Furthermore, newly mounted layers mounted directly at `opacity: 1` rather than animating in from `opacity: 0`, and only `pc_` files were probed/preloaded at startup in `useDiscoveredSlots`, causing `m_` photos to load cold from the network while `pc_` was already cached.
+  - **Fix**:
+    1. Made `useResponsiveBg` synchronously check orientation on initial state evaluation (`getPreferredBg`), initializing directly to `mobileSrc` for portrait screens and never defaulting to `pcSrc`.
+    2. Updated `useDiscoveredSlots` to probe and preload both `pc_` and `m_` variants into the browser cache and record availability in a module-level cache (`mobileAvailability`).
+    3. Added `fadeInOnMount` logic with `requestAnimationFrame` to `BackgroundLayer` so incoming layers mount at `opacity: 0` and transition to `1` over `BG_FADE_MS` (7000ms), while the outgoing layer smoothly transitions from `1` to `0` before unmounting.
+    4. Added `pointer-events-none` on background layer wrappers to prevent interfering with mobile touch interactions. Verified with `lint_applet` and `compile_applet`.
+
+- **2026-09-05** — Preset Detail Modal Footer Refactor (`src/components/PresetDetailModal.tsx`, `src/lib/glassChrome.tsx`): Refactored World & Protagonist preset modal footer action buttons from text buttons to circular `GlassIconButton` controls (Star for default, Pencil for edit, Trash2 for delete, X for close, Check for load, Play for play/story) with clean responsive spacing (`gap-2 sm:gap-2.5` in a `justify-between` row). Eliminates button crowding and overflow on mobile viewports while preserving accessible tooltips/aria-labels and cohesive dark-glass styling.
+
+- **2026-09-05** — Tale Dives v3.0 Major Architecture & UI Overhaul: XML Turn Contract Migration, State Anchoring, and Codex Archives Overhaul.
+  - **XML Turn Contract Migration** (`src/api/xmlTurnContract.ts`, `src/lib/xmlTurnParser.ts`, `src/api/providers/gemini.ts`, `src/api/turnContract.ts`, `src/App.tsx`): Completely replaced the JSON-schema wire protocol with an XML grammar consisting of `<nar>...</nar>` (prose narrative) and `<sync>...</sync>` (compact block of self-closing XML tags with shorthand attributes like `<st>`, `<loc>`, `<hp>`, `<mp>`, `<st_pool>`, `<inv>`, `<npc>`, `<quest>`, `<fac>`). This eliminated JSON escaping overhead and verbose schema scaffolding, producing a measured ~25% reduction in output tokens on the real Gemini tokenizer.
+  - **Parser Resilience & Regex Fallback**: `src/lib/xmlTurnParser.ts` uses the browser's native `DOMParser` for strict `<sync>` extraction. To defend against LLM `MAX_TOKENS` truncation mid-sync or malformed XML, a regex-based extractor extracts all narrative prose inside `<nar>` even if `<sync>` fails or is cut off, ensuring player immersion is never interrupted by a lost turn.
+  - **Inline Prose Markup Migration** (`src/lib/richText.tsx`): Shifted item tags from angle brackets (`>Item<`) to double square brackets (`[[Item]]`). Because the turn response now contains real XML tags, literal `<`/`>` in prose broke DOM parsing. Updated `OUTER_RE` to evaluate `[[Item]]` before `[Skill]` to prevent greedy bracket capture.
+  - **NPC & Location Ground Truth Anchoring** (`src/types.ts`, `src/lib/npcs.ts`, `src/lib/locations.ts`, `src/lib/jitContext.ts`): Added `heldWeapon` and `wornArmor` to `NpcEntry` and populated them into the per-turn JIT context header. Added `firstSeenTime`/`lastSeenTime` (NPCs) and `firstVisitedTime`/`lastVisitedTime` (Locations) to eliminate temporal hallucination drift where the narrator forgot when an entity was encountered.
+  - **Codex Entity Deduplication** (`src/lib/slug.ts`, `src/lib/locations.ts`, `src/lib/codex.ts`): Fixed entity duplication bug where minor casing or punctuation variances generated multiple Codex entries; `slugify` now collapses both hyphens and underscores consistently, and `locations.ts` includes an `isKnownByName` heuristic to deduplicate auto-registered places.
+  - **Codex Overhaul & Bespoke RPG Detail Views** (`src/screens/Codex.tsx`): Rebranded header from "Codex" to "Codex Archives", harmonized typography (Cinzel display serif for entity titles, clean Sans for system metadata and attributes), styled cards in dark navy/charcoal (`bg-[#131622]/90` with `#e8ca8a` gold accents), and renamed "Workbenches & Recipes" to "Crafting". Implemented custom child detail view layouts for all 9 categories (Locations, NPCs, Factions, Lore, Quests, Bestiary, Items, Skills, Crafting) tailored to their RPG function.
+  - **Adaptive Turn-State Soundtrack** (`src/lib/backgroundMusic.tsx`, `src/data/soundtrackManifest.ts`): Introduced turn-state-specific music pools. Tracks prefixed with `ts-<state>_` (e.g., `ts-combat_...`) automatically trigger when that turn state starts, crossfading with ambient music and smoothly returning to ambient rotation when the encounter concludes.
+  - **Title & Chronicle Refinements** (`src/screens/Title.tsx`, `src/screens/Chronicle.tsx`): Modernized Title CTA button to "START" with synchronous fullscreen toggle. Centered Chronicle's parchment reading column, removed typewriter character-by-character delay for instant narrative rendering, and added a responsive desktop sidebar layout.
+  - **Defensive Safeguards & Blueprint v3.0** (`src/App.tsx`, `src/api/providers/gemini.ts`, `Tale-Dives-Blueprint-v3_0.md`): Clamped `stat_grant` to prevent `NaN` pool max mutations. Anchored `startTime`/`endTime` in `recapChapter` to eliminate temporal hallucinations during chapter summaries. Scoped bang-command turn controls strictly to the last narrated turn. Documented full system architecture in `Tale-Dives-Blueprint-v3_0.md`.
+  - **Verification**: Verified clean TypeScript compilation (`tsc --noEmit`) and Vite production build (`vite build`). Live XML turn cycle verified against Gemini API, confirming state synchronization and narrative rendering.

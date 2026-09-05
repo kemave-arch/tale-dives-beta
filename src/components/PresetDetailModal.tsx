@@ -3,6 +3,7 @@ import {
   Award,
   BookMarked,
   BookOpen,
+  Check,
   Compass,
   Eye,
   Feather,
@@ -24,7 +25,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { PRESET_CLASSES } from '../data/classes.ts'
-import { GLASS_SURFACE, GlassButton } from '../lib/glassChrome.tsx'
+import { GLASS_SURFACE, GlassIconButton } from '../lib/glassChrome.tsx'
 import type { ProtagonistData, WorldData } from '../types.ts'
 
 // ===========================================================================
@@ -113,7 +114,7 @@ export function WorldDetailModal({
                   </span>
                 )}
               </div>
-              <p className="font-narrative italic text-xs text-[#d8c49e] mt-1 line-clamp-1">
+              <p className="font-narrative italic text-[10px] text-[#d8c49e] mt-1 line-clamp-1">
                 {world.sourceTitle ? (
                   <>
                     Adapted from <span className="text-[#f5dfa0]">{world.sourceTitle}</span>
@@ -244,27 +245,27 @@ export function WorldDetailModal({
                   </div>
                   {world.genreTone && (
                     <div>
-                      <span className="font-display text-[10px] uppercase tracking-wider text-[#e8ca8a]/70 font-semibold block">
+                      <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block">
                         Genre &amp; Tone
                       </span>
-                      <p className="font-narrative text-xs text-[#fbf4e2] mt-0.5">{world.genreTone}</p>
+                      <p className="font-sans text-xs text-[#fbf4e2] mt-0.5">{world.genreTone}</p>
                     </div>
                   )}
                   {world.eraTechLevel && (
                     <div>
-                      <span className="font-display text-[10px] uppercase tracking-wider text-[#e8ca8a]/70 font-semibold block">
+                      <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block">
                         Era &amp; Tech Level
                       </span>
-                      <p className="font-narrative text-xs text-[#fbf4e2] mt-0.5">{world.eraTechLevel}</p>
+                      <p className="font-sans text-xs text-[#fbf4e2] mt-0.5">{world.eraTechLevel}</p>
                     </div>
                   )}
                   {world.sourceTitle && (
                     <div className="pt-2 border-t border-[#e8ca8a]/15">
-                      <span className="font-display text-[10px] uppercase tracking-wider text-[#e8ca8a]/70 font-semibold block flex items-center gap-1">
+                      <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block flex items-center gap-1">
                         <BookMarked size={11} className="text-[#f0ca65]" />
                         Source Material
                       </span>
-                      <p className="font-narrative text-xs text-[#fbf4e2] mt-0.5">
+                      <p className="font-sans text-xs text-[#fbf4e2] mt-0.5">
                         {world.sourceTitle} {world.sourceAuthor ? `by ${world.sourceAuthor}` : ''}
                       </p>
                     </div>
@@ -375,39 +376,39 @@ export function WorldDetailModal({
 
                 {world.genreTone && (
                   <div>
-                    <span className="font-display text-[10px] uppercase tracking-wider text-[#e8ca8a]/70 font-semibold block">
+                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block">
                       Genre &amp; Tone
                     </span>
-                    <p className="font-narrative text-xs text-[#fbf4e2] mt-0.5 leading-relaxed">{world.genreTone}</p>
+                    <p className="font-sans text-xs text-[#fbf4e2] mt-0.5 leading-relaxed">{world.genreTone}</p>
                   </div>
                 )}
 
                 {world.eraTechLevel && (
                   <div>
-                    <span className="font-display text-[10px] uppercase tracking-wider text-[#e8ca8a]/70 font-semibold block">
+                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block">
                       Era &amp; Tech Level
                     </span>
-                    <p className="font-narrative text-xs text-[#fbf4e2] mt-0.5 leading-relaxed">{world.eraTechLevel}</p>
+                    <p className="font-sans text-xs text-[#fbf4e2] mt-0.5 leading-relaxed">{world.eraTechLevel}</p>
                   </div>
                 )}
 
                 {world.powerSystem && (
                   <div>
-                    <span className="font-display text-[10px] uppercase tracking-wider text-[#e8ca8a]/70 font-semibold block flex items-center gap-1">
+                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block flex items-center gap-1">
                       <Zap size={11} className="text-[#f0ca65]" />
                       Power System
                     </span>
-                    <p className="font-narrative text-xs text-[#fbf4e2] mt-0.5 leading-relaxed">{world.powerSystem}</p>
+                    <p className="font-sans text-xs text-[#fbf4e2] mt-0.5 leading-relaxed">{world.powerSystem}</p>
                   </div>
                 )}
 
                 {world.keyFactions && (
                   <div>
-                    <span className="font-display text-[10px] uppercase tracking-wider text-[#e8ca8a]/70 font-semibold block flex items-center gap-1">
+                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block flex items-center gap-1">
                       <Shield size={11} className="text-[#f0ca65]" />
                       Key Factions
                     </span>
-                    <p className="font-narrative text-xs text-[#fbf4e2] mt-0.5 leading-relaxed">{world.keyFactions}</p>
+                    <p className="font-sans text-xs text-[#fbf4e2] mt-0.5 leading-relaxed">{world.keyFactions}</p>
                   </div>
                 )}
               </div>
@@ -417,9 +418,9 @@ export function WorldDetailModal({
                 <div className="bg-[#171224]/70 border border-[#e8ca8a]/25 rounded-xl p-3.5 flex flex-col gap-1.5">
                   <div className="flex items-center gap-1.5 text-[#f0ca65]">
                     <BookMarked size={14} />
-                    <span className="font-display text-[11px] font-semibold uppercase tracking-wider">Source Material</span>
+                    <span className="font-display text-[11px] font-semibold uppercase tracking-wider text-[#fae5b5]">Source Material</span>
                   </div>
-                  <p className="font-narrative text-xs text-[#fbf4e2] mt-0.5 leading-relaxed">
+                  <p className="font-sans text-xs text-[#fbf4e2] mt-0.5 leading-relaxed">
                     Adapted from <span className="text-[#f5dfa0] font-medium">{world.sourceTitle}</span>
                     {world.sourceAuthor ? ` by ${world.sourceAuthor}` : ''}
                   </p>
@@ -472,59 +473,60 @@ export function WorldDetailModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="shrink-0 flex items-center justify-between gap-2.5 p-3.5 sm:p-4 border-t border-[#e8ca8a]/20 bg-[#171224]/80">
-          <div className="flex items-center gap-1.5">
+        <div className="shrink-0 flex items-center justify-between gap-3 p-3.5 sm:p-4 border-t border-[#e8ca8a]/20 bg-[#171224]/80">
+          <div className="flex items-center gap-2 sm:gap-2.5">
             {onSetDefault && !isDefault && (
-              <GlassButton
+              <GlassIconButton
+                icon={Star}
+                label="Set as Default World"
                 onClick={onSetDefault}
-                className="!py-1.5 !px-3 !text-xs text-[#f5dfa0]"
-              >
-                <Star size={13} className="mr-1.5 text-[#f0ca65]" />
-                Set Default
-              </GlassButton>
+                className="text-[#f0ca65] hover:text-[#fae5b5]"
+              />
             )}
             {onEdit && (
-              <GlassButton onClick={onEdit} className="!py-1.5 !px-3 !text-xs">
-                <Pencil size={13} className="mr-1.5" />
-                Edit
-              </GlassButton>
+              <GlassIconButton
+                icon={Pencil}
+                label="Edit World"
+                onClick={onEdit}
+              />
             )}
             {onDelete && (
-              <GlassButton onClick={onDelete} tone="danger" className="!py-1.5 !px-3 !text-xs">
-                <Trash2 size={13} className="mr-1.5" />
-                Delete
-              </GlassButton>
+              <GlassIconButton
+                icon={Trash2}
+                label="Delete World"
+                tone="danger"
+                onClick={onDelete}
+              />
             )}
           </div>
 
-          <div className="flex items-center gap-2">
-            <GlassButton onClick={onClose} className="!py-1.5 !px-4 !text-xs">
-              Close
-            </GlassButton>
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            <GlassIconButton
+              icon={X}
+              label="Close"
+              onClick={onClose}
+            />
             {onLoad && (
-              <GlassButton
+              <GlassIconButton
+                icon={Check}
+                label={loadLabel}
                 tone="action"
                 onClick={() => {
                   onLoad()
                   onClose()
                 }}
-                className="!py-1.5 !px-5 !text-xs font-semibold shadow-[0_0_12px_rgba(240,202,101,0.25)]"
-              >
-                {loadLabel}
-              </GlassButton>
+              />
             )}
             {onUseInStory && (
-              <GlassButton
+              <GlassIconButton
+                icon={Play}
+                label="New Story Here"
                 tone="action"
                 onClick={() => {
                   onUseInStory()
                   onClose()
                 }}
-                className="!py-1.5 !px-5 !text-xs font-semibold shadow-[0_0_12px_rgba(240,202,101,0.25)]"
-              >
-                <Play size={13} className="mr-1.5" />
-                New Story Here
-              </GlassButton>
+              />
             )}
           </div>
         </div>
@@ -631,7 +633,7 @@ export function ProtagonistDetailModal({
                   </span>
                 )}
               </div>
-              <p className="font-narrative italic text-xs text-[#d8c49e] mt-1 line-clamp-1">
+              <p className="font-narrative italic text-[10px] text-[#d8c49e] mt-1 line-clamp-1">
                 {demographics || 'Adventurer'}
               </p>
             </div>
@@ -700,16 +702,16 @@ export function ProtagonistDetailModal({
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div>
-                    <span className="font-display text-[10px] uppercase tracking-wider text-[#e8ca8a]/70 font-semibold block">
+                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block">
                       Class
                     </span>
-                    <p className="font-narrative text-xs text-[#fbf4e2] mt-0.5">{className}</p>
+                    <p className="font-sans text-xs text-[#fbf4e2] mt-0.5">{className}</p>
                   </div>
                   <div>
-                    <span className="font-display text-[10px] uppercase tracking-wider text-[#e8ca8a]/70 font-semibold block">
+                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block">
                       Age &amp; Gender
                     </span>
-                    <p className="font-narrative text-xs text-[#fbf4e2] mt-0.5">
+                    <p className="font-sans text-xs text-[#fbf4e2] mt-0.5">
                       {[protagonist.gender, protagonist.age !== undefined ? `Age ${protagonist.age}` : null]
                         .filter(Boolean)
                         .join(', ') || '—'}
@@ -718,11 +720,11 @@ export function ProtagonistDetailModal({
                 </div>
                 {protagonist.physicalTrait && (
                   <div className="pt-2 border-t border-[#e8ca8a]/15">
-                    <span className="font-display text-[10px] uppercase tracking-wider text-[#e8ca8a]/70 font-semibold block flex items-center gap-1">
+                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block flex items-center gap-1">
                       <Eye size={11} className="text-[#f0ca65]" />
                       Physical Trait / Distinguishing Feature
                     </span>
-                    <p className="font-narrative text-xs text-[#fbf4e2] mt-0.5 leading-relaxed">{protagonist.physicalTrait}</p>
+                    <p className="font-sans text-xs text-[#fbf4e2] mt-0.5 leading-relaxed">{protagonist.physicalTrait}</p>
                   </div>
                 )}
               </div>
@@ -798,24 +800,24 @@ export function ProtagonistDetailModal({
                 </div>
 
                 <div>
-                  <span className="font-display text-[10px] uppercase tracking-wider text-[#e8ca8a]/70 font-semibold block">
+                  <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block">
                     Starting Class
                   </span>
-                  <p className="font-narrative text-xs text-[#fbf4e2] mt-0.5 leading-relaxed font-medium text-[#f5dfa0]">{className}</p>
+                  <p className="font-sans text-xs text-[#fbf4e2] mt-0.5 leading-relaxed font-medium text-[#f5dfa0]">{className}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <span className="font-display text-[10px] uppercase tracking-wider text-[#e8ca8a]/70 font-semibold block">
+                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block">
                       Gender
                     </span>
-                    <p className="font-narrative text-xs text-[#fbf4e2] mt-0.5">{protagonist.gender || '—'}</p>
+                    <p className="font-sans text-xs text-[#fbf4e2] mt-0.5">{protagonist.gender || '—'}</p>
                   </div>
                   <div>
-                    <span className="font-display text-[10px] uppercase tracking-wider text-[#e8ca8a]/70 font-semibold block">
+                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block">
                       Age
                     </span>
-                    <p className="font-narrative text-xs text-[#fbf4e2] mt-0.5">
+                    <p className="font-sans text-xs text-[#fbf4e2] mt-0.5">
                       {protagonist.age !== undefined ? protagonist.age : '—'}
                     </p>
                   </div>
@@ -823,11 +825,11 @@ export function ProtagonistDetailModal({
 
                 {protagonist.physicalTrait && (
                   <div>
-                    <span className="font-display text-[10px] uppercase tracking-wider text-[#e8ca8a]/70 font-semibold block flex items-center gap-1">
+                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block flex items-center gap-1">
                       <Eye size={11} className="text-[#f0ca65]" />
                       Physical Trait
                     </span>
-                    <p className="font-narrative text-xs text-[#fbf4e2] mt-0.5 leading-relaxed">{protagonist.physicalTrait}</p>
+                    <p className="font-sans text-xs text-[#fbf4e2] mt-0.5 leading-relaxed">{protagonist.physicalTrait}</p>
                   </div>
                 )}
               </div>
@@ -843,21 +845,21 @@ export function ProtagonistDetailModal({
 
                 {protagonist.personality && (
                   <div>
-                    <span className="font-display text-[10px] uppercase tracking-wider text-[#e8ca8a]/70 font-semibold block flex items-center gap-1">
+                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block flex items-center gap-1">
                       <Heart size={11} className="text-[#f0ca65]" />
                       Personality
                     </span>
-                    <p className="font-narrative text-xs text-[#fbf4e2] mt-0.5 leading-relaxed">{protagonist.personality}</p>
+                    <p className="font-sans text-xs text-[#fbf4e2] mt-0.5 leading-relaxed">{protagonist.personality}</p>
                   </div>
                 )}
 
                 {protagonist.motivation && (
                   <div>
-                    <span className="font-display text-[10px] uppercase tracking-wider text-[#e8ca8a]/70 font-semibold block flex items-center gap-1">
+                    <span className="font-display text-[10px] uppercase tracking-wider text-[#fae5b5] font-semibold block flex items-center gap-1">
                       <Target size={11} className="text-[#f0ca65]" />
                       Core Motivation
                     </span>
-                    <p className="font-narrative text-xs text-[#fbf4e2] mt-0.5 leading-relaxed">{protagonist.motivation}</p>
+                    <p className="font-sans text-xs text-[#fbf4e2] mt-0.5 leading-relaxed">{protagonist.motivation}</p>
                   </div>
                 )}
 
@@ -905,59 +907,60 @@ export function ProtagonistDetailModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="shrink-0 flex items-center justify-between gap-2.5 p-3.5 sm:p-4 border-t border-[#e8ca8a]/20 bg-[#171224]/80">
-          <div className="flex items-center gap-1.5">
+        <div className="shrink-0 flex items-center justify-between gap-3 p-3.5 sm:p-4 border-t border-[#e8ca8a]/20 bg-[#171224]/80">
+          <div className="flex items-center gap-2 sm:gap-2.5">
             {onSetDefault && !isDefault && (
-              <GlassButton
+              <GlassIconButton
+                icon={Star}
+                label="Set as Default Protagonist"
                 onClick={onSetDefault}
-                className="!py-1.5 !px-3 !text-xs text-[#f5dfa0]"
-              >
-                <Star size={13} className="mr-1.5 text-[#f0ca65]" />
-                Set Default
-              </GlassButton>
+                className="text-[#f0ca65] hover:text-[#fae5b5]"
+              />
             )}
             {onEdit && (
-              <GlassButton onClick={onEdit} className="!py-1.5 !px-3 !text-xs">
-                <Pencil size={13} className="mr-1.5" />
-                Edit
-              </GlassButton>
+              <GlassIconButton
+                icon={Pencil}
+                label="Edit Protagonist"
+                onClick={onEdit}
+              />
             )}
             {onDelete && (
-              <GlassButton onClick={onDelete} tone="danger" className="!py-1.5 !px-3 !text-xs">
-                <Trash2 size={13} className="mr-1.5" />
-                Delete
-              </GlassButton>
+              <GlassIconButton
+                icon={Trash2}
+                label="Delete Protagonist"
+                tone="danger"
+                onClick={onDelete}
+              />
             )}
           </div>
 
-          <div className="flex items-center gap-2">
-            <GlassButton onClick={onClose} className="!py-1.5 !px-4 !text-xs">
-              Close
-            </GlassButton>
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            <GlassIconButton
+              icon={X}
+              label="Close"
+              onClick={onClose}
+            />
             {onLoad && (
-              <GlassButton
+              <GlassIconButton
+                icon={Check}
+                label={loadLabel}
                 tone="action"
                 onClick={() => {
                   onLoad()
                   onClose()
                 }}
-                className="!py-1.5 !px-5 !text-xs font-semibold shadow-[0_0_12px_rgba(240,202,101,0.25)]"
-              >
-                {loadLabel}
-              </GlassButton>
+              />
             )}
             {onUseInStory && (
-              <GlassButton
+              <GlassIconButton
+                icon={Play}
+                label="Play Protagonist"
                 tone="action"
                 onClick={() => {
                   onUseInStory()
                   onClose()
                 }}
-                className="!py-1.5 !px-5 !text-xs font-semibold shadow-[0_0_12px_rgba(240,202,101,0.25)]"
-              >
-                <Play size={13} className="mr-1.5" />
-                Play Protagonist
-              </GlassButton>
+              />
             )}
           </div>
         </div>

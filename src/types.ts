@@ -295,6 +295,7 @@ export interface WorldData {
   sourceTitle?: string // Appendix A.1 "Title" — attribution only when adapted from existing work; never sent to the model
   sourceAuthor?: string // Appendix A.1 "Author" — same caveat as sourceTitle
   isDefault?: boolean
+  isMaster?: boolean // Immutable master preset (cannot be deleted)
   savedAt?: number // Timestamp when saved/updated in the library
 }
 
@@ -313,6 +314,7 @@ export interface ProtagonistData {
   secret?: string // something the narrator can quietly plant hooks around
   opening: string
   isDefault?: boolean
+  isMaster?: boolean // Immutable master preset (cannot be deleted)
   savedAt?: number // Timestamp when saved/updated in the library
 }
 

@@ -252,11 +252,18 @@ export default function MainMenu({
                               </div>
                             </div>
 
-                            {world.isDefault && (
-                              <span className="rounded bg-[#38bdf8]/20 text-[#7dd3fc] border border-[#38bdf8]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0">
-                                default
-                              </span>
-                            )}
+                            <div className="flex items-center gap-1 shrink-0">
+                              {world.isMaster && (
+                                <span className="rounded bg-amber-400/20 text-amber-200 border border-amber-400/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0 font-semibold">
+                                  master
+                                </span>
+                              )}
+                              {world.isDefault && (
+                                <span className="rounded bg-[#38bdf8]/20 text-[#7dd3fc] border border-[#38bdf8]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0">
+                                  default
+                                </span>
+                              )}
+                            </div>
                           </div>
 
                           {world.background && (
@@ -282,7 +289,9 @@ export default function MainMenu({
                               onClick={() => onSetDefaultWorld(world.id!)}
                             />
                             <GlassIconButton compact icon={Pencil} label="Edit" onClick={() => onEditWorld(world.id!)} />
-                            <GlassIconButton compact icon={Trash2} label="Delete" tone="danger" onClick={() => onDeleteWorld(world.id!)} />
+                            {!world.isMaster && world.id !== 'world_fourth_wing' && (
+                              <GlassIconButton compact icon={Trash2} label="Delete" tone="danger" onClick={() => onDeleteWorld(world.id!)} />
+                            )}
                           </div>
                         </div>
                       </div>
@@ -328,11 +337,18 @@ export default function MainMenu({
                                 </div>
                               </div>
 
-                              {p.isDefault && (
-                                <span className="rounded bg-[#c084fc]/20 text-[#d8b4fe] border border-[#c084fc]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0">
-                                  default
-                                </span>
-                              )}
+                              <div className="flex items-center gap-1 shrink-0">
+                                {p.isMaster && (
+                                  <span className="rounded bg-amber-400/20 text-amber-200 border border-amber-400/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0 font-semibold">
+                                    master
+                                  </span>
+                                )}
+                                {p.isDefault && (
+                                  <span className="rounded bg-[#c084fc]/20 text-[#d8b4fe] border border-[#c084fc]/35 px-2 py-0.5 text-[9.5px] font-mono shrink-0">
+                                    default
+                                  </span>
+                                )}
+                              </div>
                             </div>
 
                             {details && (
@@ -363,7 +379,9 @@ export default function MainMenu({
                                 onClick={() => onSetDefaultProtagonist(p.id!)}
                               />
                               <GlassIconButton compact icon={Pencil} label="Edit" onClick={() => onEditProtagonist(p.id!)} />
-                              <GlassIconButton compact icon={Trash2} label="Delete" tone="danger" onClick={() => onDeleteProtagonist(p.id!)} />
+                              {!p.isMaster && p.id !== 'protagonist_violet_sorrengail' && (
+                                <GlassIconButton compact icon={Trash2} label="Delete" tone="danger" onClick={() => onDeleteProtagonist(p.id!)} />
+                              )}
                             </div>
                           </div>
                         </div>

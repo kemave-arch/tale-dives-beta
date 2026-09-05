@@ -103,6 +103,11 @@ export function WorldDetailModal({
                 <h2 className="font-display text-base sm:text-xl font-bold tracking-wide text-[#fae5b5]">
                   {world.name}
                 </h2>
+                {world.isMaster && (
+                  <span className="rounded bg-amber-400/20 text-amber-200 px-2 py-0.5 text-[10px] font-mono border border-amber-400/35 font-semibold">
+                    master
+                  </span>
+                )}
                 {isDefault && (
                   <span className="rounded bg-[#f0ca65]/20 text-[#f5dfa0] px-2 py-0.5 text-[10px] font-mono border border-[#f0ca65]/30">
                     default world
@@ -490,7 +495,7 @@ export function WorldDetailModal({
                 onClick={onEdit}
               />
             )}
-            {onDelete && (
+            {onDelete && !world.isMaster && world.id !== 'world_fourth_wing' && (
               <GlassIconButton
                 icon={Trash2}
                 label="Delete World"
@@ -622,6 +627,11 @@ export function ProtagonistDetailModal({
                 <h2 className="font-display text-base sm:text-xl font-bold tracking-wide text-[#fae5b5]">
                   {protagonist.name}
                 </h2>
+                {protagonist.isMaster && (
+                  <span className="rounded bg-amber-400/20 text-amber-200 px-2 py-0.5 text-[10px] font-mono border border-amber-400/35 font-semibold">
+                    master
+                  </span>
+                )}
                 {isDefault && (
                   <span className="rounded bg-[#f0ca65]/20 text-[#f5dfa0] px-2 py-0.5 text-[10px] font-mono border border-[#f0ca65]/30">
                     default protagonist
@@ -924,7 +934,7 @@ export function ProtagonistDetailModal({
                 onClick={onEdit}
               />
             )}
-            {onDelete && (
+            {onDelete && !protagonist.isMaster && protagonist.id !== 'protagonist_violet_sorrengail' && (
               <GlassIconButton
                 icon={Trash2}
                 label="Delete Protagonist"

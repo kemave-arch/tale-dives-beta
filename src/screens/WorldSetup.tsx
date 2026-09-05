@@ -4,7 +4,15 @@ import { DEFAULT_NARRATION_STYLE } from '../api/turnContract.ts'
 import {
   FIELD_CLASS, GLASS_SURFACE, GLASS_SURFACE_LIST, GlassButton, GlassCTAButton, GlassField, GlassHeader, GlassLongTextarea, GlassScreen, GlassTabs,
 } from '../lib/glassChrome.tsx'
-import { GENRE_TONE_EXAMPLES, POWER_SYSTEM_EXAMPLES } from '../data/formExamples.ts'
+import {
+  CONFLICT_EXAMPLES,
+  ERA_TECH_EXAMPLES,
+  GENRE_TONE_EXAMPLES,
+  KEY_FACTIONS_EXAMPLES,
+  NARRATION_STYLE_EXAMPLES,
+  POWER_SYSTEM_EXAMPLES,
+  WORLD_BACKGROUND_EXAMPLES,
+} from '../data/formExamples.ts'
 import type { WorldData } from '../types.ts'
 import { WorldDetailModal } from '../components/PresetDetailModal.tsx'
 
@@ -297,7 +305,7 @@ export default function WorldSetup({
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Navarre (Basgiath War College)"
+                  placeholder="e.g. Eldoria, The Sunken Expanse, Neo-Kowloon, Nine Heavens"
                   className={FIELD_CLASS}
                 />
               </GlassField>
@@ -307,7 +315,7 @@ export default function WorldSetup({
                   <input
                     value={sourceTitle}
                     onChange={(e) => setSourceTitle(e.target.value)}
-                    placeholder="e.g. Fourth Wing"
+                    placeholder="e.g. Dune, The Name of the Wind, Lord of the Mysteries"
                     className={FIELD_CLASS}
                   />
                 </GlassField>
@@ -316,7 +324,7 @@ export default function WorldSetup({
                   <input
                     value={sourceAuthor}
                     onChange={(e) => setSourceAuthor(e.target.value)}
-                    placeholder="e.g. Rebecca Yarros"
+                    placeholder="e.g. Frank Herbert, Brandon Sanderson, Patrick Rothfuss"
                     className={FIELD_CLASS}
                   />
                 </GlassField>
@@ -331,7 +339,7 @@ export default function WorldSetup({
                 <input
                   value={genreTone}
                   onChange={(e) => setGenreTone(e.target.value)}
-                  placeholder="e.g. Romantasy, lethal dragon rider war academy, high stakes & visceral"
+                  placeholder="e.g. Grimdark low fantasy, Xianxia cultivation, High-stakes romantasy, Cyberpunk noir"
                   className={FIELD_CLASS}
                 />
               </GlassField>
@@ -340,11 +348,16 @@ export default function WorldSetup({
 
           {tab === 'depth' && (
             <div className="flex flex-col gap-4">
-              <GlassField label="Core Regional Conflict" hint="The primary struggle driving events">
+              <GlassField
+                label="Core Regional Conflict"
+                hint="The primary struggle driving events"
+                examples={CONFLICT_EXAMPLES}
+                onPickExample={(val) => setConflict(val)}
+              >
                 <input
                   value={conflict}
                   onChange={(e) => setConflict(e.target.value)}
-                  placeholder="e.g. Lethal trials in the Riders Quadrant against border war and hidden venin threats"
+                  placeholder="e.g. An ancient sealed god awakening, a succession civil war between noble houses, border rebellions"
                   className={FIELD_CLASS}
                 />
               </GlassField>
@@ -361,66 +374,86 @@ export default function WorldSetup({
                     const result = await editLongText(
                       'Power System',
                       powerSystem,
-                      'Magic, cultivation, tech, or pure skill — however power works here.',
-                      'e.g. Signet magic drawn from bonded dragons with severe physical burnout risk, plus runic wards.',
+                      'Magic, cultivation, tech, divine pacts, or pure skill — however power operates.',
+                      'e.g. Hard elemental alchemy with equivalent exchange, Qi meridian cultivation and core condensation, or cybernetic neural augmentations with neural-strain limits...',
                     )
                     if (result !== null) setPowerSystem(result)
                   }}
-                  placeholder="e.g. Signet magic drawn from bonded dragons with severe physical burnout risk, plus runic wards..."
+                  placeholder="e.g. Hard elemental alchemy with equivalent exchange, Qi meridian cultivation, or cybernetic neural implants..."
                   rows={3}
                 />
               </GlassField>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <GlassField label="Era / Tech Level" hint="Setting tech or historical era">
+                <GlassField
+                  label="Era / Tech Level"
+                  hint="Setting tech or historical era"
+                  examples={ERA_TECH_EXAMPLES}
+                  onPickExample={(val) => setEraTechLevel(val)}
+                >
                   <input
                     value={eraTechLevel}
                     onChange={(e) => setEraTechLevel(e.target.value)}
-                    placeholder="e.g. High fantasy war college, dragon aerial combat, ancient wards"
+                    placeholder="e.g. Medieval high fantasy, Early modern flintlock, Victorian gaslamp, Dystopian cyberpunk"
                     className={FIELD_CLASS}
                   />
                 </GlassField>
 
-                <GlassField label="Key Factions" hint="Named factions driving tension">
+                <GlassField
+                  label="Key Factions"
+                  hint="Named factions driving tension"
+                  examples={KEY_FACTIONS_EXAMPLES}
+                  onPickExample={(val) => setKeyFactions(val)}
+                >
                   <input
                     value={keyFactions}
                     onChange={(e) => setKeyFactions(e.target.value)}
-                    placeholder="e.g. Navarre (Riders, Scribes) vs. Poromiel fliers & hidden venin"
+                    placeholder="e.g. The Iron Crown Imperium vs. Whispering Coven rebels, Rival martial sects, Megacorp syndicates"
                     className={FIELD_CLASS}
                   />
                 </GlassField>
               </div>
 
-              <GlassField label="World Background" hint="The setting's key backdrop & geography">
+              <GlassField
+                label="World Background"
+                hint="The setting's key backdrop & geography"
+                examples={WORLD_BACKGROUND_EXAMPLES}
+                onPickExample={(val) => setBackground(val)}
+              >
                 <GlassLongTextarea
                   value={background}
                   onOpenModal={async () => {
                     const result = await editLongText(
                       'World Background',
                       background,
-                      "The setting's key backdrop, e.g. the continent of Navarre.",
-                      'e.g. Navarre relies on dragon wards centered at Basgiath War College while cadet riders face lethal trials against encroaching venin.',
+                      "The setting's primary geography, history, and looming crisis.",
+                      'e.g. A realm of floating islands drifting above a toxic cloud sea, shielded by ancient titan cores while sky-corsairs raid trade routes...',
                     )
                     if (result !== null) setBackground(result)
                   }}
-                  placeholder="e.g. Navarre relies on dragon wards centered at Basgiath War College against encroaching venin..."
+                  placeholder="e.g. A realm of floating islands drifting above a toxic cloud sea, shielded by ancient titan cores while sky-corsairs raid trade routes..."
                   rows={3}
                 />
               </GlassField>
 
-              <GlassField label="Narration Style" hint="Custom narrator tone and voice directives">
+              <GlassField
+                label="Narration Style"
+                hint="Custom narrator tone and voice directives"
+                examples={NARRATION_STYLE_EXAMPLES}
+                onPickExample={(val) => setNarrationStyle(val)}
+              >
                 <GlassLongTextarea
                   value={narrationStyle}
                   onOpenModal={async () => {
                     const result = await editLongText(
                       'Narration Style',
                       narrationStyle,
-                      'Custom narrator tone instructions or voice directives.',
-                      'e.g. Visceral close POV with high-stakes urgency; short, breath-tight sentences during danger; sharp, banter-driven dialogue with simmering romantic tension; tactile physical strain over abstraction.',
+                      'Custom narrator tone instructions, author voice emulation, or sentence cadence.',
+                      'e.g. Visceral close POV with high-stakes urgency; Poetic, atmospheric grimdark with sensory weight; Witty first-person with sharp banter...',
                     )
                     if (result !== null) setNarrationStyle(result)
                   }}
-                  placeholder="e.g. Visceral close POV with high-stakes urgency, staccato tension during danger, and sharp banter..."
+                  placeholder="e.g. Visceral close POV with high-stakes urgency; Poetic, atmospheric grimdark with sensory weight; Witty first-person with sharp banter..."
                   rows={4}
                 />
               </GlassField>

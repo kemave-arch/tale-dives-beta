@@ -55,29 +55,79 @@ export function loadUiPrefs(): UiPrefs {
 }
 export const saveUiPrefs = (p: UiPrefs): void => save(KEYS.uiPrefs, p)
 
-// Seeded once, only on a genuinely first-ever load (the raw key has never
-// been written) — so there's a real, rich example to try immediately instead
-// of a blank Library, but deleting it afterward is respected like any other
-// entry rather than being silently re-seeded on the next load.
+// Master presets (Navarre & Violet Sorrengail) are permanent and cannot be deleted.
+// Loaded libraries ensure these master templates always exist and retain master status.
 export function loadWorlds(): Dict<WorldData> {
-  if (localStorage.getItem(KEYS.worlds) === null) {
-    const seeded: Dict<WorldData> = { [FOURTH_WING_WORLD.id!]: FOURTH_WING_WORLD }
-    save(KEYS.worlds, seeded)
-    return seeded
+  const loaded = load<Dict<WorldData>>(KEYS.worlds, {})
+  const merged: Dict<WorldData> = {
+    ...loaded,
+    [FOURTH_WING_WORLD.id!]: {
+      ...FOURTH_WING_WORLD,
+      ...(loaded[FOURTH_WING_WORLD.id!] || {}),
+      isMaster: true,
+      // Keep master preset seeding parameters strictly accurate
+      name: FOURTH_WING_WORLD.name,
+      mode: FOURTH_WING_WORLD.mode,
+      sourceTitle: FOURTH_WING_WORLD.sourceTitle,
+      sourceAuthor: FOURTH_WING_WORLD.sourceAuthor,
+      genreTone: FOURTH_WING_WORLD.genreTone,
+      conflict: FOURTH_WING_WORLD.conflict,
+      background: FOURTH_WING_WORLD.background,
+      powerSystem: FOURTH_WING_WORLD.powerSystem,
+      eraTechLevel: FOURTH_WING_WORLD.eraTechLevel,
+      keyFactions: FOURTH_WING_WORLD.keyFactions,
+      narrationStyle: FOURTH_WING_WORLD.narrationStyle,
+    },
   }
-  return load(KEYS.worlds, {})
+  return merged
 }
-export const saveWorlds = (w: Dict<WorldData>): void => save(KEYS.worlds, w)
+export const saveWorlds = (w: Dict<WorldData>): void => {
+  const toSave = {
+    ...w,
+    [FOURTH_WING_WORLD.id!]: {
+      ...FOURTH_WING_WORLD,
+      ...(w[FOURTH_WING_WORLD.id!] || {}),
+      isMaster: true,
+    },
+  }
+  save(KEYS.worlds, toSave)
+}
 
 export function loadProtagonists(): Dict<ProtagonistData> {
-  if (localStorage.getItem(KEYS.protagonists) === null) {
-    const seeded: Dict<ProtagonistData> = { [VIOLET_SORRENGAIL.id!]: VIOLET_SORRENGAIL }
-    save(KEYS.protagonists, seeded)
-    return seeded
+  const loaded = load<Dict<ProtagonistData>>(KEYS.protagonists, {})
+  const merged: Dict<ProtagonistData> = {
+    ...loaded,
+    [VIOLET_SORRENGAIL.id!]: {
+      ...VIOLET_SORRENGAIL,
+      ...(loaded[VIOLET_SORRENGAIL.id!] || {}),
+      isMaster: true,
+      // Keep master protagonist seeding parameters strictly accurate
+      name: VIOLET_SORRENGAIL.name,
+      gender: VIOLET_SORRENGAIL.gender,
+      age: VIOLET_SORRENGAIL.age,
+      classId: VIOLET_SORRENGAIL.classId,
+      className: VIOLET_SORRENGAIL.className,
+      background: VIOLET_SORRENGAIL.background,
+      personality: VIOLET_SORRENGAIL.personality,
+      motivation: VIOLET_SORRENGAIL.motivation,
+      physicalTrait: VIOLET_SORRENGAIL.physicalTrait,
+      secret: VIOLET_SORRENGAIL.secret,
+      opening: VIOLET_SORRENGAIL.opening,
+    },
   }
-  return load(KEYS.protagonists, {})
+  return merged
 }
-export const saveProtagonists = (p: Dict<ProtagonistData>): void => save(KEYS.protagonists, p)
+export const saveProtagonists = (p: Dict<ProtagonistData>): void => {
+  const toSave = {
+    ...p,
+    [VIOLET_SORRENGAIL.id!]: {
+      ...VIOLET_SORRENGAIL,
+      ...(p[VIOLET_SORRENGAIL.id!] || {}),
+      isMaster: true,
+    },
+  }
+  save(KEYS.protagonists, toSave)
+}
 
 // Migrates the old single td_game_state save (pre-library) into the new
 // multi-campaign shape the first time it's read, so existing playtesting

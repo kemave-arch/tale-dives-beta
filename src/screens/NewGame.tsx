@@ -5,7 +5,14 @@ import {
   FIELD_CLASS, GLASS_SURFACE, GLASS_SURFACE_LIST, GlassButton, GlassCTAButton, GlassField, GlassHeader, GlassLongTextarea, GlassScreen, GlassTabs,
   SELECT_CLASS,
 } from '../lib/glassChrome.tsx'
-import { PERSONALITY_EXAMPLES, MOTIVATION_EXAMPLES } from '../data/formExamples.ts'
+import {
+  MOTIVATION_EXAMPLES,
+  OPENING_BRIEF_EXAMPLES,
+  PERSONALITY_EXAMPLES,
+  PHYSICAL_TRAIT_EXAMPLES,
+  PROTAGONIST_BACKGROUND_EXAMPLES,
+  SECRET_EXAMPLES,
+} from '../data/formExamples.ts'
 import type { ProtagonistData } from '../types.ts'
 import { ProtagonistDetailModal } from '../components/PresetDetailModal.tsx'
 
@@ -337,7 +344,7 @@ export default function NewGame({
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Violet Sorrengail"
+                  placeholder="e.g. Katherine Vance, Rowan Shadowbane, Lin Dong, Vance Keller"
                   className={FIELD_CLASS}
                 />
               </GlassField>
@@ -348,7 +355,7 @@ export default function NewGame({
                     <input
                       value={gender}
                       onChange={(e) => setGender(e.target.value)}
-                      placeholder="e.g. female (she/her)"
+                      placeholder="e.g. female (she/her), male (he/him), non-binary"
                       className={FIELD_CLASS}
                     />
                   </GlassField>
@@ -361,7 +368,7 @@ export default function NewGame({
                       max="999"
                       value={age}
                       onChange={(e) => setAge(e.target.value)}
-                      placeholder="20"
+                      placeholder="24"
                       className={FIELD_CLASS}
                     />
                   </GlassField>
@@ -375,7 +382,7 @@ export default function NewGame({
                       type="text"
                       value={customClassName}
                       onChange={(e) => handleCustomClassChange(e.target.value)}
-                      placeholder="e.g. Warrior, Dragon Rider, Spellsword..."
+                      placeholder="e.g. Shadow Assassin, Arcane Scholar, Runesmith, Dragon Rider, Wandering Sellsword..."
                       className={FIELD_CLASS}
                       list="preset-classes-list"
                     />
@@ -421,6 +428,8 @@ export default function NewGame({
               <GlassField
                 label="Background & Origin"
                 hint="History known to the Narrator from Turn 1"
+                examples={PROTAGONIST_BACKGROUND_EXAMPLES}
+                onPickExample={(val) => setBackground(val)}
               >
                 <GlassLongTextarea
                   value={background}
@@ -428,12 +437,12 @@ export default function NewGame({
                     const result = await editLongText(
                       'Background & Origin',
                       background,
-                      'Origin, family, and history the Narrator should know from Turn 1.',
-                      "e.g. General Sorrengail's daughter, trained as a scribe but forced into the lethal Riders Quadrant on Conscription Day.",
+                      'Origin, upbringing, lineage, and history the Narrator should know from Turn 1.',
+                      'e.g. Disgraced scion of a fallen noble house, former arena gladiator who bought freedom, exiled arcane scholar...',
                     )
                     if (result !== null) setBackground(result)
                   }}
-                  placeholder="e.g. Trained as a scribe, forced into the lethal Riders Quadrant on Conscription Day..."
+                  placeholder="e.g. Disgraced scion of a fallen noble house, former arena gladiator who bought freedom, exiled arcane scholar..."
                   rows={3}
                 />
               </GlassField>
@@ -447,7 +456,7 @@ export default function NewGame({
                 <input
                   value={personality}
                   onChange={(e) => setPersonality(e.target.value)}
-                  placeholder="e.g. Stubborn and sharp-tongued, relying on tactical cunning and poison craft"
+                  placeholder="e.g. Sharp and calculating, guarded with strangers, wry sense of humor under pressure"
                   className={FIELD_CLASS}
                 />
               </GlassField>
@@ -461,26 +470,36 @@ export default function NewGame({
                 <input
                   value={motivation}
                   onChange={(e) => setMotivation(e.target.value)}
-                  placeholder="e.g. Survive the Parapet, bond a dragon, and prove she belongs"
+                  placeholder="e.g. Uncover the truth behind family execution, reach the apex of sword mastery, protect a younger sibling"
                   className={FIELD_CLASS}
                 />
               </GlassField>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <GlassField label="Physical Trait" hint="Distinguishing appearance or condition">
+                <GlassField
+                  label="Physical Trait"
+                  hint="Distinguishing appearance or condition"
+                  examples={PHYSICAL_TRAIT_EXAMPLES}
+                  onPickExample={(val) => setPhysicalTrait(val)}
+                >
                   <input
                     value={physicalTrait}
                     onChange={(e) => setPhysicalTrait(e.target.value)}
-                    placeholder="e.g. Slight frame, hypermobile joints, agile with daggers"
+                    placeholder="e.g. Piercing heterochromia eyes, limp from an old duel wound, scarred hands, agile slight frame"
                     className={FIELD_CLASS}
                   />
                 </GlassField>
 
-                <GlassField label="Secret" hint="Concealed truth the world doesn't know yet">
+                <GlassField
+                  label="Secret"
+                  hint="Concealed truth the world doesn't know yet"
+                  examples={SECRET_EXAMPLES}
+                  onPickExample={(val) => setSecret(val)}
+                >
                   <input
                     value={secret}
                     onChange={(e) => setSecret(e.target.value)}
-                    placeholder="e.g. Secret notes on fellow riders and professors' vulnerabilities"
+                    placeholder="e.g. Possesses a stolen forbidden seal, secretly a royal bastard, carrier of an unmanifested ancient curse"
                     className={FIELD_CLASS}
                   />
                 </GlassField>
@@ -490,6 +509,8 @@ export default function NewGame({
                 <GlassField
                   label="Tale Dive Brief"
                   hint="Opening scene description — optional"
+                  examples={OPENING_BRIEF_EXAMPLES}
+                  onPickExample={(val) => setOpening(val)}
                 >
                   <GlassLongTextarea
                     value={opening}
@@ -497,12 +518,12 @@ export default function NewGame({
                       const result = await editLongText(
                         'Tale Dive Brief',
                         opening,
-                        'Describe the exact scene, location, and characters present where Turn 1 should open.',
-                        'e.g. Standing atop the turret in torrential rain before the slick stone Parapet high above the gorge as the cadet ahead falls.',
+                        'Describe the exact scene, location, immediate crisis, and characters present where Turn 1 should open.',
+                        'e.g. Standing on the rain-slicked deck of an airship as alarms blare and harpoons strike the hull, weapon drawn alongside your squad...',
                       )
                       if (result !== null) setOpening(result)
                     }}
-                    placeholder="e.g. Standing atop the turret in torrential rain before the slick stone Parapet high above the gorge..."
+                    placeholder="e.g. Standing on the rain-slicked deck of an airship as alarms blare and harpoons strike the hull, weapon drawn alongside your squad..."
                     rows={4}
                   />
                 </GlassField>

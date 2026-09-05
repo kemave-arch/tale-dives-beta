@@ -1325,6 +1325,10 @@ export default function App() {
           setWorlds((w) => Object.fromEntries(Object.entries(w).map(([k, v]) => [k, { ...v, isDefault: k === id }])))
         }
         onDeleteWorld={async (id) => {
+          if (worlds[id]?.isMaster || id === 'world_fourth_wing') {
+            setError('Master world templates cannot be deleted.')
+            return
+          }
           if (!(await confirm('Delete this World template?'))) return
           setWorlds((w) => {
             const next = { ...w }
@@ -1346,6 +1350,10 @@ export default function App() {
           setProtagonists((p) => Object.fromEntries(Object.entries(p).map(([k, v]) => [k, { ...v, isDefault: k === id }])))
         }
         onDeleteProtagonist={async (id) => {
+          if (protagonists[id]?.isMaster || id === 'protagonist_violet_sorrengail') {
+            setError('Master protagonist templates cannot be deleted.')
+            return
+          }
           if (!(await confirm('Delete this Protagonist template?'))) return
           setProtagonists((p) => {
             const next = { ...p }

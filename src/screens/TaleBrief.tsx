@@ -3,6 +3,7 @@ import { Info, X } from 'lucide-react'
 import {
   GLASS_SURFACE, GlassCTAButton, GlassField, GlassHeader, GlassLongTextarea, GlassScreen, LABEL_CLASS,
 } from '../lib/glassChrome.tsx'
+import { NARRATION_STYLE_EXAMPLES, OPENING_BRIEF_EXAMPLES } from '../data/formExamples.ts'
 import type { CombatMode } from '../types.ts'
 
 interface TaleBriefPayload {
@@ -84,6 +85,8 @@ export default function TaleBrief({
           <GlassField
             label="Where do you dive in?"
             hint="Optional — leave blank and the Narrator decides."
+            examples={OPENING_BRIEF_EXAMPLES}
+            onPickExample={(val) => setOpening(val)}
           >
             <GlassLongTextarea
               value={opening}
@@ -91,12 +94,12 @@ export default function TaleBrief({
                 const result = await editLongText(
                   'Where do you dive in?',
                   opening,
-                  'Describe the exact scene, location, and characters present where Turn 1 should open.',
-                  'e.g. Standing atop the turret in torrential rain before the slick stone Parapet high above the gorge as the cadet ahead falls.',
+                  'Describe the exact scene, location, immediate crisis, and characters present where Turn 1 should open.',
+                  'e.g. Standing on the rain-slicked deck of an airship as alarms blare and harpoons strike the hull, weapon drawn alongside your squad...',
                 )
                 if (result !== null) setOpening(result)
               }}
-              placeholder="e.g. Standing atop the turret in torrential rain before the slick stone Parapet high above the gorge..."
+              placeholder="e.g. Standing on the rain-slicked deck of an airship as alarms blare and harpoons strike the hull, weapon drawn alongside your squad..."
               rows={6}
             />
           </GlassField>
@@ -104,6 +107,8 @@ export default function TaleBrief({
           <GlassField
             label="Narration Style"
             hint="Custom narrator tone instructions or voice directives"
+            examples={NARRATION_STYLE_EXAMPLES}
+            onPickExample={(val) => setNarrationStyle(val)}
           >
             <GlassLongTextarea
               value={narrationStyle}
@@ -111,12 +116,12 @@ export default function TaleBrief({
                 const result = await editLongText(
                   'Narration Style',
                   narrationStyle,
-                  'Custom narrator tone instructions or voice directives.',
-                  'e.g. Visceral close POV with high-stakes urgency; short, breath-tight sentences during danger; sharp, banter-driven dialogue with simmering romantic tension; tactile physical strain over abstraction.',
+                  'Custom narrator tone instructions, author voice emulation, or sentence cadence.',
+                  'e.g. Visceral close POV with high-stakes urgency; Poetic, atmospheric grimdark with sensory weight; Witty first-person with sharp banter...',
                 )
                 if (result !== null) setNarrationStyle(result)
               }}
-              placeholder="e.g. Visceral close POV with high-stakes urgency, staccato tension during danger, and sharp banter..."
+              placeholder="e.g. Visceral close POV with high-stakes urgency; Poetic, atmospheric grimdark with sensory weight; Witty first-person with sharp banter..."
               rows={4}
             />
           </GlassField>

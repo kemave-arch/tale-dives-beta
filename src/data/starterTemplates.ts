@@ -13,18 +13,21 @@ import type { ProtagonistData, WorldData } from '../types.ts'
 // Brief below, exactly like any other campaign.
 export const FOURTH_WING_WORLD: WorldData = {
   id: 'world_fourth_wing',
-  name: 'Fourth Wing',
+  name: 'Navarre',
+  isMaster: true,
+  isDefault: true,
   mode: 'inspired',
-  genreTone: 'Romantasy war college — dark-academia tension, banter-driven dialogue, visceral danger.',
+  genreTone: 'Romantasy war college — dark academia stakes, high-tension banter, visceral physical peril.',
   conflict:
-    'Lethal trials in the Riders Quadrant against a border war with Poromiel and hidden venin threats.',
-  background: 'The dragon-shielded continent of Navarre.',
+    'Navarre fights a covert war against Poromiel and corrupt venin while Basgiath War College ruthlessly culls weak cadets.',
+  background:
+    'Navarre is shielded from dragon-slaying venin by ancestral wards maintained by bonded dragons at Basgiath War College. Outside the magical barrier, dark channelers drain life from the earth, while inside, Navarre high command covers up the true war and executes rebel leadership.',
   narrationStyle:
     'Visceral close POV with high-stakes urgency; short, breath-tight sentences during danger; sharp, banter-driven dialogue with simmering romantic tension; tactile physical strain over abstraction.',
   powerSystem:
-    'Signet magic drawn from bonded dragons with severe physical burnout risk, supplemented by runic wards.',
-  eraTechLevel: 'High fantasy war college, dragon aerial combat',
-  keyFactions: 'Navarre (Riders, Scribes) vs. Poromiel fliers & hidden venin',
+    'Dragon-bonded Signet magic (channeling raw power into unique signets like lightning, shadows, or precognition) with lethal physical burnout risk, reinforced by defensive runic arrays.',
+  eraTechLevel: 'High fantasy war college, dragon aerial combat, blade duels, ancient ward stones, zero firearms.',
+  keyFactions: 'Navarre Military (Riders, Scribes, Infantry, Healers) vs. Poromiel Gryphon Fliers & Shadow Venin.',
   sourceTitle: 'Fourth Wing',
   sourceAuthor: 'Rebecca Yarros',
 }
@@ -32,14 +35,18 @@ export const FOURTH_WING_WORLD: WorldData = {
 export const VIOLET_SORRENGAIL: ProtagonistData = {
   id: 'protagonist_violet_sorrengail',
   name: 'Violet Sorrengail',
+  isMaster: true,
+  isDefault: true,
+  gender: 'Female',
+  age: 20,
   classId: 'apprentice_scribe',
   className: 'Apprentice Scribe',
   background:
-    "General Lilith Sorrengail's daughter, trained as a scholar but forced into the lethal Riders Quadrant on Conscription Day.",
-  personality: 'Quietly stubborn, sharp-tongued when scared, relying on cunning and poisons over brute strength',
-  motivation: 'Survive the Parapet, bond a dragon, and prove she belongs despite everyone expecting her to die',
-  physicalTrait: 'Hypermobile joints and slight frame — agile and sharp, but injures easily under heavy force',
-  secret: 'Keeps hidden notes documenting the vulnerabilities of fellow cadets and professors',
+    "General Lilith Sorrengail's daughter, trained for years in history and poisons for the Scribe Quadrant until her mother forced her into the lethal Riders Quadrant on Conscription Day.",
+  personality: 'Fiercely intelligent, quietly stubborn, sharp-tongued when cornered, relying on book-smarts, anatomy, and poisons over physical brute force.',
+  motivation: 'Survive the lethal Parapet, bond a dragon, and prove her worth despite everyone expecting her frail body to break or wash out.',
+  physicalTrait: 'Hypermobile joints and slight frame prone to dislocation; hair that turns silver-white at the ends.',
+  secret: 'Carries hidden boots lined with poisoned daggers and notes detailing the physical weaknesses of instructors and fellow cadets.',
   opening:
-    "The dive opens on Conscription Day in General Sorrengail's office during a tense final physical assessment. Violet binds her hypermobile joints while her sister Mira protests her transfer to the lethal Riders Quadrant. Outside, the deadly Parapet awaits.",
+    "The dive opens on Conscription Day in General Lilith Sorrengail's office during a tense final uniform fitting. Violet binds her fragile joints while her sister Mira argues furiously with their mother. Beyond the high turret window, the rain-slicked, narrow stone Parapet awaits over a deadly gorge.",
 }

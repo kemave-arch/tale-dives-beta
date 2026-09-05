@@ -1,9 +1,31 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-05, Claude Code on the web — landed the actual fix for the
-live truncation investigation below, on the user's own call ("i think non lite flash
-and pro models are prone to this anyway") rather than waiting on a confirmed
-`MAX_TOKENS` payload first. `gemini.ts` gained `thinkingBudgetOverride(model)`, added
+**Last updated:** 2026-09-05, Claude Code on the web — a live diagnostic report from
+the user (`gemini-2.0-flash-lite` had actually been sunset server-side, confirming the
+older-models addition below was already needed as a fallback) surfaced a real, separate
+bug: `ApiErrorPanel` (Chronicle's "FATE THREAD FALTERED" card) rendered almost
+illegibly — labels and secondary buttons washed out to near-invisible pale gray-pink.
+Root cause: the panel used the semantic `text-ink`/`text-ink-muted`/`text-gold-primary`
+tokens, but it only ever renders inside `.parchment-surface` (Chronicle's reading area),
+which re-points those exact token names to *dark* values meant for cream paper — while
+the panel's own box stayed a translucent, blurred **dark** background
+(`bg-surface-raised/80 backdrop-blur-md`). Dark text tokens on a dark, blurred box is
+the washed-out look reported. Fixed by hardcoding the panel's own palette (explicit hex
+values immune to ambient re-pointing) instead of the semantic tokens, and dropping the
+translucency/blur for a solid opaque `bg-[#181022]` box per the user's ask for a
+non-glassmorphic design; "Retry Now" is now a bold filled rose CTA (white text) and the
+three secondary buttons got real contrast (`bg-white/10`/`border-white/15` on cream
+text) instead of the old barely-there `white/5`/`ink-muted` combo. Verified with a
+side-by-side static render (old vs. new markup against the actual compiled
+`.parchment-surface` CSS) — see `panel_compare.png` reasoning: old renders as a flat
+pale blur box with illegible labels/buttons, new renders as a solid high-contrast panel
+with a clear primary action. Not yet verified against a real triggered API error in the
+live app (seeding a fake campaign to reach Chronicle's error state via Playwright proved
+too fragile to set up quickly); worth a real click-through next session. Earlier the
+same day: landed the actual fix for the live truncation investigation below, on the
+user's own call ("i think non lite flash and pro models are prone to this anyway")
+rather than waiting on a confirmed `MAX_TOKENS` payload first. `gemini.ts` gained
+`thinkingBudgetOverride(model)`, added
 to `generationConfig` in both `requestOnce` (turn generation) and `runSummary`
 (chapter recaps): it sends `thinkingConfig: { thinkingBudget: 0 }` for every model
 *except* `-flash-lite` variants (thinking already defaults off there) and the

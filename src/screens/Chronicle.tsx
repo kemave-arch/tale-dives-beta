@@ -515,7 +515,13 @@ function ApiErrorPanel({
   }
 
   return (
-    <div className="my-4 p-4 rounded-xl border border-rose-500/30 bg-surface-raised/80 backdrop-blur-md text-ink shadow-[0_8px_32px_rgba(0,0,0,0.6)] space-y-4">
+    // Deliberately hardcoded colors throughout, not the `text-ink`/`text-gold-primary`
+    // tokens: this panel renders inside `.parchment-surface` (Chronicle's reading
+    // area), which re-points those exact token names to *dark* values meant for its
+    // cream background. This box stays dark and opaque regardless of where it's
+    // mounted, so it needs its own fixed, non-glassmorphic palette rather than
+    // inheriting the ambient theme.
+    <div className="my-4 p-4 rounded-xl border border-rose-500/40 bg-[#181022] text-[#f5ecd8] shadow-[0_8px_32px_rgba(0,0,0,0.6)] space-y-4">
       {/* Header */}
       <div className="flex items-center gap-2 border-b border-white/10 pb-2.5">
         <AlertTriangle className="text-rose-400 shrink-0" size={18} />
@@ -524,7 +530,7 @@ function ApiErrorPanel({
         </h3>
         <button
           onClick={handleDismissAndPause}
-          className="text-ink-muted hover:text-ink transition-colors"
+          className="text-[#b8a888] hover:text-[#f5ecd8] transition-colors"
           title="Dismiss"
         >
           <X size={16} />
@@ -532,26 +538,26 @@ function ApiErrorPanel({
       </div>
 
       {/* Grid of details */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-[11px] font-mono text-ink-muted">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-[11px] font-mono text-[#b8a888]">
         <div>
-          <span className="opacity-60">Provider:</span>{' '}
-          <span className="text-gold-primary">{apiSettings?.provider || 'gemini'}</span>
+          <span className="opacity-80">Provider:</span>{' '}
+          <span className="text-[#f0ca65] font-semibold">{apiSettings?.provider || 'gemini'}</span>
         </div>
         <div>
-          <span className="opacity-60">Model:</span>{' '}
-          <span className="text-gold-primary">{apiSettings?.model || 'Unknown'}</span>
+          <span className="opacity-80">Model:</span>{' '}
+          <span className="text-[#f0ca65] font-semibold">{apiSettings?.model || 'Unknown'}</span>
         </div>
         <div>
-          <span className="opacity-60">Temp:</span>{' '}
-          <span className="text-cyan-400">{apiSettings?.temperature ?? 0.7}</span>
+          <span className="opacity-80">Temp:</span>{' '}
+          <span className="text-cyan-300 font-semibold">{apiSettings?.temperature ?? 0.7}</span>
         </div>
         <div>
-          <span className="opacity-60">Key:</span>{' '}
-          <span className="text-emerald-400">{maskApiKey(apiSettings?.apiKey || '')}</span>
+          <span className="opacity-80">Key:</span>{' '}
+          <span className="text-emerald-300 font-semibold">{maskApiKey(apiSettings?.apiKey || '')}</span>
         </div>
         <div className="col-span-1 sm:col-span-2">
-          <span className="opacity-60">Depth:</span>{' '}
-          <span className="text-amber-400">
+          <span className="opacity-80">Depth:</span>{' '}
+          <span className="text-amber-300 font-semibold">
             {proseDepth?.label || 'Standard'} (Max: {proseDepth?.maxOutputTokens || 800})
           </span>
         </div>
@@ -568,23 +574,23 @@ function ApiErrorPanel({
           {onRetry && (
             <button
               onClick={onRetry}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-rose-900/30 hover:bg-rose-900/50 border border-rose-500/30 py-2.5 font-display text-xs tracking-wider text-rose-200 transition-all active:scale-[0.98] cursor-pointer"
+              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 py-2.5 font-display text-xs font-semibold tracking-wider text-white shadow-[0_2px_10px_rgba(225,29,72,0.4)] transition-all active:scale-[0.98] cursor-pointer"
             >
               <RotateCcw size={13} /> Retry Now
             </button>
           )}
           <button
             onClick={onOpenSettings}
-            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 py-2.5 font-display text-xs tracking-wider text-ink-muted hover:text-ink transition-all active:scale-[0.98] cursor-pointer"
+            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 py-2.5 font-display text-xs tracking-wider text-[#f5ecd8] transition-all active:scale-[0.98] cursor-pointer"
           >
-            <SettingsIcon size={13} /> Open Settings
+            <SettingsIcon size={13} className="text-[#e8ca8a]" /> Open Settings
           </button>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2">
           <button
             onClick={handleCopyReport}
-            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 py-2.5 font-display text-xs tracking-wider text-ink-muted hover:text-ink transition-all cursor-pointer"
+            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 py-2.5 font-display text-xs tracking-wider text-[#f5ecd8] transition-all cursor-pointer"
           >
             {copied ? (
               <>
@@ -592,16 +598,16 @@ function ApiErrorPanel({
               </>
             ) : (
               <>
-                <Copy size={13} /> Copy Diagnostic Report
+                <Copy size={13} className="text-[#e8ca8a]" /> Copy Diagnostic Report
               </>
             )}
           </button>
           <button
             onClick={handleDismissAndPause}
-            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 py-2.5 font-display text-xs tracking-wider text-ink-muted hover:text-ink transition-all cursor-pointer"
+            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 py-2.5 font-display text-xs tracking-wider text-[#f5ecd8] transition-all cursor-pointer"
             title="Dismiss error and let you edit text"
           >
-            <Pause size={13} className="text-amber-400" /> Dismiss to PAUSE
+            <Pause size={13} className="text-amber-300" /> Dismiss to PAUSE
           </button>
         </div>
       </div>

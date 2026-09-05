@@ -49,7 +49,15 @@ export default function Title({
     }
   }, [])
 
-  function handleDiveIn() {
+  // Must run synchronously inside the click handler, before any conditional
+  // branch or delay — the Fullscreen API only honors a request made directly
+  // off a user gesture, not one fired later from a setTimeout callback.
+  function requestAppFullscreen() {
+    document.documentElement.requestFullscreen?.().catch(() => {})
+  }
+
+  function handleStart() {
+    requestAppFullscreen()
     if (isInitializing) return
     // If Debug mode is active or gaze delay is explicitly turned off in settings, enter immediately
     if (debugMode || introGazeDelay === false) {
@@ -62,6 +70,11 @@ export default function Title({
     timerRef.current = window.setTimeout(() => {
       onEnter()
     }, 4000)
+  }
+
+  function handleContinue() {
+    requestAppFullscreen()
+    onContinue?.()
   }
 
   return (
@@ -100,7 +113,7 @@ export default function Title({
           artwork. `max-w-full` is the guard for a narrow phone. */}
       <div className="relative z-10 w-fit max-w-full flex flex-col items-center gap-3 mb-14">
         <GlassCTAButton
-          onClick={handleDiveIn}
+          onClick={handleStart}
           disabled={isInitializing}
           className={`w-full min-w-[180px] transition-all duration-300 ${
             isInitializing ? 'opacity-90 border-[#f0ca65]/80 shadow-[0_0_25px_rgba(240,202,101,0.35)]' : ''
@@ -112,11 +125,11 @@ export default function Title({
               <span>Initializing...</span>
             </span>
           ) : (
-            'Dive In'
+            'START'
           )}
         </GlassCTAButton>
         {onContinue && !isInitializing && (
-          <GlassCTAButton onClick={onContinue} className="w-full">
+          <GlassCTAButton onClick={handleContinue} className="w-full">
             Continue
           </GlassCTAButton>
         )}

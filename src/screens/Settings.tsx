@@ -301,7 +301,7 @@ export default function Settings({
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-display font-bold text-gold-primary">Debug Mode</p>
                     <p className="font-narrative italic text-[11px] text-[#d8c49e] leading-snug">
-                      When ON, turns off the 4-second "Initializing..." delay on Dive In for instant navigation.
+                      When ON, turns off the 4-second "Initializing..." delay on START for instant navigation.
                     </p>
                   </div>
                   <GlassSegmented

@@ -1,5 +1,30 @@
 # Tale Dives — Project Revision Notes
 
+**Last updated:** 2026-09-05, Claude Code on the web — three small requests
+addressed in one pass:
+1. Confirmed debug tools and JSON export/import need no changes for the XML
+   migration: `backup.ts`'s `downloadJSON`/`saveJSON`/`readJSONFile` serialize
+   the whole campaign object generically (`rawPayload` is just an opaque
+   string field inside it either way), and `Chronicle.tsx`'s debug payload
+   view already displays `rawPayload` as plain text regardless of format. The
+   only spot that ever parsed it as JSON specifically (`patchNarInRawPayload`)
+   was already fixed with dual-format handling during the migration itself.
+2. `Title.tsx`: renamed the primary CTA from "Dive In" to "START" (button
+   label, plus the matching help text in `Settings.tsx`'s Debug Mode
+   description — left unrelated "dive in" prose elsewhere, e.g. TaleBrief's
+   "Where do you dive in?" field label, alone since that's a different concept).
+3. `Title.tsx`: both START and Continue now call `document.documentElement
+   .requestFullscreen()` (best-effort, `?.().catch(() => {})`) synchronously
+   inside their click handlers before anything else runs — the Fullscreen API
+   only honors a request made directly off a user gesture, so for START this
+   has to happen before the 4-second gaze-delay branch, not inside the
+   `setTimeout` callback that follows it.
+
+Verified: `npm run typecheck`/`npm run build` clean; live Playwright check
+against the real dev server confirmed the button renders "START" (not "Dive
+In"), `document.fullscreenElement` is set immediately after a click, and
+navigation past the title screen still proceeds normally.
+
 **Last updated:** 2026-09-05, Claude Code on the web — "Climax Overflow": a
 turn carrying a `class_evolution`, a completed quest, or a major kill is now
 allowed to exceed the player's chosen Prose Depth, not just reach it.

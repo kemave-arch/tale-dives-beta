@@ -1,4 +1,4 @@
-import type { HistoryTurn, RunTurnResult } from '../../types.ts'
+import type { GameTime, HistoryTurn, RunTurnResult } from '../../types.ts'
 
 // §3.4 — capability flags reflect what *this client's* adapter for a given
 // provider actually does today, not that provider's raw platform ceiling.
@@ -32,6 +32,12 @@ export interface RunSummaryParams {
   temperature: number
   maxOutputTokens: number
   history: HistoryTurn[]
+  // The real in-game clock span this chapter covers — grounds the recap
+  // prompt against inflating a few in-game hours into saga-length prose
+  // ("days of hardship" for an afternoon). Optional since older callers
+  // (or a chapter with no resolvable start) may not have it.
+  startTime?: GameTime
+  endTime?: GameTime
 }
 
 // One config, every call type (§3.4) — Turn narration, Chapter Milestone

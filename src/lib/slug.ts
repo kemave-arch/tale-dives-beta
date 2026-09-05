@@ -12,6 +12,12 @@ export function slugify(text: string): string {
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9\s_-]/g, '')
+    // Hyphens and underscores are just word separators, same as whitespace —
+    // without this, "Stone-Gait Sentry" (a {{Term|npc}} tag) and
+    // "stone_gait_sentry" (a model-declared npc_id for the same NPC) slugify
+    // to two different keys ("stone-gait_sentry" vs "stone_gait_sentry") and
+    // fork into duplicate Codex entries instead of converging on one.
+    .replace(/[-_]+/g, ' ')
     .split(/\s+/)
     .filter(Boolean)
 

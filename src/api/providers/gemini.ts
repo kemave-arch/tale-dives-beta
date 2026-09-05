@@ -1,6 +1,6 @@
 // Gemini provider adapter — Blueprint §7.1 (call shape) and §3.3 (self-healing pipeline).
 import { SYSTEM_INSTRUCTIONS, TURN_SCHEMA } from '../turnContract.ts'
-import type { HistoryTurn, RunTurnResult } from '../../types.ts'
+import type { GameTime, HistoryTurn, RunTurnResult } from '../../types.ts'
 import type { Provider } from './types.ts'
 
 const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
@@ -145,6 +145,12 @@ interface SummaryParams {
   temperature: number
   maxOutputTokens: number
   history: HistoryTurn[]
+  startTime?: GameTime
+  endTime?: GameTime
+}
+
+function formatGameTime(t: GameTime): string {
+  return `Day ${t.d} ${t.h}`
 }
 
 // §2 Phase E Chapter Milestone — a plain-text (not JSON-schema) follow-up
@@ -160,8 +166,18 @@ interface SummaryParams {
 // IMMERSIVE was tuned for doesn't apply) so chapter breaks read like a real
 // novel's "previously..." passage instead of a mechanical plot-point list,
 // without getting cut off mid-paragraph.
-export async function runSummary({ apiKey, model, temperature, maxOutputTokens, history }: SummaryParams): Promise<string> {
+export async function runSummary({ apiKey, model, temperature, maxOutputTokens, history, startTime, endTime }: SummaryParams): Promise<string> {
   const url = `${BASE_URL}/${encodeURIComponent(model)}:generateContent`
+
+  // Grounds the recap against inflating a real few-hour span into
+  // saga-length prose ("a grueling ascent," "days of hardship") — the exact
+  // drift a live payload surfaced. Omitted (rather than a vague fallback)
+  // when either bound couldn't be resolved, so the base instruction still
+  // works for an older save with no time-stamped turns.
+  const timeSpanNote =
+    startTime && endTime
+      ? ` This chapter's events span real story-time from ${formatGameTime(startTime)} to ${formatGameTime(endTime)} — that is the ONLY time that has passed. Keep the recap's implied pacing honest to that span; do not describe it as spanning more time than it actually did (no "days later," "weeks of hardship," etc.) unless the span above genuinely covers that much time.`
+      : ''
 
   const body = {
     contents: [
@@ -170,7 +186,7 @@ export async function runSummary({ apiKey, model, temperature, maxOutputTokens, 
         role: 'user',
         parts: [
           {
-            text: 'Write a rich, narrated recap of this chapter of the story so far — several full paragraphs, third person, past tense, in the same evocative prose style as the narration itself. Cover major plot developments, emotional turns, and standout moments, not just a bare list of events. Output ONLY the recap prose — no preamble, no headings, no markdown.',
+            text: `Write a rich, narrated recap of this chapter of the story so far — several full paragraphs, third person, past tense, in the same evocative prose style as the narration itself. Cover major plot developments, emotional turns, and standout moments, not just a bare list of events.${timeSpanNote} Output ONLY the recap prose — no preamble, no headings, no markdown.`,
           },
         ],
       },

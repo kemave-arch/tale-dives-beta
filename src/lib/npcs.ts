@@ -1,6 +1,6 @@
 import { ensureEntry } from './autoRegister.ts'
 import { slugify, titleCaseId } from './slug.ts'
-import type { Dict, NpcEntry, NpcMemoryUpdate } from '../types.ts'
+import type { Dict, GameTime, NpcEntry, NpcMemoryUpdate } from '../types.ts'
 
 // §5.5 Romance & Key Contact Memory Engine + §5.14 auto-registration.
 // npc_mem_up only ever carries an id, never a display name — a title-cased
@@ -34,6 +34,7 @@ export function applyNpcUpdates(
   npcs: Dict<NpcEntry> | undefined,
   updates: NpcMemoryUpdate[] = [],
   locId?: string,
+  time?: GameTime,
 ): Dict<NpcEntry> {
   let dict: Dict<NpcEntry> = npcs ?? {}
 
@@ -64,6 +65,12 @@ export function applyNpcUpdates(
         heldWeapon: u.held_weapon || prev.heldWeapon,
         wornArmor: u.worn_armor || prev.wornArmor,
         lastSeenLocId: locId ?? prev.lastSeenLocId,
+        // Set-once, decoupled from ensureEntry's `created` flag: a {{Term|npc}}
+        // tag frequently registers the dict entry first (same turn, before
+        // npc_mem_up runs), so gating on "did npc_mem_up itself create this
+        // entry" would almost always miss the real first encounter.
+        firstSeenTime: prev.firstSeenTime ?? time,
+        lastSeenTime: time ?? prev.lastSeenTime,
       },
     }
   }
@@ -77,13 +84,23 @@ export function applyNpcUpdates(
 // and correct pronoun/age-appropriate behavior is left to the model's own
 // judgment exactly as it was before these fields existed.
 export function describePresentNpc(entry: NpcEntry): string {
-  const identity = [entry.gender && `Gender: ${entry.gender}`, entry.age !== undefined && `Age: ${entry.age}`]
+  // Role is the same stable anchor a real title-carrying NPC record would be —
+  // "Kaelen" and "Stone-Gait Sentry" reading as the same person is a narration
+  // problem this can't force, but showing it back every turn at least gives
+  // the model a consistent handle to check its own naming against.
+  const identity = [
+    entry.role && `Role: ${entry.role}`,
+    entry.gender && `Gender: ${entry.gender}`,
+    entry.age !== undefined && `Age: ${entry.age}`,
+  ]
     .filter(Boolean)
     .join(' | ')
   const gear = [entry.heldWeapon && `Wielding: ${entry.heldWeapon}`, entry.wornArmor && `Wearing: ${entry.wornArmor}`]
     .filter(Boolean)
     .join(' | ')
-  return `NPC: ${entry.name}${identity ? ` | ${identity}` : ''} | Stage: ${entry.stage} | Trust: ${entry.trust}${gear ? ` | ${gear}` : ''} | Mem: "${entry.memSummary}"`
+  // First Seen anchors the same anti-drift check as describeKnownLocation's.
+  const firstSeen = entry.firstSeenTime ? ` | First Seen: Day ${entry.firstSeenTime.d} ${entry.firstSeenTime.h}` : ''
+  return `NPC: ${entry.name}${identity ? ` | ${identity}` : ''} | Stage: ${entry.stage} | Trust: ${entry.trust}${gear ? ` | ${gear}` : ''}${firstSeen} | Mem: "${entry.memSummary}"`
 }
 
 export function presentNpcs(npcs: Dict<NpcEntry> | undefined, locId: string): NpcEntry[] {

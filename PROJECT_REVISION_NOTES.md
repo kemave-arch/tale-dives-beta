@@ -1,5 +1,80 @@
 # Tale Dives — Project Revision Notes
 
+**Last updated:** 2026-09-05, Claude Code on the web — a real live payload surfaced
+four distinct bugs at once: duplicate NPC/Location Codex entries ("Stone-Gait
+Sentry" and "Stone Gait Sentry" as two separate records), locations never
+getting a real description, and a "temporal hallucination" where a chapter
+recap's prose implied days had passed when the record showed a few in-game
+hours. Root-caused and fixed all four:
+- **NPC/faction/lore/quest/beast/skill duplication** — `slugify()`
+  (`lib/slug.ts`) split words on whitespace only, so a `{{Term|npc}}` tag's
+  "Stone-Gait Sentry" (hyphen) and an `npc_mem_up.npc_id` of
+  "stone_gait_sentry" (underscore) produced two different keys and forked
+  into two Codex entries for the same person. Fixed by collapsing hyphens
+  and underscores to spaces before splitting, so all three separators
+  converge on one slug — a single-function fix that covers every keyword-tag
+  category, not just NPCs.
+- **Location duplication** — a deeper issue: `loc_id`-driven registration
+  (`loc_id`/`loc_disp`, a per-waypoint id the model tracks) and
+  `{{Term|loc}}`-driven registration (a slug of whatever freeform place name
+  gets tagged inline) are two entirely disjoint id spaces that the slugify
+  fix alone can't unify — "Iron-Bound Peaks" (a tagged region name) and
+  "Iron-Bound Peaks - The Ravine" (a loc_id waypoint) will never collide on
+  id alone. Added a heuristic backstop instead (`lib/codex.ts`,
+  `isKnownByName`): skip minting a new location stub when its name already
+  contains, or is contained by, an existing location's name. Also reordered
+  App.tsx's turn pipeline so the current turn's own loc_id/loc_disp registers
+  *before* the keyword-tag pass runs (previously the reverse), so a same-turn
+  region-name tag has something to dedup against instead of forking before
+  the "real" entry even exists. Also added rule 2b (Name/ID Consistency) so
+  the model itself is told to reuse an established place/NPC name exactly
+  rather than inventing "Ironheart" vs "Ironheart Crag" for one settlement.
+- **Locations never getting a real description** — `ensureLocation` always
+  wrote a hardcoded "(Auto-logged — visit again or add detail manually.)"
+  placeholder with no schema channel for the model to ever replace it,
+  the same structural gap fixed for quests earlier this session but never
+  extended to locations. Added `loc_desc` (types.ts/turnContract.ts, named
+  short per the existing loc_disp/loc_id convention) — an optional field
+  sent only when a loc_id is first visited or its description genuinely
+  changes, same economy as quest_update.description.
+- **Temporal hallucination** — the chapter-recap prompt (`runSummary`,
+  gemini.ts) asked for "a rich, narrated recap... several full paragraphs...
+  evocative," with zero grounding in how much real in-game time the chapter
+  actually covered — so it naturally reached for saga-length language ("a
+  grueling ascent," implicitly "days of hardship") even when the log showed
+  a single afternoon. A real payload had the player mockingly quote this
+  back: "Wait, days? I just met her this morning." Fixed by computing the
+  chapter's actual start/end GameTime (App.tsx's new `chapterStartTime`,
+  reading back to the last chapterSummary marker) and threading it through
+  `RunSummaryParams` into an explicit grounding sentence in the prompt:
+  the real span, plus an instruction not to imply more time passed than
+  that. Verified via a stubbed `fetch` that the real `runSummary` function
+  builds this sentence correctly.
+- **Bonus, additive-only**: `firstSeenTime`/`lastSeenTime` on NpcEntry and
+  `firstVisitedTime`/`lastVisitedTime` on LocationEntry (the user's own
+  suggested fix), surfaced as "First Seen: Day X HH:MM" in the existing
+  per-turn context lines (`describePresentNpc`/`describeKnownLocation`) —
+  an explicit real-clock anchor for the model to check its own narration
+  against, alongside the recap fix. Also surfaced NPC `role` in
+  `describePresentNpc` (e.g. "Role: Frost-Tithe Sentry") per the user's
+  other suggestion, though the actual duplication root cause was the slug
+  mismatch above, not a missing title field — this is a complementary,
+  zero-risk addition, not the fix itself.
+- Also, per explicit request: strengthened the INTIMACY turn-state guideline
+  to call for charged, vulnerable dialogue between both partners (not just
+  narrated physical description carrying the scene alone) and immediate
+  sensory "heat" — while keeping rule 5's existing fixed scene-break
+  boundary for anything beyond kissing/embrace explicitly referenced right
+  in the INTIMACY bullet itself, since that boundary doesn't flex based on
+  this kind of request.
+- Live-verified all of the above end-to-end (not just unit-style): replayed
+  the exact turn sequence from the reported payload (Iron-Bound Peaks tag +
+  loc_start waypoint, Stone-Gait Sentry tag + stone_gait_sentry npc_mem_up,
+  Ironheart Crag as a genuinely distinct place, Ironheart tag correctly
+  deduping against an already-registered Outer Gates waypoint) and confirmed
+  no forked entries, correct First Seen timestamps, and the real
+  `runSummary` producing the grounded recap prompt text.
+
 **Last updated:** 2026-09-05, Claude Code on the web — added Turn State-triggered
 soundtrack switching with crossfade. Filenames can now opt out of the ambient
 rotation and into a per-Turn-State pool via a `ts-<state>_` prefix (e.g.

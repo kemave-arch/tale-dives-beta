@@ -155,6 +155,8 @@ export interface LocationEntry {
   locationType?: string // freeform, e.g. "City"/"Dungeon"/"Wilderness"/"Landmark"
   notableFeatures?: string // freeform — what stands out about the place
   inhabitants?: string // freeform — who/what lives or lurks here
+  firstVisitedTime?: GameTime // set once, at stub creation — an explicit anchor against invented "it's been weeks" narration drift
+  lastVisitedTime?: GameTime // updated whenever the player is here again
   tags?: string[]
   autoLogged?: boolean
   discovery?: Discovery
@@ -178,6 +180,8 @@ export interface NpcEntry {
   personality?: string // freeform trait summary
   voiceNotes?: string // how they speak — a steering note for the player, not sent to the model
   factionId?: string | null // affiliation, mirrors LocationEntry's factionOwner
+  firstSeenTime?: GameTime // set once, at stub creation — same anti-drift anchor as LocationEntry's
+  lastSeenTime?: GameTime // updated on every npc_mem_up touch
   tags?: string[]
   autoLogged?: boolean
   discovery?: Discovery
@@ -505,6 +509,7 @@ export interface TurnResponse {
   time: GameTime
   loc_disp: string
   loc_id: string
+  loc_desc?: string // only sent when loc_id is first visited or its description genuinely changes — see lib/locations.ts
   dist?: 'c' | 'm' | 'f' | 'none'
   mood?: string
   deltas?: TurnDelta

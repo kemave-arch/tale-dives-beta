@@ -40,7 +40,7 @@ import NowPlayingBanner from './components/NowPlayingBanner.tsx'
 import * as store from './lib/store.ts'
 import { CURRENT_SCHEMA_VERSION, EQUIPPABLE_TYPES } from './types.ts'
 import type {
-  BestiaryEntry, Campaign, CombatMode, CombatState, Dict, EquipSlot, FactionEntry, HistoryTurn, ItemEntry, KeywordLink, LocationEntry, LogEntry, LoreEntry,
+  BestiaryEntry, Campaign, CombatMode, CombatState, Dict, EquipSlot, FactionEntry, GameTime, HistoryTurn, ItemEntry, KeywordLink, LocationEntry, LogEntry, LoreEntry,
   NpcEntry, Player, ProtagonistData, QuestEntry, SkillEntry, SlashCommand, TurnState, WorldData,
 } from './types.ts'
 
@@ -597,11 +597,22 @@ export default function App() {
       const { player: nextPlayer, defeated: playerDefeated } = applyTurn(current.player, turn, tacticalOverride)
       nextPlayer.time = turn.time ?? current.player.time // Shadow Referee doesn't own time
 
-      // Keyword links run first so a {{Term|npc}}/{{Term|loc}} tag's real name
-      // wins over the plainer fallback loc_id/npc_id-derived stub name.
+      // The current turn's own loc_id/loc_disp registers FIRST, unlike every
+      // other category — its name always comes straight from the model's
+      // real loc_disp text (never a derived-id fallback the way npc_mem_up's
+      // titleCaseId(npc_id) is), so nothing is lost by it existing before the
+      // keyword pass runs. What IS gained: a same-turn {{Term|loc}} mention of
+      // this same place (e.g. the region name "Ironheart" alongside a loc_id
+      // for "Ironheart - Outer Gates") has something to fuzzy-match against
+      // (lib/codex.ts's isKnownByName) instead of forking a duplicate stub
+      // before the "real" entry even exists yet.
+      const { dict: locationsWithCurrent } = ensureLocation(current.locations, turn.loc_id, turn.loc_disp, turn.loc_desc, nextPlayer.time)
+
+      // Keyword links run first for every other category so a {{Term|npc}}
+      // tag's real name wins over the plainer fallback npc_id-derived stub name.
       const linked = applyKeywordLinks(
         {
-          locations: current.locations,
+          locations: locationsWithCurrent,
           npcs: current.npcs,
           factions: current.factions,
           lore: current.lore,
@@ -611,8 +622,8 @@ export default function App() {
         },
         turn.nar,
       )
-      const { dict: nextLocations } = ensureLocation(linked.locations, turn.loc_id, turn.loc_disp)
-      const nextNpcs = applyNpcUpdates(linked.npcs, turn.npc_mem_up, turn.loc_id)
+      const nextLocations = linked.locations
+      const nextNpcs = applyNpcUpdates(linked.npcs, turn.npc_mem_up, turn.loc_id, nextPlayer.time)
       const nextQuests = applyQuestUpdate(linked.quests, turn.quest_update)
       // §6.4D — a skill_learn record fills in (or upgrades) whatever the
       // {{Term|skill}} keyword pass already stubbed out.
@@ -838,7 +849,12 @@ export default function App() {
       // chapter-level-up above; the recap call reads historyWithResponse
       // (this turn included) before the sliding window gets flushed.
       if (chapterLevels > 0) {
-        recapChapter(historyWithResponse, Math.floor(turnNumber / CHAPTER_TURN_INTERVAL))
+        recapChapter(
+          historyWithResponse,
+          Math.floor(turnNumber / CHAPTER_TURN_INTERVAL),
+          chapterStartTime(nextCampaign.log),
+          finalPlayer.time,
+        )
       }
     } catch (err) {
       setError(`The thread of fate falters... (${errorMessage(err)})`)
@@ -896,12 +912,33 @@ export default function App() {
     }
   }
 
+  // The real in-game clock span this chapter covers — the "start" is
+  // whatever time the turn right after the previous chapterSummary marker
+  // logged (or the very first turn, for chapter 1). Passed into the recap
+  // prompt as an explicit anchor: without it, a "several full paragraphs,
+  // evocative" recap prompt naturally reaches for saga-length language
+  // ("a grueling ascent," "days of hardship") even when the record shows
+  // only a few in-game hours passed — the exact "temporal hallucination"
+  // a live payload surfaced (a player line mockingly quoting the model's own
+  // inflated framing: "Wait, days? I just met her this morning.").
+  function chapterStartTime(log: LogEntry[]): GameTime | undefined {
+    for (let i = log.length - 1; i >= 0; i--) {
+      if (log[i].chapterSummary) return log[i + 1]?.time
+    }
+    return log.find((e) => e.time)?.time
+  }
+
   // §2 Phase E Chapter Milestone — plain-text 2-sentence recap, then flush
   // the sliding history window: "past conversation turns are flushed... while
   // persistent summary cards are saved locally." A missed recap costs only
   // flavor (the log entry), so failures are swallowed rather than surfaced —
   // the window keeps growing and the next boundary just retries.
-  async function recapChapter(historyForSummary: HistoryTurn[], chapterNumber: number) {
+  async function recapChapter(
+    historyForSummary: HistoryTurn[],
+    chapterNumber: number,
+    startTime?: GameTime,
+    endTime?: GameTime,
+  ) {
     try {
       const summary = await getProvider(apiSettings.provider).runSummary({
         apiKey: apiSettings.apiKey,
@@ -909,6 +946,8 @@ export default function App() {
         temperature: apiSettings.temperature,
         maxOutputTokens: MAX_OUTPUT_TOKENS_CEILING,
         history: historyForSummary,
+        startTime,
+        endTime,
       })
 
       setGame((g) => g && { ...g, log: [...g.log, { nar: '', chapterSummary: summary, chapterNumber }] })

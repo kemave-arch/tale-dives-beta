@@ -14,6 +14,23 @@ function ensureStub<T extends { autoLogged?: boolean }>(
   return ensureEntry(dict, id, factory).dict
 }
 
+// A {{Term|loc}} tag slugifies its own freeform text (lib/slug.ts), which is
+// a different id space than the loc_id the model separately tracks per
+// waypoint (App.tsx's ensureLocation) — so "Ironheart" mentioned inline and
+// the loc_id-registered "Ironheart - Outer Gates" fork into two Codex
+// entries for what's really one place, even after the hyphen/underscore
+// slug fix. There's no reliable way to unify the two id spaces outright, so
+// this is a heuristic backstop: skip minting a new stub when an existing
+// location's name already contains (or is contained by) the tagged term.
+function isKnownByName(locations: Dict<LocationEntry>, term: string): boolean {
+  const needle = term.trim().toLowerCase()
+  if (!needle) return false
+  return Object.values(locations).some((l) => {
+    const name = l.name.trim().toLowerCase()
+    return name.includes(needle) || needle.includes(name)
+  })
+}
+
 export interface CodexDicts {
   locations: Dict<LocationEntry>
   npcs: Dict<NpcEntry>
@@ -39,7 +56,7 @@ export function applyKeywordLinks(codex: CodexDicts, nar: string | undefined): C
 
     switch (category) {
       case 'loc':
-        locations = ensureLocation(locations, id, term).dict
+        if (!isKnownByName(locations, term)) locations = ensureLocation(locations, id, term).dict
         break
       case 'npc':
         npcs = ensureStub(npcs, id, () => emptyNpc(term))

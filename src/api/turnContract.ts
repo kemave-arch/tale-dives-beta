@@ -77,7 +77,7 @@ export const TURN_SCHEMA = {
     deltas: {
       type: 'OBJECT',
       description:
-        'Tactical Mode: must match the given Combat Result exactly. Narrative Mode: your own bounded amount (no Combat Result given).',
+        'Tactical Mode: must match the given Combat Result exactly. Narrative Mode: your own bounded amount (no Combat Result given). Also required whenever "nar" itself narrates a stat change outside combat — resting, healing, mana/stamina restoration, potion use, poison, exhaustion, currency gained or spent, etc. Never narrate a vitals or wealth change without emitting the matching delta here.',
       properties: {
         hp: { type: 'INTEGER', minimum: -500, maximum: 500 },
         mp: { type: 'INTEGER', minimum: -500, maximum: 500 },

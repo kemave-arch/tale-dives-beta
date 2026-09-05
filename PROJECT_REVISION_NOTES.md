@@ -1,5 +1,53 @@
 # Tale Dives — Project Revision Notes
 
+**Last updated:** 2026-09-05, Claude Code on the web — a "Gemini Runtime XML
+Manual" the user got from a chat session claimed a full XML rewrite of Tale
+Dives (a fabricated 4-tier currency ladder, a buff/debuff system that doesn't
+exist, a bestiary rank ladder, "IndexedDB JIT retrieval") would save massive
+tokens — verified line-by-line against the real codebase and found mostly
+invented (checked: `Player.copper` is one denomination not four; `ItemEntry`
+does track rarity, contradicting the doc's claim it doesn't; no buff/debuff
+system exists anywhere in `types.ts`; state persists via plain `localStorage`,
+not IndexedDB). A follow-up "AI Studio tokenizer comparison" table (claiming
+Gemini/Claude/GPT-4o/GPT-4 counts side by side) was also mostly fabricated —
+Google's AI Studio has no access to Anthropic's or OpenAI's tokenizers, so a
+cross-vendor table can't be real, and re-counting the actual characters/words
+of the sample snippets against the table's own numbers showed 20-30%
+discrepancies on two of the four rows. The user then re-measured for real
+using AI Studio's actual live token counter (one snippet at a time, no
+comparison-table framing) and got genuine numbers — coincidentally matching
+the earlier table's Gemini-only column exactly, meaning that specific column
+was likely real all along (Gemini can honestly self-report its own token
+count; it just can't know a competitor's). Real result: JSON turn output
+~396 tokens vs. an equivalent compact-XML output ~298 tokens — a genuine
+~25% reduction; the input context side only saved ~2%.
+
+Given a real, verified ~25% output-token saving, built a **prototype** (not
+wired into the live pipeline) to test the idea properly rather than
+theorize further: `src/api/xmlTurnContract.ts` (a compact `<sync>` XML
+grammar mirroring every real `TurnResponse` field — no invented currency/
+buff/bestiary mechanics, reusing `SYSTEM_INSTRUCTIONS`'s narrative rules
+completely unchanged) and `src/lib/xmlTurnParser.ts` (parses that XML back
+into the exact same `TurnResponse` shape `applyTurn`/`App.tsx` already
+consume, so nothing downstream needs to change). Deliberately keeps `<nar>`
+as plain prose with the existing markup unchanged ({{Term|cat}}, [Skill],
+>Item<, 'thought') rather than also XML-tagging inline narration — the
+`>Item<` convention's literal angle brackets would be a genuine parse hazard
+next to real `<tag>` markup, and the manual's own inline-tagging didn't
+account for that collision. All of the measured savings come from the
+*mechanical* fields anyway, which is exactly what the new grammar replaces.
+Live-verified: fed the parser two hand-authored XML samples (one matching
+the "Kaelen/cider" scenario at moderate complexity, one a "kitchen sink"
+sample exercising nearly every field — combat deltas, multi-item loot,
+corpses, a stat grant, quest completion, two NPC updates including a new
+held-weapon field, a rare class evolution, faction rep on two factions, and
+a learned skill) and confirmed both parse into exactly the same shape the
+JSON path already produces. Not yet done: a real round-trip test against
+actual Gemini-generated XML (only hand-authored fixtures so far) — next
+step is to hand the user the real system-instruction grammar to test live in
+AI Studio, then run whatever Gemini actually outputs back through this same
+parser as the final proof before considering wiring it into the live app.
+
 **Last updated:** 2026-09-05, Claude Code on the web — a real live payload surfaced
 four distinct bugs at once: duplicate NPC/Location Codex entries ("Stone-Gait
 Sentry" and "Stone Gait Sentry" as two separate records), locations never

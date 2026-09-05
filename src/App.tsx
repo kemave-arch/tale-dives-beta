@@ -1355,6 +1355,7 @@ export default function App() {
           setCodexTarget({ category })
           navigateTo('codex')
         }}
+        debugMode={uiPrefs.debugMode}
       />
     )
   } else {

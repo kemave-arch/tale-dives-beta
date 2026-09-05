@@ -36,7 +36,7 @@ export function loadApiSettings(): ApiSettings {
   const envKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) || DEFAULT_GEMINI_API_KEY
   const settings = load(KEYS.apiSettings, {
     provider: 'gemini',
-    model: 'gemini-3.1-flash-lite',
+    model: 'gemini-3.5-flash-lite',
     apiKey: envKey || DEFAULT_GEMINI_API_KEY,
     temperature: 0.7,
   })

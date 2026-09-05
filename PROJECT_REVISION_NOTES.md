@@ -1,20 +1,31 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-05, Claude Code on the web — the user hit a real, concerning
-truncation live (a BALANCED-depth turn cut off after ~60 words, nowhere near its
-2,048-token ceiling) and started pasting Chronicle's debug payloads to investigate.
-Two additions to that debug tooling in response: `LogEntry`/the debug panel now
-surface Gemini's own `finishReason` (STOP/MAX_TOKENS/...) — previously computed by
-`runTurn` but silently discarded — with the per-turn toggle turning rose and
-labeling itself when a turn actually hit `MAX_TOKENS`; and a new header button
-exports every real narrated turn's request/response/finishReason since turn 0 as one
-`.txt` file, for reporting a pattern across a whole session rather than one turn at a
-time. The actual truncation root cause (working theory: a thinking-capable Gemini
-model spending the `maxOutputTokens` budget on invisible reasoning before any visible
-narration) is **not yet confirmed** — waiting on the user's next payload, now that
-`finishReason` is actually recorded, to check whether it really reads `MAX_TOKENS`
-before changing anything about the actual request. See the log entry below for the
-implementation. Earlier: a follow-up pass on the Codex
+**Last updated:** 2026-09-05, Claude Code on the web — continuing the same live
+truncation investigation as the paragraph below. Four changes, all debug/config
+tooling rather than a fix to the actual request: (1) `GEMINI_MODELS` gained 4 older
+generations (2.5 Flash/Flash Lite, 2.0 Flash/Flash Lite) alongside the existing 3.x
+lineup, kept selectable as a fallback since they predate (or, Flash-Lite historically,
+default off) the extended-thinking behavior suspected of eating the response budget;
+(2) the default model in `loadApiSettings()` changed to `gemini-3.5-flash-lite` (only
+affects a genuinely first-ever load — existing saved settings are untouched); (3) the
+session-wide payload export from the previous entry was reworked, per correction —
+no more `.txt` file download, instead a `SessionPayloadPanel` matching the per-turn
+debug button's copy-to-clipboard UX, toggled open from a new header icon and rendered
+inline inside the `<header>` itself so the `ResizeObserver`-driven parchment
+`paddingTop` reflows around it automatically; (4) both that panel and the pre-existing
+per-turn "View Payload" button now only render when Debug Mode (`uiPrefs.debugMode`,
+Settings' existing toggle) is on, instead of always being visible. Verified in headless
+Chromium: debugMode off shows zero debug buttons of either kind; debugMode on shows
+the session panel toggle plus one per-turn button per turn, the `MAX_TOKENS` rose
+flagging on a per-turn button, and the expanded session panel rendering correctly with
+its content reflowing the reading surface beneath it. The actual truncation root cause
+(working theory: a thinking-capable Gemini model spending the `maxOutputTokens` budget
+on invisible reasoning before any visible narration) is **still not confirmed** —
+waiting on the user's next payload, now with `finishReason` recorded, to check whether
+it really reads `MAX_TOKENS` before changing anything about the actual request.
+Earlier the same day: `LogEntry`/the debug panel gained `finishReason` surfacing (see
+below), and a since-superseded session-export button (see above). Earlier still: a
+follow-up pass on the Codex
 overhaul: 4 categories whose data genuinely differs in shape from the rest got their
 own visual treatment instead of the shared accent-card template alone — Items now
 carry a real RPG loot-rarity border/glow (grey/green/blue/purple/gold), Bestiary shows

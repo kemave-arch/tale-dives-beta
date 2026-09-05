@@ -188,6 +188,15 @@ export const GEMINI_MODELS: import('./types.ts').ProviderModel[] = [
   { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview' },
   { id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash Lite' },
   { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
+  // Older generations, kept selectable rather than dropped — useful as a
+  // fallback while the MAX_TOKENS/thinking-budget truncation investigation
+  // (see PROJECT_REVISION_NOTES.md) is still open, since these predate (or
+  // in Flash-Lite's case, historically defaulted off) the extended-thinking
+  // behavior suspected of eating the response budget on the 3.x models above.
+  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+  { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite' },
+  { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+  { id: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite' },
 ]
 
 // Capability flags reflect what this adapter actually does today (only

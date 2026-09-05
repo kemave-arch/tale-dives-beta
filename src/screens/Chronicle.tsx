@@ -4,7 +4,7 @@ import {
   Menu, Settings as SettingsIcon, Send, Star, BookOpen, Library, Sparkle, X, ExternalLink,
   ChevronUp, ChevronDown, ChevronsDown, History, Pause, Users, Backpack, Map as MapIcon, ShieldCheck, Target, Skull, HelpCircle,
   Unlock, Lock, Repeat, Hammer, Ghost, Compass, ScrollText, User, Swords, Sparkles,
-  AlertTriangle, Copy, Check, RotateCcw, Bug, Download,
+  AlertTriangle, Copy, Check, RotateCcw, Bug,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { renderNarrative, type TapTermHandler } from '../lib/richText.tsx'
@@ -13,7 +13,6 @@ import { formatCurrency } from '../lib/currency.ts'
 import { slugify } from '../lib/slug.ts'
 import { BANG_COMMANDS } from '../lib/bangCommands.ts'
 import { isHidden } from '../lib/discovery.ts'
-import { downloadText } from '../lib/backup.ts'
 import type { CategoryId } from './Codex.tsx'
 import type {
   ApiSettings, BestiaryEntry, CombatState, CraftingJob, FactionEntry, GameTime, KeywordLink, LocationEntry, LogEntry, LoreEntry, NpcEntry, Player,
@@ -50,6 +49,7 @@ interface ChronicleProps {
   onOpenCodex: () => void
   onOpenCodexEntry: (category: KeywordLink['category'], id: string) => void
   onOpenCodexCategory: (category: CategoryId) => void
+  debugMode?: boolean // Settings' own toggle — also gates the per-turn/session debug-payload tools below
 }
 
 const WINDOW_SIZE = 20 // §9.2 — cap how many turns stay mounted; older ones load in on demand
@@ -135,22 +135,22 @@ interface TurnBlockProps {
   globalIndex: number
   onTapTerm: TapTermHandler
   registerRef: (index: number, el: HTMLDivElement | null) => void
+  debugMode?: boolean
 }
 
 // Debugging tool — every real narrated turn's request/response/finishReason
-// since turn 0, one file, for reporting a pattern across a whole session
-// rather than one turn at a time (DebugPayloadButton below covers the
-// single-turn case). Synthetic entries (bang/chapter-recap/class-evolution)
-// carry no `rawPayload` and are skipped — there's no API call to show.
-function buildSessionPayloadExport(log: LogEntry[], title: string): string {
+// since turn 0, for reporting a pattern across a whole session rather than
+// one turn at a time (DebugPayloadButton below covers the single-turn case).
+// Synthetic entries (bang/chapter-recap/class-evolution) carry no
+// `rawPayload` and are skipped — there's no API call to show.
+function buildSessionPayloadText(log: LogEntry[], title: string): string {
   const withPayload = log
     .map((entry, index) => ({ entry, index }))
     .filter(({ entry }) => entry.rawPayload)
 
   const header = [
-    '# Tale Dives — Session Payload Export',
+    '# Tale Dives — Session Payload',
     `# Tale: ${title}`,
-    `# Exported: ${new Date().toISOString()}`,
     `# Total log entries: ${log.length}, narrated turns with a recorded payload: ${withPayload.length}`,
     '',
   ].join('\n')
@@ -174,12 +174,56 @@ function buildSessionPayloadExport(log: LogEntry[], title: string): string {
   return [header, ...turns, '='.repeat(80)].join('\n\n')
 }
 
+// The "whole session" counterpart to DebugPayloadButton below — pinned to
+// the top of the screen (inside the fixed header, so the ResizeObserver
+// that already measures header height picks up the extra space and the
+// parchment reflows underneath it automatically) rather than living inline
+// in the scrolling log, since this covers every turn at once, not one.
+// Only ever rendered when Debug Mode is on (see Chronicle's own render).
+function SessionPayloadPanel({ log, title }: { log: LogEntry[]; title: string }) {
+  const [copied, setCopied] = useState(false)
+  const text = useMemo(() => buildSessionPayloadText(log, title), [log, title])
+
+  function handleCopy() {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  return (
+    <div className="px-3 pb-2">
+      <div className="rounded-lg border border-rose/30 bg-black/30 overflow-hidden">
+        <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-rose/20">
+          <span className="text-[10px] font-mono uppercase tracking-wide text-rose">Session Payload — since Turn 0</span>
+          <button onClick={handleCopy} className="inline-flex items-center gap-1 text-[10px] font-mono text-ink-muted hover:text-ink">
+            {copied ? (
+              <>
+                <Check size={11} className="text-emerald" /> Copied
+              </>
+            ) : (
+              <>
+                <Copy size={11} /> Copy All
+              </>
+            )}
+          </button>
+        </div>
+        <pre className="max-h-[35vh] overflow-auto p-2.5 text-[10px] font-mono leading-snug text-ink-muted whitespace-pre-wrap break-words">
+          {text}
+        </pre>
+      </div>
+    </div>
+  )
+}
+
 // Debugging tool — a turn's exact request context and the model's raw
 // response text, collapsed by default so it doesn't compete with the prose,
 // with a one-click copy so a player can paste a broken turn to a Claude
 // session or AI Studio without reconstructing it by hand. Only turns that
 // actually hit the API carry `rawPayload` (App.tsx's sendAction) — bang
 // commands, chapter recaps, and other synthetic entries never render this.
+// Gated behind Debug Mode by its caller (TurnBlock), same as
+// SessionPayloadPanel above.
 function DebugPayloadButton({ entry }: { entry: LogEntry }) {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -242,7 +286,7 @@ function DebugPayloadButton({ entry }: { entry: LogEntry }) {
 
 // Isolated from `input` state (§9.2 perf fix) — memoized so a keystroke in the
 // input bar doesn't re-render/re-parse rich text for every mounted turn block.
-const TurnBlock = memo(function TurnBlock({ entry, globalIndex, onTapTerm, registerRef }: TurnBlockProps) {
+const TurnBlock = memo(function TurnBlock({ entry, globalIndex, onTapTerm, registerRef, debugMode }: TurnBlockProps) {
   const setRef = useCallback((el: HTMLDivElement | null) => registerRef(globalIndex, el), [globalIndex, registerRef])
 
   if (entry.bang) {
@@ -414,7 +458,7 @@ const TurnBlock = memo(function TurnBlock({ entry, globalIndex, onTapTerm, regis
           ))}
         </div>
       )}
-      <DebugPayloadButton entry={entry} />
+      {debugMode && <DebugPayloadButton entry={entry} />}
     </div>
   )
 })
@@ -597,8 +641,10 @@ export default function Chronicle({
   onOpenCodex,
   onOpenCodexEntry,
   onOpenCodexCategory,
+  debugMode,
 }: ChronicleProps) {
   const [input, setInput] = useState('')
+  const [sessionPayloadOpen, setSessionPayloadOpen] = useState(false)
   const [bangHighlight, setBangHighlight] = useState(0)
   const [bangDismissed, setBangDismissed] = useState(false)
   const [slashHighlight, setSlashHighlight] = useState(0)
@@ -882,33 +928,40 @@ export default function Chronicle({
           gold accent lives only in the border. */}
       <header
         ref={headerRef}
-        className="fixed top-0 inset-x-0 z-10 flex items-center justify-between px-3 py-1.5 border-b shadow-2xl transition-[background,border-color] duration-700 ease-out"
+        className="fixed top-0 inset-x-0 z-10 flex flex-col border-b shadow-2xl transition-[background,border-color] duration-700 ease-out"
         style={{
-          paddingTop: 'max(0.375rem, env(safe-area-inset-top))',
           background: `rgba(11,13,20,${chromeAlpha})`,
           borderColor: `${stateAccent}45`,
         }}
       >
-        <button onClick={onOpenMenu} aria-label="Menu" className="w-7 h-7 rounded-full inline-flex items-center justify-center text-[#e8ca8a] hover:bg-white/10">
-          <Menu size={16} />
-        </button>
-        <div className="font-display text-xs font-semibold tracking-wide text-center flex-1 truncate px-2 text-[#e8ca8a]">
-          {title}
-        </div>
-        <button
-          onClick={() => downloadText(`tale-dives-session-payloads-${slugify(title)}-${Date.now()}.txt`, buildSessionPayloadExport(log, title))}
-          aria-label="Export Session Payloads"
-          title="Export every turn's request/response payload since turn 0, for debugging"
-          className="w-7 h-7 rounded-full inline-flex items-center justify-center text-[#e8ca8a] hover:bg-white/10"
+        <div
+          className="flex items-center justify-between px-3 py-1.5"
+          style={{ paddingTop: 'max(0.375rem, env(safe-area-inset-top))' }}
         >
-          <Download size={16} />
-        </button>
-        <button onClick={onOpenCodex} aria-label="Codex" className="w-7 h-7 rounded-full inline-flex items-center justify-center text-[#e8ca8a] hover:bg-white/10">
-          <Library size={16} />
-        </button>
-        <button onClick={onOpenSettings} aria-label="Settings" className="w-7 h-7 rounded-full inline-flex items-center justify-center text-[#e8ca8a] hover:bg-white/10">
-          <SettingsIcon size={16} />
-        </button>
+          <button onClick={onOpenMenu} aria-label="Menu" className="w-7 h-7 rounded-full inline-flex items-center justify-center text-[#e8ca8a] hover:bg-white/10">
+            <Menu size={16} />
+          </button>
+          <div className="font-display text-xs font-semibold tracking-wide text-center flex-1 truncate px-2 text-[#e8ca8a]">
+            {title}
+          </div>
+          {debugMode && (
+            <button
+              onClick={() => setSessionPayloadOpen((v) => !v)}
+              aria-label="Session Payload"
+              title="This session's turn-by-turn request/response/finishReason since turn 0, for debugging"
+              className={`w-7 h-7 rounded-full inline-flex items-center justify-center hover:bg-white/10 ${sessionPayloadOpen ? 'text-rose' : 'text-[#e8ca8a]'}`}
+            >
+              <Bug size={16} />
+            </button>
+          )}
+          <button onClick={onOpenCodex} aria-label="Codex" className="w-7 h-7 rounded-full inline-flex items-center justify-center text-[#e8ca8a] hover:bg-white/10">
+            <Library size={16} />
+          </button>
+          <button onClick={onOpenSettings} aria-label="Settings" className="w-7 h-7 rounded-full inline-flex items-center justify-center text-[#e8ca8a] hover:bg-white/10">
+            <SettingsIcon size={16} />
+          </button>
+        </div>
+        {debugMode && sessionPayloadOpen && <SessionPayloadPanel log={log} title={title} />}
       </header>
 
       <div
@@ -935,7 +988,7 @@ export default function Chronicle({
           </button>
         )}
         {visibleLog.map((entry, i) => (
-          <TurnBlock key={windowStart + i} entry={entry} globalIndex={windowStart + i} onTapTerm={onTapTerm} registerRef={registerRef} />
+          <TurnBlock key={windowStart + i} entry={entry} globalIndex={windowStart + i} onTapTerm={onTapTerm} registerRef={registerRef} debugMode={debugMode} />
         ))}
         {busy && <p className="font-narrative italic text-sm opacity-50">The thread of fate is being woven...</p>}
         {lastLogEntry?.act && lastLogEntry.act.length > 0 && !busy && !error && (

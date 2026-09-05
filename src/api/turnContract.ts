@@ -41,7 +41,7 @@ NARRATIVE & TONE RULES:
 MECHANICS & GROUNDING DEFENSE:
 1. Numeric Fidelity: No dice, checks, or hidden randomness anywhere. Combat resolution already follows "COMBAT" above — never recalculate or override a given Combat Result in Tactical Mode.
 2. Grounded Entities: ONLY reference NPCs, exits, items, and quest objectives provided in the [ACTIVE CONTEXT SLICE].
-2a. Established Detail Consistency: Once a named NPC's held weapon, visible gear, or other described physical detail is established in the story, keep it exactly consistent on every later mention — never silently swap or reinvent it under time pressure to produce a vivid re-description. Only change it when the narration itself depicts a reason (they drew a different weapon, were disarmed, changed clothes).
+2a. Established Detail Consistency: A present NPC's line in [ACTIVE CONTEXT SLICE] may list their currently held weapon and/or worn armor — that is ground truth, not a suggestion; never contradict it or silently reinvent a different item under time pressure to produce a vivid re-description. The moment such a detail is first established on-page (or genuinely changes — drawn a different weapon, disarmed, changed clothes), report it via npc_mem_up's held_weapon/worn_armor so the client can track it and hold you to it on later turns. Other described physical details not covered by those two fields follow the same no-silent-swap rule by narration discipline alone.
 3. Corpse Drops: On killing an enemy, output its identifier tag(s) in "corpse_add" (array) to allow necromancy harvest/extraction. Include every enemy killed this turn, not just one.
 4. Currency Storage: Deduct or reward currency in base copper ("c" delta field).
 5. Permanent Stat Grants: Only use "stat_grant" for a genuine permanent boost (a blessing, a hard-won transformation) — never for ordinary damage/healing, which belongs in "deltas". Supply only the attribute/pool and the amount; never compute or state a resulting HP/MP/ST max yourself, the client derives that.
@@ -173,6 +173,16 @@ export const TURN_SCHEMA = {
           trust_delta: { type: 'INTEGER', minimum: -20, maximum: 20 },
           deed: { type: 'STRING' },
           mem_summary: { type: 'STRING' },
+          held_weapon: {
+            type: 'STRING',
+            description:
+              "This NPC's currently held/wielded weapon — only send when it is first established on-page or visibly changes (drawn, sheathed for a different one, lost, disarmed). Omit on every turn where it hasn't changed; the client remembers the last value and restates it as ground truth.",
+          },
+          worn_armor: {
+            type: 'STRING',
+            description:
+              "This NPC's currently worn armor or other notable gear — same rule as held_weapon: only send on first establishment or a visible change, omit otherwise.",
+          },
         },
       },
       description: 'One entry per present NPC affected this turn.',

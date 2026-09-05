@@ -61,6 +61,8 @@ export function applyNpcUpdates(
         stage: stageFor(affection),
         deeds: u.deed ? [...prev.deeds, u.deed] : prev.deeds,
         memSummary: u.mem_summary || prev.memSummary,
+        heldWeapon: u.held_weapon || prev.heldWeapon,
+        wornArmor: u.worn_armor || prev.wornArmor,
         lastSeenLocId: locId ?? prev.lastSeenLocId,
       },
     }
@@ -78,7 +80,10 @@ export function describePresentNpc(entry: NpcEntry): string {
   const identity = [entry.gender && `Gender: ${entry.gender}`, entry.age !== undefined && `Age: ${entry.age}`]
     .filter(Boolean)
     .join(' | ')
-  return `NPC: ${entry.name}${identity ? ` | ${identity}` : ''} | Stage: ${entry.stage} | Trust: ${entry.trust} | Mem: "${entry.memSummary}"`
+  const gear = [entry.heldWeapon && `Wielding: ${entry.heldWeapon}`, entry.wornArmor && `Wearing: ${entry.wornArmor}`]
+    .filter(Boolean)
+    .join(' | ')
+  return `NPC: ${entry.name}${identity ? ` | ${identity}` : ''} | Stage: ${entry.stage} | Trust: ${entry.trust}${gear ? ` | ${gear}` : ''} | Mem: "${entry.memSummary}"`
 }
 
 export function presentNpcs(npcs: Dict<NpcEntry> | undefined, locId: string): NpcEntry[] {

@@ -1165,6 +1165,8 @@ export default function Codex({
       deeds: typeof draft.deeds === 'string' ? draft.deeds.split(',').map((s: string) => s.trim()).filter(Boolean) : draft.deeds,
       role: draft.role?.trim() || undefined,
       appearance: draft.appearance?.trim() || undefined,
+      heldWeapon: draft.heldWeapon?.trim() || undefined,
+      wornArmor: draft.wornArmor?.trim() || undefined,
       personality: draft.personality?.trim() || undefined,
       voiceNotes: draft.voiceNotes?.trim() || undefined,
       factionId: draft.factionId || null,
@@ -1677,6 +1679,8 @@ export default function Codex({
                 </select>
               </label>
               <TextField label="Appearance" value={draft.appearance ?? ''} onChange={(v) => setDraft((d) => ({ ...d, appearance: v }))} textarea placeholder="Physical description…" />
+              <TextField label="Held Weapon" value={draft.heldWeapon ?? ''} onChange={(v) => setDraft((d) => ({ ...d, heldWeapon: v }))} placeholder="Currently wielded weapon…" />
+              <TextField label="Worn Armor" value={draft.wornArmor ?? ''} onChange={(v) => setDraft((d) => ({ ...d, wornArmor: v }))} placeholder="Currently worn armor/gear…" />
               <TextField label="Personality" value={draft.personality ?? ''} onChange={(v) => setDraft((d) => ({ ...d, personality: v }))} textarea placeholder="Brief trait summary…" />
               <TextField label="Voice Notes" value={draft.voiceNotes ?? ''} onChange={(v) => setDraft((d) => ({ ...d, voiceNotes: v }))} textarea placeholder="How they speak — a steering note for your own reference." />
               <TextField label="Memory" value={draft.memSummary ?? ''} onChange={(v) => setDraft((d) => ({ ...d, memSummary: v }))} textarea />
@@ -1714,9 +1718,11 @@ export default function Codex({
                   <StatBar label="Affection" value={npcs[entryId].affection} />
                 </div>
               </SectionCard>
-              {(npcs[entryId].appearance || npcs[entryId].personality || npcs[entryId].voiceNotes) && (
+              {(npcs[entryId].appearance || npcs[entryId].heldWeapon || npcs[entryId].wornArmor || npcs[entryId].personality || npcs[entryId].voiceNotes) && (
                 <SectionCard accent={CATEGORY_ACCENTS.npcs} icon={ScrollText} title="Persona">
                   {npcs[entryId].appearance && <FieldRow label="Appearance" value={npcs[entryId].appearance} />}
+                  {npcs[entryId].heldWeapon && <FieldRow label="Held Weapon" value={npcs[entryId].heldWeapon} />}
+                  {npcs[entryId].wornArmor && <FieldRow label="Worn Armor" value={npcs[entryId].wornArmor} />}
                   {npcs[entryId].personality && <FieldRow label="Personality" value={npcs[entryId].personality} />}
                   {npcs[entryId].voiceNotes && <FieldRow label="Voice Notes" value={npcs[entryId].voiceNotes} />}
                 </SectionCard>

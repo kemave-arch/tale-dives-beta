@@ -1,5 +1,33 @@
 # Tale Dives — Project Revision Notes
 
+**Last updated:** 2026-09-05, Claude Code on the web — built the structural fix
+flagged (but not yet built) in the previous entry: NPCs now have real, tracked
+gear. Added `heldWeapon`/`wornArmor` to `NpcEntry` (`types.ts`), a matching
+`held_weapon`/`worn_armor` channel on `npc_mem_up` (`turnContract.ts`'s
+`TURN_SCHEMA`, each field-described as "only send when first established or
+visibly changed" — the same send-once-not-every-turn economy already used for
+`quest_update.description`), storage in `applyNpcUpdates` (`lib/npcs.ts`, only
+overwriting when the model actually sends a new value), and a restated
+`Wielding: X | Wearing: Y` fragment in `describePresentNpc` so it rides along
+in the existing per-turn "Present NPC" context-slice line — mirroring exactly
+how the player's own equipment is restated every turn via `describeEquipped`
+in `jitContext.ts`, no changes needed there since it just consumes
+`describePresentNpc`'s return value. Rule 2a (Established Detail Consistency)
+rewritten to point at this as the actual ground truth — the NPC's context-slice
+line, not just narration discipline — and to instruct the model to report
+first-establishment/changes through the new fields. Also wired into Codex CRUD
+(`Codex.tsx`): "Held Weapon"/"Worn Armor" text fields in the NPC edit form and
+matching rows in the detail view's Persona card, so a player can manually set
+or correct an NPC's gear the same way `appearance`/`role` already work.
+Live-verified: called `buildContextSlice` directly against a seeded NPC with
+both fields set and confirmed the "Wielding: Rust-Pitted Spear | Wearing:
+Dented Chainmail" fragment appears in the actual context-slice string sent to
+the model; separately confirmed via the Codex UI that both fields render in
+the NPC detail view and are editable in the edit form. This directly prevents
+the reported bug's mechanism — an NPC's held weapon will now be present as an
+explicit ground-truth line every turn they're on-page, not left to drift from
+unanchored conversation history alone.
+
 **Last updated:** 2026-09-05, Claude Code on the web — a real, upsetting live payload:
 an NPC's established weapon (`>Rust-Pitted Spear<`, turns 0-1) silently became a
 different one (`>Iron-Tipped Halberd<`, turn 4) with zero in-story explanation — a

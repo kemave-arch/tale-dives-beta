@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import {
   Award,
   BookMarked,
@@ -57,6 +57,9 @@ export function WorldDetailModal({
   const [mobileTab, setMobileTab] = useState<'overview' | 'depth' | 'voice'>('overview')
   const [depthSubTab, setDepthSubTab] = useState<'all' | 'lore' | 'power' | 'factions'>('all')
 
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
   // Mobile hardware/gesture back-key handler: close modal rather than exiting website
   useEffect(() => {
     const modalId = 'preset_world_' + Date.now()
@@ -65,7 +68,7 @@ export function WorldDetailModal({
 
     const handlePopState = () => {
       closedByPopState = true
-      onClose()
+      onCloseRef.current()
     }
 
     window.addEventListener('popstate', handlePopState)
@@ -75,12 +78,14 @@ export function WorldDetailModal({
         window.history.back()
       }
     }
-  }, [onClose])
+  }, [])
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-3 sm:p-5"
-      onClick={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
     >
       <div
         className={`${GLASS_SURFACE} w-full max-w-3xl h-[86dvh] sm:h-auto sm:max-h-[88vh] flex flex-col rounded-2xl border border-[#f0ca65]/40 bg-[#120e1b]/95 shadow-[0_0_35px_rgba(240,202,101,0.2)] text-ink overflow-hidden`}
@@ -557,6 +562,9 @@ export function ProtagonistDetailModal({
 }: ProtagonistDetailModalProps) {
   const [mobileTab, setMobileTab] = useState<'profile' | 'hooks' | 'origin'>('profile')
 
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
   // Mobile hardware/gesture back-key handler: close modal rather than exiting website
   useEffect(() => {
     const modalId = 'preset_protag_' + Date.now()
@@ -565,7 +573,7 @@ export function ProtagonistDetailModal({
 
     const handlePopState = () => {
       closedByPopState = true
-      onClose()
+      onCloseRef.current()
     }
 
     window.addEventListener('popstate', handlePopState)
@@ -575,7 +583,7 @@ export function ProtagonistDetailModal({
         window.history.back()
       }
     }
-  }, [onClose])
+  }, [])
 
   const className =
     protagonist.className ||
@@ -593,7 +601,9 @@ export function ProtagonistDetailModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-3 sm:p-5"
-      onClick={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
     >
       <div
         className={`${GLASS_SURFACE} w-full max-w-3xl h-[86dvh] sm:h-auto sm:max-h-[88vh] flex flex-col rounded-2xl border border-[#f0ca65]/40 bg-[#120e1b]/95 shadow-[0_0_35px_rgba(240,202,101,0.2)] text-ink overflow-hidden`}

@@ -52,6 +52,7 @@ const KEYWORD_CATEGORY_TO_CODEX: Record<KeywordLink['category'], CategoryId> = {
   quest: 'quests',
   beast: 'bestiary',
   skill: 'skills',
+  item: 'items',
 }
 
 // No 'settings' member: Settings is an overlay rendered ON TOP of whichever
@@ -1383,6 +1384,7 @@ export default function App() {
         quests={game.quests}
         bestiary={game.bestiary}
         skills={game.skills ?? {}}
+        items={game.items ?? {}}
         crafting={game.crafting}
         apiSettings={apiSettings}
         proseDepth={game.proseDepth}

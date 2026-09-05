@@ -4,7 +4,7 @@ import {
   Menu, Settings as SettingsIcon, Send, Star, BookOpen, Library, Sparkle, X, ExternalLink,
   ChevronUp, ChevronDown, ChevronsDown, History, Pause, Users, Backpack, Map as MapIcon, ShieldCheck, Target, Skull, HelpCircle,
   Unlock, Lock, Repeat, Hammer, Ghost, Compass, ScrollText, User, Swords, Sparkles,
-  AlertTriangle, Copy, Check, RotateCcw, Bug, Pencil, MoreHorizontal, Trash2,
+  AlertTriangle, Copy, Check, RotateCcw, Bug, Pencil, MoreHorizontal, Trash2, Heart, Zap, Activity, Coins,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { renderNarrative, type TapTermHandler } from '../lib/richText.tsx'
@@ -16,8 +16,16 @@ import { isHidden } from '../lib/discovery.ts'
 import type { CategoryId } from './Codex.tsx'
 import type {
   ApiSettings, BestiaryEntry, CombatState, CraftingJob, FactionEntry, GameTime, KeywordLink, LocationEntry, LogEntry, LoreEntry, NpcEntry, Player,
-  ProseDepthConfig, QuestEntry, SkillEntry, SlashCommand,
+  ProseDepthConfig, QuestEntry, SkillEntry, SlashCommand, ItemEntry, StatBonus,
 } from '../types.ts'
+
+function statBonusText(bonus: StatBonus | undefined): string | null {
+  if (!bonus) return null
+  const parts = Object.entries(bonus)
+    .filter(([, v]) => v)
+    .map(([k, v]) => `${v! > 0 ? '+' : ''}${v} ${k.toUpperCase()}`)
+  return parts.length ? parts.join(', ') : null
+}
 
 interface ChronicleProps {
   title: string
@@ -34,6 +42,7 @@ interface ChronicleProps {
   quests: Record<string, QuestEntry>
   bestiary: Record<string, BestiaryEntry>
   skills: Record<string, SkillEntry>
+  items?: Record<string, ItemEntry>
   crafting?: CraftingJob[]
   apiSettings?: ApiSettings
   proseDepth?: ProseDepthConfig
@@ -57,7 +66,7 @@ interface ChronicleProps {
 }
 
 const WINDOW_SIZE = 20 // §9.2 — cap how many turns stay mounted; older ones load in on demand
-const INPUT_MAX_HEIGHT = 88
+const INPUT_MAX_HEIGHT = 160
 
 // §6.5 Fantasy Radial Menu — a fan of shortcuts arcing upward from the FAB so
 // it never covers the input tray below. Angles are standard math degrees
@@ -71,18 +80,32 @@ function radialPos(index: number, count: number): { x: number; y: number } {
   return { x: Math.cos(rad) * RADIAL_RADIUS, y: -Math.sin(rad) * RADIAL_RADIUS }
 }
 
-function PoolBar({ label, value, max, colorVar }: { label: string; value: number; max: number; colorVar: string }) {
+function PoolBar({
+  icon: Icon,
+  label,
+  value,
+  max,
+  colorVar,
+}: {
+  icon: LucideIcon
+  label: string
+  value: number
+  max: number
+  colorVar: string
+}) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0
   return (
-    <div className="flex items-center gap-1.5 flex-1 min-w-0">
-      <span className="w-5 shrink-0 font-mono text-[10px] font-semibold" style={{ color: colorVar }}>
-        {label}
-      </span>
-      {/* §mobile — numbers only, no bar; the bar returns at sm: and up. */}
-      <div className="hidden sm:block flex-1 h-1.5 rounded-full bg-white/15 overflow-hidden min-w-[24px]">
-        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: colorVar }} />
+    <div className="flex items-center gap-1.5 flex-1 min-w-0" title={`${label}: ${value}/${max}`}>
+      <div className="flex items-center gap-1 shrink-0">
+        <Icon size={12} style={{ color: colorVar }} className="shrink-0" />
+        <span className="font-mono text-[10px] font-bold uppercase tracking-wider" style={{ color: colorVar }}>
+          {label}
+        </span>
       </div>
-      <span className="shrink-0 font-mono text-[10px] font-semibold" style={{ color: colorVar }}>
+      <div className="hidden sm:block flex-1 h-1.5 rounded-full bg-white/15 overflow-hidden min-w-[20px]">
+        <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pct}%`, background: colorVar }} />
+      </div>
+      <span className="shrink-0 font-mono text-[10px] font-semibold tabular-nums" style={{ color: colorVar }}>
         {value}/{max}
       </span>
     </div>
@@ -91,13 +114,17 @@ function PoolBar({ label, value, max, colorVar }: { label: string; value: number
 
 function CurrencyBadge({ copper }: { copper: number }) {
   const { p, g, s, c } = formatCurrency(copper)
-  const parts = [
-    p > 0 && `${p}P`,
-    g > 0 && `${g}G`,
-    (s > 0 || (p === 0 && g === 0)) && `${s}S`,
-    (c > 0 || (p === 0 && g === 0 && s === 0)) && `${c}C`,
-  ].filter(Boolean)
-  return <span className="font-mono text-[10px] text-[#e8ca8a] shrink-0">{parts.join(' ')}</span>
+  return (
+    <div className="flex items-center gap-1.5 shrink-0 font-mono text-[10px] font-semibold bg-black/30 border border-white/10 px-2 py-0.5 rounded-full">
+      <Coins size={12} className="text-[#fbbf24] shrink-0" />
+      <div className="flex items-center gap-1">
+        {p > 0 && <span className="text-[#e2e8f0]">{p}<span className="text-[#cbd5e1] text-[9px] font-normal">P</span></span>}
+        {g > 0 && <span className="text-[#fbbf24]">{g}<span className="text-[#f59e0b] text-[9px] font-normal">G</span></span>}
+        {(s > 0 || (p === 0 && g === 0)) && <span className="text-[#cbd5e1]">{s}<span className="text-[#94a3b8] text-[9px] font-normal">S</span></span>}
+        {(c > 0 || (p === 0 && g === 0 && s === 0)) && <span className="text-[#f97316]">{c}<span className="text-[#ea580c] text-[9px] font-normal">C</span></span>}
+      </div>
+    </div>
+  )
 }
 
 // §6.6 Bang Commands — in-game-styled framing per category (icon + a dossier
@@ -726,6 +753,7 @@ export default function Chronicle({
   quests,
   bestiary,
   skills,
+  items,
   crafting,
   apiSettings,
   proseDepth,
@@ -1008,15 +1036,15 @@ export default function Chronicle({
   const onTapTerm = useCallback<TapTermHandler>(
     (term, category) => {
       const id = slugify(term)
-      const dict = { npc: npcs, loc: locations, faction: factions, lore, quest: quests, beast: bestiary, skill: skills }[category]
+      const dict = { npc: npcs, loc: locations, faction: factions, lore, quest: quests, beast: bestiary, skill: skills, item: items }[category]
       if (dict?.[id]) setPopup({ category, id })
     },
-    [npcs, locations, factions, lore, quests, bestiary, skills],
+    [npcs, locations, factions, lore, quests, bestiary, skills, items],
   )
 
   const popupEntry =
     popup &&
-    ({ npc: npcs, loc: locations, faction: factions, lore, quest: quests, beast: bestiary, skill: skills }[popup.category]?.[popup.id] as
+    ({ npc: npcs, loc: locations, faction: factions, lore, quest: quests, beast: bestiary, skill: skills, item: items }[popup.category]?.[popup.id] as
       | NpcEntry
       | LocationEntry
       | FactionEntry
@@ -1024,6 +1052,7 @@ export default function Chronicle({
       | QuestEntry
       | BestiaryEntry
       | SkillEntry
+      | ItemEntry
       | undefined)
 
   return (
@@ -1065,6 +1094,39 @@ export default function Chronicle({
             <SettingsIcon size={16} />
           </button>
         </div>
+
+        {/* Player Vitals HUD Bar placed below header bar */}
+        <div className="px-3 border-t border-white/10 bg-black/25 backdrop-blur-sm">
+          <div className="flex items-center justify-between py-0.5">
+            <button
+              onClick={() => setStatsCollapsed((v) => !v)}
+              aria-label={statsCollapsed ? 'Expand stats' : 'Collapse stats'}
+              className="w-full flex items-center justify-center leading-none text-white/40 hover:text-[#e8ca8a] py-0.5 cursor-pointer"
+            >
+              {statsCollapsed ? <ChevronDown size={11} /> : <ChevronUp size={11} />}
+            </button>
+          </div>
+          <div
+            className="grid transition-[grid-template-rows] duration-200 ease-out"
+            style={{ gridTemplateRows: statsCollapsed ? '0fr' : '1fr' }}
+          >
+            <div className="overflow-hidden">
+              <div className="px-1 pb-1.5 flex items-center gap-3 text-white/80 flex-wrap sm:flex-nowrap">
+                <PoolBar icon={Heart} label="HP" value={player.hp} max={player.hpMax} colorVar="#fb3552" />
+                <PoolBar icon={Zap} label="MP" value={player.mp} max={player.mpMax} colorVar="#22d3ee" />
+                <PoolBar icon={Activity} label="ST" value={player.st} max={player.stMax} colorVar="#34d399" />
+                <CurrencyBadge copper={player.copper} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {combat?.active && (
+          <div className="border-t border-rose/30 px-4 py-1 text-white/80 bg-rose-950/40">
+            <PoolBar icon={Swords} label={combat.enemyName?.slice(0, 3).toUpperCase() ?? 'ENM'} value={combat.enemyHp ?? 0} max={combat.enemyHpMax ?? 1} colorVar="#e11d48" />
+          </div>
+        )}
+
         {debugMode && sessionPayloadOpen && <SessionPayloadPanel log={log} title={title} />}
       </header>
 
@@ -1076,7 +1138,7 @@ export default function Chronicle({
         // paper, i.e. invisible. This is the one place in the app that
         // deliberately inverts to a light ground.
         className="parchment-surface fixed overflow-y-auto bg-parchment parchment-texture rounded-xl pl-4 pr-6 space-y-4"
-        style={{ top: 6, bottom: 6, left: 6, right: 6, paddingTop: headerHeight + 16, paddingBottom: bottomHeight + 16 }}
+        style={{ top: 6, bottom: 6, left: 6, right: 6, paddingTop: headerHeight + 16, paddingBottom: bottomHeight + 24 }}
       >
         {log.length === 0 && (
           <p className="font-narrative italic text-sm opacity-60">
@@ -1242,36 +1304,7 @@ export default function Chronicle({
           borderColor: `${stateAccent}45`,
         }}
       >
-        {combat?.active && (
-          <div className="border-b border-rose/30 px-4 py-1 text-white/80">
-            <PoolBar label={combat.enemyName?.slice(0, 3).toUpperCase() ?? 'ENM'} value={combat.enemyHp ?? 0} max={combat.enemyHpMax ?? 1} colorVar="#e11d48" />
-          </div>
-        )}
-
-        <div className="px-3">
-          <button
-            onClick={() => setStatsCollapsed((v) => !v)}
-            aria-label={statsCollapsed ? 'Expand stats' : 'Collapse stats'}
-            className="w-full flex items-center justify-center leading-none text-white/40 hover:text-[#e8ca8a]"
-          >
-            {statsCollapsed ? <ChevronUp size={9} /> : <ChevronDown size={9} />}
-          </button>
-          <div
-            className="grid transition-[grid-template-rows] duration-200 ease-out"
-            style={{ gridTemplateRows: statsCollapsed ? '0fr' : '1fr' }}
-          >
-            <div className="overflow-hidden">
-              <div className="px-1 pb-0.5 flex items-center gap-3 text-white/80">
-                <PoolBar label="HP" value={player.hp} max={player.hpMax} colorVar="#fb3552" />
-                <PoolBar label="MP" value={player.mp} max={player.mpMax} colorVar="#22d3ee" />
-                <PoolBar label="ST" value={player.st} max={player.stMax} colorVar="#34d399" />
-                <CurrencyBadge copper={player.copper} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="relative px-3 pt-0.5 pb-1.5 flex gap-2 items-end">
+        <div className="relative px-3 pt-2 pb-2.5 flex gap-2 items-end">
           {/* §6.6 Command Palette — pops up above the input while the "!word"
               itself is being typed; arrow keys/Enter navigate it, matching
               regular typed text once a target follows the space. */}
@@ -1403,69 +1436,194 @@ export default function Chronicle({
 
       {popup && popupEntry && (
         <div
-          className="fixed inset-0 z-20 flex items-center justify-center bg-black/30 px-6"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 sm:p-6"
           onClick={() => setPopup(null)}
         >
-          <div className="glass-panel glow-ring rounded-2xl p-4 w-full max-w-xs" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-display font-bold text-sm text-gold-primary flex items-center gap-1.5">
-                {isHidden(popupEntry) && <Lock size={13} />}
-                {isHidden(popupEntry) ? '???' : popupEntry.name}
+          <div
+            className="relative bg-[#120d1b] border border-[#c89d51]/50 shadow-[0_20px_50px_rgba(0,0,0,0.95),0_0_30px_rgba(200,157,81,0.2)] rounded-xl p-5 sm:p-6 w-full max-w-sm sm:max-w-md overflow-hidden text-left"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Ambient Background Watermark / Glow Accent */}
+            <div className="absolute -top-16 -right-16 w-36 h-36 bg-[#d4af37]/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-10 -right-10 w-32 h-32 text-[#c89d51]/5 pointer-events-none">
+              <svg viewBox="0 0 100 100" fill="currentColor">
+                <path d="M50 0 C60 30, 70 40, 100 50 C70 60, 60 70, 50 100 C40 70, 30 60, 0 50 C30 40, 40 30, 50 0 Z" />
+              </svg>
+            </div>
+
+            {/* Header: Title + Lock + Close */}
+            <div className="flex items-start justify-between gap-3 pr-1">
+              <h3 className="font-serif text-xl sm:text-2xl font-normal text-[#f5ebd7] tracking-wide flex items-center gap-2 drop-shadow-sm">
+                {'discovery' in popupEntry && isHidden(popupEntry) && <Lock size={18} className="text-[#c89d51] shrink-0" />}
+                <span>{'discovery' in popupEntry && isHidden(popupEntry) ? '???' : popupEntry.name}</span>
               </h3>
-              <button onClick={() => setPopup(null)} aria-label="Close" className="text-ink-muted hover:text-ink">
-                <X size={16} />
+              <button
+                onClick={() => setPopup(null)}
+                aria-label="Close"
+                className="text-[#a89575] hover:text-[#f5ebd7] transition-colors p-1.5 -mr-1.5 -mt-1 rounded-md hover:bg-white/5 cursor-pointer"
+              >
+                <X size={18} />
               </button>
             </div>
-            {/* §5.12 — hidden entries never show real content outside CRUD Edit Mode. */}
-            {isHidden(popupEntry) ? (
-              <p className="font-narrative text-xs italic text-ink-muted">
+
+            {/* Ornamental Gold Line with Flourish */}
+            <div className="flex items-center gap-1 my-3">
+              <svg className="w-7 h-5 text-[#c89d51] shrink-0 -mr-1" viewBox="0 0 28 20" fill="currentColor">
+                <path d="M 2 10 C 2 6, 6 3, 10 3 C 13 3, 15 5, 14 8 C 13 11, 10 11, 9 9 C 8 7, 10 6, 11 6 C 10 4, 7 4, 5 8 C 3 12, 7 15, 12 14 C 16 13, 18 10, 22 10 L 28 10 L 28 11 L 22 11 C 18 11, 16 14, 12 15 C 6 16, 2 14, 2 10 Z" />
+                <circle cx="10" cy="8" r="1.5" />
+              </svg>
+              <div className="h-[1.5px] flex-1 bg-gradient-to-r from-[#c89d51] via-[#c89d51]/70 to-transparent" />
+            </div>
+
+            {/* Content Body */}
+            {'discovery' in popupEntry && isHidden(popupEntry) ? (
+              <p className="font-serif text-sm italic text-[#b8a892] leading-relaxed my-3">
                 {popupEntry.discovery?.teaser || 'Not yet discovered.'}
               </p>
             ) : (
-            <div className="font-narrative text-xs space-y-1 text-ink-muted">
-              {popup.category === 'npc' && 'stage' in popupEntry && (
-                <>
-                  <p>{popupEntry.stage} · Trust {popupEntry.trust} · Affection {popupEntry.affection}</p>
-                  {popupEntry.memSummary && <p className="italic">"{popupEntry.memSummary}"</p>}
-                </>
-              )}
-              {popup.category === 'loc' && 'region' in popupEntry && (
-                <p>{popupEntry.region} · Danger: {popupEntry.dangerLevel} · {popupEntry.standing}</p>
-              )}
-              {popup.category === 'faction' && 'repTier' in popupEntry && (
-                <p>Reputation {popupEntry.repTier > 0 ? '+' : ''}{popupEntry.repTier}</p>
-              )}
-              {popup.category === 'lore' && 'category' in popupEntry && <p>{popupEntry.category}</p>}
-              {popup.category === 'skill' && (
-                <>
-                  {'description' in popupEntry && popupEntry.description && <p>{popupEntry.description}</p>}
-                  {'mpCost' in popupEntry && (popupEntry.mpCost || popupEntry.stCost) && (
-                    <p className="font-mono">
-                      {popupEntry.mpCost ? `${popupEntry.mpCost} MP` : ''}
-                      {popupEntry.mpCost && popupEntry.stCost ? ' · ' : ''}
-                      {popupEntry.stCost ? `${popupEntry.stCost} ST` : ''}
-                    </p>
+              <div className="space-y-3">
+                {/* Attribute Badges Row */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {popup.category === 'item' && 'type' in popupEntry && (
+                    <>
+                      <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
+                        <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Type</span>
+                        <span className="font-sans font-bold text-xs text-[#f5ebd7] capitalize">{popupEntry.type}</span>
+                      </div>
+                      {popupEntry.rarity && (
+                        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
+                          <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Rarity</span>
+                          <span className="font-sans font-bold text-xs text-[#f5ebd7]">{popupEntry.rarity}</span>
+                        </div>
+                      )}
+                      {popupEntry.statBonus && statBonusText(popupEntry.statBonus) && (
+                        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
+                          <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Bonus</span>
+                          <span className="font-sans font-bold text-xs text-[#f5ebd7]">{statBonusText(popupEntry.statBonus)}</span>
+                        </div>
+                      )}
+                      {popupEntry.value !== undefined && (
+                        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
+                          <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Worth</span>
+                          <span className="font-sans font-bold text-xs text-[#f5ebd7]">{popupEntry.value} C</span>
+                        </div>
+                      )}
+                    </>
                   )}
-                </>
-              )}
-              {popup.category === 'quest' && 'status' in popupEntry && <p>{popupEntry.status ?? 'active'}</p>}
-              {popup.category === 'beast' && 'threatTier' in popupEntry && (
-                <p>
-                  {popupEntry.threatTier}
-                  {popupEntry.hpMax !== undefined && ` · HP ${popupEntry.hpMax}`}
-                  {popupEntry.dmgBase !== undefined && ` · DMG ${popupEntry.dmgBase}`}
-                </p>
-              )}
-            </div>
+
+                  {popup.category === 'npc' && 'stage' in popupEntry && (
+                    <>
+                      <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
+                        <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">{popupEntry.role || 'NPC'}</span>
+                        <span className="font-sans font-bold text-xs text-[#f5ebd7] capitalize">{popupEntry.stage}</span>
+                      </div>
+                      <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
+                        <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Trust</span>
+                        <span className="font-sans font-bold text-xs text-[#f5ebd7]">{popupEntry.trust}</span>
+                      </div>
+                      <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
+                        <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Affection</span>
+                        <span className="font-sans font-bold text-xs text-[#f5ebd7]">{popupEntry.affection}</span>
+                      </div>
+                    </>
+                  )}
+
+                  {popup.category === 'loc' && 'region' in popupEntry && (
+                    <>
+                      <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
+                        <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Region</span>
+                        <span className="font-sans font-bold text-xs text-[#f5ebd7]">{popupEntry.region || 'Realm'}</span>
+                      </div>
+                      <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
+                        <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Danger</span>
+                        <span className="font-sans font-bold text-xs text-[#f5ebd7]">{popupEntry.dangerLevel || 'Safe'}</span>
+                      </div>
+                    </>
+                  )}
+
+                  {popup.category === 'faction' && 'repTier' in popupEntry && (
+                    <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
+                      <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Reputation</span>
+                      <span className="font-sans font-bold text-xs text-[#f5ebd7]">{popupEntry.repTier > 0 ? '+' : ''}{popupEntry.repTier}</span>
+                    </div>
+                  )}
+
+                  {popup.category === 'skill' && (
+                    <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
+                      <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Cost</span>
+                      <span className="font-sans font-bold text-xs text-[#f5ebd7]">
+                        {'mpCost' in popupEntry && popupEntry.mpCost ? `${popupEntry.mpCost} MP` : ''}
+                        {'mpCost' in popupEntry && popupEntry.mpCost && 'stCost' in popupEntry && popupEntry.stCost ? ' · ' : ''}
+                        {'stCost' in popupEntry && popupEntry.stCost ? `${popupEntry.stCost} ST` : ''}
+                        {!('mpCost' in popupEntry && popupEntry.mpCost) && !('stCost' in popupEntry && popupEntry.stCost) ? 'Ability' : ''}
+                      </span>
+                    </div>
+                  )}
+
+                  {popup.category === 'beast' && 'threatTier' in popupEntry && (
+                    <>
+                      <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
+                        <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Threat</span>
+                        <span className="font-sans font-bold text-xs text-[#f5ebd7]">{popupEntry.threatTier}</span>
+                      </div>
+                      {popupEntry.hpMax !== undefined && (
+                        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
+                          <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">HP</span>
+                          <span className="font-sans font-bold text-xs text-[#f5ebd7]">{popupEntry.hpMax}</span>
+                        </div>
+                      )}
+                      {popupEntry.dmgBase !== undefined && (
+                        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
+                          <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">DMG</span>
+                          <span className="font-sans font-bold text-xs text-[#f5ebd7]">{popupEntry.dmgBase}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {popup.category === 'quest' && 'status' in popupEntry && (
+                    <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
+                      <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Status</span>
+                      <span className="font-sans font-bold text-xs text-[#f5ebd7] capitalize">{popupEntry.status ?? 'active'}</span>
+                    </div>
+                  )}
+
+                  {popup.category === 'lore' && 'category' in popupEntry && (
+                    <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
+                      <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Category</span>
+                      <span className="font-sans font-bold text-xs text-[#f5ebd7] capitalize">{popupEntry.category || 'General'}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Prose Text / Descriptions */}
+                <div className="font-serif text-sm leading-relaxed text-[#ded2be] space-y-2 pt-1">
+                  {'description' in popupEntry && popupEntry.description && (
+                    <p>{popupEntry.description}</p>
+                  )}
+                  {popup.category === 'npc' && 'memSummary' in popupEntry && popupEntry.memSummary && (
+                    <p className="italic text-[#c8b8a2]">"{popupEntry.memSummary}"</p>
+                  )}
+                  {popup.category === 'item' && 'loreText' in popupEntry && popupEntry.loreText && (
+                    <p className="italic text-[#c8b8a2]">{popupEntry.loreText}</p>
+                  )}
+                  {popup.category === 'loc' && 'notableFeatures' in popupEntry && popupEntry.notableFeatures && (
+                    <p className="text-xs text-[#b3a48e]"><strong className="text-[#d4af37] font-normal">Features:</strong> {popupEntry.notableFeatures}</p>
+                  )}
+                </div>
+              </div>
             )}
+
+            {/* Action Button */}
             <button
               onClick={() => {
                 onOpenCodexEntry(popup.category, popup.id)
                 setPopup(null)
               }}
-              className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-gold-accent/40 px-3 py-1.5 font-display text-xs text-gold-primary"
+              className="mt-5 w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-[#2a1b35] via-[#20142b] to-[#180e22] border border-[#c89d51]/50 hover:border-[#f0ca65] text-[#f0ca65] hover:text-[#fff5dd] font-serif text-xs font-semibold tracking-wider uppercase flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.98] cursor-pointer"
             >
-              Open in Codex <ExternalLink size={12} />
+              <span>Open in Codex</span>
+              <ExternalLink size={13} />
             </button>
           </div>
         </div>

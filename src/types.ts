@@ -547,7 +547,7 @@ export interface RunTurnResult {
 
 export interface KeywordLink {
   term: string
-  category: 'npc' | 'loc' | 'faction' | 'lore' | 'quest' | 'beast' | 'skill'
+  category: 'npc' | 'loc' | 'faction' | 'lore' | 'quest' | 'beast' | 'skill' | 'item'
 }
 
 export interface EnsureResult<T> {

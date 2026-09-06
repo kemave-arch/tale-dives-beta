@@ -1,6 +1,13 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-07, Claude Code on the web — restored the
+**Last updated:** 2026-09-07 — Refactored World SeedWeaver into clean, self-contained, modular sub-component modals (`ProtagonistNodeModal`, `WorldNodeModal`, `NpcNodeModal`, `NarrativeNodeModal`) in `/src/components/seedweaver/`. Key enhancements implemented:
+- **Protagonist Node**: Featured "Custom Class" option with custom stat allocation & growth rates, displayed AGI% on all archetype presets, reorganized Class/Archetype selection into the "Archetype & Skills" tab, and added Save/Load Protagonist Presets functionality.
+- **World Node**: Added Save/Load World Presets with search/filtering, inline CRUD editors for Locations, Factions, and Magic & Rules.
+- **NPC Node**: Built full Cast Pack manager with pre-built cast packs (Riders Quadrant, Courtly Intrigues, Frontier Outposts, High Fantasy Guild) and custom local cast pack saving/loading.
+- **Narrative Node**: Created dedicated prologue dive editor with pre-made narrative hooks (parapet crucible, ambush, courtly betrayal, etc.), combat mode selector, and Save/Load preset capabilities.
+- **Mobile UI & CRUD Polish**: Scaled down crowded buttons, simplified text labels, and added explicit Edit CRUD entry buttons for locations, factions, and skills. Verified build & typechecking (`tsc --noEmit && vite build`) passed clean.
+
+Previous note:
 mobile-first branch in `signInWithGoogle()` (`src/lib/googleDrive.ts`): a
 later commit had replaced "skip the popup entirely on a detected mobile
 browser" with "always try the popup first, only redirect if it throws a
@@ -979,6 +986,17 @@ New entries below, most recent first.
 - **2026-09-05** — Gateway Screen Header Cleanup (`src/screens/WorldSetup.tsx`, `src/screens/NewGame.tsx`): Removed redundant intermediate title/subtitle text blocks ("Seeding & Architecture" / "Hero Forge & Attributes") from both World Setup and Protagonist Setup gateway screens, allowing the two selection cards to sit cleanly directly below the main GlassHeader matching StoryMode.
   - **Verification**: Verified via `lint_applet` and `compile_applet`.
 
+- **2026-09-07** — World Seed Weaver: Isolated Constellation Node UI for Tale Creation (`src/screens/WorldSeedWeaver.tsx`, `src/screens/MainMenu.tsx`, `src/App.tsx`, `src/assets/images/`):
+  - **Isolated Constellation Node Architecture (`src/screens/WorldSeedWeaver.tsx`)**: Created a dedicated, creative alternative creation experience inspired by the node constellation concept. Arranged four primary celestial nodes (Protagonist, World, NPCs, and Narrative) with pulsing ley-lines, SVG glow filters, and dynamic readiness states.
+  - **Drill-Down Sub-Modals with Ergonomic Forms**:
+    - **Protagonist Node (Amber/Gold)**: Class selection, points allocation, derived vitals preview HUD, background/personality, and starting skills.
+    - **World Node (Cyan/Azure)**: Name, era/tech, power system, regional conflict, and key factions list.
+    - **NPCs Node (Emerald/Jade)**: Starting companions, rivals, commanders, weapons, personality traits, affection/trust sliders, and attitude tiers.
+    - **Narrative & Prologue Node (Arcane Violet)**: Opening scene hook, narrator tone, and combat mode selection. Kept locked behind glowing prerequisite checks until Protagonist, World, and NPCs are finalized.
+  - **Main Menu Entry**: Added a dedicated "World Seed Weaver" portal button in the Tales grid of `MainMenu.tsx` for direct access to this isolated creation flow.
+  - **Codex & Campaign Memory Integration (`src/App.tsx`)**: Extended `beginCampaign` to accept custom seeded NPCs from the node flow, merging them directly into the campaign's starting NPC registry alongside world seeding fallback data.
+  - **Verification**: Verified zero TypeScript errors via `lint_applet` (`tsc --noEmit`) and successful production compilation via `compile_applet`.
+
 - **2026-09-05** — Story Creation & World Seeding UX Overhaul: Gateway Selection, PC Multi-Column Layout, Attribute Point-Buy, and Faction/Skill CRUD (`src/screens/WorldSetup.tsx`, `src/screens/NewGame.tsx`, `src/types.ts`, `src/App.tsx`):
   - **Gateway Choice Architecture (`WorldSetup.tsx`, `NewGame.tsx`)**: Replaced initial auto-loaded master preset state with an intentional 2-card Gateway screen ("New World" / "New Protagonist" vs "Load Preset"). Players can start with a clean canvas or explore presets without having unrequested preset fields preloaded.
   - **PC Multi-Column Layout vs Mobile Subtabs (`WorldSetup.tsx`, `NewGame.tsx`)**:
@@ -1011,6 +1029,10 @@ New entries below, most recent first.
   - **Global Input Typography in Plus Jakarta Sans (`src/index.css`, `src/screens/Codex.tsx`)**: Declared `input, textarea, select, button { font-family: var(--font-sans); }` globally in `src/index.css` so form fields, filters, and text inputs default cleanly to Plus Jakarta Sans. Updated `TextField` in `Codex.tsx` to `font-sans`.
   - **Mobile Navigation Rubber-Band Fix (`src/App.tsx`, `src/index.css`)**: Eliminated the vertical slide translation (`y: 12` / `y: -12`) on top-level screen transitions in `App.tsx` in favor of a clean, pure opacity fade (`duration: 0.15`), and anchored the motion container to `w-full min-h-dvh flex flex-col`. Added explicit `window.scrollTo(0, 0)` on `navigateTo`. Set `overscroll-behavior-y: none` and `touch-action: pan-y` on `html, body, #root` to prevent browser rubber-band/bounce effects during mobile screen transitions.
   - **Verification**: Verified with `lint_applet` and `compile_applet`. Production build compiled cleanly.
+
+- **2026-09-06** — Chronicle Header & Input Bar Solid Dark Theme (`src/screens/Chronicle.tsx`, `src/index.css`):
+  - **Removed Glassmorphism and Transparency**: Switched the top header bar, mobile vitals HUD bar, elevated input bar tray, and text input area in `Chronicle.tsx` to solid opaque obsidian surfaces (`bg-[#0b0d14]`, `bg-[#0d0f18]`, and `bg-[#131622]`), eliminating `backdrop-blur-sm`, `backdrop-blur-md`, and dynamic alpha transparency.
+  - **Verification**: Verified with `lint_applet` and `compile_applet`. All builds green.
 
 - **2026-09-06** — Graphics Performance & GPU Compositing Optimization (`src/lib/cyclingBackground.tsx`, `src/index.css`):
   - **Background Crossfade Layer Isolation (`src/lib/cyclingBackground.tsx`)**: Promoted heavy full-screen background elements (`filter: blur(36px)`) onto hardware compositor layers with `transform: scale(1.15) translateZ(0)`, `willChange: opacity, transform`, and `backfaceVisibility: hidden`. Eliminated CPU paint invalidations during the 7-second background crossfade.
@@ -1083,7 +1105,22 @@ New entries below, most recent first.
   - **Codex Auto-Seeding on Turn 1 (`src/App.tsx`, `src/lib/store.ts`)**: Updated campaign initialization in `App.tsx` so all structured locations created/loaded in World Setup are seeded directly into `campaign.locations` in the Story's Locations Codex on Turn 1.
   - **Verification**: Verified with `lint_applet` and `compile_applet`. Production build compiled cleanly without errors.
 
-- **2026-09-05** — Save Presets Confirmation Prompts for World and Protagonist Setup (`src/screens/WorldSetup.tsx`, `src/screens/NewGame.tsx`, `src/lib/useConfirm.tsx`):
+- **2026-09-06** — Alternative Tale Weaver UI Layout & Full Node CRUD Architecture (`src/screens/WorldSeedWeaver.tsx`, `src/screens/MainMenu.tsx`, `src/App.tsx`, `src/types.ts`):
+  - **Isolated Constellation Node-Based Tale Creation UI** (`src/screens/WorldSeedWeaver.tsx`):
+    - Designed and implemented the "Seed Weaver" interface featuring 4 celestial interactive island nodes: **Protagonist Origin**, **World & Realm Codex**, **Key Cast & NPCs**, and **Narrative & Prologue Dive**.
+    - **Progressive Node Finalization Gate**: Gated the Narrative node so it remains locked with glowing status indicators until the Protagonist, World, and Cast nodes are finalized.
+    - **MainMenu Entry Point**: Added a dedicated "Weave from Constellation" action button on the Main Menu leading directly into the alternative workflow while preserving the classic step-by-step wizard.
+  - **Comprehensive In-Node CRUD Sub-Editors**:
+    - **Protagonist Node**: Full character identity, origin, stat sliders, and starting skill CRUD with an interactive edit sub-modal (name, tier, costs, description, flavor).
+    - **World Node**: Background lore, conflict, power systems, plus complete CRUD for starting Locations (name, region, danger rating, archetype, controlling faction, description) and Factions (name, attitude, territory, description).
+    - **Cast Node**: Multi-character dossier manager with CRUD sub-editor for each NPC (name, role, attitude, starting affection/trust sliders, held weapon, worn armor, demeanor, secrets/hooks, and backstory).
+    - **Narrative Node**: Opening situation hook, custom tale title validation, tone directives, and combat resolution engine selector (Narrative vs. Tactical).
+  - **Codex Data Pipeline Integration & Mobile Optimization** (`src/App.tsx`):
+    - Configured `beginCampaign` to ingest all seeded locations, factions, and NPCs, registering them into initial Codex registries without schema collisions.
+    - Scaled down action buttons and tightened labels across mobile viewports to prevent layout crowding.
+  - **Verification**: Verified via `lint_applet` (`tsc --noEmit`) and `compile_applet` (`vite build`). All builds compiled cleanly with 0 errors.
+
+
   - **In-App Confirmation Dialog Integration**: Added confirmation prompts when clicking "Save Preset" or "Save as New Preset" in both World Setup (`src/screens/WorldSetup.tsx`) and Protagonist Setup (`src/screens/NewGame.tsx`), using the exact same `useConfirm` modal component and styling as the "Exit to Title Screen" dialog.
   - **Modal Structure**: Renders a glass panel backdrop with `AlertTriangle` icon, custom prompt text ("Save changes to this World preset?", "Save current world as a new World preset?", "Save changes to this Protagonist preset?", "Save current hero as a new Protagonist preset?"), and explicit **Cancel** / **Confirm** action buttons.
   - **Preset Deletion Prompt Normalization**: Converted native `confirm()` dialogs on preset detail deletion cards to `await confirm(...)` using the same in-app modal, ensuring reliable behavior inside iframe sandbox environments.

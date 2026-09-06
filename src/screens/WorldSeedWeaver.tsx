@@ -1,0 +1,632 @@
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  ArrowLeft,
+  Sparkles,
+  User,
+  Globe,
+  Users,
+  BookOpen,
+  Lock,
+  CheckCircle2,
+  Play,
+  RotateCcw,
+} from 'lucide-react'
+import type { CombatMode, ProtagonistData, WorldData } from '../types.ts'
+import { FOURTH_WING_WORLD, VIOLET_SORRENGAIL } from '../data/starterTemplates.ts'
+import { DEFAULT_NARRATION_STYLE } from '../api/turnContract.ts'
+import type { NodeType, SeedNpcData, WorldSeedWeaverProps } from '../components/seedweaver/types.ts'
+export type { SeedNpcData, WorldSeedWeaverProps } from '../components/seedweaver/types.ts'
+import { DEFAULT_STARTER_NPCS } from '../components/seedweaver/defaultPacks.ts'
+import ProtagonistNodeModal from '../components/seedweaver/ProtagonistNodeModal.tsx'
+import WorldNodeModal from '../components/seedweaver/WorldNodeModal.tsx'
+import NpcNodeModal from '../components/seedweaver/NpcNodeModal.tsx'
+import NarrativeNodeModal from '../components/seedweaver/NarrativeNodeModal.tsx'
+
+// Asset imports for the 4 island nodes and background
+import seedBgImg from '../assets/images/seed_bg_1788724454395.jpg'
+import seedProtagImg from '../assets/images/seed_protag_1788724469363.jpg'
+import seedWorldImg from '../assets/images/seed_world_1788724489697.jpg'
+import seedNpcsImg from '../assets/images/seed_npcs_1788724503157.jpg'
+import seedNarrativeImg from '../assets/images/seed_narrative_1788724534669.jpg'
+
+export default function WorldSeedWeaver({
+  worldTemplates = [],
+  protagonistTemplates = [],
+  existingTitles = [],
+  onBack,
+  onSaveProtagonistPreset,
+  onSaveWorldPreset,
+  onDeleteProtagonistPreset,
+  onDeleteWorldPreset,
+  onBeginTale,
+}: WorldSeedWeaverProps) {
+  // --- Active Seed Data State ---
+  const [protagonist, setProtagonist] = useState<ProtagonistData>(() => ({
+    ...VIOLET_SORRENGAIL,
+    id: 'seed_protag_' + Date.now(),
+  }))
+  const [world, setWorld] = useState<WorldData>(() => ({
+    ...FOURTH_WING_WORLD,
+    id: 'seed_world_' + Date.now(),
+  }))
+  const [npcs, setNpcs] = useState<SeedNpcData[]>(DEFAULT_STARTER_NPCS)
+  const [narrative, setNarrative] = useState({
+    title: `${VIOLET_SORRENGAIL.name}'s Journey`,
+    opening: VIOLET_SORRENGAIL.opening || '',
+    narrationStyle: FOURTH_WING_WORLD.narrationStyle || DEFAULT_NARRATION_STYLE,
+    combatMode: 'NARRATIVE' as CombatMode,
+  })
+
+  // Finalization status for each node
+  const [finalizedNodes, setFinalizedNodes] = useState<{
+    protagonist: boolean
+    world: boolean
+    npcs: boolean
+    narrative: boolean
+  }>({
+    protagonist: true,
+    world: true,
+    npcs: true,
+    narrative: false,
+  })
+
+  // Active open modal
+  const [activeModal, setActiveModal] = useState<NodeType | null>(null)
+
+  // Validation checks
+  const isProtagonistReady = Boolean(protagonist.name.trim() && (protagonist.classId || protagonist.className))
+  const isWorldReady = Boolean(world.name.trim() && (world.background || world.genreTone || world.conflict))
+  const isNpcsReady = npcs.length > 0 && npcs.every((n) => n.name.trim())
+  const canUnlockNarrative =
+    finalizedNodes.protagonist &&
+    finalizedNodes.world &&
+    finalizedNodes.npcs &&
+    isProtagonistReady &&
+    isWorldReady &&
+    isNpcsReady
+
+  // Handle final dive launch
+  const handleIgniteDive = () => {
+    if (!canUnlockNarrative) return
+    const finalTitle = narrative.title.trim() || `${protagonist.name || 'Hero'}'s Tale`
+    onBeginTale(
+      {
+        ...protagonist,
+        opening: narrative.opening,
+      },
+      narrative.combatMode,
+      {
+        ...world,
+        narrationStyle: narrative.narrationStyle,
+      },
+      finalTitle,
+      npcs
+    )
+  }
+
+  return (
+    <div className="relative min-h-dvh max-h-dvh flex flex-col text-[#f5dfa0] overflow-hidden bg-[#07050d] select-none">
+      {/* Background artwork with atmospheric parallax & celestial light */}
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+        <img
+          src={seedBgImg}
+          alt="World Seed Background"
+          className="w-full h-full object-cover object-center scale-105 filter brightness-[0.7] contrast-[1.1] transition-all duration-1000"
+        />
+        {/* Mystic Vignette & Astral Gradients */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#050308]/75 via-[#080512]/45 to-[#05030a]/90" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,0.12),transparent_70%)]" />
+      </div>
+
+      {/* Atmospheric Central Sparks */}
+      <div className="absolute inset-0 z-0 pointer-events-none opacity-40 overflow-hidden">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-amber-500/10 blur-3xl animate-pulse" />
+        <div className="absolute bottom-1/3 right-1/4 w-96 h-96 rounded-full bg-purple-600/15 blur-3xl animate-pulse" />
+      </div>
+
+      {/* Screen Header Bar */}
+      <header
+        className="relative z-20 shrink-0 flex items-center justify-between px-4 py-3 max-w-5xl mx-auto w-full"
+        style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
+      >
+        <button
+          onClick={onBack}
+          aria-label="Back to Main Menu"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#140f24]/80 hover:bg-[#1f1738] border border-[#e8ca8a]/30 text-[#fae5b5] text-xs font-display font-semibold transition-all active:scale-95 shadow-lg shadow-black/40 cursor-pointer"
+        >
+          <ArrowLeft size={15} />
+          <span>Exit</span>
+        </button>
+
+        {/* Center Grand Title */}
+        <div className="text-center flex flex-col items-center">
+          <div className="flex items-center gap-2">
+            <span className="w-6 h-[1px] bg-gradient-to-r from-transparent to-[#e8ca8a]/60" />
+            <h1 className="font-display font-bold text-xl sm:text-2xl tracking-[0.2em] text-[#fae5b5] drop-shadow-[0_2px_12px_rgba(232,202,138,0.4)] uppercase">
+              WORLD SEED
+            </h1>
+            <span className="w-6 h-[1px] bg-gradient-to-l from-transparent to-[#e8ca8a]/60" />
+          </div>
+          <div className="flex items-center gap-1.5 text-[10px] tracking-[0.25em] font-display font-medium text-[#d8c49e]/80 uppercase mt-0.5">
+            <Sparkles size={10} className="text-[#f0ca65]" />
+            <span>SHAPE YOUR JOURNEY</span>
+            <Sparkles size={10} className="text-[#f0ca65]" />
+          </div>
+        </div>
+
+        {/* Quick Reset action */}
+        <button
+          onClick={() => {
+            setProtagonist({ ...VIOLET_SORRENGAIL, id: 'seed_protag_' + Date.now() })
+            setWorld({ ...FOURTH_WING_WORLD, id: 'seed_world_' + Date.now() })
+            setNpcs(DEFAULT_STARTER_NPCS)
+            setFinalizedNodes({ protagonist: true, world: true, npcs: true, narrative: false })
+          }}
+          title="Reset to Template"
+          className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#140f24]/80 hover:bg-[#1f1738] border border-[#e8ca8a]/20 text-[#d8c49e] text-xs font-display transition-all active:scale-95 cursor-pointer"
+        >
+          <RotateCcw size={13} />
+          <span className="hidden sm:inline">Reset</span>
+        </button>
+      </header>
+
+      {/* Main Celestial Nexus / Leyline Constellation Container */}
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-center p-2 sm:p-4 min-h-0 overflow-y-auto">
+        <div className="relative w-full max-w-2xl aspect-[3/4] sm:aspect-square max-h-[72vh] flex items-center justify-center my-auto">
+          {/* Animated SVG Ley-Lines & Star Nexus */}
+          <svg
+            className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-visible"
+            viewBox="0 0 400 400"
+          >
+            <defs>
+              <linearGradient id="leyline-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.8" />
+                <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.8" />
+              </linearGradient>
+              <linearGradient id="leyline-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.8" />
+                <stop offset="100%" stopColor="#10b981" stopOpacity="0.8" />
+              </linearGradient>
+              <linearGradient id="leyline-emerald" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#10b981" stopOpacity="0.8" />
+                <stop offset="100%" stopColor="#a855f7" stopOpacity="0.8" />
+              </linearGradient>
+              <linearGradient id="leyline-purple" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#a855f7" stopOpacity="0.8" />
+                <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.8" />
+              </linearGradient>
+
+              {/* Glowing Filter */}
+              <filter id="glow-leyline" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="3" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+            </defs>
+
+            {/* Diamond Outer Boundary Ring */}
+            <polygon
+              points="200,45 355,200 200,355 45,200"
+              fill="none"
+              stroke="rgba(232,202,138,0.2)"
+              strokeWidth="1.5"
+              strokeDasharray="4 6"
+              className="animate-[spin_120s_linear_infinite]"
+              style={{ transformOrigin: '200px 200px' }}
+            />
+
+            {/* Central Leyline Cross connecting all 4 nodes */}
+            <line
+              x1="200"
+              y1="45"
+              x2="200"
+              y2="355"
+              stroke={canUnlockNarrative ? 'url(#leyline-purple)' : 'rgba(232,202,138,0.3)'}
+              strokeWidth={canUnlockNarrative ? '2.5' : '1.5'}
+              filter="url(#glow-leyline)"
+              className="transition-all duration-700"
+            />
+            <line
+              x1="45"
+              y1="200"
+              x2="355"
+              y2="200"
+              stroke="url(#leyline-gold)"
+              strokeWidth="2"
+              filter="url(#glow-leyline)"
+            />
+
+            {/* Diagonal Ley Lines */}
+            <line x1="200" y1="45" x2="45" y2="200" stroke="rgba(56,189,248,0.4)" strokeWidth="1.5" />
+            <line x1="200" y1="45" x2="355" y2="200" stroke="rgba(16,185,129,0.4)" strokeWidth="1.5" />
+            <line
+              x1="45"
+              y1="200"
+              x2="200"
+              y2="355"
+              stroke={canUnlockNarrative ? 'rgba(168,85,247,0.5)' : 'rgba(255,255,255,0.1)'}
+              strokeWidth="1.5"
+            />
+            <line
+              x1="355"
+              y1="200"
+              x2="200"
+              y2="355"
+              stroke={canUnlockNarrative ? 'rgba(168,85,247,0.5)' : 'rgba(255,255,255,0.1)'}
+              strokeWidth="1.5"
+            />
+
+            {/* Central Astral Starburst Nexus */}
+            <circle
+              cx="200"
+              cy="200"
+              r={canUnlockNarrative ? '18' : '12'}
+              fill={canUnlockNarrative ? 'rgba(168,85,247,0.3)' : 'rgba(232,202,138,0.2)'}
+              className="animate-ping opacity-75 duration-1000"
+            />
+            <circle
+              cx="200"
+              cy="200"
+              r="8"
+              fill={canUnlockNarrative ? '#d8b4fe' : '#f0ca65'}
+              filter="url(#glow-leyline)"
+            />
+            <path
+              d="M200,185 L203,197 L215,200 L203,203 L200,215 L197,203 L185,200 L197,197 Z"
+              fill="#ffffff"
+            />
+          </svg>
+
+          {/* ========================================================= */}
+          {/* 1. TOP NODE: PROTAGONIST (Gold / Amber) */}
+          {/* ========================================================= */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 z-10 flex flex-col items-center">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setActiveModal('protagonist')}
+              className="relative group cursor-pointer focus:outline-none"
+            >
+              {/* Glowing Aura Ring */}
+              <div
+                className={`absolute -inset-2 rounded-full transition-all duration-500 blur-md ${
+                  finalizedNodes.protagonist
+                    ? 'bg-gradient-to-tr from-amber-500/60 to-yellow-300/40 opacity-100 animate-pulse'
+                    : 'bg-amber-500/20 opacity-40 group-hover:opacity-75'
+                }`}
+              />
+              {/* Island Circular Frame */}
+              <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-2 border-[#f0ca65] shadow-[0_0_20px_rgba(245,158,11,0.5)] bg-[#120e1d]">
+                <img
+                  src={seedProtagImg}
+                  alt="Protagonist"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                <div className="absolute bottom-1.5 inset-x-0 flex justify-center">
+                  <span className="px-1.5 py-0.5 rounded bg-amber-950/80 border border-amber-400/50 text-[9px] font-mono text-amber-200 uppercase font-bold truncate max-w-[85%]">
+                    {protagonist.className || 'Hero'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Ready Indicator Badge */}
+              {finalizedNodes.protagonist && (
+                <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-amber-500 text-black flex items-center justify-center shadow-lg shadow-amber-500/50">
+                  <CheckCircle2 size={14} className="stroke-[3]" />
+                </div>
+              )}
+            </motion.button>
+
+            {/* Information Card Banner */}
+            <div
+              onClick={() => setActiveModal('protagonist')}
+              className="mt-1.5 px-3 py-1.5 rounded-xl bg-[#151022]/90 border border-amber-500/40 backdrop-blur-md shadow-xl text-center max-w-[170px] sm:max-w-[200px] cursor-pointer hover:border-amber-400 transition-colors"
+            >
+              <h3 className="font-display font-bold text-xs sm:text-sm text-[#fae5b5] tracking-wide uppercase flex items-center justify-center gap-1">
+                <User size={12} className="text-amber-400" />
+                <span>PROTAGONIST</span>
+              </h3>
+              <p className="font-display text-[10px] text-amber-300/90 truncate font-semibold">
+                {protagonist.name || 'Unnamed Hero'}
+              </p>
+              <ul className="text-[9px] text-[#d8c49e]/80 text-left mt-0.5 space-y-0.2 font-narrative">
+                <li className="truncate">• Class: {protagonist.className || 'Adventurer'}</li>
+                <li className="truncate">• Origin: {protagonist.gender || 'Any'}, {protagonist.age || 20}y</li>
+                <li className="truncate">• Skills: {protagonist.startingSkills?.length || 0} Abilities</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* ========================================================= */}
+          {/* 2. LEFT NODE: WORLD (Cyan / Azure) */}
+          {/* ========================================================= */}
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 z-10 flex flex-col items-center">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setActiveModal('world')}
+              className="relative group cursor-pointer focus:outline-none"
+            >
+              <div
+                className={`absolute -inset-2 rounded-full transition-all duration-500 blur-md ${
+                  finalizedNodes.world
+                    ? 'bg-gradient-to-tr from-sky-500/60 to-cyan-300/40 opacity-100 animate-pulse'
+                    : 'bg-sky-500/20 opacity-40 group-hover:opacity-75'
+                }`}
+              />
+              <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-2 border-[#38bdf8] shadow-[0_0_20px_rgba(56,189,248,0.5)] bg-[#0c1a24]">
+                <img
+                  src={seedWorldImg}
+                  alt="World"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                <div className="absolute bottom-1.5 inset-x-0 flex justify-center">
+                  <span className="px-1.5 py-0.5 rounded bg-sky-950/80 border border-sky-400/50 text-[9px] font-mono text-sky-200 uppercase font-bold truncate max-w-[85%]">
+                    {world.name || 'Realm'}
+                  </span>
+                </div>
+              </div>
+
+              {finalizedNodes.world && (
+                <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-sky-400 text-black flex items-center justify-center shadow-lg shadow-sky-400/50">
+                  <CheckCircle2 size={14} className="stroke-[3]" />
+                </div>
+              )}
+            </motion.button>
+
+            <div
+              onClick={() => setActiveModal('world')}
+              className="mt-1.5 px-3 py-1.5 rounded-xl bg-[#0b1622]/90 border border-sky-500/40 backdrop-blur-md shadow-xl text-center max-w-[155px] sm:max-w-[185px] cursor-pointer hover:border-sky-400 transition-colors"
+            >
+              <h3 className="font-display font-bold text-xs sm:text-sm text-[#bae6fd] tracking-wide uppercase flex items-center justify-center gap-1">
+                <Globe size={12} className="text-sky-400" />
+                <span>WORLD</span>
+              </h3>
+              <p className="font-display text-[10px] text-sky-300/90 truncate font-semibold">
+                {world.name || 'Custom Realm'}
+              </p>
+              <ul className="text-[9px] text-[#93c5fd]/80 text-left mt-0.5 space-y-0.2 font-narrative">
+                <li className="truncate">• Tone: {world.genreTone || 'Fantasy'}</li>
+                <li className="truncate">• Sites: {world.locationsList?.length || 0} Locations</li>
+                <li className="truncate">• Powers: {world.factionsList?.length || 0} Factions</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* ========================================================= */}
+          {/* 3. RIGHT NODE: NPCs (Emerald / Jade) */}
+          {/* ========================================================= */}
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 z-10 flex flex-col items-center">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setActiveModal('npcs')}
+              className="relative group cursor-pointer focus:outline-none"
+            >
+              <div
+                className={`absolute -inset-2 rounded-full transition-all duration-500 blur-md ${
+                  finalizedNodes.npcs
+                    ? 'bg-gradient-to-tr from-emerald-500/60 to-teal-300/40 opacity-100 animate-pulse'
+                    : 'bg-emerald-500/20 opacity-40 group-hover:opacity-75'
+                }`}
+              />
+              <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-2 border-[#10b981] shadow-[0_0_20px_rgba(16,185,129,0.5)] bg-[#0a1a14]">
+                <img
+                  src={seedNpcsImg}
+                  alt="NPCs"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                <div className="absolute bottom-1.5 inset-x-0 flex justify-center">
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-400/50 text-[9px] font-mono text-emerald-200 uppercase font-bold">
+                    {npcs.length} Cast
+                  </span>
+                </div>
+              </div>
+
+              {finalizedNodes.npcs && (
+                <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-emerald-400 text-black flex items-center justify-center shadow-lg shadow-emerald-400/50">
+                  <CheckCircle2 size={14} className="stroke-[3]" />
+                </div>
+              )}
+            </motion.button>
+
+            <div
+              onClick={() => setActiveModal('npcs')}
+              className="mt-1.5 px-3 py-1.5 rounded-xl bg-[#091a13]/90 border border-emerald-500/40 backdrop-blur-md shadow-xl text-center max-w-[155px] sm:max-w-[185px] cursor-pointer hover:border-emerald-400 transition-colors"
+            >
+              <h3 className="font-display font-bold text-xs sm:text-sm text-[#a7f3d0] tracking-wide uppercase flex items-center justify-center gap-1">
+                <Users size={12} className="text-emerald-400" />
+                <span>NPCs</span>
+              </h3>
+              <p className="font-display text-[10px] text-emerald-300/90 truncate font-semibold">
+                {npcs.length} Key Characters
+              </p>
+              <ul className="text-[9px] text-[#6ee7b7]/80 text-left mt-0.5 space-y-0.2 font-narrative">
+                <li className="truncate">• Starting Roster: Mapped</li>
+                <li className="truncate">• Bonds & Gear: Configured</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* ========================================================= */}
+          {/* 4. BOTTOM NODE: NARRATIVE (Purple / Arcane Violet) */}
+          {/* ========================================================= */}
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-2 z-10 flex flex-col items-center">
+            <motion.button
+              whileHover={canUnlockNarrative ? { scale: 1.08 } : {}}
+              whileTap={canUnlockNarrative ? { scale: 0.95 } : {}}
+              onClick={() => {
+                if (canUnlockNarrative) {
+                  setActiveModal('narrative')
+                }
+              }}
+              disabled={!canUnlockNarrative}
+              className={`relative group cursor-pointer focus:outline-none ${
+                !canUnlockNarrative ? 'opacity-70 cursor-not-allowed filter grayscale-[40%]' : ''
+              }`}
+            >
+              {/* Glowing Radiant Purple Aura */}
+              <div
+                className={`absolute -inset-3 rounded-full transition-all duration-700 blur-lg ${
+                  canUnlockNarrative
+                    ? 'bg-gradient-to-tr from-purple-600 via-fuchsia-500 to-indigo-400 opacity-90 animate-pulse'
+                    : 'bg-purple-900/20 opacity-30'
+                }`}
+              />
+
+              <div
+                className={`relative w-22 h-22 sm:w-26 sm:h-26 rounded-full overflow-hidden border-2 transition-all duration-500 bg-[#160c24] ${
+                  canUnlockNarrative
+                    ? 'border-[#c084fc] shadow-[0_0_30px_rgba(192,132,252,0.8)] ring-4 ring-purple-500/30'
+                    : 'border-purple-900/60 shadow-none'
+                }`}
+              >
+                <img
+                  src={seedNarrativeImg}
+                  alt="Narrative Portal"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+
+                {/* Arcane Lock overlay when sealed */}
+                {!canUnlockNarrative && (
+                  <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-purple-300">
+                    <Lock size={20} className="text-purple-300/80 mb-0.5" />
+                    <span className="text-[9px] font-mono tracking-wider uppercase font-bold text-purple-300/70">
+                      Sealed
+                    </span>
+                  </div>
+                )}
+
+                {canUnlockNarrative && (
+                  <div className="absolute bottom-1.5 inset-x-0 flex justify-center">
+                    <span className="px-2 py-0.5 rounded bg-purple-950/90 border border-purple-400/60 text-[9px] font-mono text-purple-200 uppercase font-bold animate-pulse">
+                      Ready to Dive
+                    </span>
+                  </div>
+                )}
+              </div>
+            </motion.button>
+
+            <div
+              onClick={() => {
+                if (canUnlockNarrative) setActiveModal('narrative')
+              }}
+              className={`mt-1.5 px-3 py-1.5 rounded-xl backdrop-blur-md shadow-xl text-center max-w-[170px] sm:max-w-[200px] transition-all ${
+                canUnlockNarrative
+                  ? 'bg-[#1b0f2e]/95 border border-purple-400/60 hover:border-purple-300 cursor-pointer shadow-purple-950/50'
+                  : 'bg-[#120a20]/75 border border-purple-900/30 text-purple-400/60'
+              }`}
+            >
+              <h3 className="font-display font-bold text-xs sm:text-sm text-[#e9d5ff] tracking-wide uppercase flex items-center justify-center gap-1">
+                <BookOpen size={12} className="text-purple-400" />
+                <span>NARRATIVE</span>
+              </h3>
+              <p className="font-display text-[10px] text-purple-300/90 truncate font-semibold">
+                {narrative.title || 'Prologue & Dive'}
+              </p>
+              <ul className="text-[9px] text-[#d8b4fe]/80 text-left mt-0.5 space-y-0.2 font-narrative">
+                <li className="truncate">• Style: {narrative.narrationStyle ? 'Configured' : 'Default'}</li>
+                <li className="truncate">• Hook: {narrative.opening ? 'Defined' : 'Default'}</li>
+                <li className="truncate">• Mode: {narrative.combatMode}</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Call to Action Bar */}
+        <div className="w-full max-w-md mx-auto mt-auto pt-2 pb-1 flex flex-col items-center gap-2">
+          {canUnlockNarrative ? (
+            <motion.button
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={handleIgniteDive}
+              className="w-full py-2.5 sm:py-3 px-5 sm:px-6 rounded-2xl bg-gradient-to-r from-amber-500 via-purple-600 to-indigo-600 hover:from-amber-400 hover:via-purple-500 hover:to-indigo-500 text-white font-display font-bold text-xs sm:text-sm tracking-wider uppercase shadow-[0_0_25px_rgba(168,85,247,0.6)] flex items-center justify-center gap-2 border border-yellow-200/50 cursor-pointer"
+            >
+              <Sparkles size={16} className="text-yellow-300 animate-spin shrink-0" />
+              <span>Ignite Tale Dive</span>
+              <Play size={14} className="fill-current shrink-0" />
+            </motion.button>
+          ) : (
+            <div className="w-full py-2 px-3.5 rounded-xl bg-[#110c1c]/80 border border-[#e8ca8a]/20 text-center flex items-center justify-center gap-2 text-xs font-narrative italic text-[#d8c49e]/90">
+              <Lock size={13} className="text-purple-400 shrink-0" />
+              <span>Finalize Protagonist, World, and NPCs to unlock the Narrative Dive.</span>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* ========================================================================= */}
+      {/* 5. MODAL DIALOGS FOR EACH NODE */}
+      {/* ========================================================================= */}
+      <AnimatePresence>
+        {activeModal === 'protagonist' && (
+          <ProtagonistNodeModal
+            protagonist={protagonist}
+            protagonistTemplates={protagonistTemplates}
+            onSavePreset={onSaveProtagonistPreset}
+            onDeletePreset={onDeleteProtagonistPreset}
+            onSave={(updated) => {
+              setProtagonist(updated)
+              setFinalizedNodes((prev) => ({ ...prev, protagonist: true }))
+              setActiveModal(null)
+            }}
+            onClose={() => setActiveModal(null)}
+          />
+        )}
+
+        {activeModal === 'world' && (
+          <WorldNodeModal
+            world={world}
+            worldTemplates={worldTemplates}
+            onSavePreset={onSaveWorldPreset}
+            onDeletePreset={onDeleteWorldPreset}
+            onSave={(updated) => {
+              setWorld(updated)
+              setFinalizedNodes((prev) => ({ ...prev, world: true }))
+              setActiveModal(null)
+            }}
+            onClose={() => setActiveModal(null)}
+          />
+        )}
+
+        {activeModal === 'npcs' && (
+          <NpcNodeModal
+            npcs={npcs}
+            worldName={world.name}
+            onSave={(updated) => {
+              setNpcs(updated)
+              setFinalizedNodes((prev) => ({ ...prev, npcs: true }))
+              setActiveModal(null)
+            }}
+            onClose={() => setActiveModal(null)}
+          />
+        )}
+
+        {activeModal === 'narrative' && (
+          <NarrativeNodeModal
+            narrative={narrative}
+            protagonist={protagonist}
+            world={world}
+            existingTitles={existingTitles}
+            onSave={(updated) => {
+              setNarrative(updated)
+              setFinalizedNodes((prev) => ({ ...prev, narrative: true }))
+              setActiveModal(null)
+            }}
+            onLaunchDirect={() => {
+              setActiveModal(null)
+              handleIgniteDive()
+            }}
+            onClose={() => setActiveModal(null)}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}

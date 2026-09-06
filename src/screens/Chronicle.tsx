@@ -963,7 +963,7 @@ export default function Chronicle({
   seedDebug,
   busy,
   error,
-  chromeOpacity,
+  chromeOpacity: _chromeOpacity,
   npcs,
   locations,
   factions,
@@ -1060,13 +1060,6 @@ export default function Chronicle({
   // no longer retints per turn state. Per-entry turn-state badges in the log
   // (TurnBlock, below) are unrelated and keep their own per-entry coloring.
   const stateAccent = '#e8ca8a'
-
-  // §Settings "Chronicle HUD Transparency" — chromeOpacity (0.1-0.9) scales how
-  // solid the header/HUD/input glass reads. Flat obsidian, no color-wash gradient
-  // — the gold accent lives only in the border/ring, matching the reference app.
-  const chromeAlpha = chromeOpacity
-  const inputIdleAlpha = +(chromeOpacity * 0.8).toFixed(2)
-  const inputFocusAlpha = +Math.min(chromeOpacity + 0.25, 0.95).toFixed(2)
 
   // Non-chapter-summary entries only — those are what the navigator steps between.
   const narratedIndices = log.reduce<number[]>((acc, e, i) => {
@@ -1314,14 +1307,10 @@ export default function Chronicle({
         {/* Mobile/Tablet Header Bar */}
         <header
           ref={headerRef}
-          className="absolute top-0 inset-x-0 z-10 flex flex-col border-b shadow-2xl transition-[background,border-color] duration-700 ease-out"
-          style={{
-            background: `rgba(11,13,20,${chromeAlpha})`,
-            borderColor: `${stateAccent}45`,
-          }}
+          className="absolute top-0 inset-x-0 z-10 flex flex-col bg-[#0b0d14] border-b border-[#e8ca8a]/30 shadow-2xl"
         >
           <div
-            className="flex items-center justify-between px-3 py-1.5"
+            className="flex items-center justify-between px-3 py-1.5 bg-[#0b0d14]"
             style={{ paddingTop: 'max(0.375rem, env(safe-area-inset-top))' }}
           >
             <button onClick={onOpenMenu} aria-label="Home" title="Main Menu" className="w-8 h-8 rounded-xl inline-flex items-center justify-center text-[#e8ca8a] hover:bg-white/10">
@@ -1349,7 +1338,7 @@ export default function Chronicle({
           </div>
 
           {/* Player Vitals HUD Bar placed below header bar (mobile / tablet) */}
-          <div className="lg:hidden px-3 border-t border-white/10 bg-black/25 backdrop-blur-sm">
+          <div className="lg:hidden px-3 border-t border-white/10 bg-[#0d0f18]">
             <div className="flex items-center justify-between py-0.5">
               <button
                 onClick={() => setStatsCollapsed((v) => !v)}
@@ -1503,11 +1492,7 @@ export default function Chronicle({
         {/* Elevated Input Bar Tray with Extending Drawer Menu */}
         <div
           ref={bottomRef}
-          className="absolute bottom-0 inset-x-0 lg:bottom-5 lg:inset-x-6 lg:max-w-4xl lg:mx-auto z-20 flex flex-col rounded-t-2xl lg:rounded-2xl border-t border-x-0 border-b-0 lg:border shadow-2xl transition-[background,border-color] duration-700 ease-out backdrop-blur-md"
-          style={{
-            background: `rgba(11,13,20,${chromeAlpha})`,
-            borderColor: `${stateAccent}45`,
-          }}
+          className="absolute bottom-0 inset-x-0 lg:bottom-5 lg:inset-x-6 lg:max-w-4xl lg:mx-auto z-20 flex flex-col rounded-t-2xl lg:rounded-2xl border-t border-x-0 border-b-0 lg:border shadow-2xl bg-[#0b0d14] border-[#e8ca8a]/30"
         >
           {/* Drawer Menu Popup */}
           <AnimatePresence>
@@ -1680,12 +1665,10 @@ export default function Chronicle({
               }}
               placeholder="What do you do?"
               disabled={busy}
-              className="turn-glow flex-1 resize-none rounded-xl border backdrop-blur-sm px-3 py-2 font-narrative text-sm leading-relaxed text-white/90 placeholder:text-white/35 min-h-[56px]"
+              className="turn-glow flex-1 resize-none rounded-xl border px-3 py-2 font-narrative text-sm leading-relaxed text-white/90 placeholder:text-white/35 min-h-[56px] bg-[#131622]"
               style={{
                 maxHeight: INPUT_MAX_HEIGHT,
                 ['--turn-accent' as string]: stateAccent,
-                ['--chrome-alpha-idle' as string]: inputIdleAlpha,
-                ['--chrome-alpha-focus' as string]: inputFocusAlpha,
               }}
             />
 

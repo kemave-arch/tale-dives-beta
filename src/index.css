@@ -202,14 +202,12 @@ button {
   background-repeat: repeat;
 }
 
-/* §3.2 obsidian glass chrome — a runtime-set --turn-accent (fixed gold) tints
-   only the border/ring, never the fill. Flat obsidian background, no color-wash
-   gradient — matches the reference app's clean idle/focus card look. */
+/* §3.2 solid obsidian chrome — a runtime-set --turn-accent (fixed gold) tints
+   only the border/ring, never the fill. Flat obsidian background — matches
+   the clean idle/focus card look without glassmorphic transparency. */
 .turn-glow {
   --turn-accent: var(--td-gold-accent);
-  --chrome-alpha-idle: 0.4;
-  --chrome-alpha-focus: 0.6;
-  background: rgba(26, 31, 46, var(--chrome-alpha-idle));
+  background: #131622;
   border-color: color-mix(in srgb, var(--turn-accent) 30%, transparent);
   box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.5);
   transition: background 0.25s ease-out, box-shadow 0.2s ease-out, border-color 0.2s ease-out;
@@ -218,7 +216,7 @@ button {
 .turn-glow:hover,
 .turn-glow:focus-within {
   outline: none;
-  background: rgba(26, 31, 46, var(--chrome-alpha-focus));
+  background: #181d2c;
   border-color: var(--turn-accent);
   box-shadow:
     0 0 0 2px color-mix(in srgb, var(--turn-accent) 45%, transparent),

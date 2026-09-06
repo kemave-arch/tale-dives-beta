@@ -11,6 +11,8 @@ import DiveLoadingScreen from './screens/DiveLoadingScreen.tsx'
 import Chronicle from './screens/Chronicle.tsx'
 import Codex, { type CategoryId } from './screens/Codex.tsx'
 import SlashCommandManager from './screens/SlashCommandManager.tsx'
+import WorldSeedWeaver from './screens/WorldSeedWeaver.tsx'
+import type { SeedNpcData } from './components/seedweaver/types.ts'
 import { getClassById, findClassById } from './data/classes.ts'
 import { startingAttributes, derivedPools } from './lib/derivedStats.ts'
 import { buildContextSlice } from './lib/jitContext.ts'
@@ -72,7 +74,7 @@ const KEYWORD_CATEGORY_TO_CODEX: Record<KeywordLink['category'], CategoryId> = {
 // screen is current (same as SlashCommandManager), not a screen that replaces
 // it — that's what lets its glass read against the live Chronicle parchment or
 // the Title artwork behind it rather than a flat ground.
-type Screen = 'title' | 'mainmenu' | 'storymode' | 'worldsetup' | 'newgame' | 'talebrief' | 'chronicle' | 'codex' | 'diveloading' | 'seedingreview'
+type Screen = 'title' | 'mainmenu' | 'storymode' | 'worldsetup' | 'newgame' | 'talebrief' | 'chronicle' | 'codex' | 'diveloading' | 'seedingreview' | 'worldseed'
 type CreationMode = 'tale' | 'library'
 
 // §5.7 Player Defeat State — soft-fail recovery, client-owned.
@@ -476,7 +478,13 @@ export default function App() {
     return Object.values(campaigns).sort((a, b) => (b.lastPlayed ?? 0) - (a.lastPlayed ?? 0))[0]?.id
   }
 
-  async function beginCampaign(protagonistData: ProtagonistData, combatMode: CombatMode = 'NARRATIVE', worldOverride?: Partial<WorldData>, customTitle?: string) {
+  async function beginCampaign(
+    protagonistData: ProtagonistData,
+    combatMode: CombatMode = 'NARRATIVE',
+    worldOverride?: Partial<WorldData>,
+    customTitle?: string,
+    customNpcs?: SeedNpcData[]
+  ) {
     const cls = getClassById(protagonistData.classId)
     const attrs = protagonistData.customAttributes ?? startingAttributes(cls.weights)
     const { hpMax, mpMax, stMax } = derivedPools(attrs)
@@ -574,6 +582,32 @@ export default function App() {
       })
     }
 
+    // Seed initial NPCs if passed from World Seed
+    const initialNpcs: Dict<NpcEntry> = {}
+    if (customNpcs && Array.isArray(customNpcs)) {
+      customNpcs.forEach((npc) => {
+        if (!npc.name?.trim()) return
+        const id = 'npc_' + slugify(npc.name)
+        initialNpcs[id] = {
+          name: npc.name.trim(),
+          gender: npc.gender || undefined,
+          role: npc.role || undefined,
+          affection: npc.affection ?? 50,
+          trust: npc.trust ?? 50,
+          heldWeapon: npc.heldWeapon || undefined,
+          wornArmor: npc.wornArmor || undefined,
+          personality: npc.personality || undefined,
+          voiceNotes: npc.secret ? `Secret: ${npc.secret}` : undefined,
+          factionId: npc.factionId ? 'fac_' + slugify(npc.factionId) : null,
+          stage: 'Acquaintance',
+          deeds: [],
+          memSummary: npc.description || `${npc.role || 'Key character'} in ${world.name}.`,
+          lastSeenLocId: 'loc_start',
+          discovery: { state: 'known' },
+        }
+      })
+    }
+
     // §Phase B.4 — the Prologue turn folds in the World Background/Genre/
     // Conflict/Power System/Era/Key Factions from Phase A so the opening is
     // actually grounded in what was set up rather than fabricated from
@@ -639,7 +673,7 @@ export default function App() {
       proseDepth: PROSE_DEPTHS.IMMERSIVE, // default changed 2026-09-04 per explicit request for the most immersive prose by default; still overridable per-campaign in Settings
       narrationStyle: world.narrationStyle || DEFAULT_NARRATION_STYLE,
       locations: { ...initialLocations, ...seeded.locations }, // §5.10 — player-authored + World Seeding fallback + later auto-registration
-      npcs: seeded.npcs, // §5.5/§5.14 — World Seeding's starting relations, then auto-registration
+      npcs: { ...initialNpcs, ...seeded.npcs }, // §5.5/§5.14 — World Seeding's starting relations, then auto-registration
       factions: { ...initialFactions, ...seeded.factions }, // §5.14 — player-authored + World Seeding fallback + later keyword links
       lore: seeded.lore, // §5.14 — World Seeding, then {{Term|lore}} keyword links
       quests: seeded.quests, // §5.14 — World Seeding's optional Ambition quest, then quest_update/keyword links
@@ -1580,6 +1614,7 @@ export default function App() {
           })
         }}
         onOpenSettings={() => openSettings()}
+        onOpenWorldSeed={() => navigateTo('worldseed')}
         onBackToTitle={() => goBack('title')}
         musicMuted={musicMuted}
         onToggleMusicMute={toggleMusicMute}
@@ -1592,6 +1627,22 @@ export default function App() {
         onNextTrack={onNextTrack}
         onPrevTrack={onPrevTrack}
         onResumeSoundtrack={onResumeSoundtrack}
+      />
+    )
+  } else if (screen === 'worldseed') {
+    content = (
+      <WorldSeedWeaver
+        worldTemplates={Object.values(worlds)}
+        protagonistTemplates={Object.values(protagonists)}
+        existingTitles={Object.values(campaigns).map((c) => c.title)}
+        onBack={() => goBack('mainmenu')}
+        onSaveProtagonistPreset={(pData: ProtagonistData) => upsertProtagonist(pData, pData.id, pData.className || getClassById(pData.classId).name)}
+        onSaveWorldPreset={(wData: WorldData) => upsertWorld(wData, wData.id)}
+        onDeleteProtagonistPreset={deleteProtagonist}
+        onDeleteWorldPreset={deleteWorld}
+        onBeginTale={(protagonistData: ProtagonistData, combatMode: CombatMode, worldOverride: Partial<WorldData>, customTitle: string, customNpcs?: SeedNpcData[]) => {
+          beginCampaign(protagonistData, combatMode, worldOverride, customTitle, customNpcs)
+        }}
       />
     )
   } else if (screen === 'diveloading') {

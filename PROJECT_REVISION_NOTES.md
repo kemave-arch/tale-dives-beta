@@ -1,6 +1,13 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-06 — Resolved React Rules of Hooks order crash in World Setup and Protagonist Setup; added custom Tale naming at Tale Dive Brief with duplicate checking, in-library Tale renaming, and creation date tracking; resolved mobile soft keyboard occlusion in World, Protagonist, and Tale Dive Brief screens with viewport-adaptive positioning; fixed "Continue" button in World and Protagonist setups to sequentially cycle through all subtabs with automatic smooth scroll to top; performed Codex maintenance. See the dated log entry below for full details. Previous note:
+**Last updated:** 2026-09-06, Claude Code on the web — fixed two real
+Codex auto-registration bugs found via a fresh campaign's Turn #0 payload:
+the protagonist self-tagging as an NPC ({{Kei Ashborn|npc}}, forking a bogus
+Codex entry for the player character), and the overarching nation name
+getting tagged as its own faction distinct from the actual registered
+faction ({{Navarre|faction}} vs. the already-known "Navarre High Command").
+See the dated log entry below for the root cause and fix; this note stays
+until the next session archives it forward. Previous note:
 
 **2026-09-05, Claude Code on the web** — archived this file's
 accumulated log (everything since 2026-09-04, ~2,300 lines) forward into
@@ -762,6 +769,12 @@ detail than the summary sections above give — for resuming work, everything ab
 this line is what actually matters.
 
 New entries below, most recent first.
+
+- **2026-09-06** — Fixed two Codex auto-registration bugs surfaced by a fresh campaign's Turn #0 payload (`src/lib/codex.ts`, `src/App.tsx`, `src/api/turnContract.ts`):
+  - **The bug report**: a brand-new campaign's Prologue turn tagged `{{Kei Ashborn|npc}}` (the protagonist's own name) and `{{Navarre|faction}}` (the setting's nation, not one of its actual factions) in the narration. Both are `{{Term|category}}` keyword links (`lib/codex.ts`'s `applyKeywordLinks`), which auto-registers a Codex stub for anything tagged — so the first forked a bogus NPC entry for the player character himself, and the second forked a "Navarre" faction entry distinct from (and confusable with) the already-registered "Navarre High Command".
+  - **Root cause**: `applyKeywordLinks`'s `case 'npc'` had no guard against the tagged term being the player's own name, and its `case 'faction'` had no dedup check at all against existing faction names — unlike `case 'loc'`, which already had a fuzzy `isKnownByName` substring-containment check (from an earlier session's location-dedup fix) to skip re-registering a place already known under a close variant of its name.
+  - **Fix**: generalized `isKnownByName` from `Dict<LocationEntry>`-specific to any `Dict<{ name: string }>`, so the exact same fuzzy-match heuristic now also guards `case 'npc'` and `case 'faction'` — "Navarre" tagged as a faction is now recognized as already covered by "Navarre High Command" (`"navarre high command".includes("navarre")`) and skipped rather than forked. Separately, `applyKeywordLinks` gained an optional trailing `playerName` param (passed from `App.tsx` as `current.player.name`) — an `{{Term|npc}}` tag matching the player's name (case-insensitive) is now skipped outright, since there's no existing NPC entry to fuzzy-match against in that case, only the player's own identity to check against. Added matching prompt-level guidance in `turnContract.ts`'s rule 6 (never tag the protagonist as an NPC; only tag a specific named organization as a faction, never the overarching nation/world/setting name) as defense in depth, mirroring this session's earlier id-drift fix's two-layer approach.
+  - **Verification**: `npm run build` clean. Re-simulated the exact tag list from the reported payload (`Kei Ashborn|npc`, `Omega Eclipse (O.E.) AI|npc`, `Nyx Umbra|npc`, `Navarre|faction`, `Draconic Ruins of Ignis|loc`, `Basgiath War College|loc`, `Riders Quadrant|faction`) against the new logic in a standalone Node script — confirmed the player self-tag and the nation-as-faction tag are both now skipped, while every legitimately-already-known entity (Omega Eclipse, Nyx Umbra, Riders Quadrant, both locations) still resolves to its existing entry rather than forking a duplicate.
 
 - **2026-09-06** — Chapter-relative turn trace ids (`Cn-n`), stamped Codex provenance, and a "Codex Changes" debug copy button (`src/lib/leveling.ts`, `src/types.ts`, `src/lib/autoRegister.ts`, `src/lib/codex.ts`, `src/lib/locations.ts`, `src/lib/npcs.ts`, `src/lib/quests.ts`, `src/lib/skills.ts`, `src/lib/inventory.ts`, `src/lib/combat.ts`, `src/App.tsx`, `src/screens/Chronicle.tsx`, `src/screens/Codex.tsx`):
   - **Ask**: a client-side trace id per narrated turn ("C1-1, C1-2..." — chapter number, block number within the chapter) so any Codex entry can record which turn introduced it, queryable later; plus a second copy button in the existing per-turn Debug Payload popup for just the state-changing part of a turn, separate from the full request/response.

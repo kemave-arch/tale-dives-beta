@@ -749,6 +749,7 @@ export default function App() {
         },
         turn.nar,
         turnRef,
+        current.player.name,
       )
       const nextLocations = linked.locations
       const nextNpcs = applyNpcUpdates(linked.npcs, turn.npc_mem_up, turn.loc_id, nextPlayer.time, turnRef)

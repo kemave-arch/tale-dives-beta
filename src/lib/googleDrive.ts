@@ -31,6 +31,22 @@ export function isGoogleSigningIn(): boolean {
   return isSigningIn
 }
 
+// signInWithPopup is documented to be unreliable specifically on mobile web:
+// many mobile Safari/Chrome/in-app-webview contexts block window.open
+// outright, often WITHOUT a catchable error — the popup just flashes open
+// and immediately closes, and the promise never settles (this is the
+// "screen flickers, nothing happens" bug reported live on a real phone).
+// "try popup, catch the error, fall back to redirect" only fixes the
+// browsers that DO throw cleanly; it silently misses the ones that don't.
+// So a detected mobile browser skips the popup attempt entirely rather
+// than gambling on which failure mode it'll hit.
+function isMobileBrowser(): boolean {
+  if (typeof navigator === 'undefined') return false
+  const uaData = (navigator as { userAgentData?: { mobile?: boolean } }).userAgentData
+  if (uaData?.mobile !== undefined) return uaData.mobile
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+}
+
 // signInWithRedirect navigates away and back — there's no token to return
 // synchronously to whoever tapped "Sign In"/"Backup Now", only once the app
 // reloads and this resolves. Call once at app boot (before anything else
@@ -86,6 +102,19 @@ const POPUP_UNAVAILABLE_CODES = new Set([
 export async function signInWithGoogle(): Promise<{ user: User; accessToken: string }> {
   isSigningIn = true
   const inIframe = typeof window !== 'undefined' && window.self !== window.top
+
+  // Mobile: go straight to redirect, never attempt the popup — see
+  // isMobileBrowser's comment on why catching a popup failure isn't a
+  // reliable enough signal there. Redirect can't work from inside an
+  // iframe either (same-origin top-level navigation is what it needs), so
+  // that combination surfaces as an explicit message instead of a silent
+  // navigation attempt that would just fail against the embedding page.
+  if (isMobileBrowser() && !inIframe) {
+    await signInWithRedirect(auth, provider)
+    // Unreachable in practice — signInWithRedirect navigates the page away.
+    isSigningIn = false
+    throw new Error('Redirecting to Google sign-in...')
+  }
 
   try {
     const result = await signInWithPopup(auth, provider)

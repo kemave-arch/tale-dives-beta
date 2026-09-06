@@ -1,5 +1,20 @@
 # Tale Dives — Project Revision Notes
 
+**Last updated:** 2026-09-07, Claude Code on the web — restored the
+mobile-first branch in `signInWithGoogle()` (`src/lib/googleDrive.ts`): a
+later commit had replaced "skip the popup entirely on a detected mobile
+browser" with "always try the popup first, only redirect if it throws a
+specific error code." That's a real regression risk for the exact bug this
+was meant to fix — plenty of mobile browsers block `window.open` silently,
+with no catchable error at all, so a catch-based fallback can miss the
+case entirely and leave the original "screen flickers, nothing happens"
+bug in place. Re-added the mobile detection as the first check (skipping
+straight to `signInWithRedirect`, never attempting a popup at all on a
+detected mobile browser), layered on top of the later commit's own good
+additions (the `auth/popup-closed-by-user`/iframe/`auth/unauthorized-domain`
+handling) rather than reverting them. See the dated log entry below.
+Previous note:
+
 **Last updated:** 2026-09-07, Claude Code — added a player-saveable preset
 system to TaleBrief's "Where do you dive in?" and "Narration Style" fields:
 a "Your Presets" section (save-current with inline naming, click-to-use,
@@ -816,6 +831,12 @@ detail than the summary sections above give — for resuming work, everything ab
 this line is what actually matters.
 
 New entries below, most recent first.
+
+- **2026-09-07** — Restored the mobile-first branch in `signInWithGoogle()` after it got overwritten (`src/lib/googleDrive.ts`):
+  - **What happened**: an earlier pass this session fixed a real bug — Google Drive sign-in doing nothing on a real mobile browser (a screen flicker, no error, no sign-in) — by having `signInWithGoogle()` detect a mobile browser up front and skip `signInWithPopup` entirely, going straight to `signInWithRedirect`. A later commit (pulled in since) replaced that with "always try the popup first, only fall back to redirect if a specific error code (`auth/popup-blocked` etc.) is thrown," plus several good additions on top: a loading/disabled state while signing in, graceful handling of `auth/popup-closed-by-user`/`auth/cancelled-popup-request` (the user just changed their mind, not a failure), an iframe check (redirect can't work there), and a clear message for `auth/unauthorized-domain`.
+  - **Why that's a regression risk for the original bug**: "try popup, catch the error" only actually helps on the mobile browsers that throw a *clean, catchable* error when a popup is blocked. Several real mobile contexts (notably some in-app/webview browsers, and some Mobile Safari cases) block `window.open` silently instead — the popup flashes open and immediately closes, and the promise from `signInWithPopup` just never settles, so there's no error to catch and fall back from. That's the exact "screen flickers, nothing happens" symptom originally reported, and the catch-based approach alone wouldn't necessarily fix it on every device it happens on.
+  - **Fix**: re-added the `isMobileBrowser()` detection as the very first check in `signInWithGoogle()` — a detected mobile browser (and not inside an iframe) now goes straight to `signInWithRedirect`, never attempting `signInWithPopup` at all — layered on top of, not instead of, the later commit's own improvements (all of which are still in effect for the desktop/popup path and the iframe edge case).
+  - **Verification**: `npm run build` clean. Live Playwright pass with a real iPhone user agent: confirmed tapping "Link Account" no longer attempts a popup at all — `signInWithRedirect` fires immediately (observed as an attempted navigation/handshake to Firebase's auth domain, which surfaced a network-level `auth/internal-error` in this sandboxed environment since it can't reach Google's servers — expected here, and notably a *visible, surfaced* error rather than the original silent flicker). The actual end-to-end OAuth round trip on a real device with real network access still couldn't be exercised from this environment.
 
 - **2026-09-07** — Player-Saveable Text Presets for TaleBrief, App Icon Wiring, and Dev Launch Config Fix (`src/types.ts`, `src/lib/store.ts`, `src/lib/glassChrome.tsx`, `src/screens/TaleBrief.tsx`, `public/manifest.json`, `index.html`, `.claude/launch.json`):
   - **Player-Saveable Presets (`src/types.ts`, `src/lib/store.ts`, `src/lib/glassChrome.tsx`, `src/screens/TaleBrief.tsx`)**: TaleBrief's "Where do you dive in?" and "Narration Style" fields can now save the player's own typed text as a named, reusable preset. A "Your Presets" section (save-current with inline naming, click-to-use, per-item delete) was added directly into the existing `ExamplesHelpModal`/`GlassField` bookmark-icon modal, above the built-in example list, rather than introducing a separate UI surface. Persisted via new `loadTextPresets`/`saveTextPreset`/`deleteTextPreset` helpers in `store.ts`, following the file's existing `KEYS` + `load`/`save` convention (new `td_text_presets` localStorage key, keyed by field name — `openingBrief` / `narrationStyle`).

@@ -372,6 +372,21 @@ export function useBackgroundMusic() {
     audio.addEventListener('pause', handlePause)
     audio.addEventListener('ended', handleEnded)
 
+    let wasPlayingBeforeHide = false
+    function handleVisibilityChange() {
+      if (document.hidden) {
+        wasPlayingBeforeHide = !audio.paused
+        if (!audio.paused) {
+          audio.pause()
+        }
+      } else {
+        if (wasPlayingBeforeHide) {
+          resume()
+        }
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
     void discoverTracks(import.meta.env.BASE_URL).then(({ ambient, statePools }) => {
       if (cancelled) return
       tracksRef.current = ambient
@@ -398,6 +413,7 @@ export function useBackgroundMusic() {
       audio.removeEventListener('play', handlePlay)
       audio.removeEventListener('pause', handlePause)
       audio.removeEventListener('ended', handleEnded)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       if (fadeTimerRef.current !== null) clearInterval(fadeTimerRef.current)
       if (bannerTimerRef.current !== null) clearTimeout(bannerTimerRef.current)
       audio.pause()

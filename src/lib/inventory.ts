@@ -17,6 +17,7 @@ export function applyInventoryChanges(
   items: Dict<ItemEntry> | undefined,
   add: InventoryAcquisition[] = [],
   remove: InventoryChange[] = [],
+  turnRef?: string,
 ): InventoryResult {
   const nextInventory: Dict<number> = { ...(inventory ?? {}) }
   const nextItems: Dict<ItemEntry> = { ...(items ?? {}) }
@@ -32,6 +33,9 @@ export function applyInventoryChanges(
         type: item.type,
         description: item.description ?? existing?.description,
         statBonus: item.statBonus ?? existing?.statBonus,
+        // Stamped once, the turn this item first entered the Codex — never
+        // overwritten on a later re-acquisition of the same id.
+        loggedAt: existing?.loggedAt ?? turnRef,
       }
     }
   }

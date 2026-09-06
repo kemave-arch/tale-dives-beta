@@ -19,7 +19,7 @@ export function emptySkill(name: string): Omit<SkillEntry, 'autoLogged'> {
 // A learned skill overwrites a stub's blank fields but never clobbers a value
 // the player has since hand-authored via Codex CRUD with `undefined` — the
 // model re-teaching a known skill shouldn't silently erase its edited cost.
-export function applySkillLearn(skills: Dict<SkillEntry> | undefined, learned: SkillLearn[] | undefined): Dict<SkillEntry> {
+export function applySkillLearn(skills: Dict<SkillEntry> | undefined, learned: SkillLearn[] | undefined, turnRef?: string): Dict<SkillEntry> {
   if (!learned?.length) return skills ?? {}
   let dict = skills ?? {}
 
@@ -27,7 +27,7 @@ export function applySkillLearn(skills: Dict<SkillEntry> | undefined, learned: S
     const id = slugify(s.id || s.name)
     if (!id) continue
 
-    dict = ensureEntry(dict, id, () => emptySkill(s.name)).dict
+    dict = ensureEntry(dict, id, () => emptySkill(s.name), turnRef).dict
     const prev = dict[id]
     dict = {
       ...dict,

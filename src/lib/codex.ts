@@ -6,12 +6,13 @@ import { emptyNpc } from './npcs.ts'
 import { emptySkill } from './skills.ts'
 import type { BestiaryEntry, Dict, FactionEntry, LocationEntry, LoreEntry, NpcEntry, QuestEntry, SkillEntry } from '../types.ts'
 
-function ensureStub<T extends { autoLogged?: boolean }>(
+function ensureStub<T extends { autoLogged?: boolean; loggedAt?: string }>(
   dict: Dict<T> | undefined,
   id: string,
   factory: () => Omit<T, 'autoLogged'>,
+  turnRef?: string,
 ): Dict<T> {
-  return ensureEntry(dict, id, factory).dict
+  return ensureEntry(dict, id, factory, turnRef).dict
 }
 
 // A {{Term|loc}} tag slugifies its own freeform text (lib/slug.ts), which is
@@ -47,7 +48,7 @@ export interface CodexDicts {
 // npc_mem_up) — this ADDS entries for things only mentioned in passing, and
 // gives both paths a real display name (a keyword tag's Term) instead of a
 // bare id, provided this runs before those other paths each turn.
-export function applyKeywordLinks(codex: CodexDicts, nar: string | undefined): CodexDicts {
+export function applyKeywordLinks(codex: CodexDicts, nar: string | undefined, turnRef?: string): CodexDicts {
   let { locations, npcs, factions, lore, quests, bestiary, skills } = codex
 
   for (const { term, category } of parseKeywordLinks(nar)) {
@@ -56,25 +57,25 @@ export function applyKeywordLinks(codex: CodexDicts, nar: string | undefined): C
 
     switch (category) {
       case 'loc':
-        if (!isKnownByName(locations, term)) locations = ensureLocation(locations, id, term).dict
+        if (!isKnownByName(locations, term)) locations = ensureLocation(locations, id, term, undefined, undefined, turnRef).dict
         break
       case 'npc':
-        npcs = ensureStub(npcs, id, () => emptyNpc(term))
+        npcs = ensureStub(npcs, id, () => emptyNpc(term), turnRef)
         break
       case 'faction':
-        factions = ensureStub(factions, id, () => ({ name: term, repTier: 0 }))
+        factions = ensureStub(factions, id, () => ({ name: term, repTier: 0 }), turnRef)
         break
       case 'lore':
-        lore = ensureStub(lore, id, () => ({ name: term, category: 'Unknown' }))
+        lore = ensureStub(lore, id, () => ({ name: term, category: 'Unknown' }), turnRef)
         break
       case 'quest':
-        quests = ensureStub(quests, id, () => ({ name: term }))
+        quests = ensureStub(quests, id, () => ({ name: term }), turnRef)
         break
       case 'beast':
-        bestiary = ensureStub(bestiary, id, () => ({ name: term, threatTier: 'Unknown' }))
+        bestiary = ensureStub(bestiary, id, () => ({ name: term, threatTier: 'Unknown' }), turnRef)
         break
       case 'skill':
-        skills = ensureStub(skills, id, () => emptySkill(term))
+        skills = ensureStub(skills, id, () => emptySkill(term), turnRef)
         break
     }
   }

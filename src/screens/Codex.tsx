@@ -846,7 +846,8 @@ export default function Codex({
         const matchesName = n.name.toLowerCase().includes(q)
         const matchesMem = n.memSummary?.toLowerCase().includes(q)
         const matchesTeaser = n.discovery?.teaser?.toLowerCase().includes(q)
-        if (!matchesName && !matchesMem && !matchesTeaser) return false
+        const matchesTurn = n.loggedAt?.toLowerCase().includes(q)
+        if (!matchesName && !matchesMem && !matchesTeaser && !matchesTurn) return false
       }
       if (activeFilter1 && n.stage !== activeFilter1) return false
       return true
@@ -859,7 +860,8 @@ export default function Codex({
         const q = searchQuery.toLowerCase()
         const matchesName = f.name.toLowerCase().includes(q)
         const matchesRival = f.rivalId?.toLowerCase().includes(q)
-        if (!matchesName && !matchesRival) return false
+        const matchesTurn = f.loggedAt?.toLowerCase().includes(q)
+        if (!matchesName && !matchesRival && !matchesTurn) return false
       }
       if (activeFilter1 && repTierLabel(f.repTier) !== activeFilter1) return false
       return true
@@ -873,7 +875,8 @@ export default function Codex({
         const matchesName = l.name.toLowerCase().includes(q)
         const matchesRegion = l.region?.toLowerCase().includes(q)
         const matchesDesc = l.description?.toLowerCase().includes(q)
-        if (!matchesName && !matchesRegion && !matchesDesc) return false
+        const matchesTurn = l.loggedAt?.toLowerCase().includes(q)
+        if (!matchesName && !matchesRegion && !matchesDesc && !matchesTurn) return false
       }
       if (activeFilter1 && l.dangerLevel !== activeFilter1) return false
       if (activeFilter2 && l.factionOwner !== activeFilter2) return false
@@ -887,7 +890,8 @@ export default function Codex({
         const q = searchQuery.toLowerCase()
         const matchesName = l.name.toLowerCase().includes(q)
         const matchesCat = l.category?.toLowerCase().includes(q)
-        if (!matchesName && !matchesCat) return false
+        const matchesTurn = l.loggedAt?.toLowerCase().includes(q)
+        if (!matchesName && !matchesCat && !matchesTurn) return false
       }
       if (activeFilter1 && l.category !== activeFilter1) return false
       return true
@@ -901,7 +905,8 @@ export default function Codex({
         const matchesName = q_entry.name.toLowerCase().includes(q)
         const matchesNote = q_entry.note?.toLowerCase().includes(q)
         const matchesStatus = q_entry.status?.toLowerCase().includes(q)
-        if (!matchesName && !matchesNote && !matchesStatus) return false
+        const matchesTurn = q_entry.loggedAt?.toLowerCase().includes(q)
+        if (!matchesName && !matchesNote && !matchesStatus && !matchesTurn) return false
       }
       if (activeFilter1 && (q_entry.status ?? 'active') !== activeFilter1) return false
       return true
@@ -914,7 +919,8 @@ export default function Codex({
         const q = searchQuery.toLowerCase()
         const matchesName = b.name.toLowerCase().includes(q)
         const matchesTier = b.threatTier?.toLowerCase().includes(q)
-        if (!matchesName && !matchesTier) return false
+        const matchesTurn = b.loggedAt?.toLowerCase().includes(q)
+        if (!matchesName && !matchesTier && !matchesTurn) return false
       }
       if (activeFilter1 && b.threatTier !== activeFilter1) return false
       return true
@@ -927,7 +933,8 @@ export default function Codex({
         const q = searchQuery.toLowerCase()
         const matchesName = s.name.toLowerCase().includes(q)
         const matchesDesc = s.description?.toLowerCase().includes(q)
-        if (!matchesName && !matchesDesc) return false
+        const matchesTurn = s.loggedAt?.toLowerCase().includes(q)
+        if (!matchesName && !matchesDesc && !matchesTurn) return false
       }
       if (activeFilter1 && s.classId !== activeFilter1) return false
       return true
@@ -941,7 +948,8 @@ export default function Codex({
         const q = searchQuery.toLowerCase()
         const matchesName = (item?.name ?? id.replace(/_/g, ' ')).toLowerCase().includes(q)
         const matchesDesc = item?.description?.toLowerCase().includes(q)
-        if (!matchesName && !matchesDesc) return false
+        const matchesTurn = item?.loggedAt?.toLowerCase().includes(q)
+        if (!matchesName && !matchesDesc && !matchesTurn) return false
       }
       if (activeFilter1 && (item?.type ?? 'material') !== activeFilter1) return false
       return true

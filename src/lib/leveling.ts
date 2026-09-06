@@ -43,3 +43,14 @@ export function applyLevelUps(player: Player, weights: ClassWeights, levels: num
 export function isChapterBoundary(turnNumber: number): boolean {
   return turnNumber > 0 && turnNumber % CHAPTER_TURN_INTERVAL === 0
 }
+
+// Chapter-relative trace id for a real narrated turn — "C{chapter}-{block}",
+// e.g. turn 1 -> "C1-1", turn 15 -> "C1-15", turn 16 -> "C2-1". Same
+// CHAPTER_TURN_INTERVAL boundary isChapterBoundary uses, so a turn's ref and
+// whether it closes a chapter always agree. turnNumber is 1-indexed, same
+// convention as isChapterBoundary.
+export function turnRefFor(turnNumber: number): string {
+  const chapter = Math.floor((turnNumber - 1) / CHAPTER_TURN_INTERVAL) + 1
+  const block = ((turnNumber - 1) % CHAPTER_TURN_INTERVAL) + 1
+  return `C${chapter}-${block}`
+}

@@ -127,6 +127,7 @@ export interface ItemEntry {
   loreText?: string // an evocative line distinct from `description`'s mechanical summary
   value?: number // freeform currency worth, player/CRUD-set only
   tags?: string[]
+  loggedAt?: string // see LocationEntry.loggedAt — the turn this item first entered the Codex, e.g. "C1-3"
 }
 
 // §5.12 Codex Discovery ("Fog of Lore") — an entry with no `discovery` field
@@ -166,6 +167,7 @@ export interface LocationEntry {
   lastVisitedTime?: GameTime // updated whenever the player is here again
   tags?: string[]
   autoLogged?: boolean
+  loggedAt?: string // the turn this entry was first created, e.g. "C1-3" (Chapter 1, block 3) — see lib/leveling.ts's turnRefFor
   discovery?: Discovery
 }
 
@@ -191,6 +193,7 @@ export interface NpcEntry {
   lastSeenTime?: GameTime // updated on every npc_mem_up touch
   tags?: string[]
   autoLogged?: boolean
+  loggedAt?: string // see LocationEntry.loggedAt
   discovery?: Discovery
 }
 
@@ -204,6 +207,7 @@ export interface FactionEntry {
   symbol?: string // freeform — a sigil/emblem description
   tags?: string[]
   autoLogged?: boolean
+  loggedAt?: string // see LocationEntry.loggedAt
   discovery?: Discovery
 }
 
@@ -217,6 +221,7 @@ export interface LoreEntry {
   era?: string // freeform, e.g. "Ancient"/"Present Day"
   tags?: string[]
   autoLogged?: boolean
+  loggedAt?: string // see LocationEntry.loggedAt
   discovery?: Discovery
 }
 
@@ -238,6 +243,7 @@ export interface QuestEntry {
   reward?: string // freeform
   tags?: string[]
   autoLogged?: boolean
+  loggedAt?: string // see LocationEntry.loggedAt
   discovery?: Discovery
 }
 
@@ -255,6 +261,7 @@ export interface BestiaryEntry {
   lootTable?: string // freeform, e.g. "Bone Dust, Cursed Fang"
   tags?: string[]
   autoLogged?: boolean
+  loggedAt?: string // see LocationEntry.loggedAt
   discovery?: Discovery
 }
 
@@ -274,6 +281,7 @@ export interface SkillEntry {
   tier?: string // freeform progression marker, e.g. "Novice"/"Adept"/"Master"
   flavorText?: string // a short evocative line, distinct from `description`'s mechanical summary
   autoLogged?: boolean
+  loggedAt?: string // see LocationEntry.loggedAt
   discovery?: Discovery
 }
 
@@ -372,6 +380,14 @@ export interface BangCommandEntry {
 export interface LogEntry {
   action?: string
   nar: string
+  // Chapter-relative trace id, "C{chapter}-{block}" (e.g. "C1-3" = Chapter 1,
+  // 3rd narrated turn), computed client-side from turnCount and
+  // CHAPTER_TURN_INTERVAL (lib/leveling.ts's turnRefFor) — never sent to the
+  // model. Any Codex entry created during this turn stamps the same value on
+  // its own `loggedAt`, so "what turn introduced this NPC" is answerable by
+  // matching the two. Absent on synthetic entries and turns logged before
+  // this field existed.
+  turnRef?: string
   turnState?: TurnState
   mood?: string
   defeated?: boolean

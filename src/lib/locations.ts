@@ -15,17 +15,23 @@ export function ensureLocation(
   locDisp: string,
   description?: string,
   time?: GameTime,
+  turnRef?: string,
 ): EnsureResult<LocationEntry> {
-  const result = ensureEntry(locations, locId, () => ({
-    name: locDisp,
-    region: 'Unmapped',
-    description: description || '(Auto-logged — visit again or add detail manually.)',
-    dangerLevel: 'Unknown',
-    factionOwner: null,
-    standing: 'neutral',
-    firstVisitedTime: time,
-    lastVisitedTime: time,
-  }))
+  const result = ensureEntry(
+    locations,
+    locId,
+    () => ({
+      name: locDisp,
+      region: 'Unmapped',
+      description: description || '(Auto-logged — visit again or add detail manually.)',
+      dangerLevel: 'Unknown',
+      factionOwner: null,
+      standing: 'neutral',
+      firstVisitedTime: time,
+      lastVisitedTime: time,
+    }),
+    turnRef,
+  )
   if (!result.entry || !locId) return result
 
   // Re-visiting an already-known location: refresh lastVisitedTime every

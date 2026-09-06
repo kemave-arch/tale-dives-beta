@@ -8,12 +8,12 @@ import type { Dict, QuestEntry, QuestUpdate } from '../types.ts'
 // quest_update only ever carries an id, never a display name — same
 // title-cased fallback pattern as npc_mem_up (lib/npcs.ts) for when no
 // {{Term|quest}} keyword link has already registered a nicer one.
-export function applyQuestUpdate(quests: Dict<QuestEntry> | undefined, update: QuestUpdate | undefined): Dict<QuestEntry> {
+export function applyQuestUpdate(quests: Dict<QuestEntry> | undefined, update: QuestUpdate | undefined, turnRef?: string): Dict<QuestEntry> {
   if (!update?.quest_id) return quests ?? {}
   const id = slugify(update.quest_id)
   if (!id) return quests ?? {}
 
-  const { dict } = ensureEntry(quests, id, () => ({ name: titleCaseId(update.quest_id) }))
+  const { dict } = ensureEntry(quests, id, () => ({ name: titleCaseId(update.quest_id) }), turnRef)
   return {
     ...dict,
     [id]: {

@@ -28,7 +28,7 @@ import { queueCraftingJob, resolveCraftingJobs } from './lib/crafting.ts'
 import { applyMinionUpkeep, attemptSummon, type SummonCommand } from './lib/summoning.ts'
 import { applyFactionRepDeltas, attitudeToRepTier } from './lib/factions.ts'
 import { computePlayerAttack, isDisengaging, describeCombatResult, ensureAdversary } from './lib/combat.ts'
-import { applyLevelUps, isChapterBoundary, CHAPTER_TURN_INTERVAL } from './lib/leveling.ts'
+import { applyLevelUps, isChapterBoundary, CHAPTER_TURN_INTERVAL, turnRefFor } from './lib/leveling.ts'
 import { parseKeywordLinks } from './lib/keywordLinks.ts'
 import { slugify } from './lib/slug.ts'
 import { getProvider } from './api/providers/index.ts'
@@ -717,6 +717,12 @@ export default function App() {
       const { player: nextPlayer, defeated: playerDefeated } = applyTurn(current.player, turn, tacticalOverride)
       nextPlayer.time = turn.time ?? current.player.time // Shadow Referee doesn't own time
 
+      // Computed early (needs only current.turnCount) so every Codex entry
+      // this turn creates can stamp the same trace id it ends up logged
+      // under — see LogEntry.turnRef's comment for the full rationale.
+      const turnNumber = (current.turnCount ?? 0) + 1 // ?? tolerates saves from before turnCount existed
+      const turnRef = turnRefFor(turnNumber)
+
       // The current turn's own loc_id/loc_disp registers FIRST, unlike every
       // other category — its name always comes straight from the model's
       // real loc_disp text (never a derived-id fallback the way npc_mem_up's
@@ -726,7 +732,7 @@ export default function App() {
       // for "Ironheart - Outer Gates") has something to fuzzy-match against
       // (lib/codex.ts's isKnownByName) instead of forking a duplicate stub
       // before the "real" entry even exists yet.
-      const { dict: locationsWithCurrent } = ensureLocation(current.locations, turn.loc_id, turn.loc_disp, turn.loc_desc, nextPlayer.time)
+      const { dict: locationsWithCurrent } = ensureLocation(current.locations, turn.loc_id, turn.loc_disp, turn.loc_desc, nextPlayer.time, turnRef)
 
       // Keyword links run first for every other category so a {{Term|npc}}
       // tag's real name wins over the plainer fallback npc_id-derived stub name.
@@ -741,13 +747,14 @@ export default function App() {
           skills: current.skills ?? {},
         },
         turn.nar,
+        turnRef,
       )
       const nextLocations = linked.locations
-      const nextNpcs = applyNpcUpdates(linked.npcs, turn.npc_mem_up, turn.loc_id, nextPlayer.time)
-      const nextQuests = applyQuestUpdate(linked.quests, turn.quest_update)
+      const nextNpcs = applyNpcUpdates(linked.npcs, turn.npc_mem_up, turn.loc_id, nextPlayer.time, turnRef)
+      const nextQuests = applyQuestUpdate(linked.quests, turn.quest_update, turnRef)
       // §6.4D — a skill_learn record fills in (or upgrades) whatever the
       // {{Term|skill}} keyword pass already stubbed out.
-      const nextSkills = applySkillLearn(linked.skills, turn.skill_learn)
+      const nextSkills = applySkillLearn(linked.skills, turn.skill_learn, turnRef)
       const nextFlags = turn.flag_add?.length ? Array.from(new Set([...current.flags, ...turn.flag_add])) : current.flags
 
       // §5.4 App-Side Rivalry — a rep change to one faction mirrors an
@@ -764,7 +771,7 @@ export default function App() {
       // snapshot. Its output lands in inventory as the base applyInventoryChanges
       // below layers this turn's own inv_add/inv_rem on top of.
       const craftResolution = resolveCraftingJobs(current.crafting ?? [], current.inventory, nextPlayer.time)
-      const invResult = applyInventoryChanges(craftResolution.inventory, current.items, turn.inv_add, turn.inv_rem)
+      const invResult = applyInventoryChanges(craftResolution.inventory, current.items, turn.inv_add, turn.inv_rem, turnRef)
 
       // §3.2 Turn State Consistency — forced to COMBAT whenever a Tactical
       // result was precomputed; otherwise Gemini's own call, same as always.
@@ -789,6 +796,7 @@ export default function App() {
             beastLink.term,
             'standard',
             current.player.level,
+            turnRef,
           )
           nextBestiary = withAdversary
           nextCombat = {
@@ -814,7 +822,7 @@ export default function App() {
       // §5.1a Milestone Leveling — +1 per completed quest this turn, +1 at
       // every Chapter Milestone boundary (§8 item 5's Secret-quest question
       // is moot for now since quest_update doesn't track a tier at all yet).
-      const turnNumber = (current.turnCount ?? 0) + 1 // ?? tolerates saves from before turnCount existed
+      // turnNumber itself was already computed above (turnRef needs it too).
       const questLevels = turn.quest_update?.status === 'completed' ? 1 : 0
       const chapterLevels = isChapterBoundary(turnNumber) ? 1 : 0
       const { player: leveledPlayer, leveled } = applyLevelUps(
@@ -936,6 +944,7 @@ export default function App() {
           {
             action: actionText,
             nar: turn.nar,
+            turnRef,
             turnState,
             mood: turn.mood,
             defeated: playerDefeated,

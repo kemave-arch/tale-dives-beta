@@ -43,13 +43,24 @@ export function ensureAdversary(
   name: string,
   tier: string,
   level: number,
+  turnRef?: string,
 ): EnsureAdversaryResult {
   const dict = bestiary ?? {}
   const existing = dict[id]
   if (existing?.hpMax) return { dict, entry: existing, created: false } // already a full stat block
 
   const { hpMax, dmgBase } = statsForTier(tier, level)
-  const entry: BestiaryEntry = { name: existing?.name ?? name, threatTier: tier, hpMax, dmgBase, autoLogged: true }
+  // loggedAt preserves whatever turn a same-turn {{Name|beast}} keyword tag
+  // already stamped (lib/codex.ts's ensureStub runs first) — only stamps a
+  // fresh one if this adversary genuinely never existed before this upgrade.
+  const entry: BestiaryEntry = {
+    name: existing?.name ?? name,
+    threatTier: tier,
+    hpMax,
+    dmgBase,
+    autoLogged: true,
+    loggedAt: existing?.loggedAt ?? turnRef,
+  }
   return { dict: { ...dict, [id]: entry }, entry, created: !existing }
 }
 

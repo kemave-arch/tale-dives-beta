@@ -1,12 +1,15 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-06, Claude Code on the web — built World Seeding
-(a one-time LLM call at campaign creation covering Lore/NPCs/an optional
-Ambition quest, layered onto AI Studio's new player-authored Locations/
-Factions/Starting-Abilities CRUD from the previous session) plus the Main/
-Side/Ambition/Secret Ambition quest `type` field and a Seeding Review screen.
-See the dated log entry below for the full writeup; this note stays until
-the next session archives it forward. Previous note:
+**Last updated:** 2026-09-06, Claude Code on the web — added a chapter-relative
+turn trace id (`C{chapter}-{block}`) stamped on every real narrated turn and
+on every Codex entry at the moment it's first logged, a "Codex Changes" copy
+button in Chronicle's per-turn Debug Payload popup, and basic query-by-turn-id
+support in Codex's search boxes. Same pass also fixed a duplicate-Codex-entry
+bug (NPCs/Factions forking a second stub instead of reusing the model's own
+established id), a malformed `[[Item|item]]` narration tag, and exposed the
+one-time World Seeding call's raw request/response in the debug UI. See the
+dated log entries below for the full writeup; this note stays until the next
+session archives it forward. Previous note:
 
 **2026-09-05, Claude Code on the web** — archived this file's
 accumulated log (everything since 2026-09-04, ~2,300 lines) forward into
@@ -768,6 +771,25 @@ detail than the summary sections above give — for resuming work, everything ab
 this line is what actually matters.
 
 New entries below, most recent first.
+
+- **2026-09-06** — Chapter-relative turn trace ids (`Cn-n`), stamped Codex provenance, and a "Codex Changes" debug copy button (`src/lib/leveling.ts`, `src/types.ts`, `src/lib/autoRegister.ts`, `src/lib/codex.ts`, `src/lib/locations.ts`, `src/lib/npcs.ts`, `src/lib/quests.ts`, `src/lib/skills.ts`, `src/lib/inventory.ts`, `src/lib/combat.ts`, `src/App.tsx`, `src/screens/Chronicle.tsx`, `src/screens/Codex.tsx`):
+  - **Ask**: a client-side trace id per narrated turn ("C1-1, C1-2..." — chapter number, block number within the chapter) so any Codex entry can record which turn introduced it, queryable later; plus a second copy button in the existing per-turn Debug Payload popup for just the state-changing part of a turn, separate from the full request/response.
+  - **`turnRefFor(turnNumber)`** (`lib/leveling.ts`) derives `"C{chapter}-{block}"` from `turnCount` and the existing `CHAPTER_TURN_INTERVAL` (15) constant — no new persisted field, computed the same way chapter boundaries already are. Verified by hand: turn 1 → `C1-1`, 15 → `C1-15`, 16 → `C2-1`, 30 → `C2-15`, 31 → `C3-1`.
+  - **`LogEntry.turnRef`**: stamped on every real narrated turn in `App.tsx`'s `sendAction`, computed once (hoisted early, before the Codex-apply pipeline runs) and reused for both leveling's existing chapter-boundary check and the new stamping below — no duplicate `turnNumber` computation.
+  - **`loggedAt` on all 8 Codex entry types**: stamped once, at creation, via a new optional trailing `turnRef` parameter threaded through the single shared low-level primitive (`ensureEntry`, `lib/autoRegister.ts`) that `ensureStub`/`applyKeywordLinks`, `ensureLocation`, `applyNpcUpdates`, `applyQuestUpdate`, and `applySkillLearn` all route through — one place to add the stamp rather than duplicating it in six files. The two paths that deliberately bypass `ensureEntry` (`applyInventoryChanges` for items, `ensureAdversary` for bestiary, since it needs to *upgrade* an existing bare stub rather than treat "already exists" as final) each get their own `existing?.loggedAt ?? turnRef` — preserves the original stamp on re-acquisition/upgrade instead of overwriting it.
+  - **Codex Changes copy button** (`Chronicle.tsx`): a new `extractSyncBlock(raw)` pulls just the `<sync>...</sync>` portion out of a turn's raw response text; the existing per-turn Debug Payload popup gained a second copy button next to the original ("Copy just the `<sync>` block — the Codex-affecting part of this turn"), and both the collapsed toggle and expanded header now show the turn's `(C1-3)`-style ref. The full Session Payload export's per-turn header line also gains the `[C1-3]` tag.
+  - **Basic query-by-turn support** (`Codex.tsx`): each category's existing search-matching `useMemo` now also checks `loggedAt`, so typing e.g. `C1-3` into any Codex search box surfaces every entry logged that turn.
+  - **Deliberately deferred**: no standalone visible "Logged: C1-3" badge in Codex's detail/card views yet — the data is recorded and searchable, but not yet shown as its own UI badge. Scoped out to fit this pass; the user's own phrasing on the ask ("if needed") suggested this was optional. Worth a quick follow-up if the querying alone isn't enough.
+  - **Verification**: `npm run build` clean (twice — once after the apply-pipeline wiring, once after the Chronicle/Codex UI additions). `turnRefFor` math and the `<sync>` regex extraction verified with a standalone Node script. Not yet click-through-verified live in a browser (no explicit re-request from the user to do so this round).
+
+- **2026-09-06** — Fixed a real NPC/Faction duplicate-Codex-entry bug, a malformed `[[Item|item]]` narration tag, and exposed the World Seeding call's debug payload (`src/api/turnContract.ts`, `src/lib/jitContext.ts`, `src/lib/npcs.ts`, `src/lib/richText.tsx`, `src/App.tsx`, `src/screens/Chronicle.tsx`):
+  - **The bug report**: a real campaign run (screenshots + a full Turn #0 debug payload) showed the Codex registering duplicate entries for known NPCs/Factions the player had explicitly authored at creation — e.g. both a rich "General Lilith Sorrengail" (player-authored) and a bare auto-registered "L Sorrengail" stub, and likewise for "Riders Quadrant"/"Navarre High Command" alongside their own duplicate auto stubs.
+  - **Root cause**: the "Known Entities" context line (`jitContext.ts`) and `describePresentNpc` (`npcs.ts`) only ever showed entity *names* to the model, never their real dict *id* — so when the model needed to emit `npc_mem_up`/`fac_rep` for an already-known entity, it had no ground truth id to reuse and invented its own abbreviation (`l_sorrengail`), forking a second entry under a new id instead of updating the existing one. Confirmed against the pasted payload: the model's invented `<npc id="l_sorrengail" aff="-5" trust="10">` tag's stats matched the screenshot's duplicate stub exactly.
+  - **Fix**: `jitContext.ts`'s `elsewhereNpcNames`/`factionNames` now render as `"${name} (id: ${id})"`; `describePresentNpc(id, entry)` takes the id and prints it too; `presentNpcs()` (`npcs.ts`) returns `[string, NpcEntry][]` instead of bare values so the id survives to the caller; a new explicit rule in `turnContract.ts` requires the model to reuse the exact id shown rather than invent one. Locations were deliberately left alone — `loc_id` is already a required field on every turn's `<turn>` tag, so it's self-correcting by design.
+  - **The `[[Item|item]]` tag**: the model conflated `[[Item]]` (double-bracket markup, no category suffix) with `{{Term|category}}` (a separate marker that does take one), producing `[[Poison-Lined Boots|item]]` in narration. Fixed at the prompt level (explicit rule in `turnContract.ts` forbidding a `|category` suffix inside `[[...]]`) and defensively at render time (`richText.tsx` strips a trailing `\|\w+$` before display/icon lookup, so a stray one at any temperature still resolves instead of leaking literal `|item` text).
+  - **No quests registered**: traced to the campaign's brief simply not implying any quest-worthy goal on Turn 0 — not a bug, expected behavior (a Quest only registers on an explicit `quest_update`).
+  - **`campaign.seedDebug` exposure**: the one-time World Seeding call's raw request/response (added the same session World Seeding itself was built) had no UI to view it. Wired into Chronicle's existing Session Payload debug panel as a prepended "World Seeding (one-time call, before Turn 0)" section.
+  - **Verification**: `npm run build` clean.
 
 - **2026-09-06** — World Seeding: LLM-authored Lore/NPCs/Ambition quest, layered onto AI Studio's player-authored creation CRUD, plus the quest `type` field (`src/api/worldSeedContract.ts`, `src/lib/worldSeedParser.ts`, `src/lib/xmlHelpers.ts`, `src/lib/seeding.ts`, `src/api/providers/types.ts`/`gemini.ts`, `src/App.tsx`, `src/screens/NewGame.tsx`, `src/screens/Chronicle.tsx`, `src/screens/Codex.tsx`, `src/types.ts`, `src/api/turnContract.ts`, `src/api/xmlTurnContract.ts`, `src/lib/xmlTurnParser.ts`, `src/lib/quests.ts`, `src/lib/discovery.ts`, `src/lib/factions.ts`):
   - **Context**: the previous session's user request (LLM-driven world seeding before Turn 1) landed the same night a parallel Google AI Studio session shipped its own ~5,400-line pass adding player-authored structured CRUD — World Setup's Key Factions/Locations tables and Protagonist Setup's Attributes point-buy/Starting Abilities table, all auto-seeded into the Codex by `beginCampaign` with no LLM call. This session re-scoped the original plan around that: nothing seeded Lore, NPCs/starting relations, or a personal Ambition quest, and a location/faction the player left blank still started with nothing — that's the gap this closes, without duplicating what AI Studio already built.

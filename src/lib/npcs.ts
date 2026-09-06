@@ -35,6 +35,7 @@ export function applyNpcUpdates(
   updates: NpcMemoryUpdate[] = [],
   locId?: string,
   time?: GameTime,
+  turnRef?: string,
 ): Dict<NpcEntry> {
   let dict: Dict<NpcEntry> = npcs ?? {}
 
@@ -46,7 +47,7 @@ export function applyNpcUpdates(
     // Same slug as a {{Term|npc}} tag would produce, so if that ran first
     // this turn (lib/codex.js), its nicer name is preserved here — this
     // factory only fires when npc_mem_up is the very first mention.
-    const { dict: withEntry } = ensureEntry(dict, id, () => emptyNpc(titleCaseId(u.npc_id)))
+    const { dict: withEntry } = ensureEntry(dict, id, () => emptyNpc(titleCaseId(u.npc_id)), turnRef)
     dict = withEntry
 
     const prev = dict[id]

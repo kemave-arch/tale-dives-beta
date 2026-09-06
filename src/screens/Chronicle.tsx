@@ -344,7 +344,7 @@ function buildSessionPayloadText(log: LogEntry[], title: string, seedDebug?: Cam
     const when = [entry.time ? `${entry.time.d}d ${entry.time.h}` : null, entry.locDisp].filter(Boolean).join(' @ ')
     return [
       '='.repeat(80),
-      `Turn #${index}${when ? ` — ${when}` : ''}`,
+      `Turn #${index}${entry.turnRef ? ` [${entry.turnRef}]` : ''}${when ? ` — ${when}` : ''}`,
       `Action: ${entry.action ?? '(none recorded)'}`,
       `finishReason: ${entry.finishReason ?? '(not recorded)'}`,
       '-'.repeat(80),
@@ -409,9 +409,19 @@ function SessionPayloadPanel({ log, title, seedDebug }: { log: LogEntry[]; title
 // commands, chapter recaps, and other synthetic entries never render this.
 // Gated behind Debug Mode by its caller (TurnBlock), same as
 // SessionPayloadPanel above.
+// Just the <sync> block — the part of a turn's raw response that actually
+// touched the Codex (npc_mem_up/quest_update/fac_rep/inv_add/etc.) — pulled
+// out separately from the full request+response so it can be copied on its
+// own, e.g. to cross-check against what actually landed in the Codex without
+// wading through the narrative prose alongside it.
+function extractSyncBlock(raw: string): string | null {
+  return raw.match(/<sync>[\s\S]*?<\/sync>/)?.[0] ?? null
+}
+
 function DebugPayloadButton({ entry }: { entry: LogEntry }) {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [syncCopied, setSyncCopied] = useState(false)
   if (!entry.rawPayload) return null
 
   // MAX_TOKENS on a real narrated turn means the model got cut off
@@ -420,11 +430,20 @@ function DebugPayloadButton({ entry }: { entry: LogEntry }) {
   // that means "this turn is visibly broken," not just "here's some info."
   const truncated = entry.finishReason === 'MAX_TOKENS'
   const payloadText = `### REQUEST (context sent)\n${entry.requestPayload ?? '(not recorded)'}\n\n### RESPONSE (raw model output)\n${entry.rawPayload}\n\n### finishReason: ${entry.finishReason ?? '(not recorded)'}`
+  const syncBlock = extractSyncBlock(entry.rawPayload)
 
   function handleCopy() {
     navigator.clipboard.writeText(payloadText).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  function handleCopySync() {
+    if (!syncBlock) return
+    navigator.clipboard.writeText(syncBlock).then(() => {
+      setSyncCopied(true)
+      setTimeout(() => setSyncCopied(false), 2000)
     })
   }
 
@@ -437,28 +456,48 @@ function DebugPayloadButton({ entry }: { entry: LogEntry }) {
         }`}
       >
         <Bug size={11} /> {open ? 'Hide Payload' : 'View Payload'}
+        {entry.turnRef ? ` (${entry.turnRef})` : ''}
         {truncated && !open && ' — cut off (MAX_TOKENS)'}
       </button>
       {open && (
         <div className="mt-1.5 rounded-lg border border-ink-muted/25 bg-black/[0.04] overflow-hidden">
           <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-ink-muted/20">
             <span className={`text-[10px] font-mono uppercase tracking-wide ${truncated ? 'text-rose' : 'text-ink-muted'}`}>
-              Debug Payload{entry.finishReason ? ` · ${entry.finishReason}` : ''}
+              Debug Payload{entry.turnRef ? ` · ${entry.turnRef}` : ''}{entry.finishReason ? ` · ${entry.finishReason}` : ''}
             </span>
-            <button
-              onClick={handleCopy}
-              className="inline-flex items-center gap-1 text-[10px] font-mono text-ink-muted hover:text-ink"
-            >
-              {copied ? (
-                <>
-                  <Check size={11} className="text-emerald" /> Copied
-                </>
-              ) : (
-                <>
-                  <Copy size={11} /> Copy
-                </>
+            <div className="flex items-center gap-2.5">
+              {syncBlock && (
+                <button
+                  onClick={handleCopySync}
+                  title="Copy just the <sync> block — the Codex-affecting part of this turn"
+                  className="inline-flex items-center gap-1 text-[10px] font-mono text-ink-muted hover:text-ink"
+                >
+                  {syncCopied ? (
+                    <>
+                      <Check size={11} className="text-emerald" /> Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={11} /> Codex Changes
+                    </>
+                  )}
+                </button>
               )}
-            </button>
+              <button
+                onClick={handleCopy}
+                className="inline-flex items-center gap-1 text-[10px] font-mono text-ink-muted hover:text-ink"
+              >
+                {copied ? (
+                  <>
+                    <Check size={11} className="text-emerald" /> Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy size={11} /> Copy
+                  </>
+                )}
+              </button>
+            </div>
           </div>
           <pre className="max-h-64 overflow-auto p-2.5 text-[10px] font-mono leading-snug text-ink-muted whitespace-pre-wrap break-words">
             {payloadText}

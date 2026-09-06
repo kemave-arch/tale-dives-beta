@@ -1,10 +1,15 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-06, Claude Code on the web — added a chapter-relative
-turn trace id (`C{chapter}-{block}`) stamped on every real narrated turn and
-on every Codex entry at the moment it's first logged, a "Codex Changes" copy
-button in Chronicle's per-turn Debug Payload popup, and basic query-by-turn-id
-support in Codex's search boxes. Same pass also fixed a duplicate-Codex-entry
+**Last updated:** 2026-09-06, Claude Code on the web — Tales now get a
+player-chosen, collision-guarded title at creation (with a rename option
+later in the Tales library) instead of an auto-generated name every replay
+of the same protagonist preset used to collide on, plus a `createdAt`
+timestamp so the Tales list shows both when a Tale started and when it was
+last played. Earlier the same day: a chapter-relative turn trace id
+(`C{chapter}-{block}`) stamped on every real narrated turn and on every
+Codex entry at the moment it's first logged, a "Codex Changes" copy button
+in Chronicle's per-turn Debug Payload popup, and basic query-by-turn-id
+support in Codex's search boxes. Same day also fixed a duplicate-Codex-entry
 bug (NPCs/Factions forking a second stub instead of reusing the model's own
 established id), a malformed `[[Item|item]]` narration tag, and exposed the
 one-time World Seeding call's raw request/response in the debug UI. See the
@@ -771,6 +776,13 @@ detail than the summary sections above give — for resuming work, everything ab
 this line is what actually matters.
 
 New entries below, most recent first.
+
+- **2026-09-06** — Player-chosen Tale titles with a duplicate-name guard, rename support, and Tale creation/last-played timestamps (`src/types.ts`, `src/App.tsx`, `src/screens/TaleBrief.tsx`, `src/screens/MainMenu.tsx`):
+  - **The problem**: a Tale's title was hardcoded as `` `${player.name}'s Tale` `` (`App.tsx`, `beginCampaign`) with no user input at all — every replay of the same protagonist preset (a real pattern here, given reusable Master presets like Violet Sorrengail) produced an *identical* title, and the synopsis (first 140 chars of the opening brief/world background) was often identical too, making same-preset Tales indistinguishable in the library. There was also no rename option anywhere once a Tale existed.
+  - **Player-chosen title at creation**: `TaleBrief.tsx` (the last creation step, right before World Seeding fires) gained a "Tale Title" text field, pre-filled with the same `` `${player.name}'s Tale` `` suggestion as before but now fully editable. Validated inline against every existing Tale's title (case/whitespace-insensitive) — a collision or blank title shows a red error message under the field and disables the DIVE IN button until fixed, so two Tales can no longer land in the library with the same name. `beginCampaign` gained a trailing `customTitle?: string` param threading the chosen title through to the new `Campaign.title`.
+  - **Rename anytime** (`MainMenu.tsx`): a new Pencil icon button on each Tale card opens the same reusable `editLongText` modal already used for other long-text fields app-wide, pre-filled with the Tale's current title. `onRenameCampaign` (`App.tsx`) loops on that same modal — re-prompting with an explanatory hint ("Give this Tale a name" / "Another Tale already has this name — choose a different one") instead of silently failing — until the player provides a valid unique title or cancels.
+  - **Tale timestamps**: `Campaign.createdAt` is a new optional field (backward-compatible — falls back to `lastPlayed` on older saves that predate it), stamped once at creation alongside the existing `lastPlayed`. Each Tale card in the library now shows both: "Started {date}" and "Last played {date, time}" (previously only a bare last-played *date*, no time).
+  - **Verification**: `npm run build` clean. Live Playwright click-through against the dev server: walked the full creation flow (World Setup → Protagonist Setup → Tale Dive Brief) and confirmed the Tale Title field renders with the correct pre-filled suggestion; seeded two Tales directly via `localStorage` to exercise the library UI without a real Gemini call, confirming both the "Started"/"Last played" timestamp lines and the rename flow end-to-end — including the duplicate-guard re-prompt firing correctly when renaming one Tale to the other's exact title, and a subsequent unique name saving and updating the card.
 
 - **2026-09-06** — Chapter-relative turn trace ids (`Cn-n`), stamped Codex provenance, and a "Codex Changes" debug copy button (`src/lib/leveling.ts`, `src/types.ts`, `src/lib/autoRegister.ts`, `src/lib/codex.ts`, `src/lib/locations.ts`, `src/lib/npcs.ts`, `src/lib/quests.ts`, `src/lib/skills.ts`, `src/lib/inventory.ts`, `src/lib/combat.ts`, `src/App.tsx`, `src/screens/Chronicle.tsx`, `src/screens/Codex.tsx`):
   - **Ask**: a client-side trace id per narrated turn ("C1-1, C1-2..." — chapter number, block number within the chapter) so any Codex entry can record which turn introduced it, queryable later; plus a second copy button in the existing per-turn Debug Payload popup for just the state-changing part of a turn, separate from the full request/response.

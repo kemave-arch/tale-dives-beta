@@ -11,6 +11,7 @@ interface TaleBriefPayload {
   narrationStyle: string
   temperature: number
   combatMode: CombatMode
+  title: string
 }
 
 interface TaleBriefProps {
@@ -18,6 +19,12 @@ interface TaleBriefProps {
   initialNarrationStyle: string
   initialTemperature: number
   initialCombatMode?: CombatMode
+  // A pre-filled suggestion (e.g. "Violet Sorrengail's Tale"), not a locked
+  // value — the player can freely overwrite it before diving in.
+  suggestedTitle: string
+  // Other Tales' titles already in the library, checked case/whitespace-
+  // insensitively so two saves never look identical in the Tales list.
+  existingTitles: string[]
   editLongText: (label: string, value: string, hint?: string, placeholder?: string) => Promise<string | null>
   onBack: () => void
   onBegin: (payload: TaleBriefPayload) => void
@@ -67,6 +74,8 @@ export default function TaleBrief({
   initialNarrationStyle,
   initialTemperature,
   initialCombatMode = 'NARRATIVE',
+  suggestedTitle,
+  existingTitles,
   editLongText,
   onBack,
   onBegin,
@@ -75,6 +84,11 @@ export default function TaleBrief({
   const [narrationStyle, setNarrationStyle] = useState(initialNarrationStyle)
   const [temperature, setTemperature] = useState(initialTemperature)
   const [combatMode, setCombatMode] = useState<CombatMode>(initialCombatMode)
+  const [title, setTitle] = useState(suggestedTitle)
+
+  const trimmedTitle = title.trim()
+  const isDuplicateTitle = trimmedTitle.length > 0 && existingTitles.some((t) => t.trim().toLowerCase() === trimmedTitle.toLowerCase())
+  const titleError = trimmedTitle.length === 0 ? 'Give this Tale a name.' : isDuplicateTitle ? 'Another Tale already has this name — choose a different one.' : null
 
   return (
     <GlassScreen ground="art" fill>
@@ -82,6 +96,19 @@ export default function TaleBrief({
 
       <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 focus-within:pb-[60vh] md:focus-within:pb-4">
         <div className="max-w-md md:max-w-2xl lg:max-w-3xl mx-auto flex flex-col gap-5">
+          <GlassField label="Tale Title" hint="Shown in your Tales library — rename it anytime later from there.">
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder={suggestedTitle}
+              className={`w-full rounded-lg bg-[#181324]/60 border px-3 py-2 font-display text-sm text-[#fbf4e2] outline-none transition-colors ${
+                titleError ? 'border-red-400/60 focus:border-red-400' : 'border-[#e8ca8a]/25 focus:border-[#f0ca65]/60'
+              }`}
+            />
+            {titleError && <p className="font-narrative italic text-xs text-red-300 mt-1">{titleError}</p>}
+          </GlassField>
+
           <GlassField
             label="Where do you dive in?"
             hint="Optional — leave blank and the Narrator decides."
@@ -179,7 +206,12 @@ export default function TaleBrief({
         style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
       >
         <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl flex justify-center">
-          <GlassCTAButton onClick={() => onBegin({ opening, narrationStyle, temperature, combatMode })}>DIVE IN</GlassCTAButton>
+          <GlassCTAButton
+            disabled={!!titleError}
+            onClick={() => onBegin({ opening, narrationStyle, temperature, combatMode, title: trimmedTitle })}
+          >
+            DIVE IN
+          </GlassCTAButton>
         </div>
       </div>
     </GlassScreen>

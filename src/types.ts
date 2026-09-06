@@ -465,6 +465,7 @@ export interface Campaign {
   corpses?: string[] // §5.3 — harvestable slain-enemy tags accumulated from corpse_add, consumed by `!arise`
   slashCommands?: Dict<SlashCommand> // §6.6 — this Tale's own commands, not marked global in the manager
   log: LogEntry[]
+  createdAt?: number // when this Tale was first begun — optional since older saves predate the field; falls back to lastPlayed for display
   lastPlayed: number
   turnCount: number // real narrated turns only — decoupled from log.length, which also holds synthetic chapter-recap entries
   // One-time World Seeding call's raw request/response (or failure reason) —

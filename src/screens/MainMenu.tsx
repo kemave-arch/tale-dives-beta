@@ -33,6 +33,7 @@ interface MainMenuProps {
   campaigns: Dict<Campaign>
   onResume: (id: string) => void
   onNewSession: (worldId?: string, protagonistId?: string) => void
+  onRenameCampaign: (id: string) => void
   onDeleteCampaign: (id: string) => void
   onExportCampaign: (id: string) => void
   onImportCampaign: (file: File) => void
@@ -67,6 +68,7 @@ export default function MainMenu({
   campaigns,
   onResume,
   onNewSession,
+  onRenameCampaign,
   onDeleteCampaign,
   onExportCampaign,
   onImportCampaign,
@@ -180,11 +182,19 @@ export default function MainMenu({
                     <h3 className="font-display font-bold text-base text-[#fae5b5] tracking-wide">{tale.title}</h3>
                     {tale.synopsis && <p className="font-narrative text-xs text-[#fbf4e2] line-clamp-2 leading-relaxed">{tale.synopsis}</p>}
                     <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#e8ca8a]/15">
-                      <span className="font-mono text-[11px] text-[#d8c49e]">
-                        {tale.lastPlayed ? new Date(tale.lastPlayed).toLocaleDateString() : ''}
-                      </span>
-                      <div className="flex gap-1">
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        <span className="font-mono text-[10px] text-[#d8c49e]/70 truncate">
+                          Started {new Date(tale.createdAt ?? tale.lastPlayed).toLocaleDateString()}
+                        </span>
+                        <span className="font-mono text-[11px] text-[#d8c49e] truncate">
+                          {tale.lastPlayed
+                            ? `Last played ${new Date(tale.lastPlayed).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}`
+                            : ''}
+                        </span>
+                      </div>
+                      <div className="flex gap-1 shrink-0">
                         <GlassIconButton icon={Play} label="Resume" tone="action" onClick={() => onResume(tale.id)} />
+                        <GlassIconButton icon={Pencil} label="Rename" onClick={() => onRenameCampaign(tale.id)} />
                         <GlassIconButton icon={Sparkles} label="New Session" onClick={() => onNewSession(tale.worldId, tale.protagonistId)} />
                         <GlassIconButton icon={Download} label="Export" onClick={() => onExportCampaign(tale.id)} />
                         <GlassIconButton icon={Trash2} label="Delete" tone="danger" onClick={() => onDeleteCampaign(tale.id)} />

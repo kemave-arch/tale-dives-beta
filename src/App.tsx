@@ -414,7 +414,7 @@ export default function App() {
     return Object.values(campaigns).sort((a, b) => (b.lastPlayed ?? 0) - (a.lastPlayed ?? 0))[0]?.id
   }
 
-  async function beginCampaign(protagonistData: ProtagonistData, combatMode: CombatMode = 'NARRATIVE', worldOverride?: Partial<WorldData>) {
+  async function beginCampaign(protagonistData: ProtagonistData, combatMode: CombatMode = 'NARRATIVE', worldOverride?: Partial<WorldData>, customTitle?: string) {
     const cls = getClassById(protagonistData.classId)
     const attrs = protagonistData.customAttributes ?? startingAttributes(cls.weights)
     const { hpMax, mpMax, stMax } = derivedPools(attrs)
@@ -567,7 +567,7 @@ export default function App() {
     const campaign: Campaign = {
       id: campaignId,
       schemaVersion: CURRENT_SCHEMA_VERSION,
-      title: `${player.name}'s Tale`,
+      title: customTitle?.trim() || `${player.name}'s Tale`, // Tale Dive Brief's title field, guarded there against colliding with an existing Tale's name
       synopsis: (protagonistData.opening || world.background || '').slice(0, 140),
       worldId: worldEntry.id!,
       protagonistId: protagonistEntry.id!,
@@ -588,6 +588,7 @@ export default function App() {
       flags: [], // §5.6 World Impact Ledger
       inventory: seeded.inventory, // §5.9
       log: [],
+      createdAt: Date.now(),
       lastPlayed: Date.now(),
       turnCount: 0,
       seedDebug: seeded.debug,
@@ -1419,6 +1420,33 @@ export default function App() {
             setActiveCampaignId(null)
           }
         }}
+        onRenameCampaign={async (id) => {
+          const current = campaigns[id]
+          if (!current) return
+          let draft = current.title
+          let hint: string | undefined
+          // Loops on the same "edit → validate → re-open" modal rather than a
+          // one-shot prompt, so a collision or blank name re-prompts with an
+          // explanatory hint instead of silently failing or renaming to "".
+          for (;;) {
+            const result = await editLongText('Rename Tale', draft, hint, 'e.g. The Fall of Basgiath')
+            if (result === null) return
+            const trimmed = result.trim()
+            if (!trimmed) {
+              draft = result
+              hint = 'Give this Tale a name — it cannot be blank.'
+              continue
+            }
+            const collides = Object.values(campaigns).some((c) => c.id !== id && c.title.trim().toLowerCase() === trimmed.toLowerCase())
+            if (collides) {
+              draft = result
+              hint = 'Another Tale already has this name — choose a different one.'
+              continue
+            }
+            setCampaigns((c) => ({ ...c, [id]: { ...c[id], title: trimmed } }))
+            return
+          }
+        }}
         onExportCampaign={(id) => saveJSON(`${campaigns[id].title}.json`, campaigns[id])}
         onImportCampaign={async (file) => {
           try {
@@ -1553,11 +1581,13 @@ export default function App() {
         initialOpening={pendingProtagonist.opening}
         initialNarrationStyle={pendingWorld.narrationStyle}
         initialTemperature={apiSettings.temperature}
+        suggestedTitle={pendingProtagonist.name ? `${pendingProtagonist.name}'s Tale` : 'Untitled Tale'}
+        existingTitles={Object.values(campaigns).map((c) => c.title)}
         editLongText={editLongText}
         onBack={() => goBack('newgame')}
-        onBegin={({ opening, narrationStyle, temperature, combatMode }) => {
+        onBegin={({ opening, narrationStyle, temperature, combatMode, title }) => {
           setApiSettings((a) => ({ ...a, temperature }))
-          beginCampaign({ ...pendingProtagonist, opening }, combatMode, { narrationStyle })
+          beginCampaign({ ...pendingProtagonist, opening }, combatMode, { narrationStyle }, title)
         }}
       />
     )

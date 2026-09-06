@@ -1,18 +1,26 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import Title from './screens/Title.tsx'
-import Settings, { type SettingsSavePayload } from './screens/Settings.tsx'
 import MainMenu from './screens/MainMenu.tsx'
-import StoryMode from './screens/StoryMode.tsx'
-import WorldSetup from './screens/WorldSetup.tsx'
-import NewGame from './screens/NewGame.tsx'
-import TaleBrief from './screens/TaleBrief.tsx'
-import DiveLoadingScreen from './screens/DiveLoadingScreen.tsx'
-import Chronicle from './screens/Chronicle.tsx'
-import Codex, { type CategoryId } from './screens/Codex.tsx'
-import SlashCommandManager from './screens/SlashCommandManager.tsx'
-import WorldSeedWeaver from './screens/WorldSeedWeaver.tsx'
+import type { SettingsSavePayload } from './screens/Settings.tsx'
+import type { CategoryId } from './screens/Codex.tsx'
 import type { SeedNpcData } from './components/seedweaver/types.ts'
+// Everything below Title/MainMenu is code-split — mobile's first paint only
+// needs to parse those two, not the whole app (Codex, WorldSeedWeaver + its
+// 4 modals, Chronicle, etc. run well past 5,000 lines combined). Each only
+// loads once the player actually navigates to it; the Suspense fallback
+// around `content` below covers the brief gap on that first visit.
+const Settings = lazy(() => import('./screens/Settings.tsx'))
+const StoryMode = lazy(() => import('./screens/StoryMode.tsx'))
+const WorldSetup = lazy(() => import('./screens/WorldSetup.tsx'))
+const NewGame = lazy(() => import('./screens/NewGame.tsx'))
+const TaleBrief = lazy(() => import('./screens/TaleBrief.tsx'))
+const DiveLoadingScreen = lazy(() => import('./screens/DiveLoadingScreen.tsx'))
+const Chronicle = lazy(() => import('./screens/Chronicle.tsx'))
+const Codex = lazy(() => import('./screens/Codex.tsx'))
+const SlashCommandManager = lazy(() => import('./screens/SlashCommandManager.tsx'))
+const WorldSeedWeaver = lazy(() => import('./screens/WorldSeedWeaver.tsx'))
+const NovelWeaver = lazy(() => import('./screens/NovelWeaver.tsx'))
 import { getClassById, findClassById } from './data/classes.ts'
 import { startingAttributes, derivedPools } from './lib/derivedStats.ts'
 import { buildContextSlice } from './lib/jitContext.ts'
@@ -74,7 +82,7 @@ const KEYWORD_CATEGORY_TO_CODEX: Record<KeywordLink['category'], CategoryId> = {
 // screen is current (same as SlashCommandManager), not a screen that replaces
 // it — that's what lets its glass read against the live Chronicle parchment or
 // the Title artwork behind it rather than a flat ground.
-type Screen = 'title' | 'mainmenu' | 'storymode' | 'worldsetup' | 'newgame' | 'talebrief' | 'chronicle' | 'codex' | 'diveloading' | 'seedingreview' | 'worldseed'
+type Screen = 'title' | 'mainmenu' | 'storymode' | 'worldsetup' | 'newgame' | 'talebrief' | 'chronicle' | 'codex' | 'diveloading' | 'seedingreview' | 'worldseed' | 'novelweaver'
 type CreationMode = 'tale' | 'library'
 
 // §5.7 Player Defeat State — soft-fail recovery, client-owned.
@@ -1615,6 +1623,7 @@ export default function App() {
         }}
         onOpenSettings={() => openSettings()}
         onOpenWorldSeed={() => navigateTo('worldseed')}
+        onOpenNovelWeaver={() => navigateTo('novelweaver')}
         onBackToTitle={() => goBack('title')}
         musicMuted={musicMuted}
         onToggleMusicMute={toggleMusicMute}
@@ -1642,6 +1651,22 @@ export default function App() {
         onDeleteWorldPreset={deleteWorld}
         onBeginTale={(protagonistData: ProtagonistData, combatMode: CombatMode, worldOverride: Partial<WorldData>, customTitle: string, customNpcs?: SeedNpcData[]) => {
           beginCampaign(protagonistData, combatMode, worldOverride, customTitle, customNpcs)
+        }}
+      />
+    )
+  } else if (screen === 'novelweaver') {
+    content = (
+      <NovelWeaver
+        worldTemplates={Object.values(worlds)}
+        protagonistTemplates={Object.values(protagonists)}
+        existingTitles={Object.values(campaigns).map((c) => c.title)}
+        onBack={() => goBack('mainmenu')}
+        onSaveProtagonistPreset={(pData: ProtagonistData) => upsertProtagonist(pData, pData.id, pData.className || getClassById(pData.classId).name)}
+        onSaveWorldPreset={(wData: WorldData) => upsertWorld(wData, wData.id)}
+        onDeleteProtagonistPreset={deleteProtagonist}
+        onDeleteWorldPreset={deleteWorld}
+        onBeginTale={(protagonistData, combatMode, worldOverride, customTitle, cast) => {
+          beginCampaign(protagonistData, combatMode, worldOverride, customTitle, cast.map((c) => ({ ...c, role: c.role ?? '' })))
         }}
       />
     )
@@ -1874,7 +1899,7 @@ export default function App() {
           transition={{ duration: 0.15 }}
           className="w-full min-h-dvh flex flex-col"
         >
-          {content}
+          <Suspense fallback={<div className="w-full min-h-dvh bg-[#0b0812]" />}>{content}</Suspense>
         </motion.div>
       </AnimatePresence>
 
@@ -1889,6 +1914,7 @@ export default function App() {
       {/* Overlay, not a screen — the screen underneath stays mounted and
           visible through the modal's glass. */}
       {settingsOpen && (
+       <Suspense fallback={null}>
         <Settings
           apiSettings={apiSettings}
           uiPrefs={uiPrefs}
@@ -1986,9 +2012,11 @@ export default function App() {
             window.location.reload()
           }}
         />
+       </Suspense>
       )}
 
       {slashManagerOpen && game && (
+       <Suspense fallback={null}>
         <SlashCommandManager
           campaignCommands={game.slashCommands ?? {}}
           globalCommands={globalSlashCommands}
@@ -1996,6 +2024,7 @@ export default function App() {
           onDelete={deleteSlashCommand}
           onClose={closeSlashManager}
         />
+       </Suspense>
       )}
 
       {confirmDialog}

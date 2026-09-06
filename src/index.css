@@ -397,3 +397,23 @@ button {
 .parchment-surface::-webkit-scrollbar-thumb:hover {
   background-color: var(--td-gold-accent);
 }
+
+/* Mobile perf — backdrop-filter is one of the most expensive things a phone
+   GPU paints, and this app's glass-panel look leans on it everywhere
+   (cards, dropdowns, popups), often several layers at once in a scrolling
+   view. Desktop keeps the full radius; touch/narrow viewports get the same
+   panels at a flat, cheap 4px instead of losing the frosted look outright.
+   Unlayered, so it beats Tailwind's own utilities (emitted in @layer
+   utilities) regardless of source order — no !important needed, but it's
+   here anyway since this is a deliberate, load-bearing override. */
+@media (max-width: 768px), (pointer: coarse) {
+  .backdrop-blur-sm,
+  .backdrop-blur-md,
+  .backdrop-blur-lg,
+  .backdrop-blur-xl,
+  .backdrop-blur-2xl,
+  .backdrop-blur-3xl {
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
+  }
+}

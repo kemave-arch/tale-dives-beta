@@ -21,7 +21,12 @@ const KEYS = {
 // Free-text fields (TaleBrief's Opening Brief / Narration Style) that let
 // the player save their own reusable snippets, on top of the app's
 // built-in FormExampleItem inspiration lists.
-export type TextPresetField = 'openingBrief' | 'narrationStyle'
+// 'novelCast'/'novelNarrative' (Novel Weaver, an isolated alternate Tale-
+// creation UI — see screens/NovelWeaver.tsx) reuse this exact mechanism for
+// structured values too: value is always a string, so a Cast roster or a
+// Narrative bundle round-trips through JSON.stringify/parse rather than the
+// plain text the other two fields store directly.
+export type TextPresetField = 'openingBrief' | 'narrationStyle' | 'novelCast' | 'novelNarrative'
 
 export function loadTextPresets(field: TextPresetField): SavedPreset[] {
   return load<Partial<Record<TextPresetField, SavedPreset[]>>>(KEYS.textPresets, {})[field] ?? []

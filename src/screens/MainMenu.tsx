@@ -47,6 +47,7 @@ interface MainMenuProps {
   onDeleteProtagonist: (id: string) => void
   onOpenSettings: () => void
   onOpenWorldSeed?: () => void
+  onOpenNovelWeaver?: () => void
   // Same soundtrack controls as Title, so the toggle is reachable from
   // wherever the player happens to be rather than only the entry screen.
   onBackToTitle: () => void
@@ -83,6 +84,7 @@ export default function MainMenu({
   onDeleteProtagonist,
   onOpenSettings,
   onOpenWorldSeed,
+  onOpenNovelWeaver,
   onBackToTitle,
   musicMuted,
   onToggleMusicMute,
@@ -224,6 +226,23 @@ export default function MainMenu({
                       <span className="font-narrative text-[11px] text-purple-300/80 italic mt-0.5">
                         Interactive Constellation Weaver (Node Flow)
                       </span>
+                    </div>
+                  </button>
+                )}
+                {onOpenNovelWeaver && (
+                  <button
+                    type="button"
+                    onClick={onOpenNovelWeaver}
+                    className="relative group col-span-1 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 border-2 border-[#e8ca8a]/40 bg-gradient-to-br from-[#161221] to-[#0b0812] hover:border-[#f5dfa0] transition-all duration-300 shadow-[0_0_20px_rgba(232,202,138,0.15)] hover:shadow-[0_0_25px_rgba(232,202,138,0.35)] text-center cursor-pointer min-h-[110px]"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#e8ca8a] to-[#f5dfa0] p-[1.5px] shadow-lg shadow-black/40">
+                      <div className="w-full h-full rounded-full bg-[#120e1b] flex items-center justify-center text-[#f5dfa0] group-hover:scale-110 transition-transform">
+                        <BookOpen size={18} />
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className="font-display font-bold text-sm text-[#fae5b5] tracking-wider uppercase">Novel Weaver</span>
+                      <span className="font-narrative text-[11px] text-[#c9b989] italic mt-0.5">Chapter-by-chapter Tale forge</span>
                     </div>
                   </button>
                 )}

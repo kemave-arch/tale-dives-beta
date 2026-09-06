@@ -101,26 +101,23 @@ function useResponsiveBg(stem: string, portrait: boolean): string {
   const base = import.meta.env.BASE_URL
   const pcSrc = `${base}img/pc_${stem}.webp`
   const mobileSrc = `${base}img/m_${stem}.webp`
-  const [src, setSrc] = useState(() => getPreferredBg(stem, portrait))
 
+  const preferred = getPreferredBg(stem, portrait)
+  const [src, setSrc] = useState(preferred)
+
+  // Sync state if preferred background changes
   useEffect(() => {
-    let cancelled = false
+    setSrc(preferred)
+  }, [preferred])
 
-    if (!portrait) {
-      setSrc(pcSrc)
-      return
-    }
+  // Probe only if portrait and availability is unknown
+  useEffect(() => {
+    if (!portrait) return
 
     const known = mobileAvailability.get(stem)
-    if (known === true) {
-      setSrc(mobileSrc)
-      return
-    }
-    if (known === false) {
-      setSrc(pcSrc)
-      return
-    }
+    if (known !== undefined) return
 
+    let cancelled = false
     const probe = new Image()
     probe.onload = () => {
       mobileAvailability.set(stem, true)

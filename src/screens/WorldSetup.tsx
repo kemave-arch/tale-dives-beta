@@ -869,6 +869,16 @@ export default function WorldSetup({
     </div>
   )
 
+  const handleContinue = () => {
+    if (activeTab === 'overview') {
+      setActiveTab('depth')
+    } else if (activeTab === 'depth') {
+      setActiveTab('locations')
+    } else {
+      onContinue(currentData())
+    }
+  }
+
   return (
     <GlassScreen ground="art" fill>
       <GlassHeader
@@ -889,7 +899,7 @@ export default function WorldSetup({
       </div>
 
       {/* Main Form Body */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 focus-within:pb-[60vh] md:focus-within:pb-4">
         <div className="max-w-md md:max-w-3xl lg:max-w-6xl mx-auto flex flex-col gap-5">
           {activeTab === 'overview' && overviewFields}
           {activeTab === 'depth' && depthFields}
@@ -931,7 +941,7 @@ export default function WorldSetup({
         style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
       >
         <div className="w-full max-w-md md:max-w-3xl lg:max-w-6xl flex justify-center">
-          <GlassCTAButton onClick={() => onContinue(currentData())}>Continue</GlassCTAButton>
+          <GlassCTAButton onClick={handleContinue}>Continue</GlassCTAButton>
         </div>
       </div>
 

@@ -9,9 +9,9 @@ export default function DiveLoadingScreen() {
     >
       <div className="absolute inset-0 pointer-events-none">
         <picture>
-          <source media="(min-width: 1024px)" srcSet={`${import.meta.env.BASE_URL}pc_title-bg2.webp`} />
+          <source media="(min-width: 1024px)" srcSet={`${import.meta.env.BASE_URL}img/pc_title-bg2.webp`} />
           <img
-            src={`${import.meta.env.BASE_URL}m_title-bg2.webp`}
+            src={`${import.meta.env.BASE_URL}img/m_title-bg2.webp`}
             alt=""
             className="absolute inset-0 w-full h-full object-cover animate-[fade-in_2s_ease-in_forwards]"
           />

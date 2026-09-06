@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { ArrowLeft, Bookmark, X } from 'lucide-react'
 import { CyclingBackground } from './cyclingBackground.tsx'
@@ -246,6 +246,27 @@ interface GlassScreenProps {
 }
 
 export function GlassScreen({ ground, children, fill = false, className = '' }: GlassScreenProps) {
+  useEffect(() => {
+    // Only apply on touch/mobile devices or small/mobile screens
+    const isMobile = window.matchMedia('(max-width: 1024px)').matches
+    if (!isMobile) return
+
+    const handleFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+        // Wait for keyboard animation and CSS focus-within transitions to apply
+        setTimeout(() => {
+          target.scrollIntoView({ block: 'center', behavior: 'smooth' })
+        }, 250)
+      }
+    }
+
+    document.addEventListener('focusin', handleFocusIn)
+    return () => {
+      document.removeEventListener('focusin', handleFocusIn)
+    }
+  }, [])
+
   return (
     <div className={`relative text-ink ${fill ? 'h-dvh flex flex-col overflow-hidden' : 'min-h-dvh'} ${ground === 'dark' ? 'bg-canvas' : ''} ${className}`}>
       {ground === 'art' && (

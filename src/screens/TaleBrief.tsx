@@ -80,7 +80,7 @@ export default function TaleBrief({
     <GlassScreen ground="art" fill>
       <GlassHeader title="Tale Dive Brief" subtitle="Step 4 — where the first page opens" onBack={onBack} />
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 focus-within:pb-[60vh] md:focus-within:pb-4">
         <div className="max-w-md md:max-w-2xl lg:max-w-3xl mx-auto flex flex-col gap-5">
           <GlassField
             label="Where do you dive in?"

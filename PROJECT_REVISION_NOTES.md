@@ -962,3 +962,15 @@ New entries below, most recent first.
     Updated all dependencies across `PRESET_CLASSES` (`src/data/classes.ts`), `getClassById`/`findClassById` lookup helpers, starter templates (`src/data/starterTemplates.ts`), bang command descriptions (`src/lib/bangCommands.ts`), and Codex help copy (`src/screens/Codex.tsx`).
   - **Verification**: Verified via `lint_applet` (`tsc --noEmit`) and `compile_applet` (`vite build`). All builds compiled cleanly with 0 errors.
 
+- **2026-09-05** — Setup Screen Background Fixes, Mobile Soft Keyboard Handling, and "Continue" Button Tab Cycling (`src/lib/cyclingBackground.tsx`, `src/screens/DiveLoadingScreen.tsx`, `src/lib/glassChrome.tsx`, `src/screens/WorldSetup.tsx`, `src/screens/NewGame.tsx`, `src/screens/TaleBrief.tsx`, `PROJECT_REVISION_NOTES.md`):
+  - **Background Typing Flicker Fix** (`src/lib/cyclingBackground.tsx`): Refactored `useResponsiveBg` to synchronously evaluate and return background image source paths during rendering if availability is already recorded or when on wide/PC viewports. This completely avoids redundant React state updates on every keystroke, ensuring absolute visual stability while typing.
+  - **Restored "Dive In" Wallpaper Path** (`src/screens/DiveLoadingScreen.tsx`): Appended the missing `img/` subdirectory prefix to PC and mobile wallpaper source strings in the loading screen component to correctly load the blurred backdrop transition assets.
+  - **Mobile Soft Keyboard Visual Comfort** (`src/lib/glassChrome.tsx`, `src/screens/WorldSetup.tsx`, `src/screens/NewGame.tsx`, `src/screens/TaleBrief.tsx`): 
+    - Added focus-within padding (`focus-within:pb-[60vh]`) to the scroll containers of World Setup, Protagonist Setup, and Tale Dive Brief screens, providing massive bottom scrollable empty space.
+    - Integrated a smooth automatic viewport auto-scroller inside the general `<GlassScreen>` layout for touch/mobile devices that centers any active/focused text inputs or textareas safely above the virtual keypad.
+  - **"Continue" Action Button Tab Cycling** (`src/screens/WorldSetup.tsx`, `src/screens/NewGame.tsx`):
+    - Refactored the "Continue" button in the World Setup screen to cycle through the custom tabs sequentially (Overview -> Depth -> Locations) and only trigger the step's complete handler once on the final section.
+    - Refactored the "Continue" button in the Protagonist Setup (New Game) screen so that on mobile/tablet screens it sequentially cycles through the mobile tabs (Basics -> Identity -> Skills) before initiating the story start sequence, while remaining a single action-trigger on large desktop screens.
+  - **Verification**: Verified successfully via `lint_applet` (`tsc --noEmit`) and `compile_applet` (`vite build`).
+
+

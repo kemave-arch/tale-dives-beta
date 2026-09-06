@@ -1150,6 +1150,21 @@ export default function NewGame({
     </div>
   )
 
+  const handleContinue = () => {
+    const isMobileLayout = window.innerWidth < 1024 // lg breakpoint is 1024px
+    if (isMobileLayout) {
+      if (mobileTab === 'basics') {
+        setMobileTab('identity')
+      } else if (mobileTab === 'identity') {
+        setMobileTab('skills')
+      } else {
+        onBegin(currentData())
+      }
+    } else {
+      onBegin(currentData())
+    }
+  }
+
   return (
     <GlassScreen ground="art" fill>
       <GlassHeader
@@ -1175,7 +1190,7 @@ export default function NewGame({
       </div>
 
       {/* Main Form Body */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 lg:py-4">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 lg:py-4 focus-within:pb-[60vh] lg:focus-within:pb-4">
         <div className="max-w-md md:max-w-3xl lg:max-w-6xl mx-auto flex flex-col gap-5">
           {/* Mobile subtabs (< lg) */}
           <div className="lg:hidden">
@@ -1209,7 +1224,7 @@ export default function NewGame({
         style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
       >
         <div className="w-full max-w-md md:max-w-3xl lg:max-w-6xl flex justify-center">
-          <GlassCTAButton onClick={() => onBegin(currentData())}>Continue</GlassCTAButton>
+          <GlassCTAButton onClick={handleContinue}>Continue</GlassCTAButton>
         </div>
       </div>
 

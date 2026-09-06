@@ -204,12 +204,18 @@ export function renderNarrative(
       // thought/dialogue italic below by color, not by another badge. Icon
       // prefix is best-effort (matched by name against the Codex item dict)
       // and silently omitted if nothing matches — decoration only, never load-bearing.
-      const matchedItemType = itemsByName.get(item.trim().toLowerCase())?.type
+      // [[Item]] carries no category code (unlike {{Term|category}}), but a
+      // model occasionally conflates the two markers and writes
+      // [[Item|item]] anyway — strip a trailing "|word" defensively so a
+      // stray one doesn't render as literal "Item|item" text or break the
+      // icon lookup below.
+      const cleanItem = item.replace(/\|\w+$/, '').trim()
+      const matchedItemType = itemsByName.get(cleanItem.toLowerCase())?.type
       const itemIcon = matchedItemType ? ITEM_TYPE_ICONS[matchedItemType] : undefined
       nodes.push(
         <em key={`i${key}`} className="font-semibold italic text-gold-primary">
           {itemIcon ? `${itemIcon} ` : ''}
-          {renderTags(item, `i${key}`, onTapTerm, locationsByName)}
+          {renderTags(cleanItem, `i${key}`, onTapTerm, locationsByName)}
         </em>,
       )
     } else if (thought !== undefined) {

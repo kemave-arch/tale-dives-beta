@@ -15,7 +15,7 @@ import { BANG_COMMANDS } from '../lib/bangCommands.ts'
 import { isHidden } from '../lib/discovery.ts'
 import type { CategoryId } from './Codex.tsx'
 import type {
-  ApiSettings, BestiaryEntry, CombatState, CraftingJob, FactionEntry, GameTime, KeywordLink, LocationEntry, LogEntry, LoreEntry, NpcEntry, Player,
+  ApiSettings, BestiaryEntry, Campaign, CombatState, CraftingJob, FactionEntry, GameTime, KeywordLink, LocationEntry, LogEntry, LoreEntry, NpcEntry, Player,
   ProseDepthConfig, QuestEntry, SkillEntry, SlashCommand, ItemEntry, StatBonus,
 } from '../types.ts'
 
@@ -32,6 +32,7 @@ interface ChronicleProps {
   player: Player
   combat?: CombatState
   log: LogEntry[]
+  seedDebug?: Campaign['seedDebug']
   busy: boolean
   error: string | null
   chromeOpacity: number
@@ -312,7 +313,7 @@ interface TurnBlockProps {
 // one turn at a time (DebugPayloadButton below covers the single-turn case).
 // Synthetic entries (bang/chapter-recap/class-evolution) carry no
 // `rawPayload` and are skipped — there's no API call to show.
-function buildSessionPayloadText(log: LogEntry[], title: string): string {
+function buildSessionPayloadText(log: LogEntry[], title: string, seedDebug?: Campaign['seedDebug']): string {
   const withPayload = log
     .map((entry, index) => ({ entry, index }))
     .filter(({ entry }) => entry.rawPayload)
@@ -323,6 +324,21 @@ function buildSessionPayloadText(log: LogEntry[], title: string): string {
     `# Total log entries: ${log.length}, narrated turns with a recorded payload: ${withPayload.length}`,
     '',
   ].join('\n')
+
+  // World Seeding isn't a turn (no history, no log entry) — its own
+  // request/response is kept on campaign.seedDebug and shown here so a
+  // "why didn't X get seeded" question is answerable without leaving the app.
+  const seedSection = seedDebug
+    ? [
+        '='.repeat(80),
+        'World Seeding (one-time call, before Turn 0)',
+        '-'.repeat(80),
+        '### PROMPT',
+        seedDebug.prompt,
+        '',
+        seedDebug.error ? `### ERROR\n${seedDebug.error}` : `### RESPONSE (raw model output)\n${seedDebug.response ?? '(not recorded)'}`,
+      ].join('\n')
+    : null
 
   const turns = withPayload.map(({ entry, index }) => {
     const when = [entry.time ? `${entry.time.d}d ${entry.time.h}` : null, entry.locDisp].filter(Boolean).join(' @ ')
@@ -340,7 +356,7 @@ function buildSessionPayloadText(log: LogEntry[], title: string): string {
     ].join('\n')
   })
 
-  return [header, ...turns, '='.repeat(80)].join('\n\n')
+  return [header, ...(seedSection ? [seedSection] : []), ...turns, '='.repeat(80)].join('\n\n')
 }
 
 // The "whole session" counterpart to DebugPayloadButton below — pinned to
@@ -349,9 +365,9 @@ function buildSessionPayloadText(log: LogEntry[], title: string): string {
 // parchment reflows underneath it automatically) rather than living inline
 // in the scrolling log, since this covers every turn at once, not one.
 // Only ever rendered when Debug Mode is on (see Chronicle's own render).
-function SessionPayloadPanel({ log, title }: { log: LogEntry[]; title: string }) {
+function SessionPayloadPanel({ log, title, seedDebug }: { log: LogEntry[]; title: string; seedDebug?: Campaign['seedDebug'] }) {
   const [copied, setCopied] = useState(false)
-  const text = useMemo(() => buildSessionPayloadText(log, title), [log, title])
+  const text = useMemo(() => buildSessionPayloadText(log, title, seedDebug), [log, title, seedDebug])
 
   function handleCopy() {
     navigator.clipboard.writeText(text).then(() => {
@@ -883,6 +899,7 @@ export default function Chronicle({
   player,
   combat,
   log,
+  seedDebug,
   busy,
   error,
   chromeOpacity,
@@ -1289,7 +1306,7 @@ export default function Chronicle({
             </div>
           )}
 
-          {debugMode && sessionPayloadOpen && <SessionPayloadPanel log={log} title={title} />}
+          {debugMode && sessionPayloadOpen && <SessionPayloadPanel log={log} title={title} seedDebug={seedDebug} />}
         </header>
 
         {/* Parchment Log Container */}

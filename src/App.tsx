@@ -1645,6 +1645,7 @@ export default function App() {
         player={game.player}
         combat={game.combat}
         log={game.log}
+        seedDebug={game.seedDebug}
         busy={busy}
         error={error}
         chromeOpacity={uiPrefs.chromeOpacity}

@@ -103,8 +103,8 @@ export function buildContextSlice(state: Campaign, combatResultLine?: string | n
   }
 
   // §5.5 Proximity Slicing — an NPC not currently here costs 0 context tokens.
-  for (const npc of presentNpcs(npcs, player.locId)) {
-    lines.push(describePresentNpc(npc))
+  for (const [npcId, npc] of presentNpcs(npcs, player.locId)) {
+    lines.push(describePresentNpc(npcId, npc))
   }
 
   // Memory retention — everything below this point exists because the
@@ -112,21 +112,29 @@ export function buildContextSlice(state: Campaign, combatResultLine?: string | n
   // E) and the model has no memory beyond it. Cheap, compact, re-told every
   // turn rather than relying on a full replay.
 
-  // Known Entities — names only, capped per category (MAX_KNOWN_NAMES) so
-  // this line's cost stays flat no matter how long the campaign runs. Exists
-  // so the model checks this list before inventing a new NPC/location/faction
-  // that duplicates one it just can't see in the sliced-down context above —
+  // Known Entities — capped per category (MAX_KNOWN_NAMES) so this line's
+  // cost stays flat no matter how long the campaign runs. Exists so the model
+  // checks this list before inventing a new NPC/location/faction that
+  // duplicates one it just can't see in the sliced-down context above —
   // without this, "not currently present/visited" reads to the model as
-  // "doesn't exist yet."
+  // "doesn't exist yet." NPCs and Factions show their real id in parens —
+  // an npc_mem_up/fac_rep update for one of these MUST reuse that exact id;
+  // without it shown here, the model has no ground truth and invents its own
+  // abbreviation, forking a duplicate stub instead of updating the real
+  // entry (confirmed live: "General Lilith Sorrengail" got auto-registered a
+  // second time under a model-invented "l_sorrengail" id). Locations don't
+  // need this — loc_id is already a required field on every single turn.
   const otherLocationNames = Object.entries(locations ?? {})
     .filter(([id]) => id !== player.locId)
     .map(([, l]) => l.name)
     .slice(-MAX_KNOWN_NAMES)
-  const elsewhereNpcNames = Object.values(npcs ?? {})
-    .filter((n) => n.lastSeenLocId !== player.locId)
-    .map((n) => n.name)
+  const elsewhereNpcNames = Object.entries(npcs ?? {})
+    .filter(([, n]) => n.lastSeenLocId !== player.locId)
+    .map(([id, n]) => `${n.name} (id: ${id})`)
     .slice(-MAX_KNOWN_NAMES)
-  const factionNames = Object.values(factions ?? {}).map((f) => f.name).slice(-MAX_KNOWN_NAMES)
+  const factionNames = Object.entries(factions ?? {})
+    .map(([id, f]) => `${f.name} (id: ${id})`)
+    .slice(-MAX_KNOWN_NAMES)
   const loreNames = Object.values(lore ?? {}).map((l) => l.name).slice(-MAX_KNOWN_NAMES)
 
   const knownSegments = [

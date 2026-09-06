@@ -83,7 +83,7 @@ export function applyNpcUpdates(
 // only append when the player has set them via Codex CRUD — otherwise 0 cost,
 // and correct pronoun/age-appropriate behavior is left to the model's own
 // judgment exactly as it was before these fields existed.
-export function describePresentNpc(entry: NpcEntry): string {
+export function describePresentNpc(id: string, entry: NpcEntry): string {
   // Role is the same stable anchor a real title-carrying NPC record would be —
   // "Kaelen" and "Stone-Gait Sentry" reading as the same person is a narration
   // problem this can't force, but showing it back every turn at least gives
@@ -100,9 +100,14 @@ export function describePresentNpc(entry: NpcEntry): string {
     .join(' | ')
   // First Seen anchors the same anti-drift check as describeKnownLocation's.
   const firstSeen = entry.firstSeenTime ? ` | First Seen: Day ${entry.firstSeenTime.d} ${entry.firstSeenTime.h}` : ''
-  return `NPC: ${entry.name}${identity ? ` | ${identity}` : ''} | Stage: ${entry.stage} | Trust: ${entry.trust}${gear ? ` | ${gear}` : ''}${firstSeen} | Mem: "${entry.memSummary}"`
+  // id is the exact npc_id an npc_mem_up update for this person must reuse —
+  // shown explicitly because the model otherwise has no ground truth for it
+  // (only the display name), and will invent its own abbreviation (e.g.
+  // "l_sorrengail" for "General Lilith Sorrengail") that forks a duplicate
+  // stub entry instead of updating the real one.
+  return `NPC: ${entry.name} (id: ${id})${identity ? ` | ${identity}` : ''} | Stage: ${entry.stage} | Trust: ${entry.trust}${gear ? ` | ${gear}` : ''}${firstSeen} | Mem: "${entry.memSummary}"`
 }
 
-export function presentNpcs(npcs: Dict<NpcEntry> | undefined, locId: string): NpcEntry[] {
-  return Object.values(npcs ?? {}).filter((n) => n.lastSeenLocId === locId)
+export function presentNpcs(npcs: Dict<NpcEntry> | undefined, locId: string): [string, NpcEntry][] {
+  return Object.entries(npcs ?? {}).filter(([, n]) => n.lastSeenLocId === locId)
 }

@@ -7,6 +7,17 @@
 
 export type Dict<T> = Record<string, T>
 
+// A player-saved snippet for a free-text field (e.g. TaleBrief's Opening
+// Brief / Narration Style) — separate from the built-in FormExampleItem
+// list in data/formExamples.ts, which ships with the app and can't be
+// edited or removed.
+export interface SavedPreset {
+  id: string
+  name: string
+  value: string
+  savedAt: number
+}
+
 export interface Attributes {
   STR: number
   INT: number

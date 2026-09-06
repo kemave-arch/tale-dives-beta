@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { ArrowLeft, Bookmark, Info, X } from 'lucide-react'
+import { ArrowLeft, Bookmark, Check, Info, Plus, Trash2, X } from 'lucide-react'
 import { CyclingBackground } from './cyclingBackground.tsx'
+import type { SavedPreset } from '../types.ts'
 
 // Shared "border-only glassmorphism" chrome for screens that sit directly on
 // top of the cycling background art (Title, MainMenu) — transparent fill at
@@ -509,11 +510,35 @@ export function ExamplesHelpModal({
   config,
   onClose,
   onSelect,
+  presets,
+  onSelectPreset,
+  onDeletePreset,
+  onSaveCurrent,
+  canSaveCurrent,
 }: {
   config: ExamplesHelpConfig
   onClose: () => void
   onSelect?: (val: string) => void
+  // Player-saved snippets, shown above the built-in examples. Kept as a
+  // separate prop set from `config`/`onSelect` since presets are mutable
+  // (savable/deletable) and per-field, unlike the static example lists.
+  presets?: SavedPreset[]
+  onSelectPreset?: (val: string) => void
+  onDeletePreset?: (id: string) => void
+  onSaveCurrent?: (name: string) => void
+  canSaveCurrent?: boolean
 }) {
+  const [isNaming, setIsNaming] = useState(false)
+  const [presetName, setPresetName] = useState('')
+
+  function commitSave() {
+    const trimmed = presetName.trim()
+    if (!trimmed) return
+    onSaveCurrent?.(trimmed)
+    setPresetName('')
+    setIsNaming(false)
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
@@ -545,7 +570,95 @@ export function ExamplesHelpModal({
           </button>
         </div>
 
+        {onSaveCurrent && (
+          <div className="shrink-0 pt-2.5 pb-0.5">
+            {isNaming ? (
+              <div className="flex items-center gap-1.5">
+                <input
+                  autoFocus
+                  type="text"
+                  value={presetName}
+                  onChange={(e) => setPresetName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') commitSave()
+                    if (e.key === 'Escape') { setIsNaming(false); setPresetName('') }
+                  }}
+                  placeholder="Name this preset..."
+                  className="flex-1 min-w-0 rounded-lg bg-[#181324]/60 border border-[#e8ca8a]/25 focus:border-[#f0ca65]/60 px-2.5 py-1.5 font-display text-xs text-[#fbf4e2] outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={commitSave}
+                  disabled={!presetName.trim()}
+                  aria-label="Confirm save"
+                  className="shrink-0 rounded-full p-1.5 text-[#f0ca65] hover:bg-[#f0ca65]/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Check size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setIsNaming(false); setPresetName('') }}
+                  aria-label="Cancel"
+                  className="shrink-0 rounded-full p-1.5 text-[#e8ca8a]/70 hover:text-white hover:bg-white/10 transition-colors"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsNaming(true)}
+                disabled={!canSaveCurrent}
+                title={canSaveCurrent ? undefined : 'Type something in the field first'}
+                className="flex items-center gap-1.5 font-display text-xs font-semibold text-[#f0ca65] hover:text-[#f5dfa0] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                <Plus size={13} /> Save current as preset
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="flex-1 min-h-0 overflow-y-auto py-3 pr-1 flex flex-col gap-2">
+          {presets && presets.length > 0 && (
+            <>
+              <p className="font-display text-[10px] font-semibold uppercase tracking-[0.14em] text-[#d8c49e]/80">Your Presets</p>
+              {presets.map((p) => (
+                <div
+                  key={p.id}
+                  onClick={() => onSelectPreset?.(p.value)}
+                  className={`group flex items-start justify-between gap-3 p-3 rounded-xl border border-[#f0ca65]/30 bg-[#201830]/50 transition-all duration-150 ${
+                    onSelectPreset ? 'cursor-pointer hover:border-[#f0ca65] hover:bg-[#201830] active:scale-[0.99]' : ''
+                  }`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="font-display text-xs font-semibold text-[#fae5b5] group-hover:text-[#f5dfa0] flex items-center gap-1.5">
+                      <Bookmark size={10} className="text-[#f0ca65] shrink-0" />
+                      <span className="truncate">{p.name}</span>
+                    </div>
+                    <p className="font-narrative text-xs text-[#d8c49e] mt-1 leading-relaxed line-clamp-2">{p.value}</p>
+                  </div>
+                  <div className="shrink-0 flex items-center gap-1.5 self-center">
+                    {onSelectPreset && (
+                      <span className="font-display text-[11px] font-semibold text-[#f0ca65] opacity-80 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all whitespace-nowrap pl-1">
+                        Use &rarr;
+                      </span>
+                    )}
+                    {onDeletePreset && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); onDeletePreset(p.id) }}
+                        aria-label={`Delete preset ${p.name}`}
+                        className="rounded-full p-1 text-[#e8ca8a]/50 hover:text-red-300 hover:bg-red-400/10 transition-colors"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+              <p className="font-display text-[10px] font-semibold uppercase tracking-[0.14em] text-[#d8c49e]/80 mt-1">{config.title}</p>
+            </>
+          )}
           {config.items.map((item) => (
             <div
               key={item.name}
@@ -597,6 +710,11 @@ export function GlassField({
   hint,
   examples,
   onPickExample,
+  presets,
+  onPickPreset,
+  onSavePreset,
+  onDeletePreset,
+  canSavePreset,
   action,
   children,
 }: {
@@ -604,6 +722,14 @@ export function GlassField({
   hint?: string
   examples?: ExamplesHelpConfig
   onPickExample?: (val: string) => void
+  // Player-saved snippets for this field (Settings > nowhere yet — persisted
+  // via lib/store.ts's textPresets), shown in the same modal as `examples`
+  // above the built-in list, with save/delete controls of their own.
+  presets?: SavedPreset[]
+  onPickPreset?: (val: string) => void
+  onSavePreset?: (name: string) => void
+  onDeletePreset?: (id: string) => void
+  canSavePreset?: boolean
   action?: ReactNode
   onExpand?: () => void
   children: ReactNode
@@ -646,6 +772,11 @@ export function GlassField({
             onPickExample?.(val)
             setShowExamples(false)
           }}
+          presets={presets}
+          onSelectPreset={onPickPreset ? (val) => { onPickPreset(val); setShowExamples(false) } : undefined}
+          onDeletePreset={onDeletePreset}
+          onSaveCurrent={onSavePreset}
+          canSaveCurrent={canSavePreset}
         />
       )}
     </div>

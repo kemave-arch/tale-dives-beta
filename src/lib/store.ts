@@ -1,7 +1,7 @@
 import { FOURTH_WING_WORLD, VIOLET_SORRENGAIL } from '../data/starterTemplates.ts'
 import { CURRENT_SCHEMA_VERSION } from '../types.ts'
 import { derivedPools } from './derivedStats.ts'
-import type { ApiSettings, Campaign, Dict, ProtagonistData, SlashCommand, UiPrefs, WorldData } from '../types.ts'
+import type { ApiSettings, Campaign, Dict, ProtagonistData, SavedPreset, SlashCommand, UiPrefs, WorldData } from '../types.ts'
 
 // Centralized localStorage persistence. Splits the old single-save shape
 // into Tales (campaigns), Worlds, and Protagonists libraries (Blueprint
@@ -15,6 +15,30 @@ const KEYS = {
   activeCampaign: 'td_active_campaign',
   globalSlashCommands: 'td_global_slash_commands', // §6.6 — shared across every Tale, vs. a campaign's own slashCommands
   legacyGame: 'td_game_state', // pre-library single-save format
+  textPresets: 'td_text_presets', // player-saved TaleBrief field snippets, keyed by TextPresetField below
+}
+
+// Free-text fields (TaleBrief's Opening Brief / Narration Style) that let
+// the player save their own reusable snippets, on top of the app's
+// built-in FormExampleItem inspiration lists.
+export type TextPresetField = 'openingBrief' | 'narrationStyle'
+
+export function loadTextPresets(field: TextPresetField): SavedPreset[] {
+  return load<Partial<Record<TextPresetField, SavedPreset[]>>>(KEYS.textPresets, {})[field] ?? []
+}
+
+export function saveTextPreset(field: TextPresetField, name: string, value: string): SavedPreset[] {
+  const all = load<Partial<Record<TextPresetField, SavedPreset[]>>>(KEYS.textPresets, {})
+  const next = [...(all[field] ?? []), { id: newId('preset'), name, value, savedAt: Date.now() }]
+  save(KEYS.textPresets, { ...all, [field]: next })
+  return next
+}
+
+export function deleteTextPreset(field: TextPresetField, id: string): SavedPreset[] {
+  const all = load<Partial<Record<TextPresetField, SavedPreset[]>>>(KEYS.textPresets, {})
+  const next = (all[field] ?? []).filter((p) => p.id !== id)
+  save(KEYS.textPresets, { ...all, [field]: next })
+  return next
 }
 
 function load<T>(key: string, fallback: T): T {

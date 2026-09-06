@@ -3,15 +3,15 @@
   "configurations": [
     {
       "name": "tale-dives-dev",
-      "runtimeExecutable": "D:\\WebApps\\tale-dives\\.claude\\run-dev.cmd",
-      "runtimeArgs": [],
-      "port": 5173
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000
     },
     {
       "name": "tale-dives-preview",
-      "runtimeExecutable": "D:\\WebApps\\tale-dives\\.claude\\run-preview.cmd",
-      "runtimeArgs": [],
-      "port": 4173
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "preview"],
+      "port": 3000
     }
   ]
 }

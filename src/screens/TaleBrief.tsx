@@ -3,6 +3,7 @@ import {
   GLASS_SURFACE, GlassCTAButton, GlassField, GlassHeader, GlassLongTextarea, GlassScreen, InfoTooltip, LABEL_CLASS,
 } from '../lib/glassChrome.tsx'
 import { NARRATION_STYLE_EXAMPLES, OPENING_BRIEF_EXAMPLES } from '../data/formExamples.ts'
+import { deleteTextPreset, loadTextPresets, saveTextPreset } from '../lib/store.ts'
 import type { CombatMode } from '../types.ts'
 
 interface TaleBriefPayload {
@@ -58,6 +59,9 @@ export default function TaleBrief({
   const [combatMode, setCombatMode] = useState<CombatMode>(initialCombatMode)
   const [title, setTitle] = useState(suggestedTitle)
 
+  const [openingPresets, setOpeningPresets] = useState(() => loadTextPresets('openingBrief'))
+  const [narrationPresets, setNarrationPresets] = useState(() => loadTextPresets('narrationStyle'))
+
   const trimmedTitle = title.trim()
   const isDuplicateTitle = trimmedTitle.length > 0 && existingTitles.some((t) => t.trim().toLowerCase() === trimmedTitle.toLowerCase())
   const titleError = trimmedTitle.length === 0 ? 'Give this Tale a name.' : isDuplicateTitle ? 'Another Tale already has this name — choose a different one.' : null
@@ -86,6 +90,11 @@ export default function TaleBrief({
             hint="Optional — leave blank and the Narrator decides."
             examples={OPENING_BRIEF_EXAMPLES}
             onPickExample={(val) => setOpening(val)}
+            presets={openingPresets}
+            onPickPreset={(val) => setOpening(val)}
+            onSavePreset={(name) => setOpeningPresets(saveTextPreset('openingBrief', name, opening))}
+            onDeletePreset={(id) => setOpeningPresets(deleteTextPreset('openingBrief', id))}
+            canSavePreset={opening.trim().length > 0}
           >
             <GlassLongTextarea
               value={opening}
@@ -108,6 +117,11 @@ export default function TaleBrief({
             hint="Custom narrator tone instructions or voice directives"
             examples={NARRATION_STYLE_EXAMPLES}
             onPickExample={(val) => setNarrationStyle(val)}
+            presets={narrationPresets}
+            onPickPreset={(val) => setNarrationStyle(val)}
+            onSavePreset={(name) => setNarrationPresets(saveTextPreset('narrationStyle', name, narrationStyle))}
+            onDeletePreset={(id) => setNarrationPresets(deleteTextPreset('narrationStyle', id))}
+            canSavePreset={narrationStyle.trim().length > 0}
           >
             <GlassLongTextarea
               value={narrationStyle}

@@ -12,6 +12,11 @@
       "src": "favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml"
+    },
+    {
+      "src": "img/icons/tale_dives_logo-01.jpg",
+      "sizes": "120x120",
+      "type": "image/jpeg"
     }
   ]
 }

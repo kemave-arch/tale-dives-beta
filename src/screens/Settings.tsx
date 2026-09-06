@@ -114,6 +114,7 @@ export default function Settings({
   const [loadingDriveFiles, setLoadingDriveFiles] = useState(false)
   const [cloudBusy, setCloudBusy] = useState<'backup' | 'restore' | null>(null)
   const [cloudFeedback, setCloudFeedback] = useState<string | null>(null)
+  const [isSigningInGoogle, setIsSigningInGoogle] = useState(false)
   const [availHeight, setAvailHeight] = useState<number | null>(null)
   const importRef = useRef<HTMLInputElement>(null)
 
@@ -210,6 +211,9 @@ export default function Settings({
   }
 
   async function handleSignInGoogle() {
+    if (isSigningInGoogle) return
+    setIsSigningInGoogle(true)
+    setCloudFeedback(null)
     try {
       const res = await signInWithGoogle()
       if (res?.user) {
@@ -219,8 +223,20 @@ export default function Settings({
         setTimeout(() => setCloudFeedback(null), 3000)
         refreshDriveFiles()
       }
-    } catch (e) {
-      console.error(e)
+    } catch (e: any) {
+      const msg = e?.message ?? ''
+      const code = e?.code
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+        return
+      }
+      if (msg.includes('Redirecting to Google sign-in')) {
+        setCloudFeedback('Redirecting to Google sign-in...')
+        return
+      }
+      setCloudFeedback(msg || 'Sign-in was interrupted. Please check popup permissions.')
+      setTimeout(() => setCloudFeedback(null), 5000)
+    } finally {
+      setIsSigningInGoogle(false)
     }
   }
 
@@ -568,8 +584,8 @@ export default function Settings({
                         </span>
                       )}
                     </div>
-                    <p className="font-narrative text-[11px] text-ink-muted truncate mt-0.5">
-                      {googleUser ? googleUser.email ?? 'Connected' : 'Sync your campaign progress.'}
+                    <p className="font-narrative text-[11px] text-ink-muted leading-tight mt-0.5">
+                      {googleUser ? googleUser.email ?? 'Connected' : 'Sync online to privately access your Tales anywhere.'}
                     </p>
                   </div>
                 </div>
@@ -579,8 +595,15 @@ export default function Settings({
                     Disconnect Account
                   </GlassButton>
                 ) : (
-                  <GlassButton onClick={handleSignInGoogle} className="w-full !py-1.5 !text-[11px]" tone="action">
-                    Link Account
+                  <GlassButton
+                    type="button"
+                    onClick={handleSignInGoogle}
+                    disabled={isSigningInGoogle}
+                    icon={isSigningInGoogle ? Loader2 : undefined}
+                    tone="action"
+                    className={`w-full !py-1.5 !text-[11px] ${isSigningInGoogle ? 'animate-pulse' : ''}`}
+                  >
+                    {isSigningInGoogle ? 'Connecting to Google...' : 'Link Account'}
                   </GlassButton>
                 )}
 

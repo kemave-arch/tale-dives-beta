@@ -141,14 +141,16 @@ interface GlassButtonProps {
   tone?: IconTone | 'positive'
   disabled?: boolean
   className?: string
+  type?: 'button' | 'submit' | 'reset'
 }
 
 // Ordinary labelled button — the workhorse for rows of actions (Settings'
 // backup grid, Codex's editor controls). GlassCTAButton stays reserved for a
 // screen's single primary action; using it everywhere flattens the hierarchy.
-export function GlassButton({ onClick, children, icon: Icon, tone = 'default', disabled = false, className = '' }: GlassButtonProps) {
+export function GlassButton({ onClick, children, icon: Icon, tone = 'default', disabled = false, className = '', type = 'button' }: GlassButtonProps) {
   return (
     <button
+      type={type}
       onClick={onClick}
       disabled={disabled}
       className={`inline-flex items-center justify-center gap-1.5 rounded-xl border bg-transparent backdrop-blur-sm px-3 py-2.5 font-display text-xs transition-colors duration-150 disabled:opacity-35 disabled:pointer-events-none ${BUTTON_TONE_CLASS[tone]} ${className}`}

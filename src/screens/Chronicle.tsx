@@ -1244,9 +1244,21 @@ export default function Chronicle({
   // does nothing rather than showing an empty/broken card.
   const onTapTerm = useCallback<TapTermHandler>(
     (term, category) => {
-      const id = slugify(term)
       const dict = { npc: npcs, loc: locations, faction: factions, lore, quest: quests, beast: bestiary, skill: skills, item: items }[category]
-      if (dict?.[id]) setPopup({ category, id })
+      if (!dict) return
+      const bareId = slugify(term)
+      if (dict[bareId]) {
+        setPopup({ category, id: bareId })
+        return
+      }
+      // A player-authored or World-Seeded location/faction gets a category
+      // prefix at creation ("loc_"/"fac_" + slug) that a {{Term|category}}
+      // tag's bare slugified id never carries, so the direct lookup above
+      // always misses for one of those — fall back to a case-insensitive
+      // name match across the same dict before giving up.
+      const needle = term.trim().toLowerCase()
+      const match = Object.entries(dict).find(([, entry]) => entry.name.trim().toLowerCase() === needle)
+      if (match) setPopup({ category, id: match[0] })
     },
     [npcs, locations, factions, lore, quests, bestiary, skills, items],
   )

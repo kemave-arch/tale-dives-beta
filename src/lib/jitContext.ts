@@ -117,16 +117,23 @@ export function buildContextSlice(state: Campaign, combatResultLine?: string | n
   // checks this list before inventing a new NPC/location/faction that
   // duplicates one it just can't see in the sliced-down context above —
   // without this, "not currently present/visited" reads to the model as
-  // "doesn't exist yet." NPCs and Factions show their real id in parens —
-  // an npc_mem_up/fac_rep update for one of these MUST reuse that exact id;
-  // without it shown here, the model has no ground truth and invents its own
-  // abbreviation, forking a duplicate stub instead of updating the real
-  // entry (confirmed live: "General Lilith Sorrengail" got auto-registered a
-  // second time under a model-invented "l_sorrengail" id). Locations don't
-  // need this — loc_id is already a required field on every single turn.
+  // "doesn't exist yet." Every category shows its real id in parens — an
+  // npc_mem_up/fac_rep update, or a loc_id on the turn a place is first
+  // (re)visited, MUST reuse that exact id; without it shown here, the model
+  // has no ground truth and invents its own (an abbreviation, or the generic
+  // starting loc_id left over from character creation), forking a duplicate
+  // entry instead of updating/visiting the real one (confirmed live twice:
+  // "General Lilith Sorrengail" auto-registered a second time under a
+  // model-invented "l_sorrengail" id, and a player-authored "Draconic Ruins
+  // of Ignis" location auto-registered a second time under the leftover
+  // "loc_start" id because its own real id was never shown here). loc_id
+  // used to be assumed self-correcting without this — true for a place the
+  // model itself named and gave an id to, but not for one that already
+  // existed in the Codex before the model ever saw it (player-authored, or
+  // World-Seeded).
   const otherLocationNames = Object.entries(locations ?? {})
     .filter(([id]) => id !== player.locId)
-    .map(([, l]) => l.name)
+    .map(([id, l]) => `${l.name} (id: ${id})`)
     .slice(-MAX_KNOWN_NAMES)
   const elsewhereNpcNames = Object.entries(npcs ?? {})
     .filter(([, n]) => n.lastSeenLocId !== player.locId)

@@ -1,13 +1,21 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-06, Claude Code on the web — fixed two real
-Codex auto-registration bugs found via a fresh campaign's Turn #0 payload:
-the protagonist self-tagging as an NPC ({{Kei Ashborn|npc}}, forking a bogus
-Codex entry for the player character), and the overarching nation name
-getting tagged as its own faction distinct from the actual registered
-faction ({{Navarre|faction}} vs. the already-known "Navarre High Command").
-See the dated log entry below for the root cause and fix; this note stays
-until the next session archives it forward. Previous note:
+**Last updated:** 2026-09-06, Claude Code on the web — fixed a player-authored
+location duplicating itself on Turn 0/1 (loc_id left at the generic
+"loc_start" placeholder instead of the real, already-seeded id, because
+that id was never shown to the model — Locations now get the same
+"(id: ...)" Known Entities treatment NPCs/Factions already had) and a
+Codex popup click doing nothing for any player-authored/World-Seeded
+location or faction (the click handler only ever tried a bare slugified
+id, never the "loc_"/"fac_" prefix those entries are actually keyed
+under — now falls back to a name match). Earlier the same day: two
+other Codex auto-registration bugs found via a fresh campaign's Turn #0
+payload — the protagonist self-tagging as an NPC ({{Kei Ashborn|npc}}),
+and the overarching nation name getting tagged as its own faction
+distinct from the actual registered faction ({{Navarre|faction}} vs.
+the already-known "Navarre High Command"). See the dated log entries
+below for the full root-cause writeups; this note stays until the next
+session archives it forward. Previous note:
 
 **2026-09-05, Claude Code on the web** — archived this file's
 accumulated log (everything since 2026-09-04, ~2,300 lines) forward into
@@ -769,6 +777,13 @@ detail than the summary sections above give — for resuming work, everything ab
 this line is what actually matters.
 
 New entries below, most recent first.
+
+- **2026-09-06** — Fixed a duplicated player-authored location and a broken Codex popup click for player-authored/World-Seeded locations and factions (`src/lib/jitContext.ts`, `src/api/turnContract.ts`, `src/screens/Chronicle.tsx`):
+  - **The bug reports**: (1) "Draconic Ruins of Ignis" — a player-authored location, seeded before Turn 1 — got a second, duplicate Codex entry after the Prologue turn narrated arriving there. (2) Tapping the `{{Basgiath War College|loc}}` keyword link in the narration (also player-authored) did nothing — no popup card.
+  - **Root cause, duplication**: `beginCampaign` mints player-authored/World-Seeded location ids as `'loc_' + slugify(name)` (`App.tsx`), but the model is never shown that id anywhere — the Known Entities line only listed location *names*, unlike NPCs/Factions (which already show `(id: ...)`, from an earlier session's id-drift fix). With no real id to reuse, the model kept `loc_id` at the generic "loc_start" the protagonist starts every campaign on, and `ensureLocation` (`lib/locations.ts`) — keyed purely by `loc_id`, no name-based dedup unlike the `{{Term|loc}}` keyword path — happily created a second entry under "loc_start" with the same display name as the real one. The earlier fix's assumption that "loc_id is self-correcting, it's required on every turn" holds once the model has already given a place its own id, but not for a location that already existed in the Codex *before* the model ever saw it.
+  - **Root cause, dead click**: Chronicle's `onTapTerm` (the `{{Term|category}}` click handler) always looked up `dict[slugify(term)]` — a bare slug, no prefix. That matches an entry auto-registered via a keyword tag (which also mints a bare-slug id), but never a player-authored/World-Seeded location or faction, which are keyed with a `loc_`/`fac_` prefix the click handler never accounted for — so the lookup missed and the popup silently never opened, exactly the "a miss just does nothing" behavior the code already comments as intentional (for a genuinely unregistered term), just triggered by a real entry instead.
+  - **Fix**: (1) `jitContext.ts`'s Known Entities line now shows `(id: ...)` for Locations too, matching NPCs/Factions, and `turnContract.ts`'s rule 2b now explicitly requires reusing a shown location's real id as `loc_id` on the turn it's first (re)visited — including instead of leaving it at the starting placeholder. (2) `onTapTerm` now falls back to a case-insensitive name match across the same category's dict when the direct id lookup misses, so a prefixed real id still resolves. A deeper client-side merge (redirecting a mismatched `loc_id` onto an existing same-named entry, the way the keyword-tag path already prevents *creating* one) was considered but not built this pass — it would need to rewrite `player.locId` after `applyTurn` already sets it and thread the correction through every other same-turn consumer of `turn.loc_id` (`npc_mem_up`'s location, corpse tracking, JIT context); the prompt-side id-exposure fix is the same shape as the fix that already resolved this exact failure mode for NPCs/Factions, so it's the primary fix, with the deeper safety net left as a future option if the duplication recurs.
+  - **Verification**: `npm run build` clean. Re-simulated both fixes against the reported case in standalone Node scripts: the `onTapTerm` name-fallback resolves "Basgiath War College" and "Draconic Ruins of Ignis" to their real `loc_` -prefixed ids, and a term with no matching entry at all still correctly resolves to nothing (no false-positive popups).
 
 - **2026-09-06** — Fixed two Codex auto-registration bugs surfaced by a fresh campaign's Turn #0 payload (`src/lib/codex.ts`, `src/App.tsx`, `src/api/turnContract.ts`):
   - **The bug report**: a brand-new campaign's Prologue turn tagged `{{Kei Ashborn|npc}}` (the protagonist's own name) and `{{Navarre|faction}}` (the setting's nation, not one of its actual factions) in the narration. Both are `{{Term|category}}` keyword links (`lib/codex.ts`'s `applyKeywordLinks`), which auto-registers a Codex stub for anything tagged — so the first forked a bogus NPC entry for the player character himself, and the second forked a "Navarre" faction entry distinct from (and confusable with) the already-registered "Navarre High Command".

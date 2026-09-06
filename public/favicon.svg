@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="16" fill="#0d0e15"/>
+  <rect x="1" y="1" width="62" height="62" rx="15" stroke="#d4af37" stroke-opacity="0.3" stroke-width="2"/>
+  <!-- Fantasy Open Tome / Compass Star -->
+  <path d="M32 16L34.5 25.5L44 28L34.5 30.5L32 40L29.5 30.5L20 28L29.5 25.5L32 16Z" fill="#d4af37" fill-opacity="0.9"/>
+  <path d="M16 44C21 41 27 41 32 44C37 41 43 41 48 44V49C43 46 37 46 32 49C27 46 21 46 16 49V44Z" fill="#e2d9bc" fill-opacity="0.75"/>
+  <path d="M32 44V49" stroke="#d4af37" stroke-width="2" stroke-linecap="round"/>
+</svg>

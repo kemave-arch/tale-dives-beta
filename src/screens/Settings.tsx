@@ -229,12 +229,18 @@ export default function Settings({
       if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
         return
       }
+      if (code === 'auth/unauthorized-domain' || msg.includes('unauthorized-domain')) {
+        const domain = typeof window !== 'undefined' ? window.location.hostname : 'this domain'
+        setCloudFeedback(`Domain unauthorized: Add "${domain}" to Firebase Console -> Authentication -> Settings -> Authorized domains.`)
+        setTimeout(() => setCloudFeedback(null), 12000)
+        return
+      }
       if (msg.includes('Redirecting to Google sign-in')) {
         setCloudFeedback('Redirecting to Google sign-in...')
         return
       }
       setCloudFeedback(msg || 'Sign-in was interrupted. Please check popup permissions.')
-      setTimeout(() => setCloudFeedback(null), 5000)
+      setTimeout(() => setCloudFeedback(null), 6000)
     } finally {
       setIsSigningInGoogle(false)
     }

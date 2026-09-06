@@ -1,5 +1,17 @@
 # Tale Dives — Project Revision Notes
 
+**Last updated:** 2026-09-07, Claude Code — added a player-saveable preset
+system to TaleBrief's "Where do you dive in?" and "Narration Style" fields:
+a "Your Presets" section (save-current with inline naming, click-to-use,
+delete) folded directly into the existing bookmark-icon Examples modal
+rather than a new UI surface, persisted to localStorage via new `store.ts`
+helpers (`loadTextPresets`/`saveTextPreset`/`deleteTextPreset`). Also wired
+`tale_dives_logo-01.jpg` in as the app's manifest/apple-touch icon (moved
+to lowercase `public/img/icons` to avoid GitHub Pages case-sensitivity
+issues), and fixed `.claude/launch.json`, whose dev/preview configs
+pointed at a different, unrelated project's path on another machine. See
+the dated log entry below for the full writeup. Previous note:
+
 **Last updated:** 2026-09-06, Claude Code on the web — reviewed the Google
 Drive cloud backup system (added the same day, separately) and fixed a
 real mobile bug in it: signing in to link a Drive account did nothing on
@@ -804,6 +816,12 @@ detail than the summary sections above give — for resuming work, everything ab
 this line is what actually matters.
 
 New entries below, most recent first.
+
+- **2026-09-07** — Player-Saveable Text Presets for TaleBrief, App Icon Wiring, and Dev Launch Config Fix (`src/types.ts`, `src/lib/store.ts`, `src/lib/glassChrome.tsx`, `src/screens/TaleBrief.tsx`, `public/manifest.json`, `index.html`, `.claude/launch.json`):
+  - **Player-Saveable Presets (`src/types.ts`, `src/lib/store.ts`, `src/lib/glassChrome.tsx`, `src/screens/TaleBrief.tsx`)**: TaleBrief's "Where do you dive in?" and "Narration Style" fields can now save the player's own typed text as a named, reusable preset. A "Your Presets" section (save-current with inline naming, click-to-use, per-item delete) was added directly into the existing `ExamplesHelpModal`/`GlassField` bookmark-icon modal, above the built-in example list, rather than introducing a separate UI surface. Persisted via new `loadTextPresets`/`saveTextPreset`/`deleteTextPreset` helpers in `store.ts`, following the file's existing `KEYS` + `load`/`save` convention (new `td_text_presets` localStorage key, keyed by field name — `openingBrief` / `narrationStyle`).
+  - **App Icon (`public/img/icons/tale_dives_logo-01.jpg`, `public/manifest.json`, `index.html`)**: Renamed `public/img/Icons` to lowercase `icons` (avoids case-sensitivity breakage on GitHub Pages) and wired the logo in as a `manifest.json` icon entry (actual 120×120 dimensions) and an `apple-touch-icon` link in `index.html`.
+  - **Dev Launch Config (`.claude/launch.json`)**: Fixed the `tale-dives-dev`/`tale-dives-preview` configs, which pointed at a `D:\WebApps\tale-dives\.claude\run-*.cmd` path belonging to a different, unrelated project on a different machine — now run `npm run dev`/`npm run preview` directly, with the port corrected to match `package.json` (3000, not the old Vite-default 5173/4173).
+  - **Verification**: `npm run typecheck` and `npm run build` clean. Live-verified against the dev server: saved a Narration Style preset, confirmed it round-tripped through `localStorage` (`td_text_presets`), used the "Use →" affordance, deleted it, and confirmed removal from both the modal and `localStorage`.
 
 - **2026-09-06** — Fixed Google Drive sign-in doing nothing on a real mobile browser, and completely refactored Settings for mobile ergonomics (`src/lib/googleDrive.ts`, `src/App.tsx`, `src/screens/Settings.tsx`, `src/lib/glassChrome.tsx`, `src/screens/TaleBrief.tsx`):
   - **The bug report**: tapping "Link Account"/"Backup Now" on an actual mobile browser did nothing — no sign-in, no error, just a brief screen flicker.

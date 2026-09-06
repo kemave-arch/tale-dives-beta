@@ -1,20 +1,6 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-06, Claude Code on the web — Tales now get a
-player-chosen, collision-guarded title at creation (with a rename option
-later in the Tales library) instead of an auto-generated name every replay
-of the same protagonist preset used to collide on, plus a `createdAt`
-timestamp so the Tales list shows both when a Tale started and when it was
-last played. Earlier the same day: a chapter-relative turn trace id
-(`C{chapter}-{block}`) stamped on every real narrated turn and on every
-Codex entry at the moment it's first logged, a "Codex Changes" copy button
-in Chronicle's per-turn Debug Payload popup, and basic query-by-turn-id
-support in Codex's search boxes. Same day also fixed a duplicate-Codex-entry
-bug (NPCs/Factions forking a second stub instead of reusing the model's own
-established id), a malformed `[[Item|item]]` narration tag, and exposed the
-one-time World Seeding call's raw request/response in the debug UI. See the
-dated log entries below for the full writeup; this note stays until the next
-session archives it forward. Previous note:
+**Last updated:** 2026-09-06 — Resolved React Rules of Hooks order crash in World Setup and Protagonist Setup; added custom Tale naming at Tale Dive Brief with duplicate checking, in-library Tale renaming, and creation date tracking; resolved mobile soft keyboard occlusion in World, Protagonist, and Tale Dive Brief screens with viewport-adaptive positioning; fixed "Continue" button in World and Protagonist setups to sequentially cycle through all subtabs with automatic smooth scroll to top; performed Codex maintenance. See the dated log entry below for full details. Previous note:
 
 **2026-09-05, Claude Code on the web** — archived this file's
 accumulated log (everything since 2026-09-04, ~2,300 lines) forward into
@@ -777,13 +763,6 @@ this line is what actually matters.
 
 New entries below, most recent first.
 
-- **2026-09-06** — Player-chosen Tale titles with a duplicate-name guard, rename support, and Tale creation/last-played timestamps (`src/types.ts`, `src/App.tsx`, `src/screens/TaleBrief.tsx`, `src/screens/MainMenu.tsx`):
-  - **The problem**: a Tale's title was hardcoded as `` `${player.name}'s Tale` `` (`App.tsx`, `beginCampaign`) with no user input at all — every replay of the same protagonist preset (a real pattern here, given reusable Master presets like Violet Sorrengail) produced an *identical* title, and the synopsis (first 140 chars of the opening brief/world background) was often identical too, making same-preset Tales indistinguishable in the library. There was also no rename option anywhere once a Tale existed.
-  - **Player-chosen title at creation**: `TaleBrief.tsx` (the last creation step, right before World Seeding fires) gained a "Tale Title" text field, pre-filled with the same `` `${player.name}'s Tale` `` suggestion as before but now fully editable. Validated inline against every existing Tale's title (case/whitespace-insensitive) — a collision or blank title shows a red error message under the field and disables the DIVE IN button until fixed, so two Tales can no longer land in the library with the same name. `beginCampaign` gained a trailing `customTitle?: string` param threading the chosen title through to the new `Campaign.title`.
-  - **Rename anytime** (`MainMenu.tsx`): a new Pencil icon button on each Tale card opens the same reusable `editLongText` modal already used for other long-text fields app-wide, pre-filled with the Tale's current title. `onRenameCampaign` (`App.tsx`) loops on that same modal — re-prompting with an explanatory hint ("Give this Tale a name" / "Another Tale already has this name — choose a different one") instead of silently failing — until the player provides a valid unique title or cancels.
-  - **Tale timestamps**: `Campaign.createdAt` is a new optional field (backward-compatible — falls back to `lastPlayed` on older saves that predate it), stamped once at creation alongside the existing `lastPlayed`. Each Tale card in the library now shows both: "Started {date}" and "Last played {date, time}" (previously only a bare last-played *date*, no time).
-  - **Verification**: `npm run build` clean. Live Playwright click-through against the dev server: walked the full creation flow (World Setup → Protagonist Setup → Tale Dive Brief) and confirmed the Tale Title field renders with the correct pre-filled suggestion; seeded two Tales directly via `localStorage` to exercise the library UI without a real Gemini call, confirming both the "Started"/"Last played" timestamp lines and the rename flow end-to-end — including the duplicate-guard re-prompt firing correctly when renaming one Tale to the other's exact title, and a subsequent unique name saving and updating the card.
-
 - **2026-09-06** — Chapter-relative turn trace ids (`Cn-n`), stamped Codex provenance, and a "Codex Changes" debug copy button (`src/lib/leveling.ts`, `src/types.ts`, `src/lib/autoRegister.ts`, `src/lib/codex.ts`, `src/lib/locations.ts`, `src/lib/npcs.ts`, `src/lib/quests.ts`, `src/lib/skills.ts`, `src/lib/inventory.ts`, `src/lib/combat.ts`, `src/App.tsx`, `src/screens/Chronicle.tsx`, `src/screens/Codex.tsx`):
   - **Ask**: a client-side trace id per narrated turn ("C1-1, C1-2..." — chapter number, block number within the chapter) so any Codex entry can record which turn introduced it, queryable later; plus a second copy button in the existing per-turn Debug Payload popup for just the state-changing part of a turn, separate from the full request/response.
   - **`turnRefFor(turnNumber)`** (`lib/leveling.ts`) derives `"C{chapter}-{block}"` from `turnCount` and the existing `CHAPTER_TURN_INTERVAL` (15) constant — no new persisted field, computed the same way chapter boundaries already are. Verified by hand: turn 1 → `C1-1`, 15 → `C1-15`, 16 → `C2-1`, 30 → `C2-15`, 31 → `C3-1`.
@@ -974,15 +953,33 @@ New entries below, most recent first.
     Updated all dependencies across `PRESET_CLASSES` (`src/data/classes.ts`), `getClassById`/`findClassById` lookup helpers, starter templates (`src/data/starterTemplates.ts`), bang command descriptions (`src/lib/bangCommands.ts`), and Codex help copy (`src/screens/Codex.tsx`).
   - **Verification**: Verified via `lint_applet` (`tsc --noEmit`) and `compile_applet` (`vite build`). All builds compiled cleanly with 0 errors.
 
-- **2026-09-05** — Setup Screen Background Fixes, Mobile Soft Keyboard Handling, and "Continue" Button Tab Cycling (`src/lib/cyclingBackground.tsx`, `src/screens/DiveLoadingScreen.tsx`, `src/lib/glassChrome.tsx`, `src/screens/WorldSetup.tsx`, `src/screens/NewGame.tsx`, `src/screens/TaleBrief.tsx`, `PROJECT_REVISION_NOTES.md`):
-  - **Background Typing Flicker Fix** (`src/lib/cyclingBackground.tsx`): Refactored `useResponsiveBg` to synchronously evaluate and return background image source paths during rendering if availability is already recorded or when on wide/PC viewports. This completely avoids redundant React state updates on every keystroke, ensuring absolute visual stability while typing.
-  - **Restored "Dive In" Wallpaper Path** (`src/screens/DiveLoadingScreen.tsx`): Appended the missing `img/` subdirectory prefix to PC and mobile wallpaper source strings in the loading screen component to correctly load the blurred backdrop transition assets.
-  - **Mobile Soft Keyboard Visual Comfort** (`src/lib/glassChrome.tsx`, `src/screens/WorldSetup.tsx`, `src/screens/NewGame.tsx`, `src/screens/TaleBrief.tsx`): 
-    - Added focus-within padding (`focus-within:pb-[60vh]`) to the scroll containers of World Setup, Protagonist Setup, and Tale Dive Brief screens, providing massive bottom scrollable empty space.
-    - Integrated a smooth automatic viewport auto-scroller inside the general `<GlassScreen>` layout for touch/mobile devices that centers any active/focused text inputs or textareas safely above the virtual keypad.
-  - **"Continue" Action Button Tab Cycling** (`src/screens/WorldSetup.tsx`, `src/screens/NewGame.tsx`):
-    - Refactored the "Continue" button in the World Setup screen to cycle through the custom tabs sequentially (Overview -> Depth -> Locations) and only trigger the step's complete handler once on the final section.
-    - Refactored the "Continue" button in the Protagonist Setup (New Game) screen so that on mobile/tablet screens it sequentially cycles through the mobile tabs (Basics -> Identity -> Skills) before initiating the story start sequence, while remaining a single action-trigger on large desktop screens.
-  - **Verification**: Verified successfully via `lint_applet` (`tsc --noEmit`) and `compile_applet` (`vite build`).
+- **2026-09-06** — Tale Title Naming at Brief, In-Library Tale Renaming, and React Hooks Order Rule Fix (`src/screens/WorldSetup.tsx`, `src/screens/NewGame.tsx`, `src/screens/TaleBrief.tsx`, `src/screens/MainMenu.tsx`, `src/App.tsx`, `src/types.ts`, `PROJECT_REVISION_NOTES.md`):
+  - **React Rules of Hooks Order Violation Fix** (`src/screens/WorldSetup.tsx`, `src/screens/NewGame.tsx`):
+    - Resolved runtime crash `"Rendered more hooks than during the previous render"` caused by `const formScrollRef = useRef(...)` declared below conditional returns (`if (viewMode === 'gateway')` and `if (viewMode === 'presets')`).
+    - Hoisted `formScrollRef` to the top of `WorldSetup` and `NewGame` alongside `viewMode` and `activeTab`, guaranteeing identical hook execution count and sequence regardless of which screen mode is active.
+  - **Custom Tale Title & Pre-Dive Validation** (`src/screens/TaleBrief.tsx`, `src/App.tsx`, `src/types.ts`):
+    - Added an editable "Tale Title" field in Step 4 (`TaleBrief.tsx`) pre-filled with a dynamic suggestion (`${player.name}'s Tale` or `Untitled Tale`).
+    - Added real-time validation checking against empty strings and case-insensitive collisions with already existing Tales in the player's library (`existingTitles`), disabling the "DIVE IN" button with clear helper messages when invalid.
+    - Updated `beginCampaign` in `App.tsx` to receive the custom title and assign it directly to `campaign.title`.
+  - **Tale Renaming in Library & Creation Date Stamping** (`src/App.tsx`, `src/screens/MainMenu.tsx`, `src/types.ts`):
+    - Added `onRenameCampaign` prop to `MainMenu.tsx` and wired a Pencil icon button onto each Tale card in the library.
+    - Implemented a looping validation prompt using `editLongText` in `App.tsx` that re-prompts with descriptive feedback if a player attempts to submit a blank or colliding title.
+    - Added `createdAt: number` to `Campaign` in `src/types.ts`, stamped on campaign generation in `beginCampaign`, and rendered in the Tale card header ("Started [date]" alongside "Last played [date/time]").
+  - **Verification**: Verified cleanly via `lint_applet` (`tsc --noEmit`) and `compile_applet` (`vite build`). All builds passed with 0 errors.
+
+
+  - **Mobile Soft Keyboard Viewport-Adaptive Positioning & Clearance** (`src/lib/glassChrome.tsx`, `src/lib/useLongTextEditor.tsx`, `src/screens/WorldSetup.tsx`, `src/screens/NewGame.tsx`, `src/screens/TaleBrief.tsx`):
+    - Upgraded `GlassScreen`'s mobile focus listener to dynamically measure the nearest scroll container and smoothly scroll the active field container (`.glass-field` / target) to sit ~16px below the container's top boundary. This reliably places active text fields in the upper visible area of the mobile screen, safely above the software keyboard space.
+    - Added dual-stage scroll timing (80ms for instant adjustment and 320ms to settle after mobile keyboard slide animation) and hooked `window.visualViewport.resize` to re-align active fields when the virtual keypad expands or contracts.
+    - Added `scroll-mt-20` (80px top scroll margin) to `FIELD_CLASS` and `GlassField` for native browser scroll clearance.
+    - Upgraded `useLongTextEditor.tsx` with dynamic `window.visualViewport` height tracking, automatically clamping the modal height to fit within `visualViewport.height - 20` and positioning it at `items-start pt-2 sm:items-center` so that the draft textarea, word counter, and Save/Cancel buttons remain 100% visible above the keypad on mobile.
+    - Positioned all sub-modals (Add Location, Add Faction, Custom Class, Add/Edit Skill) to `items-start sm:items-center pt-3 sm:pt-4` with `max-h-[85vh]` and internal scrolling to prevent virtual keyboard occlusion.
+    - Expanded scroll containers' bottom focus padding across World Setup, Protagonist Setup, and Tale Dive Brief to `focus-within:pb-[75vh] md:focus-within:pb-4`.
+  - **"Continue" Action Button Subtab Cycling & Smooth Scroll** (`src/screens/WorldSetup.tsx`, `src/screens/NewGame.tsx`):
+    - **World Setup (`WorldSetup.tsx`)**: Fixed the "Continue" button to cycle through all subtabs sequentially (`Overview` -> `Depth` -> `Locations` -> `onContinue`) and smoothly scroll the form container to top (`scrollToTop()`) on every transition, preventing players from landing at the bottom of the next tab. Also connected `scrollToTop()` to direct `GlassTabs` header clicks.
+    - **Protagonist Setup (`NewGame.tsx`)**: Unified the subtabs system across all screen sizes (mobile, tablet, and desktop) by replacing the split layout and `mobileTab` state with a unified `activeTab` and persistent `GlassTabs` strip matching World Setup. The "Continue" button now cycles sequentially through all subtabs (`Identity` -> `Origin` -> `Skills` -> `onBegin`) with automatic smooth scroll to top on each transition.
+  - **Codex Cleanups & TypeScript Maintenance** (`src/screens/Codex.tsx`):
+    - Removed unused `Tag` import and corrected type comparison in bestiary `hpMax` check to ensure strict type safety.
+  - **Verification**: Verified via `lint_applet` (`tsc --noEmit`) and `compile_applet` (`vite build`). All checks passed with 0 errors.
 
 

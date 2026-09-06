@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { FIELD_CLASS, GLASS_SURFACE, GlassButton, LABEL_CLASS } from './glassChrome.tsx'
 
 interface EditorState {
@@ -19,6 +19,7 @@ interface EditorState {
 export function useLongTextEditor() {
   const [state, setState] = useState<EditorState | null>(null)
   const [draft, setDraft] = useState('')
+  const [availHeight, setAvailHeight] = useState<number | null>(null)
   const resolveRef = useRef<((v: string | null) => void) | null>(null)
 
   const edit = useCallback((label: string, value: string, hint?: string, placeholder?: string) => {
@@ -35,16 +36,34 @@ export function useLongTextEditor() {
     setState(null)
   }
 
+  useEffect(() => {
+    if (!state) return
+    const updateHeight = () => {
+      if (window.visualViewport) {
+        setAvailHeight(window.visualViewport.height - 20)
+      }
+    }
+    updateHeight()
+    window.visualViewport?.addEventListener('resize', updateHeight)
+    return () => {
+      window.visualViewport?.removeEventListener('resize', updateHeight)
+    }
+  }, [state])
+
   const dialog = state ? (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto"
       onClick={(e) => {
         e.stopPropagation()
         close(null)
       }}
     >
       <div
-        className={`${GLASS_SURFACE} rounded-2xl w-full max-w-lg h-[80vh] sm:h-[70vh] flex flex-col p-4 shadow-2xl`}
+        className={`${GLASS_SURFACE} rounded-2xl w-full max-w-lg flex flex-col p-4 shadow-2xl transition-[max-height] duration-150 mt-1 sm:mt-0`}
+        style={{
+          maxHeight: availHeight ? `${Math.max(220, availHeight)}px` : undefined,
+          height: availHeight ? `${Math.min(availHeight, 520)}px` : '75vh',
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="shrink-0 pb-2">

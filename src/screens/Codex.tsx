@@ -3,7 +3,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   Globe, BookOpen, Users, ShieldCheck, Map, ScrollText, Target, Skull, Backpack,
   Pencil, Save, X, Trash2, Plus, Lock, User, Hammer, Clock, Sparkles, CheckCircle2, XCircle, ArrowRight, Ghost,
-  Swords, Star, EyeOff,
+  Swords, Star, EyeOff, Search, MapPin, Heart, Coins, Gift, Zap, Compass, AlertTriangle, Shield, Flame,
 } from 'lucide-react'
 import { DASHED_ROW_CLASS, GLASS_SURFACE_LIST, GlassHeader, GlassIconButton, GlassScreen, SELECT_CLASS } from '../lib/glassChrome.tsx'
 import { slugify, titleCaseId } from '../lib/slug.ts'
@@ -339,6 +339,7 @@ interface CategoryAccent {
   sectionIcon: string // just the icon color, for section-card headers
   tag: string // a single tag chip
   solid?: string // a solid fill in the accent hue, for meters/stat tiles
+  activeTab: string // styling for active category subtab
 }
 
 const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
@@ -350,6 +351,7 @@ const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
     badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#fb7185]/60 group-hover:text-[#fecdd3] group-hover:bg-[#fb7185]/20 transition-all',
     sectionIcon: 'text-[#fb7185]',
     tag: 'rounded-full border border-[#fb7185]/35 bg-[#fb7185]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#fecdd3]',
+    activeTab: 'bg-[#fb7185]/20 text-[#fecdd3] border-[#fb7185]/60 shadow-[0_0_12px_rgba(251,113,133,0.25)]',
   },
   factions: {
     icon: ShieldCheck,
@@ -360,6 +362,7 @@ const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
     sectionIcon: 'text-[#fbbf24]',
     tag: 'rounded-full border border-[#fbbf24]/35 bg-[#fbbf24]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#fde68a]',
     solid: 'bg-[#fbbf24]',
+    activeTab: 'bg-[#fbbf24]/20 text-[#fde68a] border-[#fbbf24]/60 shadow-[0_0_12px_rgba(251,191,36,0.25)]',
   },
   locations: {
     icon: Map,
@@ -369,6 +372,7 @@ const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
     badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#38bdf8]/60 group-hover:text-[#7dd3fc] group-hover:bg-[#38bdf8]/20 transition-all',
     sectionIcon: 'text-[#38bdf8]',
     tag: 'rounded-full border border-[#38bdf8]/35 bg-[#38bdf8]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#7dd3fc]',
+    activeTab: 'bg-[#38bdf8]/20 text-[#7dd3fc] border-[#38bdf8]/60 shadow-[0_0_12px_rgba(56,189,248,0.25)]',
   },
   lore: {
     icon: ScrollText,
@@ -378,6 +382,7 @@ const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
     badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#c084fc]/60 group-hover:text-[#d8b4fe] group-hover:bg-[#c084fc]/20 transition-all',
     sectionIcon: 'text-[#c084fc]',
     tag: 'rounded-full border border-[#c084fc]/35 bg-[#c084fc]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#d8b4fe]',
+    activeTab: 'bg-[#c084fc]/20 text-[#d8b4fe] border-[#c084fc]/60 shadow-[0_0_12px_rgba(192,132,252,0.25)]',
   },
   quests: {
     icon: Target,
@@ -387,6 +392,7 @@ const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
     badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#34d399]/60 group-hover:text-[#6ee7b7] group-hover:bg-[#34d399]/20 transition-all',
     sectionIcon: 'text-[#34d399]',
     tag: 'rounded-full border border-[#34d399]/35 bg-[#34d399]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#6ee7b7]',
+    activeTab: 'bg-[#34d399]/20 text-[#6ee7b7] border-[#34d399]/60 shadow-[0_0_12px_rgba(52,211,153,0.25)]',
   },
   bestiary: {
     icon: Skull,
@@ -397,6 +403,7 @@ const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
     sectionIcon: 'text-[#ef4444]',
     tag: 'rounded-full border border-[#ef4444]/35 bg-[#ef4444]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#fca5a5]',
     solid: 'bg-[#ef4444]',
+    activeTab: 'bg-[#ef4444]/20 text-[#fca5a5] border-[#ef4444]/60 shadow-[0_0_12px_rgba(239,68,68,0.25)]',
   },
   skills: {
     icon: Sparkles,
@@ -406,6 +413,7 @@ const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
     badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#818cf8]/60 group-hover:text-[#c7d2fe] group-hover:bg-[#818cf8]/20 transition-all',
     sectionIcon: 'text-[#818cf8]',
     tag: 'rounded-full border border-[#818cf8]/35 bg-[#818cf8]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#c7d2fe]',
+    activeTab: 'bg-[#818cf8]/20 text-[#c7d2fe] border-[#818cf8]/60 shadow-[0_0_12px_rgba(129,140,248,0.25)]',
   },
   items: {
     icon: Backpack,
@@ -415,6 +423,7 @@ const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
     badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#f0ca65]/60 group-hover:text-[#fae5b5] group-hover:bg-[#f0ca65]/20 transition-all',
     sectionIcon: 'text-[#f0ca65]',
     tag: 'rounded-full border border-[#f0ca65]/35 bg-[#f0ca65]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#fae5b5]',
+    activeTab: 'bg-[#f0ca65]/20 text-[#fae5b5] border-[#f0ca65]/60 shadow-[0_0_12px_rgba(240,202,101,0.25)]',
   },
 }
 
@@ -428,6 +437,7 @@ const NEUTRAL_ACCENT: CategoryAccent = {
   badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#f0ca65]/60 group-hover:text-[#fae5b5] group-hover:bg-[#f0ca65]/20 transition-all',
   sectionIcon: 'text-[#e8ca8a]',
   tag: 'rounded-full border border-[#e8ca8a]/35 bg-[#e8ca8a]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#fae5b5]',
+  activeTab: 'bg-[#f0ca65]/20 text-[#fae5b5] border-[#f0ca65]/60 shadow-[0_0_12px_rgba(240,202,101,0.25)]',
 }
 
 // Item rarity gets its own accent set, in the same shape as CATEGORY_ACCENTS
@@ -445,6 +455,7 @@ const ITEM_RARITY_ACCENTS: Record<string, CategoryAccent> = {
     badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#9ca3af]/60 group-hover:text-[#d1d5db] transition-all',
     sectionIcon: 'text-[#9ca3af]',
     tag: 'rounded-full border border-[#9ca3af]/35 bg-[#9ca3af]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#d1d5db]',
+    activeTab: 'bg-[#9ca3af]/20 text-[#d1d5db] border-[#9ca3af]/60',
   },
   uncommon: {
     icon: Backpack,
@@ -454,6 +465,7 @@ const ITEM_RARITY_ACCENTS: Record<string, CategoryAccent> = {
     badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#4ade80]/60 group-hover:text-[#86efac] group-hover:bg-[#4ade80]/20 transition-all',
     sectionIcon: 'text-[#4ade80]',
     tag: 'rounded-full border border-[#4ade80]/35 bg-[#4ade80]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#86efac]',
+    activeTab: 'bg-[#4ade80]/20 text-[#86efac] border-[#4ade80]/60',
   },
   rare: {
     icon: Backpack,
@@ -463,6 +475,7 @@ const ITEM_RARITY_ACCENTS: Record<string, CategoryAccent> = {
     badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#60a5fa]/60 group-hover:text-[#93c5fd] group-hover:bg-[#60a5fa]/20 transition-all',
     sectionIcon: 'text-[#60a5fa]',
     tag: 'rounded-full border border-[#60a5fa]/35 bg-[#60a5fa]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#93c5fd]',
+    activeTab: 'bg-[#60a5fa]/20 text-[#93c5fd] border-[#60a5fa]/60',
   },
   epic: {
     icon: Backpack,
@@ -472,6 +485,7 @@ const ITEM_RARITY_ACCENTS: Record<string, CategoryAccent> = {
     badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#c084fc]/60 group-hover:text-[#d8b4fe] group-hover:bg-[#c084fc]/20 transition-all',
     sectionIcon: 'text-[#c084fc]',
     tag: 'rounded-full border border-[#c084fc]/35 bg-[#c084fc]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#d8b4fe]',
+    activeTab: 'bg-[#c084fc]/20 text-[#d8b4fe] border-[#c084fc]/60',
   },
   legendary: {
     icon: Backpack,
@@ -481,6 +495,7 @@ const ITEM_RARITY_ACCENTS: Record<string, CategoryAccent> = {
     badge: 'rounded-lg bg-[#1a1d2b] border border-[#fbbf24]/40 text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#fbbf24]/70 group-hover:text-[#fde68a] group-hover:bg-[#fbbf24]/20 transition-all',
     sectionIcon: 'text-[#fbbf24]',
     tag: 'rounded-full border border-[#fbbf24]/40 bg-[#fbbf24]/15 px-1.5 py-0.25 text-[9px] font-mono text-[#fde68a]',
+    activeTab: 'bg-[#fbbf24]/20 text-[#fde68a] border-[#fbbf24]/60',
   },
 }
 
@@ -552,48 +567,82 @@ function QuestTypeBadge({ type }: { type?: string }) {
   )
 }
 
-// The list-view "deck card" — replaces the old plain EntryCard for the 8
-// real CRUD categories. `kicker` is the short type/status line under the
-// title (e.g. a location's region, a quest's status); `tags` renders as up
-// to 4 small chips, matching a modern TCG/RPG card's keyword line.
+// The list-view "deck card" — mobile-first, shows Entry name + prominent description,
+// with Lucide icons, status pill, and compact meta chips.
+interface MetaChip {
+  icon?: LucideIcon
+  label: string
+}
+
 function DeckEntryCard({
-  accent, icon, title, kicker, statusBadge, subtitle, badge, tags, onClick,
+  accent, icon, title, kicker, statusBadge, subtitle, badge, metaChips, tags, onClick,
 }: {
   accent: CategoryAccent
   icon?: LucideIcon
   title: string
   kicker?: string
-  statusBadge?: React.ReactNode // a richer badge (e.g. Quests' colored status ribbon), shown beside the kicker line
+  statusBadge?: React.ReactNode
   subtitle?: string
   badge?: React.ReactNode
+  metaChips?: MetaChip[]
   tags?: string[]
   onClick: () => void
 }) {
   const Icon = icon ?? accent.icon
   return (
-    <div onClick={onClick} className={accent.card}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2.5 min-w-0">
+    <div
+      onClick={onClick}
+      className={`${accent.card} p-3 sm:p-3.5 flex flex-col gap-2 rounded-xl transition-all duration-200 cursor-pointer active:scale-[0.99]`}
+    >
+      {/* Title & Badge Row */}
+      <div className="flex items-start justify-between gap-2.5">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <div className={accent.iconBadge}>
             <Icon size={15} />
           </div>
-          <div className="min-w-0">
-            <h3 className="font-display font-bold text-xs sm:text-sm text-[#e8ca8a] group-hover:text-[#f0ca65] uppercase tracking-wider truncate">{title}</h3>
-            {(kicker || statusBadge) && (
-              <p className={`${accent.kicker} flex items-center gap-1.5`}>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-display font-bold text-xs sm:text-sm text-[#fae5b5] group-hover:text-[#fde68a] uppercase tracking-wider truncate">
+              {title}
+            </h3>
+            {kicker && (
+              <p className={`${accent.kicker} truncate mt-0.5`}>
                 {kicker}
-                {statusBadge}
               </p>
             )}
           </div>
         </div>
-        {badge}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {statusBadge}
+          {badge}
+        </div>
       </div>
-      {subtitle && <p className="font-sans text-[11px] text-[#9095a8] group-hover:text-[#b0b5c8] line-clamp-2 leading-snug">{subtitle}</p>}
-      {tags && tags.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {tags.slice(0, 4).map((t) => (
-            <span key={t} className={accent.tag}>{t}</span>
+
+      {/* Main Description (Prominent, Compact, High Readability) */}
+      {subtitle && (
+        <p className="font-narrative text-xs text-[#d2d6e4] group-hover:text-[#f1f3f9] line-clamp-2 leading-relaxed">
+          {subtitle}
+        </p>
+      )}
+
+      {/* Meta Chips & Tags Row */}
+      {((metaChips && metaChips.length > 0) || (tags && tags.length > 0)) && (
+        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+          {metaChips?.map((chip, idx) => {
+            const ChipIcon = chip.icon
+            return (
+              <span
+                key={idx}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#181d2a] border border-[#2c3349] text-[10px] font-mono text-[#a5adc6]"
+              >
+                {ChipIcon && <ChipIcon size={10} className={accent.sectionIcon} />}
+                <span className="truncate max-w-[140px]">{chip.label}</span>
+              </span>
+            )
+          })}
+          {tags?.slice(0, 3).map((t) => (
+            <span key={t} className={accent.tag}>
+              #{t}
+            </span>
           ))}
         </div>
       )}
@@ -601,11 +650,60 @@ function DeckEntryCard({
   )
 }
 
-// The detail-view "hero header" — an icon avatar + title + subtitle, same
-// depth recipe as PresetDetailModal.tsx's own header (bright accent border,
-// tinted fill), just inline in Codex's existing single-panel navigation
-// (category -> list -> detail, Back button in the shared GlassHeader) rather
-// than a separate modal.
+// Modern horizontal subtab navigator for category entries.
+interface SubtabItem {
+  id: string
+  label: string
+  count?: number
+  icon?: LucideIcon
+}
+
+function SubtabsBar({
+  tabs,
+  activeTab,
+  onSelectTab,
+  accent,
+}: {
+  tabs: SubtabItem[]
+  activeTab: string
+  onSelectTab: (id: string) => void
+  accent: CategoryAccent
+}) {
+  return (
+    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 px-0.5 -mx-0.5 shrink-0 scroll-smooth">
+      {tabs.map((tab) => {
+        const isActive = activeTab === tab.id
+        const Icon = tab.icon
+        return (
+          <button
+            key={tab.id}
+            onClick={() => onSelectTab(tab.id)}
+            type="button"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-medium shrink-0 transition-all border cursor-pointer active:scale-95 ${
+              isActive
+                ? `${accent.activeTab} font-semibold`
+                : 'bg-[#141724]/90 border-[#262c3e] text-[#8e94a8] hover:text-[#cdd2e5] hover:border-[#384058] hover:bg-[#1a1f30]'
+            }`}
+          >
+            {Icon && <Icon size={12} className={isActive ? accent.sectionIcon : 'text-[#7e8498]'} />}
+            <span>{tab.label}</span>
+            {tab.count !== undefined && (
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                  isActive ? 'bg-black/30 text-ink' : 'bg-[#1e2333] text-[#72788e]'
+                }`}
+              >
+                {tab.count}
+              </span>
+            )}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// The detail-view "hero header" — an icon avatar + title + subtitle
 function EntryHeroHeader({
   accent, title, subtitle, badges,
 }: {
@@ -631,38 +729,44 @@ function EntryHeroHeader({
   )
 }
 
-// A resting content card inside the detail view — PresetDetailModal.tsx's
-// exact "section card" recipe (dark tinted fill, thin border, icon+label
-// header with a divider underneath), reused here so an entry's detail read
-// like the same polished info-sheet the World/Protagonist presets already
-// get, not the old bare label/value list.
+// A resting content card inside the detail view — bespoke tailored container
 function SectionCard({
-  accent, icon, title, children,
+  accent, icon, title, badge, children,
 }: {
   accent: CategoryAccent
   icon: LucideIcon
   title: string
+  badge?: React.ReactNode
   children: React.ReactNode
 }) {
   const Icon = icon
   return (
-    <div className="bg-[#171224]/70 border border-[#e8ca8a]/25 rounded-xl p-4 flex flex-col gap-3">
-      <div className="flex items-center gap-2 pb-2 border-b border-[#e8ca8a]/15">
-        <Icon size={16} className={accent.sectionIcon} />
-        <span className="font-display text-xs font-semibold uppercase tracking-[0.12em] text-[#fae5b5]">{title}</span>
+    <div className="bg-[#141826]/90 border border-[#272d42] rounded-xl p-3.5 sm:p-4 flex flex-col gap-3 shadow-[0_2px_12px_rgba(0,0,0,0.3)]">
+      <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#252a3d]">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-lg bg-[#1a1f30] border border-[#2d344d] flex items-center justify-center shrink-0">
+            <Icon size={13} className={accent.sectionIcon} />
+          </div>
+          <span className="font-display text-xs font-semibold uppercase tracking-[0.14em] text-[#fae5b5]">{title}</span>
+        </div>
+        {badge}
       </div>
       {children}
     </div>
   )
 }
 
-// Field label/value pair, matching PresetDetailModal.tsx's own recipe —
-// replaces the old plain DetailField wherever a SectionCard is used.
-function FieldRow({ label, value }: { label: string; value: React.ReactNode }) {
+// Field label/value pair — concise and controlled
+function FieldRow({ label, value, icon }: { label: string; value: React.ReactNode; icon?: LucideIcon }) {
+  if (value === undefined || value === null || value === '') return null
+  const Icon = icon
   return (
-    <div>
-      <span className="font-display text-[10px] uppercase tracking-wider text-[#e8ca8a]/70 font-semibold block">{label}</span>
-      <div className="font-narrative text-xs text-[#fbf4e2] mt-0.5 leading-relaxed">{value}</div>
+    <div className="flex flex-col gap-0.5">
+      <div className="flex items-center gap-1.5">
+        {Icon && <Icon size={11} className="text-[#a0a5b8]" />}
+        <span className="font-display text-[10px] uppercase tracking-wider text-[#a0a5b8] font-semibold">{label}</span>
+      </div>
+      <div className="font-narrative text-xs text-[#f4efe4] leading-relaxed break-words">{value}</div>
     </div>
   )
 }
@@ -761,51 +865,17 @@ export default function Codex({
     return (Object.entries(player.equipped ?? {}) as [EquipSlot, string][]).find(([, id]) => id === itemId)?.[0]
   }
 
-  // Search & Filter State
+  // Search & Subtab Navigation State
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeFilter1, setActiveFilter1] = useState('')
-  const [activeFilter2, setActiveFilter2] = useState('')
+  const [activeSubtab, setActiveSubtab] = useState('all')
 
   // Reset filters on category change
   useEffect(() => {
     setSearchQuery('')
-    setActiveFilter1('')
-    setActiveFilter2('')
+    setActiveSubtab('all')
   }, [category])
 
   // Unique collections for filter selectors
-  const npcStages = useMemo(() => {
-    const stages = new Set<string>()
-    Object.values(npcs).forEach((n) => {
-      if (n.stage) stages.add(n.stage)
-    })
-    return Array.from(stages)
-  }, [npcs])
-
-  const factionStandings = useMemo(() => {
-    const standings = new Set<string>()
-    Object.values(factions).forEach((f) => {
-      standings.add(repTierLabel(f.repTier))
-    })
-    return Array.from(standings)
-  }, [factions])
-
-  const dangerLevels = useMemo(() => {
-    const levels = new Set<string>()
-    Object.values(locations).forEach((l) => {
-      if (l.dangerLevel) levels.add(l.dangerLevel)
-    })
-    return Array.from(levels)
-  }, [locations])
-
-  const locationOwners = useMemo(() => {
-    const owners = new Set<string>()
-    Object.values(locations).forEach((l) => {
-      if (l.factionOwner) owners.add(l.factionOwner)
-    })
-    return Array.from(owners)
-  }, [locations])
-
   const loreCategories = useMemo(() => {
     const cats = new Set<string>()
     Object.values(lore).forEach((l) => {
@@ -814,31 +884,40 @@ export default function Codex({
     return Array.from(cats)
   }, [lore])
 
-  const questStatuses = useMemo(() => {
-    const statuses = new Set<string>()
-    Object.values(quests).forEach((q) => {
-      if (q.status) statuses.add(q.status)
-    })
-    return Array.from(statuses)
-  }, [quests])
+  // Helper stage checkers
+  const isAllyStage = (stage?: string) => {
+    const s = (stage || '').toLowerCase()
+    return ['party', 'companion', 'trusted', 'ally', 'friend', 'confidant', 'devoted'].some((k) => s.includes(k))
+  }
+  const isContactStage = (stage?: string) => {
+    const s = (stage || '').toLowerCase()
+    return ['acquaintance', 'contact', 'associate', 'neutral', 'merchant', 'informant', 'patron'].some((k) => s.includes(k))
+  }
+  const isStrangerStage = (stage?: string) => {
+    return !isAllyStage(stage) && !isContactStage(stage)
+  }
 
-  const threatTiers = useMemo(() => {
-    const tiers = new Set<string>()
-    Object.values(bestiary).forEach((b) => {
-      if (b.threatTier) tiers.add(b.threatTier)
-    })
-    return Array.from(tiers)
-  }, [bestiary])
+  // Helper location checkers
+  const isHavenLocation = (l: LocationEntry) => {
+    const danger = (l.dangerLevel || '').toLowerCase()
+    const type = (l.locationType || '').toLowerCase()
+    return ['safe', 'low', 'minimal'].includes(danger) || ['settlement', 'city', 'town', 'tavern', 'temple', 'haven', 'sanctuary', 'camp'].includes(type)
+  }
+  const isPerilLocation = (l: LocationEntry) => {
+    const danger = (l.dangerLevel || '').toLowerCase()
+    const type = (l.locationType || '').toLowerCase()
+    return ['deadly', 'extreme', 'high', 'cursed', 'lethal'].includes(danger) || ['dungeon', 'ruin', 'cave', 'lair', 'abyss', 'crypt', 'tomb'].includes(type)
+  }
+  const isWildLocation = (l: LocationEntry) => {
+    return !isHavenLocation(l) && !isPerilLocation(l)
+  }
 
-  const skillClasses = useMemo(() => {
-    const classes = new Set<string>()
-    Object.values(skills).forEach((s) => {
-      if (s.classId) classes.add(s.classId)
-    })
-    return Array.from(classes)
-  }, [skills])
+  // Helper bestiary threat checkers
+  const isMinionTier = (tier?: string) => /low|minor|minion|nuisance|trash|scout|tier\s*1\b|tier\s*i\b/i.test(tier || '')
+  const isEliteTier = (tier?: string) => /elite|boss|calamity|deadly|overlord|legendary|nemesis|tier\s*[345]\b|tier\s*(iii|iv|v)\b/i.test(tier || '')
+  const isStandardTier = (tier?: string) => !isMinionTier(tier) && !isEliteTier(tier)
 
-  // Filtered lists
+  // Filtered lists with both Search and Subtab criteria
   const filteredNpcs = useMemo(() => {
     return Object.entries(npcs).filter(([, n]) => {
       if (searchQuery) {
@@ -846,27 +925,34 @@ export default function Codex({
         const matchesName = n.name.toLowerCase().includes(q)
         const matchesMem = n.memSummary?.toLowerCase().includes(q)
         const matchesTeaser = n.discovery?.teaser?.toLowerCase().includes(q)
+        const matchesRole = n.role?.toLowerCase().includes(q)
+        const matchesStage = n.stage?.toLowerCase().includes(q)
         const matchesTurn = n.loggedAt?.toLowerCase().includes(q)
-        if (!matchesName && !matchesMem && !matchesTeaser && !matchesTurn) return false
+        if (!matchesName && !matchesMem && !matchesTeaser && !matchesRole && !matchesStage && !matchesTurn) return false
       }
-      if (activeFilter1 && n.stage !== activeFilter1) return false
+      if (activeSubtab === 'allies' && !isAllyStage(n.stage)) return false
+      if (activeSubtab === 'contacts' && !isContactStage(n.stage)) return false
+      if (activeSubtab === 'strangers' && !isStrangerStage(n.stage)) return false
       return true
     })
-  }, [npcs, searchQuery, activeFilter1])
+  }, [npcs, searchQuery, activeSubtab])
 
   const filteredFactions = useMemo(() => {
     return Object.entries(factions).filter(([, f]) => {
       if (searchQuery) {
         const q = searchQuery.toLowerCase()
         const matchesName = f.name.toLowerCase().includes(q)
+        const matchesDesc = f.description?.toLowerCase().includes(q)
         const matchesRival = f.rivalId?.toLowerCase().includes(q)
         const matchesTurn = f.loggedAt?.toLowerCase().includes(q)
-        if (!matchesName && !matchesRival && !matchesTurn) return false
+        if (!matchesName && !matchesDesc && !matchesRival && !matchesTurn) return false
       }
-      if (activeFilter1 && repTierLabel(f.repTier) !== activeFilter1) return false
+      if (activeSubtab === 'allied' && f.repTier <= 0) return false
+      if (activeSubtab === 'neutral' && f.repTier !== 0) return false
+      if (activeSubtab === 'hostile' && f.repTier >= 0) return false
       return true
     })
-  }, [factions, searchQuery, activeFilter1])
+  }, [factions, searchQuery, activeSubtab])
 
   const filteredLocations = useMemo(() => {
     return Object.entries(locations).filter(([, l]) => {
@@ -875,14 +961,16 @@ export default function Codex({
         const matchesName = l.name.toLowerCase().includes(q)
         const matchesRegion = l.region?.toLowerCase().includes(q)
         const matchesDesc = l.description?.toLowerCase().includes(q)
+        const matchesType = l.locationType?.toLowerCase().includes(q)
         const matchesTurn = l.loggedAt?.toLowerCase().includes(q)
-        if (!matchesName && !matchesRegion && !matchesDesc && !matchesTurn) return false
+        if (!matchesName && !matchesRegion && !matchesDesc && !matchesType && !matchesTurn) return false
       }
-      if (activeFilter1 && l.dangerLevel !== activeFilter1) return false
-      if (activeFilter2 && l.factionOwner !== activeFilter2) return false
+      if (activeSubtab === 'havens' && !isHavenLocation(l)) return false
+      if (activeSubtab === 'wilderness' && !isWildLocation(l)) return false
+      if (activeSubtab === 'perilous' && !isPerilLocation(l)) return false
       return true
     })
-  }, [locations, searchQuery, activeFilter1, activeFilter2])
+  }, [locations, searchQuery, activeSubtab])
 
   const filteredLore = useMemo(() => {
     return Object.entries(lore).filter(([, l]) => {
@@ -890,13 +978,14 @@ export default function Codex({
         const q = searchQuery.toLowerCase()
         const matchesName = l.name.toLowerCase().includes(q)
         const matchesCat = l.category?.toLowerCase().includes(q)
+        const matchesContent = l.content?.toLowerCase().includes(q)
         const matchesTurn = l.loggedAt?.toLowerCase().includes(q)
-        if (!matchesName && !matchesCat && !matchesTurn) return false
+        if (!matchesName && !matchesCat && !matchesContent && !matchesTurn) return false
       }
-      if (activeFilter1 && l.category !== activeFilter1) return false
+      if (activeSubtab !== 'all' && l.category !== activeSubtab) return false
       return true
     })
-  }, [lore, searchQuery, activeFilter1])
+  }, [lore, searchQuery, activeSubtab])
 
   const filteredQuests = useMemo(() => {
     return Object.entries(quests).filter(([, q_entry]) => {
@@ -904,14 +993,19 @@ export default function Codex({
         const q = searchQuery.toLowerCase()
         const matchesName = q_entry.name.toLowerCase().includes(q)
         const matchesNote = q_entry.note?.toLowerCase().includes(q)
+        const matchesDesc = q_entry.description?.toLowerCase().includes(q)
         const matchesStatus = q_entry.status?.toLowerCase().includes(q)
         const matchesTurn = q_entry.loggedAt?.toLowerCase().includes(q)
-        if (!matchesName && !matchesNote && !matchesStatus && !matchesTurn) return false
+        if (!matchesName && !matchesNote && !matchesDesc && !matchesStatus && !matchesTurn) return false
       }
-      if (activeFilter1 && (q_entry.status ?? 'active') !== activeFilter1) return false
+      if (activeSubtab === 'active' && (q_entry.status === 'completed' || q_entry.status === 'failed')) return false
+      if (activeSubtab === 'completed' && q_entry.status !== 'completed') return false
+      if (activeSubtab === 'failed' && q_entry.status !== 'failed') return false
+      if (activeSubtab === 'main' && q_entry.type !== 'main') return false
+      if (activeSubtab === 'side' && q_entry.type === 'main') return false
       return true
     })
-  }, [quests, searchQuery, activeFilter1])
+  }, [quests, searchQuery, activeSubtab])
 
   const filteredBestiary = useMemo(() => {
     return Object.entries(bestiary).filter(([, b]) => {
@@ -919,13 +1013,17 @@ export default function Codex({
         const q = searchQuery.toLowerCase()
         const matchesName = b.name.toLowerCase().includes(q)
         const matchesTier = b.threatTier?.toLowerCase().includes(q)
+        const matchesDesc = b.description?.toLowerCase().includes(q)
+        const matchesHabitat = b.habitat?.toLowerCase().includes(q)
         const matchesTurn = b.loggedAt?.toLowerCase().includes(q)
-        if (!matchesName && !matchesTier && !matchesTurn) return false
+        if (!matchesName && !matchesTier && !matchesDesc && !matchesHabitat && !matchesTurn) return false
       }
-      if (activeFilter1 && b.threatTier !== activeFilter1) return false
+      if (activeSubtab === 'minions' && !isMinionTier(b.threatTier)) return false
+      if (activeSubtab === 'standard' && !isStandardTier(b.threatTier)) return false
+      if (activeSubtab === 'elite' && !isEliteTier(b.threatTier)) return false
       return true
     })
-  }, [bestiary, searchQuery, activeFilter1])
+  }, [bestiary, searchQuery, activeSubtab])
 
   const filteredSkills = useMemo(() => {
     return Object.entries(skills).filter(([, s]) => {
@@ -933,13 +1031,22 @@ export default function Codex({
         const q = searchQuery.toLowerCase()
         const matchesName = s.name.toLowerCase().includes(q)
         const matchesDesc = s.description?.toLowerCase().includes(q)
+        const matchesFlavor = s.flavorText?.toLowerCase().includes(q)
         const matchesTurn = s.loggedAt?.toLowerCase().includes(q)
-        if (!matchesName && !matchesDesc && !matchesTurn) return false
+        if (!matchesName && !matchesDesc && !matchesFlavor && !matchesTurn) return false
       }
-      if (activeFilter1 && s.classId !== activeFilter1) return false
+      if (activeSubtab === 'class' && (!s.classId || s.classId !== player.classId)) return false
+      if (activeSubtab === 'active') {
+        const isActive = (s.mpCost ?? 0) > 0 || (s.stCost ?? 0) > 0 || (s.skillType || '').toLowerCase() === 'active'
+        if (!isActive) return false
+      }
+      if (activeSubtab === 'passive') {
+        const isPassive = (s.skillType || '').toLowerCase() === 'passive' || (!(s.mpCost ?? 0) && !(s.stCost ?? 0))
+        if (!isPassive) return false
+      }
       return true
     })
-  }, [skills, searchQuery, activeFilter1])
+  }, [skills, searchQuery, activeSubtab, player.classId])
 
   const filteredItems = useMemo(() => {
     return Object.entries(inventory).filter(([id]) => {
@@ -948,180 +1055,182 @@ export default function Codex({
         const q = searchQuery.toLowerCase()
         const matchesName = (item?.name ?? id.replace(/_/g, ' ')).toLowerCase().includes(q)
         const matchesDesc = item?.description?.toLowerCase().includes(q)
+        const matchesLore = item?.loreText?.toLowerCase().includes(q)
         const matchesTurn = item?.loggedAt?.toLowerCase().includes(q)
-        if (!matchesName && !matchesDesc && !matchesTurn) return false
+        if (!matchesName && !matchesDesc && !matchesLore && !matchesTurn) return false
       }
-      if (activeFilter1 && (item?.type ?? 'material') !== activeFilter1) return false
+      if (activeSubtab === 'equipped' && !equippedSlotFor(id)) return false
+      if (activeSubtab === 'weapons' && item?.type !== 'weapon') return false
+      if (activeSubtab === 'armor' && item?.type !== 'armor') return false
+      if (activeSubtab === 'accessories' && item?.type !== 'accessory') return false
+      if (activeSubtab === 'consumables' && item?.type !== 'consumable') return false
+      if (activeSubtab === 'materials' && !['material', 'tool', 'key'].includes(item?.type ?? 'material')) return false
       return true
     })
-  }, [inventory, items, searchQuery, activeFilter1])
+  }, [inventory, items, searchQuery, activeSubtab, player.equipped])
+
+  // Subtabs generator per active category
+  const categorySubtabs = useMemo((): SubtabItem[] => {
+    if (!category) return []
+
+    if (category === 'npcs') {
+      const allCount = Object.keys(npcs).length
+      const alliesCount = Object.values(npcs).filter((n) => isAllyStage(n.stage)).length
+      const contactsCount = Object.values(npcs).filter((n) => isContactStage(n.stage)).length
+      const strangersCount = Object.values(npcs).filter((n) => isStrangerStage(n.stage)).length
+      return [
+        { id: 'all', label: 'All', count: allCount, icon: Users },
+        { id: 'allies', label: 'Allies & Bonds', count: alliesCount, icon: Heart },
+        { id: 'contacts', label: 'Contacts', count: contactsCount, icon: User },
+        { id: 'strangers', label: 'Strangers', count: strangersCount, icon: EyeOff },
+      ]
+    }
+
+    if (category === 'factions') {
+      const allCount = Object.keys(factions).length
+      const alliedCount = Object.values(factions).filter((f) => f.repTier > 0).length
+      const neutralCount = Object.values(factions).filter((f) => f.repTier === 0).length
+      const hostileCount = Object.values(factions).filter((f) => f.repTier < 0).length
+      return [
+        { id: 'all', label: 'All', count: allCount, icon: ShieldCheck },
+        { id: 'allied', label: 'Allied', count: alliedCount, icon: Shield },
+        { id: 'neutral', label: 'Neutral', count: neutralCount, icon: Compass },
+        { id: 'hostile', label: 'Hostile', count: hostileCount, icon: Swords },
+      ]
+    }
+
+    if (category === 'locations') {
+      const allCount = Object.keys(locations).length
+      const havensCount = Object.values(locations).filter(isHavenLocation).length
+      const wildCount = Object.values(locations).filter(isWildLocation).length
+      const perilCount = Object.values(locations).filter(isPerilLocation).length
+      return [
+        { id: 'all', label: 'All', count: allCount, icon: Map },
+        { id: 'havens', label: 'Havens & Towns', count: havensCount, icon: ShieldCheck },
+        { id: 'wilderness', label: 'Wilds', count: wildCount, icon: Compass },
+        { id: 'perilous', label: 'Perilous & Ruins', count: perilCount, icon: AlertTriangle },
+      ]
+    }
+
+    if (category === 'lore') {
+      const allCount = Object.keys(lore).length
+      const tabs: SubtabItem[] = [{ id: 'all', label: 'All', count: allCount, icon: ScrollText }]
+      loreCategories.forEach((cat) => {
+        const count = Object.values(lore).filter((l) => l.category === cat).length
+        tabs.push({ id: cat, label: cat, count, icon: BookOpen })
+      })
+      return tabs
+    }
+
+    if (category === 'quests') {
+      const allCount = Object.keys(quests).length
+      const activeCount = Object.values(quests).filter((q) => q.status !== 'completed' && q.status !== 'failed').length
+      const mainCount = Object.values(quests).filter((q) => q.type === 'main').length
+      const sideCount = Object.values(quests).filter((q) => q.type !== 'main').length
+      const doneCount = Object.values(quests).filter((q) => q.status === 'completed').length
+      return [
+        { id: 'all', label: 'All', count: allCount, icon: Target },
+        { id: 'active', label: 'Active', count: activeCount, icon: Zap },
+        { id: 'main', label: 'Main Story', count: mainCount, icon: Star },
+        { id: 'side', label: 'Side Quests', count: sideCount, icon: Compass },
+        { id: 'completed', label: 'Completed', count: doneCount, icon: CheckCircle2 },
+      ]
+    }
+
+    if (category === 'bestiary') {
+      const allCount = Object.keys(bestiary).length
+      const minionCount = Object.values(bestiary).filter((b) => isMinionTier(b.threatTier)).length
+      const standardCount = Object.values(bestiary).filter((b) => isStandardTier(b.threatTier)).length
+      const eliteCount = Object.values(bestiary).filter((b) => isEliteTier(b.threatTier)).length
+      return [
+        { id: 'all', label: 'All', count: allCount, icon: Skull },
+        { id: 'minions', label: 'Minions', count: minionCount, icon: Skull },
+        { id: 'standard', label: 'Beasts & Foes', count: standardCount, icon: Swords },
+        { id: 'elite', label: 'Elites & Bosses', count: eliteCount, icon: Flame },
+      ]
+    }
+
+    if (category === 'skills') {
+      const allCount = Object.keys(skills).length
+      const classCount = Object.values(skills).filter((s) => s.classId && s.classId === player.classId).length
+      const activeCount = Object.values(skills).filter((s) => (s.mpCost ?? 0) > 0 || (s.stCost ?? 0) > 0 || (s.skillType || '').toLowerCase() === 'active').length
+      const passiveCount = Object.values(skills).filter((s) => (s.skillType || '').toLowerCase() === 'passive' || (!(s.mpCost ?? 0) && !(s.stCost ?? 0))).length
+      return [
+        { id: 'all', label: 'All', count: allCount, icon: Sparkles },
+        { id: 'class', label: 'Class Skills', count: classCount, icon: Star },
+        { id: 'active', label: 'Spells & Arts', count: activeCount, icon: Zap },
+        { id: 'passive', label: 'Passives', count: passiveCount, icon: Shield },
+      ]
+    }
+
+    if (category === 'items') {
+      const allCount = Object.keys(inventory).length
+      const equippedCount = Object.keys(inventory).filter((id) => equippedSlotFor(id) !== undefined).length
+      const weaponsCount = Object.keys(inventory).filter((id) => items[id]?.type === 'weapon').length
+      const armorCount = Object.keys(inventory).filter((id) => items[id]?.type === 'armor').length
+      const accessoryCount = Object.keys(inventory).filter((id) => items[id]?.type === 'accessory').length
+      const consumablesCount = Object.keys(inventory).filter((id) => items[id]?.type === 'consumable').length
+      const materialsCount = Object.keys(inventory).filter((id) => ['material', 'tool', 'key'].includes(items[id]?.type ?? 'material')).length
+      return [
+        { id: 'all', label: 'All', count: allCount, icon: Backpack },
+        { id: 'equipped', label: 'Equipped', count: equippedCount, icon: ShieldCheck },
+        { id: 'weapons', label: 'Weapons', count: weaponsCount, icon: Swords },
+        { id: 'armor', label: 'Armor', count: armorCount, icon: Shield },
+        { id: 'accessories', label: 'Relics', count: accessoryCount, icon: Sparkles },
+        { id: 'consumables', label: 'Potions & Food', count: consumablesCount, icon: Heart },
+        { id: 'materials', label: 'Materials', count: materialsCount, icon: Hammer },
+      ]
+    }
+
+    return []
+  }, [category, npcs, factions, locations, lore, loreCategories, quests, bestiary, skills, inventory, items, player])
+
+  const currentAccent = (category ? (CATEGORY_ACCENTS as Record<string, CategoryAccent>)[category] : undefined) ?? NEUTRAL_ACCENT
 
   const searchFilterBar = useMemo(() => {
     if (!category || entryId || editing) return null
-
-    let filter1Select = null
-    let filter2Select = null
-
-    if (category === 'npcs') {
-      filter1Select = (
-        <select
-          value={activeFilter1}
-          onChange={(e) => setActiveFilter1(e.target.value)}
-          className={`text-xs px-2.5 py-1.5 h-9 rounded-xl border border-[#e8ca8a]/20 bg-[#14101c]/80 text-[#ecdcb8] focus:border-[#f0ca65]/60 outline-none w-full sm:w-40 cursor-pointer`}
-        >
-          <option value="">All Stages</option>
-          {npcStages.map((stage) => (
-            <option key={stage} value={stage}>{stage}</option>
-          ))}
-        </select>
-      )
-    } else if (category === 'factions') {
-      filter1Select = (
-        <select
-          value={activeFilter1}
-          onChange={(e) => setActiveFilter1(e.target.value)}
-          className={`text-xs px-2.5 py-1.5 h-9 rounded-xl border border-[#e8ca8a]/20 bg-[#14101c]/80 text-[#ecdcb8] focus:border-[#f0ca65]/60 outline-none w-full sm:w-40 cursor-pointer`}
-        >
-          <option value="">All Standings</option>
-          {factionStandings.map((standing) => (
-            <option key={standing} value={standing}>{standing}</option>
-          ))}
-        </select>
-      )
-    } else if (category === 'locations') {
-      filter1Select = (
-        <select
-          value={activeFilter1}
-          onChange={(e) => setActiveFilter1(e.target.value)}
-          className={`text-xs px-2.5 py-1.5 h-9 rounded-xl border border-[#e8ca8a]/20 bg-[#14101c]/80 text-[#ecdcb8] focus:border-[#f0ca65]/60 outline-none w-full sm:w-40 cursor-pointer`}
-        >
-          <option value="">All Danger Levels</option>
-          {dangerLevels.map((lvl) => (
-            <option key={lvl} value={lvl}>{lvl}</option>
-          ))}
-        </select>
-      )
-      filter2Select = (
-        <select
-          value={activeFilter2}
-          onChange={(e) => setActiveFilter2(e.target.value)}
-          className={`text-xs px-2.5 py-1.5 h-9 rounded-xl border border-[#e8ca8a]/20 bg-[#14101c]/80 text-[#ecdcb8] focus:border-[#f0ca65]/60 outline-none w-full sm:w-40 cursor-pointer`}
-        >
-          <option value="">All Faction Owners</option>
-          {locationOwners.map((owner) => {
-            const factionName = factions[owner]?.name ?? owner
-            return (
-              <option key={owner} value={owner}>{factionName}</option>
-            )
-          })}
-        </select>
-      )
-    } else if (category === 'lore') {
-      filter1Select = (
-        <select
-          value={activeFilter1}
-          onChange={(e) => setActiveFilter1(e.target.value)}
-          className={`text-xs px-2.5 py-1.5 h-9 rounded-xl border border-[#e8ca8a]/20 bg-[#14101c]/80 text-[#ecdcb8] focus:border-[#f0ca65]/60 outline-none w-full sm:w-40 cursor-pointer`}
-        >
-          <option value="">All Categories</option>
-          {loreCategories.map((cat) => (
-            <option key={cat} value={cat}>{cat}</option>
-          ))}
-        </select>
-      )
-    } else if (category === 'quests') {
-      filter1Select = (
-        <select
-          value={activeFilter1}
-          onChange={(e) => setActiveFilter1(e.target.value)}
-          className={`text-xs px-2.5 py-1.5 h-9 rounded-xl border border-[#e8ca8a]/20 bg-[#14101c]/80 text-[#ecdcb8] focus:border-[#f0ca65]/60 outline-none w-full sm:w-40 cursor-pointer`}
-        >
-          <option value="">All Statuses</option>
-          <option value="active">Active/Advanced</option>
-          {questStatuses.map((status) => {
-            if (status === 'active' || status === 'advanced') return null
-            return (
-              <option key={status} value={status}>{status}</option>
-            )
-          })}
-        </select>
-      )
-    } else if (category === 'bestiary') {
-      filter1Select = (
-        <select
-          value={activeFilter1}
-          onChange={(e) => setActiveFilter1(e.target.value)}
-          className={`text-xs px-2.5 py-1.5 h-9 rounded-xl border border-[#e8ca8a]/20 bg-[#14101c]/80 text-[#ecdcb8] focus:border-[#f0ca65]/60 outline-none w-full sm:w-40 cursor-pointer`}
-        >
-          <option value="">All Threat Tiers</option>
-          {threatTiers.map((tier) => (
-            <option key={tier} value={tier}>{tier}</option>
-          ))}
-        </select>
-      )
-    } else if (category === 'skills') {
-      filter1Select = (
-        <select
-          value={activeFilter1}
-          onChange={(e) => setActiveFilter1(e.target.value)}
-          className={`text-xs px-2.5 py-1.5 h-9 rounded-xl border border-[#e8ca8a]/20 bg-[#14101c]/80 text-[#ecdcb8] focus:border-[#f0ca65]/60 outline-none w-full sm:w-40 cursor-pointer`}
-        >
-          <option value="">All Classes</option>
-          {skillClasses.map((clsId) => (
-            <option key={clsId} value={clsId}>{classNameFor(clsId) || clsId}</option>
-          ))}
-        </select>
-      )
-    } else if (category === 'items') {
-      filter1Select = (
-        <select
-          value={activeFilter1}
-          onChange={(e) => setActiveFilter1(e.target.value)}
-          className={`text-xs px-2.5 py-1.5 h-9 rounded-xl border border-[#e8ca8a]/20 bg-[#14101c]/80 text-[#ecdcb8] focus:border-[#f0ca65]/60 outline-none w-full sm:w-40 cursor-pointer`}
-        >
-          <option value="">All Types</option>
-          {ITEM_TYPES.map((t) => (
-            <option key={t} value={t}>{t}</option>
-          ))}
-        </select>
-      )
-    }
 
     if (category === 'character' || category === 'realm' || category === 'crafting' || category === 'chapters' || category === 'corpses') {
       return null
     }
 
     return (
-      <div className="mb-4 flex flex-col gap-2 p-3 rounded-2xl border border-[#e8ca8a]/15 bg-[#e8ca8a]/[0.02]">
-        <div className="flex flex-col sm:flex-row gap-2">
-          <div className="relative flex-1">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name, tags, description..."
-              className="w-full text-xs h-9 rounded-xl border border-[#e8ca8a]/20 bg-[#e8ca8a]/[0.04] px-3.5 py-1.5 text-ink placeholder:text-[#e8ca8a]/45 focus:border-[#f0ca65]/60 outline-none"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#e8ca8a]/50 hover:text-[#e8ca8a] text-xs cursor-pointer"
-              >
-                Clear
-              </button>
-            )}
+      <div className="mb-4 flex flex-col gap-2 p-2.5 sm:p-3 rounded-2xl border border-[#252b3e] bg-[#0f121d]/90 shadow-[0_2px_12px_rgba(0,0,0,0.4)]">
+        {/* Search Input */}
+        <div className="relative flex-1">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7f869e] pointer-events-none">
+            <Search size={14} />
           </div>
-
-          {(filter1Select || filter2Select) && (
-            <div className="flex flex-row gap-2 shrink-0">
-              {filter1Select}
-              {filter2Select}
-            </div>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search entries by name, traits, or description..."
+            className="w-full text-xs h-9 rounded-xl border border-[#272d42] bg-[#141826] pl-8 pr-8 py-1.5 text-[#f4efe4] placeholder:text-[#6a7187] focus:border-[#e8ca8a]/60 outline-none transition-colors"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              type="button"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#82889e] hover:text-[#f4efe4] text-xs cursor-pointer p-0.5"
+            >
+              <X size={13} />
+            </button>
           )}
         </div>
+
+        {/* Subtabs Bar */}
+        {categorySubtabs.length > 0 && (
+          <SubtabsBar
+            tabs={categorySubtabs}
+            activeTab={activeSubtab}
+            onSelectTab={setActiveSubtab}
+            accent={currentAccent}
+          />
+        )}
       </div>
     )
-  }, [category, entryId, editing, searchQuery, activeFilter1, activeFilter2, npcStages, factionStandings, dangerLevels, locationOwners, loreCategories, questStatuses, threatTiers, skillClasses, factions])
+  }, [category, entryId, editing, searchQuery, activeSubtab, categorySubtabs, currentAccent])
 
   const chapters = log.filter((e) => e.chapterSummary)
 
@@ -1659,18 +1768,33 @@ export default function Codex({
       {category === 'npcs' && !entryId && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AddButton label="Add NPC" onClick={() => startCreate({ name: '', stage: 'Stranger', trust: 0, affection: 0, memSummary: '', deeds: '' })} />
-          {filteredNpcs.map(([id, n]) => (
-            <DeckEntryCard
-              key={id}
-              accent={CATEGORY_ACCENTS.npcs}
-              title={isHidden(n) ? '???' : n.name}
-              kicker={isHidden(n) ? undefined : n.role || n.stage}
-              subtitle={isHidden(n) ? (n.discovery?.teaser || 'Not yet discovered.') : n.personality || n.appearance || `Trust ${n.trust} · Affection ${n.affection}`}
-              badge={isHidden(n) ? <LockBadge /> : <AutoBadge shown={n.autoLogged} />}
-              tags={isHidden(n) ? undefined : n.tags}
-              onClick={() => setEntryId(id)}
-            />
-          ))}
+          {filteredNpcs.map(([id, n]) => {
+            const hidden = isHidden(n)
+            const metaChips: MetaChip[] = hidden
+              ? []
+              : [
+                  n.stage ? { icon: User, label: n.stage } : null,
+                  n.factionId && factions[n.factionId] ? { icon: ShieldCheck, label: factions[n.factionId].name } : null,
+                  { icon: Heart, label: `Trust ${n.trust} · Aff ${n.affection}` },
+                ].filter(Boolean) as MetaChip[]
+            return (
+              <DeckEntryCard
+                key={id}
+                accent={CATEGORY_ACCENTS.npcs}
+                title={hidden ? '???' : n.name}
+                kicker={hidden ? undefined : n.role || n.stage}
+                subtitle={
+                  hidden
+                    ? n.discovery?.teaser || 'Not yet discovered.'
+                    : n.memSummary || n.personality || n.appearance || 'Met during your travels.'
+                }
+                badge={hidden ? <LockBadge /> : <AutoBadge shown={n.autoLogged} />}
+                metaChips={metaChips}
+                tags={hidden ? undefined : n.tags}
+                onClick={() => setEntryId(id)}
+              />
+            )
+          })}
           {Object.keys(npcs).length === 0 ? (
             <p className="font-narrative italic text-sm text-ink-muted col-span-full">No NPCs met yet.</p>
           ) : filteredNpcs.length === 0 ? (
@@ -1729,33 +1853,39 @@ export default function Codex({
                 subtitle={npcs[entryId].role || npcs[entryId].stage}
                 badges={<AutoBadge shown={npcs[entryId].autoLogged} />}
               />
-              <SectionCard accent={CATEGORY_ACCENTS.npcs} icon={Users} title="Overview">
+              <SectionCard accent={CATEGORY_ACCENTS.npcs} icon={Heart} title="Bond & Status">
+                <FieldRow label="Stage" value={npcs[entryId].stage} icon={User} />
+                <div className="flex flex-col gap-2 pt-1">
+                  <StatBar label="Trust" value={npcs[entryId].trust} />
+                  <StatBar label="Affection" value={npcs[entryId].affection} />
+                </div>
+              </SectionCard>
+              <SectionCard accent={CATEGORY_ACCENTS.npcs} icon={User} title="Profile">
                 {(npcs[entryId].gender || npcs[entryId].age !== undefined) && (
                   <FieldRow
                     label="Identity"
                     value={[npcs[entryId].gender, npcs[entryId].age !== undefined && `Age ${npcs[entryId].age}`].filter(Boolean).join(' · ')}
                   />
                 )}
-                <FieldRow label="Stage" value={npcs[entryId].stage} />
                 {npcs[entryId].factionId && factions[npcs[entryId].factionId!] && (
-                  <FieldRow label="Faction" value={factions[npcs[entryId].factionId!].name} />
+                  <FieldRow label="Affiliation" value={factions[npcs[entryId].factionId!].name} icon={ShieldCheck} />
                 )}
-                <div className="flex flex-col gap-1.5">
-                  <StatBar label="Trust" value={npcs[entryId].trust} />
-                  <StatBar label="Affection" value={npcs[entryId].affection} />
-                </div>
               </SectionCard>
-              {(npcs[entryId].appearance || npcs[entryId].heldWeapon || npcs[entryId].wornArmor || npcs[entryId].personality || npcs[entryId].voiceNotes) && (
-                <SectionCard accent={CATEGORY_ACCENTS.npcs} icon={ScrollText} title="Persona">
-                  {npcs[entryId].appearance && <FieldRow label="Appearance" value={npcs[entryId].appearance} />}
-                  {npcs[entryId].heldWeapon && <FieldRow label="Held Weapon" value={npcs[entryId].heldWeapon} />}
-                  {npcs[entryId].wornArmor && <FieldRow label="Worn Armor" value={npcs[entryId].wornArmor} />}
-                  {npcs[entryId].personality && <FieldRow label="Personality" value={npcs[entryId].personality} />}
-                  {npcs[entryId].voiceNotes && <FieldRow label="Voice Notes" value={npcs[entryId].voiceNotes} />}
+              {(npcs[entryId].appearance || npcs[entryId].heldWeapon || npcs[entryId].wornArmor) && (
+                <SectionCard accent={CATEGORY_ACCENTS.npcs} icon={Shield} title="Appearance & Gear">
+                  {npcs[entryId].appearance && <FieldRow label="Looks" value={npcs[entryId].appearance} />}
+                  {npcs[entryId].heldWeapon && <FieldRow label="Weapon" value={npcs[entryId].heldWeapon} />}
+                  {npcs[entryId].wornArmor && <FieldRow label="Armor" value={npcs[entryId].wornArmor} />}
                 </SectionCard>
               )}
-              <SectionCard accent={CATEGORY_ACCENTS.npcs} icon={Clock} title="History">
-                <FieldRow label="Memory" value={npcs[entryId].memSummary || '—'} />
+              {(npcs[entryId].personality || npcs[entryId].voiceNotes) && (
+                <SectionCard accent={CATEGORY_ACCENTS.npcs} icon={ScrollText} title="Persona">
+                  {npcs[entryId].personality && <FieldRow label="Traits" value={npcs[entryId].personality} />}
+                  {npcs[entryId].voiceNotes && <FieldRow label="Voice" value={npcs[entryId].voiceNotes} />}
+                </SectionCard>
+              )}
+              <SectionCard accent={CATEGORY_ACCENTS.npcs} icon={Clock} title="Chronicle">
+                <FieldRow label="Memory" value={npcs[entryId].memSummary || 'No chronicled deeds.'} />
                 {npcs[entryId].deeds.length > 0 && <FieldRow label="Deeds" value={npcs[entryId].deeds.join(', ')} />}
               </SectionCard>
               <TagPills tags={npcs[entryId].tags} accent={CATEGORY_ACCENTS.npcs} />
@@ -1768,18 +1898,29 @@ export default function Codex({
       {category === 'factions' && !entryId && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AddButton label="Add Faction" onClick={() => startCreate({ name: '', repTier: 0 })} />
-          {filteredFactions.map(([id, f]) => (
-            <DeckEntryCard
-              key={id}
-              accent={CATEGORY_ACCENTS.factions}
-              title={isHidden(f) ? '???' : f.name}
-              kicker={isHidden(f) ? undefined : `${repTierLabel(f.repTier)} (${f.repTier > 0 ? '+' : ''}${f.repTier})`}
-              subtitle={isHidden(f) ? (f.discovery?.teaser || 'Not yet discovered.') : f.description}
-              badge={isHidden(f) ? <LockBadge /> : <AutoBadge shown={f.autoLogged} />}
-              tags={isHidden(f) ? undefined : f.tags}
-              onClick={() => setEntryId(id)}
-            />
-          ))}
+          {filteredFactions.map(([id, f]) => {
+            const hidden = isHidden(f)
+            const metaChips: MetaChip[] = hidden
+              ? []
+              : [
+                  { icon: ShieldCheck, label: `${repTierLabel(f.repTier)} (${f.repTier > 0 ? '+' : ''}${f.repTier})` },
+                  f.territory ? { icon: MapPin, label: f.territory } : null,
+                  f.rivalId && factions[f.rivalId] ? { icon: Swords, label: `vs ${factions[f.rivalId].name}` } : null,
+                ].filter(Boolean) as MetaChip[]
+            return (
+              <DeckEntryCard
+                key={id}
+                accent={CATEGORY_ACCENTS.factions}
+                title={hidden ? '???' : f.name}
+                kicker={hidden ? undefined : f.leader ? `Leader: ${f.leader}` : f.territory}
+                subtitle={hidden ? (f.discovery?.teaser || 'Not yet discovered.') : (f.description || 'An active realm faction.')}
+                badge={hidden ? <LockBadge /> : <AutoBadge shown={f.autoLogged} />}
+                metaChips={metaChips}
+                tags={hidden ? undefined : f.tags}
+                onClick={() => setEntryId(id)}
+              />
+            )
+          })}
           {Object.keys(factions).length === 0 ? (
             <p className="font-narrative italic text-sm text-ink-muted col-span-full">No factions encountered yet.</p>
           ) : filteredFactions.length === 0 ? (
@@ -1827,23 +1968,23 @@ export default function Codex({
                 subtitle={factions[entryId].description}
                 badges={<AutoBadge shown={factions[entryId].autoLogged} />}
               />
-              <SectionCard accent={CATEGORY_ACCENTS.factions} icon={ShieldCheck} title="Standing">
+              <SectionCard accent={CATEGORY_ACCENTS.factions} icon={ShieldCheck} title="Standing & Feuds">
                 <div>
                   <FieldRow
-                    label="Reputation Tier"
+                    label="Standing"
                     value={`${repTierLabel(factions[entryId].repTier)} (${factions[entryId].repTier > 0 ? '+' : ''}${factions[entryId].repTier} of -2 to +2)`}
                   />
                   <ReputationMeter tier={factions[entryId].repTier} accent={CATEGORY_ACCENTS.factions} />
                 </div>
                 {factions[entryId].rivalId && factions[factions[entryId].rivalId!] && (
-                  <FieldRow label="Rival Faction" value={factions[factions[entryId].rivalId!].name} />
+                  <FieldRow label="Rival" value={factions[factions[entryId].rivalId!].name} icon={Swords} />
                 )}
               </SectionCard>
               {(factions[entryId].leader || factions[entryId].territory || factions[entryId].symbol) && (
-                <SectionCard accent={CATEGORY_ACCENTS.factions} icon={ScrollText} title="Identity">
-                  {factions[entryId].leader && <FieldRow label="Leader" value={factions[entryId].leader} />}
-                  {factions[entryId].territory && <FieldRow label="Territory" value={factions[entryId].territory} />}
-                  {factions[entryId].symbol && <FieldRow label="Symbol" value={factions[entryId].symbol} />}
+                <SectionCard accent={CATEGORY_ACCENTS.factions} icon={ScrollText} title="Domain">
+                  {factions[entryId].leader && <FieldRow label="Leader" value={factions[entryId].leader} icon={User} />}
+                  {factions[entryId].territory && <FieldRow label="Territory" value={factions[entryId].territory} icon={MapPin} />}
+                  {factions[entryId].symbol && <FieldRow label="Emblem" value={factions[entryId].symbol} icon={Sparkles} />}
                 </SectionCard>
               )}
               <TagPills tags={factions[entryId].tags} accent={CATEGORY_ACCENTS.factions} />
@@ -1856,18 +1997,29 @@ export default function Codex({
       {category === 'locations' && !entryId && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AddButton label="Add Location" onClick={() => startCreate({ name: '', region: '', description: '', dangerLevel: '', factionOwner: '', standing: '' })} />
-          {filteredLocations.map(([id, l]) => (
-            <DeckEntryCard
-              key={id}
-              accent={CATEGORY_ACCENTS.locations}
-              title={isHidden(l) ? '???' : l.name}
-              kicker={isHidden(l) ? undefined : l.locationType || l.region}
-              subtitle={isHidden(l) ? (l.discovery?.teaser || 'Not yet discovered.') : `${l.region} · Danger: ${l.dangerLevel}`}
-              badge={isHidden(l) ? <LockBadge /> : <AutoBadge shown={l.autoLogged} />}
-              tags={isHidden(l) ? undefined : l.tags}
-              onClick={() => setEntryId(id)}
-            />
-          ))}
+          {filteredLocations.map(([id, l]) => {
+            const hidden = isHidden(l)
+            const metaChips: MetaChip[] = hidden
+              ? []
+              : [
+                  l.dangerLevel ? { icon: AlertTriangle, label: l.dangerLevel } : null,
+                  l.region ? { icon: MapPin, label: l.region } : null,
+                  l.factionOwner && factions[l.factionOwner] ? { icon: ShieldCheck, label: factions[l.factionOwner].name } : null,
+                ].filter(Boolean) as MetaChip[]
+            return (
+              <DeckEntryCard
+                key={id}
+                accent={CATEGORY_ACCENTS.locations}
+                title={hidden ? '???' : l.name}
+                kicker={hidden ? undefined : [l.locationType, l.region].filter(Boolean).join(' · ')}
+                subtitle={hidden ? (l.discovery?.teaser || 'Not yet discovered.') : (l.description || l.notableFeatures || 'An uncharted site in the realm.')}
+                badge={hidden ? <LockBadge /> : <AutoBadge shown={l.autoLogged} />}
+                metaChips={metaChips}
+                tags={hidden ? undefined : l.tags}
+                onClick={() => setEntryId(id)}
+              />
+            )
+          })}
           {Object.keys(locations).length === 0 ? (
             <p className="font-narrative italic text-sm text-ink-muted col-span-full">No locations visited yet.</p>
           ) : filteredLocations.length === 0 ? (
@@ -1947,19 +2099,19 @@ export default function Codex({
                 subtitle={locations[entryId].locationType ? `${locations[entryId].locationType} · ${locations[entryId].region}` : locations[entryId].region}
                 badges={<AutoBadge shown={locations[entryId].autoLogged} />}
               />
-              <SectionCard accent={CATEGORY_ACCENTS.locations} icon={Map} title="Overview">
-                <FieldRow label="Region" value={locations[entryId].region} />
-                <FieldRow label="Danger Level" value={locations[entryId].dangerLevel} />
-                <FieldRow label="Standing" value={effectiveStanding(locations[entryId], factions)} />
+              <SectionCard accent={CATEGORY_ACCENTS.locations} icon={MapPin} title="Geography">
+                <FieldRow label="Region" value={locations[entryId].region} icon={MapPin} />
+                <FieldRow label="Danger" value={locations[entryId].dangerLevel} icon={AlertTriangle} />
+                <FieldRow label="Standing" value={effectiveStanding(locations[entryId], factions)} icon={ShieldCheck} />
                 {locations[entryId].factionOwner && (
-                  <FieldRow label="Faction Owner" value={factions[locations[entryId].factionOwner!]?.name ?? locations[entryId].factionOwner!} />
+                  <FieldRow label="Ruler" value={factions[locations[entryId].factionOwner!]?.name ?? locations[entryId].factionOwner!} icon={Shield} />
                 )}
-                <FieldRow label="Description" value={locations[entryId].description} />
+                {locations[entryId].description && <FieldRow label="Overview" value={locations[entryId].description} />}
               </SectionCard>
               {(locations[entryId].notableFeatures || locations[entryId].inhabitants) && (
-                <SectionCard accent={CATEGORY_ACCENTS.locations} icon={ScrollText} title="Depth">
-                  {locations[entryId].notableFeatures && <FieldRow label="Notable Features" value={locations[entryId].notableFeatures} />}
-                  {locations[entryId].inhabitants && <FieldRow label="Inhabitants" value={locations[entryId].inhabitants} />}
+                <SectionCard accent={CATEGORY_ACCENTS.locations} icon={ScrollText} title="Landmarks & Denizens">
+                  {locations[entryId].notableFeatures && <FieldRow label="Landmarks" value={locations[entryId].notableFeatures} />}
+                  {locations[entryId].inhabitants && <FieldRow label="Denizens" value={locations[entryId].inhabitants} />}
                 </SectionCard>
               )}
               <TagPills tags={locations[entryId].tags} accent={CATEGORY_ACCENTS.locations} />
@@ -1972,18 +2124,28 @@ export default function Codex({
       {category === 'lore' && !entryId && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AddButton label="Add Lore" onClick={() => startCreate({ name: '', category: '' })} />
-          {filteredLore.map(([id, l]) => (
-            <DeckEntryCard
-              key={id}
-              accent={CATEGORY_ACCENTS.lore}
-              title={isHidden(l) ? '???' : l.name}
-              kicker={isHidden(l) ? undefined : [l.category, l.era].filter(Boolean).join(' · ')}
-              subtitle={isHidden(l) ? (l.discovery?.teaser || 'Not yet discovered.') : l.content}
-              badge={isHidden(l) ? <LockBadge /> : <AutoBadge shown={l.autoLogged} />}
-              tags={isHidden(l) ? undefined : l.tags}
-              onClick={() => setEntryId(id)}
-            />
-          ))}
+          {filteredLore.map(([id, l]) => {
+            const hidden = isHidden(l)
+            const metaChips: MetaChip[] = hidden
+              ? []
+              : [
+                  l.category ? { icon: ScrollText, label: l.category } : null,
+                  l.era ? { icon: Clock, label: l.era } : null,
+                ].filter(Boolean) as MetaChip[]
+            return (
+              <DeckEntryCard
+                key={id}
+                accent={CATEGORY_ACCENTS.lore}
+                title={hidden ? '???' : l.name}
+                kicker={hidden ? undefined : [l.category, l.era].filter(Boolean).join(' · ')}
+                subtitle={hidden ? (l.discovery?.teaser || 'Not yet discovered.') : (l.content || 'An ancient lore entry.')}
+                badge={hidden ? <LockBadge /> : <AutoBadge shown={l.autoLogged} />}
+                metaChips={metaChips}
+                tags={hidden ? undefined : l.tags}
+                onClick={() => setEntryId(id)}
+              />
+            )
+          })}
           {Object.keys(lore).length === 0 ? (
             <p className="font-narrative italic text-sm text-ink-muted col-span-full">No lore uncovered yet.</p>
           ) : filteredLore.length === 0 ? (
@@ -2015,8 +2177,11 @@ export default function Codex({
                 subtitle={[lore[entryId].category, lore[entryId].era].filter(Boolean).join(' · ')}
                 badges={<AutoBadge shown={lore[entryId].autoLogged} />}
               />
-              <SectionCard accent={CATEGORY_ACCENTS.lore} icon={ScrollText} title="Lore">
-                <FieldRow label="Lore Text" value={lore[entryId].content || 'No lore recorded yet — edit this entry to write it in.'} />
+              <SectionCard accent={CATEGORY_ACCENTS.lore} icon={ScrollText} title="Chronicle Archive">
+                <FieldRow label="Classification" value={[lore[entryId].category, lore[entryId].era].filter(Boolean).join(' · ')} />
+                <div className="mt-1 p-3.5 rounded-xl bg-[#0f121d]/80 border border-[#2b3046] font-narrative text-xs sm:text-sm text-[#f6eedb] italic leading-relaxed whitespace-pre-wrap">
+                  {lore[entryId].content || 'No text chronicled yet.'}
+                </div>
               </SectionCard>
               <TagPills tags={lore[entryId].tags} accent={CATEGORY_ACCENTS.lore} />
             </div>
@@ -2028,18 +2193,29 @@ export default function Codex({
       {category === 'quests' && !entryId && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AddButton label="Add Quest" onClick={() => startCreate({ name: '', status: '', note: '' })} />
-          {filteredQuests.map(([id, q]) => (
-            <DeckEntryCard
-              key={id}
-              accent={CATEGORY_ACCENTS.quests}
-              title={isHidden(q) ? '???' : q.name}
-              statusBadge={isHidden(q) ? undefined : <><QuestStatusBadge status={q.status} /><QuestTypeBadge type={q.type} /></>}
-              subtitle={isHidden(q) ? (q.discovery?.teaser || 'Not yet discovered.') : (q.description || q.note)}
-              badge={isHidden(q) ? <LockBadge /> : <AutoBadge shown={q.autoLogged} />}
-              tags={isHidden(q) ? undefined : q.tags}
-              onClick={() => setEntryId(id)}
-            />
-          ))}
+          {filteredQuests.map(([id, q]) => {
+            const hidden = isHidden(q)
+            const metaChips: MetaChip[] = hidden
+              ? []
+              : [
+                  q.questGiver ? { icon: User, label: `By: ${q.questGiver}` } : null,
+                  q.reward ? { icon: Gift, label: q.reward } : null,
+                ].filter(Boolean) as MetaChip[]
+            return (
+              <DeckEntryCard
+                key={id}
+                accent={CATEGORY_ACCENTS.quests}
+                title={hidden ? '???' : q.name}
+                kicker={hidden ? undefined : q.questGiver ? `Patron: ${q.questGiver}` : undefined}
+                statusBadge={hidden ? undefined : <QuestStatusBadge status={q.status} />}
+                subtitle={hidden ? (q.discovery?.teaser || 'Not yet discovered.') : (q.description || q.note || 'No recorded objective.')}
+                badge={hidden ? <LockBadge /> : <><QuestTypeBadge type={q.type} /><AutoBadge shown={q.autoLogged} /></>}
+                metaChips={metaChips}
+                tags={hidden ? undefined : q.tags}
+                onClick={() => setEntryId(id)}
+              />
+            )
+          })}
           {Object.keys(quests).length === 0 ? (
             <p className="font-narrative italic text-sm text-ink-muted col-span-full">No quests tracked yet.</p>
           ) : filteredQuests.length === 0 ? (
@@ -2079,12 +2255,16 @@ export default function Codex({
                   </>
                 }
               />
-              <SectionCard accent={CATEGORY_ACCENTS.quests} icon={Target} title="Objective">
-                {quests[entryId].description && <FieldRow label="Description" value={quests[entryId].description} />}
-                {quests[entryId].questGiver && <FieldRow label="Quest Giver" value={quests[entryId].questGiver} />}
-                {quests[entryId].reward && <FieldRow label="Reward" value={quests[entryId].reward} />}
-                {quests[entryId].note && <FieldRow label="Note" value={quests[entryId].note!} />}
+              <SectionCard accent={CATEGORY_ACCENTS.quests} icon={Target} title="Mission Brief">
+                {quests[entryId].questGiver && <FieldRow label="Patron" value={quests[entryId].questGiver} icon={User} />}
+                {quests[entryId].reward && <FieldRow label="Bounty" value={quests[entryId].reward} icon={Gift} />}
+                {quests[entryId].description && <FieldRow label="Premise" value={quests[entryId].description} />}
               </SectionCard>
+              {quests[entryId].note && (
+                <SectionCard accent={CATEGORY_ACCENTS.quests} icon={Clock} title="Journal Log">
+                  <FieldRow label="Latest Log" value={quests[entryId].note!} />
+                </SectionCard>
+              )}
               <TagPills tags={quests[entryId].tags} accent={CATEGORY_ACCENTS.quests} />
             </div>
           )}
@@ -2095,18 +2275,29 @@ export default function Codex({
       {category === 'bestiary' && !entryId && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AddButton label="Add Adversary" onClick={() => startCreate({ name: '', threatTier: '', hpMax: '', dmgBase: '' })} />
-          {filteredBestiary.map(([id, b]) => (
-            <DeckEntryCard
-              key={id}
-              accent={CATEGORY_ACCENTS.bestiary}
-              title={isHidden(b) ? '???' : b.name}
-              kicker={isHidden(b) ? undefined : b.threatTier}
-              subtitle={isHidden(b) ? (b.discovery?.teaser || 'Not yet discovered.') : b.description}
-              badge={isHidden(b) ? <LockBadge /> : <AutoBadge shown={b.autoLogged} />}
-              tags={isHidden(b) ? undefined : b.tags}
-              onClick={() => setEntryId(id)}
-            />
-          ))}
+          {filteredBestiary.map(([id, b]) => {
+            const hidden = isHidden(b)
+            const metaChips: MetaChip[] = hidden
+              ? []
+              : [
+                  b.threatTier ? { icon: Skull, label: b.threatTier } : null,
+                  b.hpMax !== undefined ? { icon: Heart, label: `HP ${b.hpMax}` } : null,
+                  b.weaknesses ? { icon: Zap, label: `Weak: ${b.weaknesses}` } : null,
+                ].filter(Boolean) as MetaChip[]
+            return (
+              <DeckEntryCard
+                key={id}
+                accent={CATEGORY_ACCENTS.bestiary}
+                title={hidden ? '???' : b.name}
+                kicker={hidden ? undefined : b.threatTier || b.habitat}
+                subtitle={hidden ? (b.discovery?.teaser || 'Not yet discovered.') : (b.description || b.weaknesses || 'A creature roaming the dark.')}
+                badge={hidden ? <LockBadge /> : <AutoBadge shown={b.autoLogged} />}
+                metaChips={metaChips}
+                tags={hidden ? undefined : b.tags}
+                onClick={() => setEntryId(id)}
+              />
+            )
+          })}
           {Object.keys(bestiary).length === 0 ? (
             <p className="font-narrative italic text-sm text-ink-muted col-span-full">No adversaries encountered yet.</p>
           ) : filteredBestiary.length === 0 ? (
@@ -2150,20 +2341,20 @@ export default function Codex({
                 badges={<AutoBadge shown={bestiary[entryId].autoLogged} />}
               />
               <SectionCard accent={CATEGORY_ACCENTS.bestiary} icon={Skull} title="Combat Profile">
-                <FieldRow label="Threat Tier" value={bestiary[entryId].threatTier} />
+                <FieldRow label="Threat" value={bestiary[entryId].threatTier} icon={Skull} />
                 {(bestiary[entryId].hpMax !== undefined || bestiary[entryId].dmgBase !== undefined) && (
                   <div className="flex gap-2">
                     {bestiary[entryId].hpMax !== undefined && <StatTile label="HP" value={bestiary[entryId].hpMax!} accent={CATEGORY_ACCENTS.bestiary} />}
-                    {bestiary[entryId].dmgBase !== undefined && <StatTile label="Base Damage" value={bestiary[entryId].dmgBase!} accent={CATEGORY_ACCENTS.bestiary} />}
+                    {bestiary[entryId].dmgBase !== undefined && <StatTile label="Damage" value={bestiary[entryId].dmgBase!} accent={CATEGORY_ACCENTS.bestiary} />}
                   </div>
                 )}
+                {bestiary[entryId].weaknesses && <FieldRow label="Weaknesses" value={bestiary[entryId].weaknesses} icon={Zap} />}
               </SectionCard>
-              {(bestiary[entryId].description || bestiary[entryId].habitat || bestiary[entryId].weaknesses || bestiary[entryId].lootTable) && (
-                <SectionCard accent={CATEGORY_ACCENTS.bestiary} icon={ScrollText} title="Bestiary Notes">
-                  {bestiary[entryId].description && <FieldRow label="Description" value={bestiary[entryId].description} />}
-                  {bestiary[entryId].habitat && <FieldRow label="Habitat" value={bestiary[entryId].habitat} />}
-                  {bestiary[entryId].weaknesses && <FieldRow label="Weaknesses" value={bestiary[entryId].weaknesses} />}
-                  {bestiary[entryId].lootTable && <FieldRow label="Loot Table" value={bestiary[entryId].lootTable} />}
+              {(bestiary[entryId].habitat || bestiary[entryId].description || bestiary[entryId].lootTable) && (
+                <SectionCard accent={CATEGORY_ACCENTS.bestiary} icon={ScrollText} title="Ecology & Spoils">
+                  {bestiary[entryId].habitat && <FieldRow label="Habitat" value={bestiary[entryId].habitat} icon={MapPin} />}
+                  {bestiary[entryId].lootTable && <FieldRow label="Loot" value={bestiary[entryId].lootTable} icon={Gift} />}
+                  {bestiary[entryId].description && <FieldRow label="Notes" value={bestiary[entryId].description} />}
                 </SectionCard>
               )}
               <TagPills tags={bestiary[entryId].tags} accent={CATEGORY_ACCENTS.bestiary} />
@@ -2172,29 +2363,35 @@ export default function Codex({
         </>
       )}
 
-      {/* Skills — §6.4D category 6. Entries arrive two ways: a {{Term|skill}}
-          mention in prose auto-registers a bare stub, and `skill_learn` fills
-          in the real record when the protagonist actually gains an ability.
-          Costs are shown as pills matching the [Active Skill] indigo accent
-          the same skills already use inline in narration (§4.2). */}
+      {/* Skills */}
       {category === 'skills' && !entryId && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AddButton label="Add Skill" onClick={() => startCreate({ name: '', description: '', classId: '', mpCost: '', stCost: '' })} />
-          {filteredSkills.map(([id, s]) => (
-            <DeckEntryCard
-              key={id}
-              accent={CATEGORY_ACCENTS.skills}
-              title={isHidden(s) ? '???' : s.name}
-              kicker={isHidden(s) ? undefined : [s.skillType, classNameFor(s.classId)].filter(Boolean).join(' · ')}
-              subtitle={
-                isHidden(s)
-                  ? s.discovery?.teaser || 'Not yet discovered.'
-                  : s.flavorText || s.description || 'No description yet.'
-              }
-              badge={isHidden(s) ? <LockBadge /> : <SkillCostBadge skill={s} />}
-              onClick={() => setEntryId(id)}
-            />
-          ))}
+          {filteredSkills.map(([id, s]) => {
+            const hidden = isHidden(s)
+            const metaChips: MetaChip[] = hidden
+              ? []
+              : [
+                  classNameFor(s.classId) ? { icon: Star, label: classNameFor(s.classId)! } : null,
+                  s.tier ? { icon: Sparkles, label: s.tier } : null,
+                ].filter(Boolean) as MetaChip[]
+            return (
+              <DeckEntryCard
+                key={id}
+                accent={CATEGORY_ACCENTS.skills}
+                title={hidden ? '???' : s.name}
+                kicker={hidden ? undefined : [s.skillType, classNameFor(s.classId)].filter(Boolean).join(' · ')}
+                subtitle={
+                  hidden
+                    ? s.discovery?.teaser || 'Not yet discovered.'
+                    : s.flavorText || s.description || 'A martial or magical technique.'
+                }
+                badge={hidden ? <LockBadge /> : <SkillCostBadge skill={s} />}
+                metaChips={metaChips}
+                onClick={() => setEntryId(id)}
+              />
+            )
+          })}
           {Object.keys(skills).length === 0 ? (
             <p className="font-narrative italic text-sm text-ink-muted col-span-full">
               No skills learned yet. They register automatically as the Narrator names them, or add one by hand.
@@ -2259,14 +2456,15 @@ export default function Codex({
                 subtitle={skills[entryId].flavorText || [skills[entryId].skillType, skills[entryId].tier].filter(Boolean).join(' · ')}
                 badges={<SkillCostBadge skill={skills[entryId]} />}
               />
-              <SectionCard accent={CATEGORY_ACCENTS.skills} icon={Sparkles} title="Ability">
-                {skills[entryId].description && <FieldRow label="Description" value={skills[entryId].description!} />}
-                {classNameFor(skills[entryId].classId) && <FieldRow label="Owning Class" value={classNameFor(skills[entryId].classId)!} />}
-                {skills[entryId].mpCost !== undefined && <FieldRow label="MP Cost" value={String(skills[entryId].mpCost)} />}
-                {skills[entryId].stCost !== undefined && <FieldRow label="ST Cost" value={String(skills[entryId].stCost)} />}
-                {/* §3.2 — affordability is surfaced, never enforced: the check
-                    tells the narrator whether to describe a clean cast or an
-                    exhaustion penalty, it does not block the player. */}
+              <SectionCard accent={CATEGORY_ACCENTS.skills} icon={Sparkles} title="Ability Profile">
+                {classNameFor(skills[entryId].classId) && <FieldRow label="Class" value={classNameFor(skills[entryId].classId)!} icon={Star} />}
+                {skills[entryId].skillType && <FieldRow label="Type" value={skills[entryId].skillType!} />}
+                {skills[entryId].tier && <FieldRow label="Tier" value={skills[entryId].tier!} />}
+                <div className="flex gap-2">
+                  {skills[entryId].mpCost !== undefined && <StatTile label="MP Cost" value={skills[entryId].mpCost!} accent={CATEGORY_ACCENTS.skills} />}
+                  {skills[entryId].stCost !== undefined && <StatTile label="ST Cost" value={skills[entryId].stCost!} accent={CATEGORY_ACCENTS.skills} />}
+                </div>
+                {/* Affordability preview */}
                 {(() => {
                   const { affordable, missing } = checkAffordability(skills[entryId], player)
                   if (affordable) return null
@@ -2277,16 +2475,22 @@ export default function Codex({
                   )
                 })()}
               </SectionCard>
+              {(skills[entryId].description || skills[entryId].flavorText) && (
+                <SectionCard accent={CATEGORY_ACCENTS.skills} icon={ScrollText} title="Effect & Lore">
+                  {skills[entryId].description && <FieldRow label="Mechanics" value={skills[entryId].description!} />}
+                  {skills[entryId].flavorText && (
+                    <div className="mt-1 p-3 rounded-lg bg-[#0f121d]/70 border border-[#2b3046] font-narrative text-xs italic text-[#f6eedb]/90">
+                      "{skills[entryId].flavorText}"
+                    </div>
+                  )}
+                </SectionCard>
+              )}
             </div>
           )}
         </>
       )}
 
-      {/* Items — §5.9 Item Type Taxonomy. `items` (name/type/description/
-          statBonus) is a separate dict from `inventory` (id -> qty): every
-          item that's ever entered inventory gets at least a minimal entry
-          here (no more raw-slug display names), while only Weapon/Armor/
-          Accessory can carry a statBonus and be equipped. */}
+      {/* Items */}
       {category === 'items' && !entryId && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AddButton label="Add Item" onClick={() => startCreate({ name: '', type: 'material', qty: '1', description: '', statBonus: {} })} />
@@ -2295,14 +2499,21 @@ export default function Codex({
             const item = items[id]
             const slot = equippedSlotFor(id)
             const accent = itemAccentFor(item?.rarity)
+            const bonus = statBonusText(item?.statBonus)
+            const metaChips: MetaChip[] = [
+              { icon: Coins, label: `×${qty}` },
+              bonus ? { icon: Zap, label: bonus } : null,
+              item?.value ? { icon: Coins, label: `${item.value}g` } : null,
+            ].filter(Boolean) as MetaChip[]
             return (
               <DeckEntryCard
                 key={id}
                 accent={accent}
                 title={item?.name ?? id.replace(/_/g, ' ')}
                 kicker={[item?.type ?? 'unknown', item?.rarity].filter(Boolean).join(' · ')}
-                subtitle={`×${qty}${statBonusText(item?.statBonus) ? ` · ${statBonusText(item?.statBonus)}` : ''}${item?.loreText ? ` — ${item.loreText}` : ''}`}
+                subtitle={item?.description || item?.loreText || 'Stored in your gear pouch.'}
                 badge={slot ? <span className={accent.badge}>equipped</span> : undefined}
+                metaChips={metaChips}
                 tags={item?.tags}
                 onClick={() => setEntryId(id)}
               />
@@ -2390,19 +2601,18 @@ export default function Codex({
                 subtitle={[items[entryId]?.type ?? 'unknown', items[entryId]?.rarity].filter(Boolean).join(' · ')}
                 badges={equippedSlotFor(entryId) ? <span className={itemAccentFor(items[entryId]?.rarity).badge}>equipped</span> : undefined}
               />
-              <SectionCard accent={itemAccentFor(items[entryId]?.rarity)} icon={Backpack} title="Item">
+              <SectionCard accent={itemAccentFor(items[entryId]?.rarity)} icon={Backpack} title="Item Dossier">
                 <FieldRow label="Type" value={items[entryId]?.type ?? 'unknown'} />
                 <FieldRow label="Quantity" value={String(inventory[entryId] ?? 0)} />
-                {items[entryId]?.value !== undefined && <FieldRow label="Value" value={String(items[entryId]!.value)} />}
+                {items[entryId]?.value !== undefined && <FieldRow label="Value" value={`${items[entryId]!.value} gold`} icon={Coins} />}
+                {statBonusText(items[entryId]?.statBonus) && <FieldRow label="Stat Bonus" value={statBonusText(items[entryId]?.statBonus)!} icon={Zap} />}
                 {items[entryId]?.description && <FieldRow label="Description" value={items[entryId]!.description!} />}
-                {items[entryId]?.loreText && <FieldRow label="Lore Text" value={items[entryId]!.loreText!} />}
-                {statBonusText(items[entryId]?.statBonus) && <FieldRow label="Stat Bonus" value={statBonusText(items[entryId]?.statBonus)!} />}
                 {items[entryId] && EQUIPPABLE_TYPES.includes(items[entryId]!.type) && (
-                  <div className="mt-1">
+                  <div className="mt-2 pt-2 border-t border-[#e8ca8a]/15">
                     {equippedSlotFor(entryId) ? (
                       <button
                         onClick={() => onUnequipSlot(equippedSlotFor(entryId)!)}
-                        className="rounded-full px-4 py-1.5 font-display text-xs font-semibold bg-rose-500/20 text-rose-300"
+                        className="rounded-full px-4 py-1.5 font-display text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30"
                       >
                         Unequip
                       </button>
@@ -2414,6 +2624,13 @@ export default function Codex({
                   </div>
                 )}
               </SectionCard>
+              {items[entryId]?.loreText && (
+                <SectionCard accent={itemAccentFor(items[entryId]?.rarity)} icon={ScrollText} title="Inscription">
+                  <div className="p-3 rounded-lg bg-[#0f121d]/70 border border-[#2b3046] font-narrative text-xs italic text-[#f6eedb]/90">
+                    "{items[entryId]!.loreText}"
+                  </div>
+                </SectionCard>
+              )}
               <TagPills tags={items[entryId]?.tags} accent={itemAccentFor(items[entryId]?.rarity)} />
             </div>
           )}

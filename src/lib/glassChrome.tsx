@@ -248,22 +248,66 @@ interface GlassScreenProps {
 export function GlassScreen({ ground, children, fill = false, className = '' }: GlassScreenProps) {
   useEffect(() => {
     // Only apply on touch/mobile devices or small/mobile screens
-    const isMobile = window.matchMedia('(max-width: 1024px)').matches
+    const isMobile = window.matchMedia('(max-width: 1024px)').matches || 'ontouchstart' in window
     if (!isMobile) return
+
+    const scrollFieldAboveKeyboard = (target: HTMLElement) => {
+      // Find nearest scrollable container
+      let container: HTMLElement | null = target.parentElement
+      while (container && container !== document.body) {
+        const style = window.getComputedStyle(container)
+        if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+          break
+        }
+        container = container.parentElement
+      }
+
+      // Find the enclosing field container or target itself
+      const field = target.closest<HTMLElement>('.glass-field, [data-field-container]') || target
+
+      if (container && container !== document.body) {
+        const containerRect = container.getBoundingClientRect()
+        const fieldRect = field.getBoundingClientRect()
+        // Position field ~16px below the top of the scroll container
+        // This keeps the text field in the upper visible area, safely above the mobile keypad at the bottom
+        const offset = fieldRect.top - containerRect.top
+        const targetScroll = container.scrollTop + offset - 16
+        container.scrollTo({
+          top: Math.max(0, targetScroll),
+          behavior: 'smooth',
+        })
+      } else {
+        field.scrollIntoView({ block: 'start', behavior: 'smooth' })
+      }
+    }
 
     const handleFocusIn = (e: FocusEvent) => {
       const target = e.target as HTMLElement
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
-        // Wait for keyboard animation and CSS focus-within transitions to apply
+        // Run quickly for already-open keyboards or field-to-field focus
         setTimeout(() => {
-          target.scrollIntoView({ block: 'center', behavior: 'smooth' })
-        }, 250)
+          scrollFieldAboveKeyboard(target)
+        }, 80)
+        // Run again after the software keyboard slide animation finishes (~300ms)
+        setTimeout(() => {
+          scrollFieldAboveKeyboard(target)
+        }, 320)
+      }
+    }
+
+    const handleViewportResize = () => {
+      const active = document.activeElement as HTMLElement | null
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+        scrollFieldAboveKeyboard(active)
       }
     }
 
     document.addEventListener('focusin', handleFocusIn)
+    window.visualViewport?.addEventListener('resize', handleViewportResize)
+
     return () => {
       document.removeEventListener('focusin', handleFocusIn)
+      window.visualViewport?.removeEventListener('resize', handleViewportResize)
     }
   }, [])
 
@@ -407,7 +451,7 @@ export function GlassTabs<T extends string>({
 // Shared by input/textarea. Has an opaque dark glass backing so text remains
 // crisp and legible regardless of which background artwork or scene is active.
 export const FIELD_CLASS =
-  'w-full rounded-xl border border-[#e8ca8a]/30 bg-[#120e1b]/80 backdrop-blur-sm px-3 py-2.5 font-sans text-[12px] leading-relaxed text-[#fbf4e2] placeholder:text-[#d4be88]/70 outline-none transition-colors duration-150 focus:border-[#f0ca65] focus:bg-[#181324]/90 focus:shadow-[0_0_12px_rgba(240,202,101,0.18)]'
+  'w-full rounded-xl border border-[#e8ca8a]/30 bg-[#120e1b]/80 backdrop-blur-sm px-3 py-2.5 font-sans text-[12px] leading-relaxed text-[#fbf4e2] placeholder:text-[#d4be88]/70 outline-none transition-colors duration-150 focus:border-[#f0ca65] focus:bg-[#181324]/90 focus:shadow-[0_0_12px_rgba(240,202,101,0.18)] scroll-mt-20'
 
 // A <select>'s dropdown list is painted by the OS, and it inherits the
 // element's own background — a near-transparent select gets an unreadable
@@ -534,7 +578,7 @@ export function GlassField({
   const [showExamples, setShowExamples] = useState(false)
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="glass-field flex flex-col gap-1.5 scroll-mt-20">
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
         <span className="flex flex-wrap items-baseline gap-x-2">
           <span className={LABEL_CLASS}>{label}</span>

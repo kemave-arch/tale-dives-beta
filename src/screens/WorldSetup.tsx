@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   Bookmark,
   Check,
@@ -74,6 +74,7 @@ export default function WorldSetup({
   // If initial world is supplied (e.g. from library edit), open directly in editor; otherwise show the gateway
   const [viewMode, setViewMode] = useState<'gateway' | 'editor' | 'presets'>(() => (initial ? 'editor' : 'gateway'))
   const [activeTab, setActiveTab] = useState<'overview' | 'depth' | 'locations'>('overview')
+  const formScrollRef = useRef<HTMLDivElement>(null)
 
   // Form State
   const [templateId, setTemplateId] = useState<string | null | undefined>(initial?.id ?? null)
@@ -869,11 +870,19 @@ export default function WorldSetup({
     </div>
   )
 
+  const scrollToTop = () => {
+    if (formScrollRef.current) {
+      formScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
   const handleContinue = () => {
     if (activeTab === 'overview') {
       setActiveTab('depth')
+      scrollToTop()
     } else if (activeTab === 'depth') {
       setActiveTab('locations')
+      scrollToTop()
     } else {
       onContinue(currentData())
     }
@@ -894,12 +903,20 @@ export default function WorldSetup({
       {/* Subtabs strip */}
       <div className="px-4 pb-2 shrink-0">
         <div className="max-w-md md:max-w-3xl lg:max-w-6xl mx-auto">
-          <GlassTabs tabs={TABS} value={activeTab} onChange={(id) => setActiveTab(id as 'overview' | 'depth' | 'locations')} className="w-full" />
+          <GlassTabs
+            tabs={TABS}
+            value={activeTab}
+            onChange={(id) => {
+              setActiveTab(id as 'overview' | 'depth' | 'locations')
+              scrollToTop()
+            }}
+            className="w-full"
+          />
         </div>
       </div>
 
       {/* Main Form Body */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 focus-within:pb-[60vh] md:focus-within:pb-4">
+      <div ref={formScrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 focus-within:pb-[75vh] md:focus-within:pb-4">
         <div className="max-w-md md:max-w-3xl lg:max-w-6xl mx-auto flex flex-col gap-5">
           {activeTab === 'overview' && overviewFields}
           {activeTab === 'depth' && depthFields}
@@ -948,11 +965,11 @@ export default function WorldSetup({
       {/* Add / Edit Location Modal */}
       {newLocationModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto"
           onClick={() => setNewLocationModalOpen(false)}
         >
           <div
-            className={`${GLASS_SURFACE} rounded-2xl w-full max-w-lg flex flex-col p-5 shadow-2xl bg-[#120e1b]/95 border-[#f0ca65]/40 max-h-[90vh] overflow-y-auto`}
+            className={`${GLASS_SURFACE} rounded-2xl w-full max-w-lg flex flex-col p-4 sm:p-5 shadow-2xl bg-[#120e1b]/95 border-[#f0ca65]/40 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto mt-2 sm:mt-0`}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-3 border-b border-[#e8ca8a]/20">
@@ -1055,11 +1072,11 @@ export default function WorldSetup({
       {/* Add / Edit Faction Modal */}
       {newFactionModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto"
           onClick={() => setNewFactionModalOpen(false)}
         >
           <div
-            className={`${GLASS_SURFACE} rounded-2xl w-full max-w-md flex flex-col p-5 shadow-2xl bg-[#120e1b]/95 border-[#f0ca65]/40`}
+            className={`${GLASS_SURFACE} rounded-2xl w-full max-w-md flex flex-col p-4 sm:p-5 shadow-2xl bg-[#120e1b]/95 border-[#f0ca65]/40 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto mt-2 sm:mt-0`}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-3 border-b border-[#e8ca8a]/20">

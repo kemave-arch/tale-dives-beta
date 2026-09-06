@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   Bookmark,
   Check,
@@ -139,7 +139,8 @@ export default function NewGame({
 
   // If initial is supplied (e.g. from library edit), open directly in editor; otherwise show the gateway
   const [viewMode, setViewMode] = useState<'gateway' | 'editor' | 'presets'>(() => (initial ? 'editor' : 'gateway'))
-  const [mobileTab, setMobileTab] = useState<'basics' | 'identity' | 'skills'>('basics')
+  const [activeTab, setActiveTab] = useState<'basics' | 'identity' | 'skills'>('basics')
+  const formScrollRef = useRef<HTMLDivElement>(null)
 
   // Core Identity State
   const [templateId, setTemplateId] = useState<string | null | undefined>(initial?.id ?? null)
@@ -1150,16 +1151,19 @@ export default function NewGame({
     </div>
   )
 
+  const scrollToTop = () => {
+    if (formScrollRef.current) {
+      formScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
   const handleContinue = () => {
-    const isMobileLayout = window.innerWidth < 1024 // lg breakpoint is 1024px
-    if (isMobileLayout) {
-      if (mobileTab === 'basics') {
-        setMobileTab('identity')
-      } else if (mobileTab === 'identity') {
-        setMobileTab('skills')
-      } else {
-        onBegin(currentData())
-      }
+    if (activeTab === 'basics') {
+      setActiveTab('identity')
+      scrollToTop()
+    } else if (activeTab === 'identity') {
+      setActiveTab('skills')
+      scrollToTop()
     } else {
       onBegin(currentData())
     }
@@ -1177,44 +1181,27 @@ export default function NewGame({
         right={<GlassIconButton icon={Bookmark} label="Load Preset" onClick={() => setViewMode('presets')} />}
       />
 
-      {/* Mobile subtabs (< lg) outside scroll area */}
-      <div className="lg:hidden px-4 pb-2 shrink-0">
-        <div className="max-w-md mx-auto">
+      {/* Subtabs strip */}
+      <div className="px-4 pb-2 shrink-0">
+        <div className="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto">
           <GlassTabs
             tabs={TABS}
-            value={mobileTab}
-            onChange={(id) => setMobileTab(id as 'basics' | 'identity' | 'skills')}
+            value={activeTab}
+            onChange={(id) => {
+              setActiveTab(id as 'basics' | 'identity' | 'skills')
+              scrollToTop()
+            }}
             className="w-full"
           />
         </div>
       </div>
 
       {/* Main Form Body */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 lg:py-4 focus-within:pb-[60vh] lg:focus-within:pb-4">
-        <div className="max-w-md md:max-w-3xl lg:max-w-6xl mx-auto flex flex-col gap-5">
-          {/* Mobile subtabs (< lg) */}
-          <div className="lg:hidden">
-            {mobileTab === 'basics' && basicsFields}
-            {mobileTab === 'identity' && identityFields}
-            {mobileTab === 'skills' && skillsFields}
-          </div>
-
-          {/* PC Multi-Column Layout (>= lg) */}
-          <div className="hidden lg:grid lg:grid-cols-2 gap-8 relative items-start">
-            {/* Column 1: Basics & Attributes */}
-            <div className="pr-4">{basicsFields}</div>
-
-            {/* Vertical Ornate Center Divider */}
-            <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-px bg-gradient-to-b from-transparent via-[#e8ca8a]/30 to-transparent pointer-events-none" />
-
-            {/* Column 2: Identity & Starting Skills */}
-            <div className="pl-4 flex flex-col gap-6">
-              {identityFields}
-              <div className="pt-2 border-t border-[#e8ca8a]/15">{skillsFields}</div>
-            </div>
-          </div>
-
-
+      <div ref={formScrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 focus-within:pb-[75vh] md:focus-within:pb-4">
+        <div className="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto flex flex-col gap-5">
+          {activeTab === 'basics' && basicsFields}
+          {activeTab === 'identity' && identityFields}
+          {activeTab === 'skills' && skillsFields}
         </div>
       </div>
 
@@ -1223,7 +1210,7 @@ export default function NewGame({
         className={`shrink-0 ${GLASS_SURFACE} border-x-0 border-b-0 bg-[#07050c]/60 px-4 py-2 flex justify-center`}
         style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
       >
-        <div className="w-full max-w-md md:max-w-3xl lg:max-w-6xl flex justify-center">
+        <div className="w-full max-w-md md:max-w-3xl lg:max-w-5xl flex justify-center">
           <GlassCTAButton onClick={handleContinue}>Continue</GlassCTAButton>
         </div>
       </div>
@@ -1231,11 +1218,11 @@ export default function NewGame({
       {/* Custom Class Setup Modal */}
       {customModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto"
           onClick={() => setCustomModalOpen(false)}
         >
           <div
-            className={`${GLASS_SURFACE} rounded-2xl w-full max-w-md flex flex-col p-5 shadow-2xl bg-[#120e1b]/95 border-[#f0ca65]/40`}
+            className={`${GLASS_SURFACE} rounded-2xl w-full max-w-md flex flex-col p-4 sm:p-5 shadow-2xl bg-[#120e1b]/95 border-[#f0ca65]/40 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto mt-2 sm:mt-0`}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-3 border-b border-[#e8ca8a]/20">
@@ -1307,11 +1294,11 @@ export default function NewGame({
       {/* Add / Edit Skill Modal */}
       {skillModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/60 p-3 sm:p-4 overflow-y-auto"
           onClick={() => setSkillModalOpen(false)}
         >
           <div
-            className={`${GLASS_SURFACE} rounded-2xl w-full max-w-md flex flex-col p-5 shadow-2xl bg-[#120e1b]/95 border-[#f0ca65]/40`}
+            className={`${GLASS_SURFACE} rounded-2xl w-full max-w-md flex flex-col p-4 sm:p-5 shadow-2xl bg-[#120e1b]/95 border-[#f0ca65]/40 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto mt-2 sm:mt-0`}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-3 border-b border-[#e8ca8a]/20">

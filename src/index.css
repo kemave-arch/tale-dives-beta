@@ -258,6 +258,8 @@ button {
   z-index: 1;
   overflow: hidden;
   pointer-events: none;
+  contain: strict;
+  transform: translateZ(0);
 }
 .title-sparks span {
   position: absolute;
@@ -267,6 +269,9 @@ button {
   box-shadow: 0 0 6px 1.5px rgba(240, 202, 101, 0.85);
   opacity: 0;
   animation: title-spark-rise linear infinite;
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 @keyframes title-spark-rise {
   0% { opacity: 0; transform: translateY(0) scale(0.6); }
@@ -288,6 +293,8 @@ button {
   overflow: hidden;
   pointer-events: none;
   border-radius: inherit;
+  contain: strict;
+  transform: translateZ(0);
 }
 .bday-confetti span {
   position: absolute;
@@ -295,6 +302,9 @@ button {
   border-radius: 1px;
   opacity: 0;
   animation: bday-fall linear infinite;
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 @keyframes bday-fall {
   0% { opacity: 0; transform: translateY(0) rotate(0deg); }

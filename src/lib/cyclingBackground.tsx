@@ -188,12 +188,18 @@ function BackgroundLayer({
           the screen outright. */}
       <div
         className="absolute inset-0 bg-center bg-cover bg-no-repeat"
-        style={{ backgroundImage: image, filter: 'blur(36px) brightness(0.4) saturate(0.85)', transform: 'scale(1.15)' }}
+        style={{
+          backgroundImage: image,
+          filter: 'blur(36px) brightness(0.4) saturate(0.85)',
+          transform: 'scale(1.15) translateZ(0)',
+          willChange: 'opacity, transform',
+          backfaceVisibility: 'hidden',
+        }}
         aria-hidden="true"
       />
       <div
         className="absolute inset-0 bg-center bg-no-repeat"
-        style={{ backgroundImage: image, backgroundSize: size }}
+        style={{ backgroundImage: image, backgroundSize: size, transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
         aria-hidden="true"
       />
     </div>

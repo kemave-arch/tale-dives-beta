@@ -53,6 +53,7 @@ interface ChronicleProps {
   onEditLastTurn?: (newNar: string) => void
   onRemoveLastTurn?: () => void
   editLongText?: (label: string, value: string, hint?: string, placeholder?: string) => Promise<string | null>
+  onOpenRetryEditor?: (originalAction: string) => Promise<string | null>
   confirmAction?: (message: string) => Promise<boolean>
   onSend: (action: string, forcePause?: boolean) => void
   onBangCommand: (raw: string) => void
@@ -302,8 +303,10 @@ interface TurnBlockProps {
   onEditLastTurn?: (newNar: string) => void
   onRemoveLastTurn?: () => void
   editLongText?: (label: string, value: string, hint?: string, placeholder?: string) => Promise<string | null>
+  onOpenRetryEditor?: (originalAction: string) => Promise<string | null>
   confirmAction?: (message: string) => Promise<boolean>
   setInput?: (val: string) => void
+  onSend?: (action: string, forcePause?: boolean) => void
   items?: Record<string, ItemEntry>
   locations?: Record<string, LocationEntry>
 }
@@ -563,8 +566,10 @@ const TurnBlock = memo(function TurnBlock({
   onEditLastTurn,
   onRemoveLastTurn,
   editLongText,
+  onOpenRetryEditor,
   confirmAction,
   setInput,
+  onSend,
   items,
   locations,
 }: TurnBlockProps) {
@@ -756,6 +761,23 @@ const TurnBlock = memo(function TurnBlock({
           }}
           onRetry={async () => {
             if (!confirmAction || !onRemoveLastTurn) return
+            // A big, keyboard-safe popup (useRetryEditor) rather than
+            // re-seeding the cramped bottom input bar — the mobile soft
+            // keyboard covers most of that bar, making a long action (Turn
+            // 0's Prologue prompt especially) unreadable while editing.
+            // Nothing is removed until the player actually confirms a
+            // revised action in the popup; cancelling it aborts the whole
+            // retry, same as never having opened it.
+            if (onOpenRetryEditor && onSend) {
+              const ok = await confirmAction('Retry this turn? It — and anything since, like a bang command lookup — will be removed once you confirm your revised action.')
+              if (!ok) return
+              const revised = await onOpenRetryEditor(entry.action ?? '')
+              if (revised === null) return
+              onRemoveLastTurn()
+              onSend(revised)
+              return
+            }
+            // Fallback (older callers not yet wired to the popup): re-seed the input bar as before.
             const ok = await confirmAction(
               'Retry this turn? It — and anything since, like a bang command lookup — will be removed so you can revise and resend your action.',
             )
@@ -959,6 +981,7 @@ export default function Chronicle({
   onEditLastTurn,
   onRemoveLastTurn,
   editLongText,
+  onOpenRetryEditor,
   confirmAction,
   onSend,
   onBangCommand,
@@ -1393,8 +1416,10 @@ export default function Chronicle({
                 onEditLastTurn={onEditLastTurn}
                 onRemoveLastTurn={onRemoveLastTurn}
                 editLongText={editLongText}
+                onOpenRetryEditor={onOpenRetryEditor}
                 confirmAction={confirmAction}
                 setInput={setInput}
+                onSend={onSend}
                 items={items}
                 locations={locations}
               />

@@ -37,6 +37,7 @@ import { PROSE_DEPTHS, DEFAULT_NARRATION_STYLE, MAX_OUTPUT_TOKENS_CEILING, MIN_T
 import { readJSONFile, saveJSON } from './lib/backup.ts'
 import { useConfirm } from './lib/useConfirm.tsx'
 import { useLongTextEditor } from './lib/useLongTextEditor.tsx'
+import { useRetryEditor } from './lib/useRetryEditor.tsx'
 import { useBackgroundMusic } from './lib/backgroundMusic.tsx'
 import NowPlayingBanner from './components/NowPlayingBanner.tsx'
 import * as store from './lib/store.ts'
@@ -305,6 +306,7 @@ export default function App() {
   const [pendingRecall, setPendingRecall] = useState<string | null>(null) // §6.6 — a targeted/full !recall snapshot waiting to ride along on the next real turn
   const { confirm, dialog: confirmDialog } = useConfirm()
   const { edit: editLongText, dialog: longTextDialog } = useLongTextEditor()
+  const { openRetry, dialog: retryDialog } = useRetryEditor()
   // Mounted here rather than in a screen so the soundtrack keeps playing
   // across navigation instead of restarting whenever a screen unmounts.
   const {
@@ -1706,6 +1708,7 @@ export default function App() {
         onEditLastTurn={handleEditLastTurn}
         onRemoveLastTurn={handleRemoveLastTurn}
         editLongText={editLongText}
+        onOpenRetryEditor={openRetry}
         confirmAction={confirm}
         onSend={sendAction}
         onBangCommand={handleBangCommand}
@@ -1838,6 +1841,7 @@ export default function App() {
 
       {confirmDialog}
       {longTextDialog}
+      {retryDialog}
     </>
   )
 }

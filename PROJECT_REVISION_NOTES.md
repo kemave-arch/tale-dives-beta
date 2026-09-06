@@ -1,21 +1,29 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-06, Claude Code on the web — fixed a player-authored
-location duplicating itself on Turn 0/1 (loc_id left at the generic
-"loc_start" placeholder instead of the real, already-seeded id, because
-that id was never shown to the model — Locations now get the same
-"(id: ...)" Known Entities treatment NPCs/Factions already had) and a
-Codex popup click doing nothing for any player-authored/World-Seeded
-location or faction (the click handler only ever tried a bare slugified
-id, never the "loc_"/"fac_" prefix those entries are actually keyed
-under — now falls back to a name match). Earlier the same day: two
-other Codex auto-registration bugs found via a fresh campaign's Turn #0
-payload — the protagonist self-tagging as an NPC ({{Kei Ashborn|npc}}),
-and the overarching nation name getting tagged as its own faction
-distinct from the actual registered faction ({{Navarre|faction}} vs.
-the already-known "Navarre High Command"). See the dated log entries
-below for the full root-cause writeups; this note stays until the next
-session archives it forward. Previous note:
+**Last updated:** 2026-09-06, Claude Code on the web — Retry now opens a
+big, keyboard-safe popup (same viewport-aware sizing as the app's other
+long-text editors) instead of re-seeding the cramped bottom input bar,
+which the mobile soft keyboard covers almost entirely — especially painful
+retrying Turn 0's dense Prologue prompt. The popup adds a "what would you
+like changed?" note that gets prepended onto the full original action text
+rather than replacing it, so nothing about World Seeding or the Prologue's
+own framing is ever lost on retry; the turn is only actually removed once
+a revision is confirmed, not the moment "Retry?" is answered. Earlier the
+same day: fixed a player-authored location duplicating itself on Turn 0/1
+(loc_id left at the generic "loc_start" placeholder instead of the real,
+already-seeded id, because that id was never shown to the model —
+Locations now get the same "(id: ...)" Known Entities treatment NPCs/
+Factions already had) and a Codex popup click doing nothing for any
+player-authored/World-Seeded location or faction (the click handler only
+ever tried a bare slugified id, never the "loc_"/"fac_" prefix those
+entries are actually keyed under — now falls back to a name match). Also
+earlier: two Codex auto-registration bugs found via a fresh campaign's
+Turn #0 payload — the protagonist self-tagging as an NPC
+({{Kei Ashborn|npc}}), and the overarching nation name getting tagged as
+its own faction distinct from the actual registered faction
+({{Navarre|faction}} vs. the already-known "Navarre High Command"). See
+the dated log entries below for the full root-cause writeups; this note
+stays until the next session archives it forward. Previous note:
 
 **2026-09-05, Claude Code on the web** — archived this file's
 accumulated log (everything since 2026-09-04, ~2,300 lines) forward into
@@ -777,6 +785,13 @@ detail than the summary sections above give — for resuming work, everything ab
 this line is what actually matters.
 
 New entries below, most recent first.
+
+- **2026-09-06** — Retry now opens a big, keyboard-safe popup with a "what would you like changed?" note instead of re-seeding the bottom input bar (`src/lib/useRetryEditor.tsx`, `src/App.tsx`, `src/screens/Chronicle.tsx`):
+  - **The problem**: pressing Retry re-populated the main Chronicle input bar with the turn's original action text for the player to revise — but on mobile, the soft keyboard covers almost that entire bar the moment you start typing, making anything past a couple of words unreadable while editing. Worst on Turn 0: the Prologue's action text is the full comprehensive prompt (world background, protagonist identity, brief), the least editable of all in a few cramped visible lines.
+  - **The design**: a new `useRetryEditor` hook/modal, sized and positioned the same way `useLongTextEditor.tsx` already solves this exact mobile-keyboard problem elsewhere in the app (`window.visualViewport`-driven height, so the visible viewport — not the pre-keyboard one — sets how tall the popup gets). Two fields, not one: a short "What would you like changed?" note on top (the common case — a critique of the previous attempt, not a full rewrite), and the full original action text below, still directly editable for finer control. Confirming combines them as `` `Player feedback on the previous attempt — revise accordingly: ${note}\n\n${originalOrEditedAction}` `` — the note is always prepended, never substituted, so a retry on Turn 0 can never accidentally drop the World Seeding/Prologue framing the original action text carries. The turn is only actually removed from the log once the player confirms inside the popup, not the moment they answer the initial "Retry this turn?" prompt — safer than before, where confirming that alone already dropped the turn regardless of what happened next.
+  - **Styling**: built with plain solid panels/fields (no `backdrop-blur`/translucency) rather than the app's usual glass-over-artwork language (`GLASS_SURFACE`/`FIELD_CLASS`/`GlassButton`) — a dense two-textarea editing surface reads better flat and fully opaque, and per explicit request for this one popup specifically; the rest of the app's glass styling is untouched.
+  - **Wiring**: `App.tsx` instantiates the hook alongside `useConfirm`/`useLongTextEditor` and passes `openRetry` into `Chronicle` as `onOpenRetryEditor`, threaded down to `TurnBlock`'s own Retry handler (which also now needs `onSend`, previously only used by the top-level input bar). The older re-seed-the-input-bar behavior is kept as a fallback for any caller not wired to the new popup.
+  - **Verification**: `npm run build` clean. Full live click-through via Playwright against the dev server (mocked Gemini response, since no real key is configured here): seeded a one-turn campaign, opened Retry, confirmed the popup renders both fields with the original action text intact, typed a feedback note, confirmed, and verified the resent turn's own action text shows the note prepended ahead of the complete original prompt (a `FULL_ORIGINAL_TEXT_MARKER` planted in the test data survived untouched) and that a new turn actually came back from the (mocked) call.
 
 - **2026-09-06** — Fixed a duplicated player-authored location and a broken Codex popup click for player-authored/World-Seeded locations and factions (`src/lib/jitContext.ts`, `src/api/turnContract.ts`, `src/screens/Chronicle.tsx`):
   - **The bug reports**: (1) "Draconic Ruins of Ignis" — a player-authored location, seeded before Turn 1 — got a second, duplicate Codex entry after the Prologue turn narrated arriving there. (2) Tapping the `{{Basgiath War College|loc}}` keyword link in the narration (also player-authored) did nothing — no popup card.

@@ -40,6 +40,7 @@ import {
   listDriveBackups,
   downloadDriveBackup,
   signInWithGoogle,
+  completeGoogleRedirectSignIn,
   getCurrentGoogleUser,
   getGoogleAccessToken,
   type GoogleDriveFile,
@@ -390,6 +391,16 @@ export default function App() {
     const idx = findLastNarratedIndex(game.log)
     setMusicTurnState(idx >= 0 ? game.log[idx].turnState ?? null : null)
   }, [game?.log])
+
+  // Completes a signInWithGoogle() that had to fall back to signInWithRedirect
+  // (real mobile browsers routinely block/silently drop signInWithPopup —
+  // see googleDrive.ts) — the token only becomes available once the app
+  // reloads after the redirect back from Google, which is exactly now, on
+  // this fresh mount. Runs unconditionally at boot, before any screen asks
+  // for Google auth state, so it's already cached by the time one does.
+  useEffect(() => {
+    completeGoogleRedirectSignIn()
+  }, [])
 
   useEffect(() => { store.saveApiSettings(apiSettings) }, [apiSettings])
   useEffect(() => { store.saveUiPrefs(uiPrefs) }, [uiPrefs])

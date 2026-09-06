@@ -1,6 +1,23 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-06, Cloud backup system refactored. The settings "Backup" tab was renamed to "Storage" with new "Local" and "Cloud" subtabs for better mobile layout and ergonomics. The 3-slot manual selector was removed in favor of an automatic 3-version rotating cloud backup system. The `uploadBackupToDrive` function now inherently keeps the 3 most recent backups by overwriting the oldest one when the limit is reached, removing the need for manual slot management in the UI. Cloud restoration presents a simple dropdown of available versions (e.g., Version 3, Version 2, Version 1) based on timestamp.
+**Last updated:** 2026-09-06, Claude Code on the web — reviewed the Google
+Drive cloud backup system (added the same day, separately) and fixed a
+real mobile bug in it: signing in to link a Drive account did nothing on
+an actual mobile browser beyond a screen flicker, because `signInWithPopup`
+is routinely blocked or silently dropped on mobile (Firebase's own
+documented limitation) — now falls back to `signInWithRedirect` on a
+detected mobile browser (or if a popup demonstrably can't open), completed
+on the next app load via a new `completeGoogleRedirectSignIn()` call at
+boot. Also completely refactored the Settings screen for mobile: a
+near-full-height sheet instead of a small floating card, 4 flat icon tabs
+(the Storage tab's nested Local/Cloud subtabs are now peers) with a sticky
+Save/Cancel footer that's always reachable regardless of how tall a tab's
+content gets, icon+tooltip field labels replacing permanent caption
+paragraphs, and a new inline warning when Auto-Backup is enabled but the
+Drive link needs reconnecting after a page reload (previously silent).
+See the dated log entries below for the full writeups. Previous note:
+
+**2026-09-06, cloud backup system** — The settings "Backup" tab was renamed to "Storage" with new "Local" and "Cloud" subtabs for better mobile layout and ergonomics. The 3-slot manual selector was removed in favor of an automatic 3-version rotating cloud backup system. The `uploadBackupToDrive` function now inherently keeps the 3 most recent backups by overwriting the oldest one when the limit is reached, removing the need for manual slot management in the UI. Cloud restoration presents a simple dropdown of available versions (e.g., Version 3, Version 2, Version 1) based on timestamp.
 
 **Last updated:** 2026-09-06, Claude Code on the web — Retry now opens a
 big, keyboard-safe popup (same viewport-aware sizing as the app's other
@@ -787,6 +804,13 @@ detail than the summary sections above give — for resuming work, everything ab
 this line is what actually matters.
 
 New entries below, most recent first.
+
+- **2026-09-06** — Fixed Google Drive sign-in doing nothing on a real mobile browser, and completely refactored Settings for mobile ergonomics (`src/lib/googleDrive.ts`, `src/App.tsx`, `src/screens/Settings.tsx`, `src/lib/glassChrome.tsx`, `src/screens/TaleBrief.tsx`):
+  - **The bug report**: tapping "Link Account"/"Backup Now" on an actual mobile browser did nothing — no sign-in, no error, just a brief screen flicker.
+  - **Root cause**: `signInWithGoogle()` used Firebase's `signInWithPopup`, which is documented to be unreliable specifically on mobile web — many mobile Safari/Chrome/in-app-webview contexts block `window.open` outright once there's even one `await` between the tap and the call (breaking the "direct user gesture" requirement some browsers enforce), and often without a clean catchable error: the popup just flashes open and immediately closes (matching the reported flicker), and the promise never settles — so the button's own try/catch never saw a failure to show either.
+  - **Fix**: `signInWithGoogle()` now detects a mobile browser (`navigator.userAgentData?.mobile`, falling back to a UA regex) and uses `signInWithRedirect` instead — a full navigation to Google's sign-in page and back, which reliably works where a popup silently doesn't. Desktop keeps the faster, non-disruptive popup, with the same redirect fallback if popup-specific errors do surface (`auth/popup-blocked`, `auth/operation-not-supported-in-this-environment`). Since a redirect can't return a token synchronously to whoever tapped the button (the page navigates away before that's possible), a new `completeGoogleRedirectSignIn()` calls Firebase's `getRedirectResult()` once at app boot (`App.tsx`) so a token picked up this way is already cached by the time any screen asks for it — the one UX cost is that a mobile sign-in needs the button tapped again after the redirect completes, once, rather than resolving in the same tap.
+  - **Settings refactor**: a near-full-height sheet (viewport-`visualViewport`-aware, same technique the Retry/long-text editors already use for the same reason — staying clear of the mobile keyboard) instead of a small floating card; the former 3-tab-plus-nested-subtab layout (Storage → Local/Cloud) flattened into 4 flat peer icon tabs (AI Model/Gameplay/Local/Cloud) so nothing reads as buried a level down; a sticky Save/Cancel footer that stays reachable regardless of how tall a tab's content is (previously at the very bottom of the whole scrollable panel, meaning a full scroll past the Cloud tab's account/auto-backup/version-list cards just to find Save); icon-led field labels with tap-to-reveal tooltips (`InfoTooltip`, promoted from a TaleBrief-local component to a shared one in `glassChrome.tsx`, now also deduplicated there) replacing the permanent italic caption paragraphs under Creativity Randomness/HUD Opacity/Debug Mode/Combat Mode/Auto-Backup — freeing significant vertical space across all 4 tabs. Also added: an inline amber warning when Auto-Backup is on but the Drive access token was lost on a page reload (memory-only by design, so this was previously a silent no-op with no indication anything had stopped working).
+  - **Verification**: `npm run build` clean. Mobile-detection regex verified against real iPhone/Android/desktop user-agent strings in a standalone script. Full live Playwright pass against the dev server with an iPhone user agent and a 390×844 viewport: confirmed all 4 tabs render correctly, the sticky footer stays visible on every tab, and a tooltip opens/closes correctly on tap. The actual Google sign-in redirect round-trip itself couldn't be exercised end-to-end here (needs a real Google account and network egress to accounts.google.com, unavailable in this environment) — the fix is verified at the code/logic level (correct branch selection, correct token hand-off point) rather than a live OAuth round trip.
 
 - **2026-09-06** — Storage Tab Reorganization, Mobile Viewport Containment, and Automatic 3-Version Rolling Cloud Backup (`src/screens/Settings.tsx`, `src/lib/googleDrive.ts`, `src/App.tsx`, `src/types.ts`, `src/lib/store.ts`):
   - **Storage Tab Refactor & Subtabs**: Renamed the "Backup" tab to "Storage" in `Settings.tsx` to reflect both local and cloud persistence management. Added two dedicated subtabs ("Local" and "Cloud") using `GlassSegmented` control, keeping all options organized and comfortably contained on mobile viewports without requiring vertical page scrolling.

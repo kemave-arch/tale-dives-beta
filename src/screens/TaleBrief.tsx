@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import { Info, X } from 'lucide-react'
 import {
-  GLASS_SURFACE, GlassCTAButton, GlassField, GlassHeader, GlassLongTextarea, GlassScreen, LABEL_CLASS,
+  GLASS_SURFACE, GlassCTAButton, GlassField, GlassHeader, GlassLongTextarea, GlassScreen, InfoTooltip, LABEL_CLASS,
 } from '../lib/glassChrome.tsx'
 import { NARRATION_STYLE_EXAMPLES, OPENING_BRIEF_EXAMPLES } from '../data/formExamples.ts'
 import type { CombatMode } from '../types.ts'
@@ -35,33 +34,6 @@ const COMBAT_MODE_INFO: Record<CombatMode, string> = {
   TACTICAL: 'Damage is computed client-side from your stats before the Narrator ever sees it — deterministic and precise, but the Narrator just describes the given result rather than judging your approach.',
 }
 
-// Tap-to-reveal, not hover-only — this app is mobile-first, so a tooltip that
-// only works on :hover would be invisible on touch devices.
-function InfoTooltip({ text }: { text: string }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <span className="relative inline-block align-middle ml-1">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-label="More info"
-        className="w-4 h-4 rounded-full inline-flex items-center justify-center text-gold-primary/70 hover:text-gold-primary"
-      >
-        <Info size={13} />
-      </button>
-      {open && (
-        <span className="absolute z-10 left-1/2 -translate-x-1/2 top-6 w-56 rounded-lg glass-panel glow-ring p-2.5 text-left">
-          <span className="flex items-start justify-between gap-2">
-            <span className="font-narrative text-xs text-ink leading-snug">{text}</span>
-            <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="shrink-0 text-ink-muted hover:text-ink">
-              <X size={12} />
-            </button>
-          </span>
-        </span>
-      )}
-    </span>
-  )
-}
 
 // Blueprint Appendix A.3 — the free-text brief entered right before the world
 // is fabricated, now its own final creation step. Narration Style/Creativity

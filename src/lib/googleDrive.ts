@@ -2,6 +2,8 @@ import { initializeApp, getApps } from 'firebase/app'
 import {
   getAuth,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
   onAuthStateChanged,
   type User,
@@ -29,6 +31,39 @@ export function isGoogleSigningIn(): boolean {
   return isSigningIn
 }
 
+// signInWithPopup silently fails on a real mobile browser: many mobile
+// Safari/Chrome/in-app-webview contexts block window.open outright (no
+// clean error — the popup just flashes open and immediately closes, and
+// the promise never settles), especially once there's even one `await`
+// between the tap and the call, which breaks the "direct user gesture"
+// requirement some browsers enforce. Firebase's own guidance is to use
+// signInWithRedirect on mobile instead — this is that same pattern.
+function isMobileBrowser(): boolean {
+  if (typeof navigator === 'undefined') return false
+  const uaData = (navigator as { userAgentData?: { mobile?: boolean } }).userAgentData
+  if (uaData?.mobile !== undefined) return uaData.mobile
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+}
+
+// signInWithRedirect navigates away and back — there's no token to return
+// synchronously to whoever tapped "Sign In"/"Backup Now", only once the app
+// reloads and this resolves. Call once at app boot (before anything else
+// touches Google auth state) so a token picked up this way is already
+// cached by the time any screen asks for it.
+export async function completeGoogleRedirectSignIn(): Promise<{ user: User; accessToken: string } | null> {
+  try {
+    const result = await getRedirectResult(auth)
+    if (!result) return null
+    const credential = GoogleAuthProvider.credentialFromResult(result)
+    if (!credential?.accessToken) return null
+    cachedAccessToken = credential.accessToken
+    return { user: result.user, accessToken: cachedAccessToken }
+  } catch (err) {
+    console.error('Google redirect sign-in error:', err)
+    return null
+  }
+}
+
 export interface GoogleDriveFile {
   id: string
   name: string
@@ -53,7 +88,29 @@ export function initGoogleAuth(
   })
 }
 
+// Errors that mean "no popup could be shown at all" rather than "the user
+// declined" — only these fall back to a redirect; a user-closed popup
+// should stay a user-closed popup, not silently become a full navigation.
+const POPUP_UNAVAILABLE_CODES = new Set([
+  'auth/popup-blocked',
+  'auth/operation-not-supported-in-this-environment',
+  'auth/web-storage-unsupported',
+])
+
+// On a genuine mobile browser this deliberately never attempts a popup at
+// all — see isMobileBrowser's comment on why "try popup, catch the error"
+// isn't reliable there. On a redirect path, this resolves only once the
+// page has already navigated away; the caller (a button's onClick) simply
+// never sees it return, same as the tab closing — there's nothing left to
+// resume in that page instance. completeGoogleRedirectSignIn (called once
+// at app boot) is what actually captures the token once the user is back.
 export async function signInWithGoogle(): Promise<{ user: User; accessToken: string }> {
+  if (isMobileBrowser()) {
+    isSigningIn = true
+    await signInWithRedirect(auth, provider)
+    // Unreachable in practice — signInWithRedirect navigates the page away.
+    throw new Error('Redirecting to Google sign-in...')
+  }
   try {
     isSigningIn = true
     const result = await signInWithPopup(auth, provider)
@@ -64,6 +121,11 @@ export async function signInWithGoogle(): Promise<{ user: User; accessToken: str
     cachedAccessToken = credential.accessToken
     return { user: result.user, accessToken: cachedAccessToken }
   } catch (err) {
+    const code = (err as { code?: string })?.code
+    if (code && POPUP_UNAVAILABLE_CODES.has(code)) {
+      await signInWithRedirect(auth, provider)
+      throw new Error('Redirecting to Google sign-in...')
+    }
     console.error('Google sign-in error:', err)
     throw err
   } finally {

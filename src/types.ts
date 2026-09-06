@@ -488,6 +488,7 @@ export interface UiPrefs {
   chromeOpacity: number // §3.2 — 0.1-0.9, how opaque the Chronicle header/HUD/input glass is
   debugMode?: boolean // Debug mode toggle in Settings — when ON, bypasses 4s Title delay & enables dev diagnostics
   introGazeDelay?: boolean // When true (default), Dive In pauses for 4s showing "Initializing..." to admire wallpapers
+  autoCloudBackup?: boolean // Automatically save backup to Google Drive Slot 1 on chapter completion & milestones
 }
 
 // §7.3 JSON Schema — the shape of a single turn response from the model.

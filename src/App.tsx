@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import Title from './screens/Title.tsx'
 import Settings, { type SettingsSavePayload } from './screens/Settings.tsx'
@@ -35,6 +35,15 @@ import { getProvider } from './api/providers/index.ts'
 import { sanitize } from './api/providers/gemini.ts'
 import { PROSE_DEPTHS, DEFAULT_NARRATION_STYLE, MAX_OUTPUT_TOKENS_CEILING, MIN_TURN_OUTPUT_CEILING } from './api/turnContract.ts'
 import { readJSONFile, saveJSON } from './lib/backup.ts'
+import {
+  uploadBackupToDrive,
+  listDriveBackups,
+  downloadDriveBackup,
+  signInWithGoogle,
+  getCurrentGoogleUser,
+  getGoogleAccessToken,
+  type GoogleDriveFile,
+} from './lib/googleDrive.ts'
 import { useConfirm } from './lib/useConfirm.tsx'
 import { useLongTextEditor } from './lib/useLongTextEditor.tsx'
 import { useRetryEditor } from './lib/useRetryEditor.tsx'
@@ -225,6 +234,46 @@ export default function App() {
       })
     }
   }
+
+  const getFullBackupPayload = useCallback(() => ({
+    schemaVersion: CURRENT_SCHEMA_VERSION,
+    worlds,
+    protagonists,
+    campaigns,
+    globalSlashCommands,
+    apiSettings: { ...apiSettings, apiKey: undefined },
+    uiPrefs,
+    exportedAt: new Date().toISOString(),
+  }), [worlds, protagonists, campaigns, globalSlashCommands, apiSettings, uiPrefs])
+
+  const restoreBackupPayload = useCallback((data: any) => {
+    if (data.worlds || data.protagonists || data.campaigns) {
+      if (data.worlds) setWorlds((w) => ({ ...w, ...data.worlds }))
+      if (data.protagonists) setProtagonists((p) => ({ ...p, ...data.protagonists }))
+      if (data.campaigns) setCampaigns((c) => ({ ...c, ...data.campaigns }))
+      if (data.globalSlashCommands) setGlobalSlashCommands((g) => ({ ...g, ...data.globalSlashCommands }))
+      if (data.uiPrefs) setUiPrefs((u) => ({ ...u, ...data.uiPrefs }))
+    } else if (data.player && data.log) {
+      const id = data.id ?? store.newId('campaign')
+      setCampaigns((c) => ({
+        ...c,
+        [id]: { schemaVersion: CURRENT_SCHEMA_VERSION, ...data, id, lastPlayed: Date.now() },
+      }))
+    }
+  }, [])
+
+  const triggerAutoCloudBackup = useCallback(async () => {
+    if (!uiPrefs.autoCloudBackup) return
+    const token = await getGoogleAccessToken()
+    if (!token) return
+    try {
+      const payload = getFullBackupPayload()
+      await uploadBackupToDrive(payload)
+      console.log('[AutoCloudBackup] Successfully backed up to Google Drive')
+    } catch (err) {
+      console.warn('[AutoCloudBackup] Background auto-backup failed:', err)
+    }
+  }, [uiPrefs.autoCloudBackup, getFullBackupPayload])
 
   // Turn CRUD (Edit/Retry/Delete on the last turn only, Chronicle.tsx) —
   // patches just the narrative content inside an already-stored raw payload,
@@ -612,6 +661,9 @@ export default function App() {
     setError(null)
     setPendingWorld(null)
     setPendingFirstAction(firstAction)
+    if (uiPrefs.autoCloudBackup) {
+      triggerAutoCloudBackup()
+    }
     navigateTo('seedingreview')
   }
 
@@ -988,6 +1040,9 @@ export default function App() {
           chapterStartTime(nextCampaign.log),
           finalPlayer.time,
         )
+        if (uiPrefs.autoCloudBackup) {
+          triggerAutoCloudBackup()
+        }
       }
     } catch (err) {
       setError(`The thread of fate falters... (${errorMessage(err)})`)
@@ -1788,29 +1843,71 @@ export default function App() {
             closeSettings()
           }}
           onExportActive={() => game && saveJSON(`${game.title}.json`, game)}
-          onBackupAll={() =>
-            saveJSON('tale-dives-backup.json', {
-              schemaVersion: CURRENT_SCHEMA_VERSION,
-              worlds,
-              protagonists,
-              campaigns,
-              apiSettings: { ...apiSettings, apiKey: undefined },
-            })
-          }
+          onBackupAll={() => {
+            const payload = getFullBackupPayload()
+            saveJSON('tale-dives-backup.json', payload)
+            if (uiPrefs.autoCloudBackup) {
+              triggerAutoCloudBackup()
+            }
+          }}
+          onBackupCloud={async () => {
+            try {
+              const user = getCurrentGoogleUser()
+              const token = await getGoogleAccessToken()
+              if (!user || !token) {
+                await signInWithGoogle()
+              }
+              const proceed = await confirm(
+                `Upload save data to Google Drive? This will save all your campaigns, worlds, protagonists, commands, and settings.`
+              )
+              if (!proceed) return false
+
+              const payload = getFullBackupPayload()
+              await uploadBackupToDrive(payload)
+              return true
+            } catch (err: any) {
+              console.error('Google Drive backup error:', err)
+              setError(errorMessage(err))
+              return false
+            }
+          }}
+          onRestoreCloud={async (fileId?: string) => {
+            try {
+              const user = getCurrentGoogleUser()
+              const token = await getGoogleAccessToken()
+              if (!user || !token) {
+                await signInWithGoogle()
+              }
+              const files = await listDriveBackups()
+              if (files.length === 0) {
+                setError('No Tale Dives backups found on your Google Drive.')
+                return false
+              }
+              let target: GoogleDriveFile | undefined
+              if (fileId) {
+                target = files.find((f) => f.id === fileId)
+              }
+              if (!target) {
+                target = files[0]
+              }
+              const proceed = await confirm(
+                `Restore save data from Google Drive (${target.name})? Current saves and templates will be merged.`
+              )
+              if (!proceed) return false
+
+              const data = await downloadDriveBackup(target.id)
+              restoreBackupPayload(data)
+              return true
+            } catch (err: any) {
+              console.error('Google Drive restore error:', err)
+              setError(errorMessage(err))
+              return false
+            }
+          }}
           onImportJson={async (file: File) => {
             try {
               const data = await readJSONFile(file)
-              if (data.worlds || data.protagonists || data.campaigns) {
-                setWorlds((w) => ({ ...w, ...(data.worlds ?? {}) }))
-                setProtagonists((p) => ({ ...p, ...(data.protagonists ?? {}) }))
-                setCampaigns((c) => ({ ...c, ...(data.campaigns ?? {}) }))
-              } else if (data.player && data.log) {
-                const id = data.id ?? store.newId('campaign')
-                setCampaigns((c) => ({
-                  ...c,
-                  [id]: { schemaVersion: CURRENT_SCHEMA_VERSION, ...data, id, lastPlayed: Date.now() },
-                }))
-              }
+              restoreBackupPayload(data)
             } catch {
               setError('That file could not be read as a Tale Dives save.')
             }

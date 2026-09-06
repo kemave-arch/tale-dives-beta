@@ -1,20 +1,26 @@
-import { useEffect, useRef, useState } from 'react'
-import { Cpu, SlidersHorizontal, Database, X, Save, Download, Upload, RotateCcw, FolderOpen, FolderX, Maximize, Minimize, Trash2, Volume2, VolumeX } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  Cpu, SlidersHorizontal, Database, X, Download, Upload, RotateCcw,
+  FolderOpen, FolderX, Maximize, Minimize, Trash2, Volume2, VolumeX,
+  Cloud, CloudUpload, CloudDownload, Loader2, Check, RefreshCw,
+} from 'lucide-react'
 import { PROSE_DEPTHS } from '../api/turnContract.ts'
 import { allProviders, getProvider } from '../api/providers/index.ts'
 import { forgetSaveFolder, loadSaveFolder, pickSaveFolder, supportsFileSystemAccess } from '../lib/fsAccess.ts'
 import {
   FIELD_CLASS, GLASS_SURFACE, GlassButton, GlassField, GlassIconButton, GlassSegmented, LABEL_CLASS, SELECT_CLASS,
 } from '../lib/glassChrome.tsx'
+import {
+  initGoogleAuth, signOutGoogle, listDriveBackups, signInWithGoogle,
+  type GoogleDriveFile, type User,
+} from '../lib/googleDrive.ts'
 import type { ApiSettings, Campaign, CombatMode, UiPrefs } from '../types.ts'
 
 const TABS = [
   { id: 'model', label: 'AI Model', icon: Cpu },
   { id: 'gameplay', label: 'Gameplay', icon: SlidersHorizontal },
-  { id: 'backup', label: 'Backup', icon: Database },
+  { id: 'storage', label: 'Storage', icon: Database },
 ] as const
-
-
 
 export interface SettingsSavePayload {
   apiSettings: ApiSettings
@@ -36,6 +42,8 @@ interface SettingsProps {
   onClearCache: () => void
   musicMuted?: boolean
   onToggleMusicMute?: () => void
+  onBackupCloud?: () => Promise<boolean>
+  onRestoreCloud?: (fileId?: string) => Promise<boolean>
 }
 
 // Blueprint §6.4E — one drawer, reused pre-campaign and in-story. Gameplay
@@ -53,8 +61,11 @@ export default function Settings({
   onClearCache,
   musicMuted = false,
   onToggleMusicMute,
+  onBackupCloud,
+  onRestoreCloud,
 }: SettingsProps) {
   const [tab, setTab] = useState<(typeof TABS)[number]['id']>('model')
+  const [storageSubtab, setStorageSubtab] = useState<'local' | 'cloud'>('local')
   const [provider, setProvider] = useState(apiSettings.provider)
   const [model, setModel] = useState(apiSettings.model)
   const [apiKey, setApiKey] = useState(apiSettings.apiKey)
@@ -68,7 +79,111 @@ export default function Settings({
   const [combatMode, setCombatMode] = useState<CombatMode>(game?.combatMode ?? 'NARRATIVE')
   const [folderLinked, setFolderLinked] = useState<boolean | null>(null) // null = still checking
   const [isFullscreen, setIsFullscreen] = useState(!!document.fullscreenElement)
+  const [googleUser, setGoogleUser] = useState<User | null>(null)
+  const [autoCloudBackup, setAutoCloudBackup] = useState<boolean>(uiPrefs.autoCloudBackup ?? false)
+  const [driveFiles, setDriveFiles] = useState<GoogleDriveFile[]>([])
+  const [selectedRestoreFileId, setSelectedRestoreFileId] = useState<string>('')
+  const [loadingDriveFiles, setLoadingDriveFiles] = useState(false)
+  const [cloudBusy, setCloudBusy] = useState<'backup' | 'restore' | null>(null)
+  const [cloudFeedback, setCloudFeedback] = useState<string | null>(null)
   const importRef = useRef<HTMLInputElement>(null)
+
+  const refreshDriveFiles = useCallback(async () => {
+    setLoadingDriveFiles(true)
+    try {
+      const files = await listDriveBackups(true)
+      setDriveFiles(files)
+      if (files.length > 0 && !selectedRestoreFileId) {
+        setSelectedRestoreFileId(files[0].id)
+      }
+    } catch {
+      // silent
+    } finally {
+      setLoadingDriveFiles(false)
+    }
+  }, [selectedRestoreFileId])
+
+  useEffect(() => {
+    const unsub = initGoogleAuth((user) => {
+      setGoogleUser(user)
+    })
+    return () => unsub()
+  }, [])
+
+  useEffect(() => {
+    if (tab === 'storage' && googleUser) {
+      refreshDriveFiles()
+    }
+  }, [tab, googleUser, refreshDriveFiles])
+
+  async function handleBackupCloud() {
+    if (!onBackupCloud || cloudBusy) return
+    setCloudBusy('backup')
+    try {
+      const ok = await onBackupCloud()
+      if (ok) {
+        setCloudFeedback(`Saved to Google Drive!`)
+        setTimeout(() => setCloudFeedback(null), 4000)
+        await refreshDriveFiles()
+      }
+    } finally {
+      setCloudBusy(null)
+    }
+  }
+
+  async function handleRestoreCloud() {
+    if (!onRestoreCloud || cloudBusy) return
+    setCloudBusy('restore')
+    try {
+      const target = selectedRestoreFileId || undefined
+      const ok = await onRestoreCloud(target)
+      if (ok) {
+        setCloudFeedback('Restored from Google Drive!')
+        setTimeout(() => setCloudFeedback(null), 4000)
+        await refreshDriveFiles()
+      }
+    } finally {
+      setCloudBusy(null)
+    }
+  }
+
+  async function handleSignOutGoogle() {
+    await signOutGoogle()
+    setGoogleUser(null)
+    setDriveFiles([])
+    setSelectedRestoreFileId('')
+    setCloudFeedback('Signed out of Google Drive.')
+    setTimeout(() => setCloudFeedback(null), 3000)
+  }
+
+  async function handleSignInGoogle() {
+    try {
+      const res = await signInWithGoogle()
+      if (res?.user) {
+        setGoogleUser(res.user)
+        setCloudFeedback('Linked Google Drive.')
+        setTimeout(() => setCloudFeedback(null), 3000)
+        refreshDriveFiles()
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  function formatBackupDate(isoString?: string): string {
+    if (!isoString) return 'Empty'
+    try {
+      const d = new Date(isoString)
+      return d.toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      })
+    } catch {
+      return 'Saved'
+    }
+  }
 
   useEffect(() => {
     const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement)
@@ -109,7 +224,7 @@ export default function Settings({
   function save() {
     onSave({
       apiSettings: { provider, model, apiKey, temperature },
-      uiPrefs: { chromeOpacity, debugMode, introGazeDelay },
+      uiPrefs: { chromeOpacity, debugMode, introGazeDelay, autoCloudBackup },
       proseDepthKey,
       combatMode,
     })
@@ -324,72 +439,215 @@ export default function Settings({
           </div>
         )}
 
-        {tab === 'backup' && (
+        {tab === 'storage' && (
           <div className="flex flex-col gap-3">
-            {/* §6.4B Local Save status — a status indicator, not a freely
-                reversible toggle: On-Device Folder writes Export/Backup
-                directly to a chosen folder; Browser Only (the fallback
-                everywhere without File System Access API support) keeps
-                using the plain download flow below. */}
-            <div className="rounded-xl border border-gold-accent/25 bg-gold-accent/[0.04] backdrop-blur-sm px-3 py-2.5 flex items-center gap-2.5">
-              {folderLinked ? <FolderOpen size={16} className="text-gold-primary shrink-0" /> : <FolderX size={16} className="text-ink-muted shrink-0" />}
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-display">
-                  {!supportsFileSystemAccess()
-                    ? 'Browser Only'
-                    : folderLinked
-                      ? 'On-Device Folder'
-                      : 'Browser Only'}
-                </p>
-                <p className="font-narrative text-[11px] text-ink-muted">
-                  {!supportsFileSystemAccess()
-                    ? 'This browser has no folder-save support — Export writes a normal download.'
-                    : folderLinked
-                      ? 'Export & Backup write directly into your chosen folder.'
-                      : 'Saves live in this browser only — clearing site data erases them. Link a folder, or use Export for backup.'}
-                </p>
-              </div>
-              {supportsFileSystemAccess() && (
-                <GlassButton onClick={folderLinked ? unlinkFolder : linkFolder} className="shrink-0 !py-1.5 !text-[11px]">
-                  {folderLinked ? 'Unlink' : 'Choose Folder'}
-                </GlassButton>
-              )}
-            </div>
+            <GlassSegmented
+              options={[
+                { id: 'local', label: 'Local' },
+                { id: 'cloud', label: 'Cloud' },
+              ]}
+              value={storageSubtab}
+              onChange={(v) => setStorageSubtab(v as 'local' | 'cloud')}
+            />
 
-            <div className="grid grid-cols-2 gap-2">
-              <GlassButton onClick={onExportActive} disabled={!game} icon={Download}>
-                Export Active
-              </GlassButton>
-              <GlassButton onClick={onBackupAll} icon={Database}>
-                Backup All
-              </GlassButton>
-              <GlassButton onClick={() => importRef.current?.click()} tone="positive" icon={Upload}>
-                Import JSON
-              </GlassButton>
-              <GlassButton onClick={onResetDefaults} tone="danger" icon={RotateCcw}>
-                Reset Defaults
-              </GlassButton>
-              <GlassButton onClick={onClearCache} tone="danger" icon={Trash2} className="col-span-2">
-                Clear Local Data
-              </GlassButton>
-              <input
-                ref={importRef}
-                type="file"
-                accept="application/json"
-                hidden
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) onImportJson(file)
-                  e.target.value = ''
-                }}
-              />
-            </div>
+            {storageSubtab === 'local' && (
+              <div className="flex flex-col gap-3 mt-1">
+                <div className="rounded-xl border border-gold-accent/25 bg-gold-accent/[0.04] backdrop-blur-sm px-3 py-2.5 flex items-center gap-2.5">
+                  {folderLinked ? <FolderOpen size={16} className="text-gold-primary shrink-0" /> : <FolderX size={16} className="text-ink-muted shrink-0" />}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-display">
+                      {!supportsFileSystemAccess()
+                        ? 'Browser Only'
+                        : folderLinked
+                          ? 'On-Device Folder'
+                          : 'Browser Only'}
+                    </p>
+                    <p className="font-narrative text-[11px] text-ink-muted leading-tight mt-0.5">
+                      {!supportsFileSystemAccess()
+                        ? 'This browser has no folder-save support — Export writes a normal download.'
+                        : folderLinked
+                          ? 'Export & Backup write directly into your chosen folder.'
+                          : 'Saves live in this browser only. Link a folder, or use Export to save.'}
+                    </p>
+                  </div>
+                  {supportsFileSystemAccess() && (
+                    <GlassButton onClick={folderLinked ? unlinkFolder : linkFolder} className="shrink-0 !py-1.5 !text-[11px]">
+                      {folderLinked ? 'Unlink' : 'Choose'}
+                    </GlassButton>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  <GlassButton onClick={onExportActive} disabled={!game} icon={Download}>
+                    Export Active
+                  </GlassButton>
+                  <GlassButton
+                    onClick={onBackupAll}
+                    icon={Database}
+                    className="border-[#e8ca8a]/50 text-[#f5dfa0] hover:border-[#f0ca65] hover:bg-[#e8ca8a]/15 transition-all shadow-[0_0_12px_rgba(232,202,138,0.1)]"
+                  >
+                    Backup All
+                  </GlassButton>
+                  <GlassButton onClick={() => importRef.current?.click()} icon={Upload}>
+                    Import JSON
+                  </GlassButton>
+                  <GlassButton onClick={onResetDefaults} tone="danger" icon={RotateCcw}>
+                    Reset Defaults
+                  </GlassButton>
+                  <GlassButton onClick={onClearCache} tone="danger" icon={Trash2} className="col-span-2 mt-1">
+                    Clear Local Data
+                  </GlassButton>
+                  <input
+                    ref={importRef}
+                    type="file"
+                    accept="application/json"
+                    hidden
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) onImportJson(file)
+                      e.target.value = ''
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {storageSubtab === 'cloud' && (
+              <div className="flex flex-col gap-3 mt-1">
+                <div className="rounded-xl border border-emerald/20 bg-emerald/5 backdrop-blur-sm px-3 py-2.5">
+                  <p className="font-narrative text-[11.5px] text-emerald leading-snug">
+                    <Check size={12} className="inline mr-1 -mt-0.5" />
+                    <strong>Private & Secure:</strong> Your save data is stored directly in your own Google Drive. We never access your files.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-gold-accent/25 bg-gold-accent/[0.04] backdrop-blur-sm px-3 py-2.5 flex flex-col gap-2.5">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <Cloud size={16} className={googleUser ? 'text-emerald shrink-0' : 'text-gold-primary shrink-0'} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-display">Google Drive Account</p>
+                        {googleUser && (
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full border border-emerald/40 text-emerald bg-emerald/10">
+                            Linked
+                          </span>
+                        )}
+                      </div>
+                      <p className="font-narrative text-[11px] text-ink-muted truncate mt-0.5">
+                        {googleUser ? googleUser.email ?? 'Connected' : 'Sync your campaign progress.'}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {googleUser ? (
+                    <GlassButton
+                      onClick={handleSignOutGoogle}
+                      className="w-full !py-1.5 !text-[11px] !border-rose-400/30 !text-rose-300 hover:!border-rose-400"
+                    >
+                      Disconnect Account
+                    </GlassButton>
+                  ) : (
+                    <GlassButton onClick={handleSignInGoogle} className="w-full !py-1.5 !text-[11px]" tone="action">
+                      Link Account
+                    </GlassButton>
+                  )}
+                  
+                  {cloudFeedback && (
+                    <p className="font-narrative text-[11px] text-gold-primary flex items-center justify-center gap-1 mt-1">
+                      <Check size={12} className="text-emerald" /> {cloudFeedback}
+                    </p>
+                  )}
+                </div>
+
+                {googleUser && (
+                  <>
+                    <div className="rounded-xl border border-gold-accent/25 bg-gold-accent/[0.04] backdrop-blur-sm px-3 py-2.5 flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-display text-[#f5dfa0]">Auto-Backup</p>
+                        <p className="font-narrative text-[11px] text-ink-muted leading-tight mt-0.5">
+                          Automatically upload progress to the cloud when you complete a chapter or manually save.
+                        </p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={autoCloudBackup}
+                          onChange={(e) => setAutoCloudBackup(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-black/50 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-ink-muted peer-checked:after:bg-black after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gold-primary border border-gold-accent/30"></div>
+                      </label>
+                    </div>
+
+                    <div className="rounded-xl border border-gold-accent/25 bg-gold-accent/[0.04] backdrop-blur-sm px-3 py-3 flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-display text-gold-primary flex items-center gap-1.5">
+                          <Database size={14} /> Cloud Versions
+                        </p>
+                        <button
+                          type="button"
+                          onClick={refreshDriveFiles}
+                          disabled={loadingDriveFiles}
+                          className="text-[10px] text-gold-accent/80 hover:text-gold-primary flex items-center gap-1 font-mono transition-colors"
+                        >
+                          <RefreshCw size={10} className={loadingDriveFiles ? 'animate-spin' : ''} />
+                          <span>Refresh</span>
+                        </button>
+                      </div>
+                      
+                      {driveFiles.length > 0 ? (
+                        <div className="flex flex-col gap-1.5">
+                          <span className="text-[10px] font-mono text-ink-muted uppercase tracking-wider mb-0.5">Restore From:</span>
+                          <select
+                            value={selectedRestoreFileId}
+                            onChange={(e) => setSelectedRestoreFileId(e.target.value)}
+                            className="w-full bg-black/50 border border-gold-accent/30 rounded-lg px-2 py-1.5 text-xs text-gold-accent focus:outline-none focus:border-gold-primary font-mono truncate"
+                          >
+                            {driveFiles.map((f, i) => {
+                              const timeStr = formatBackupDate(f.modifiedTime)
+                              return (
+                                <option key={f.id} value={f.id} className="bg-[#121520] text-gold-accent">
+                                  Version {driveFiles.length - i} ({timeStr})
+                                </option>
+                              )
+                            })}
+                          </select>
+                        </div>
+                      ) : (
+                        <p className="text-[11px] font-narrative text-ink-muted italic">No cloud backups found yet.</p>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-2 mt-1">
+                        <GlassButton
+                          onClick={handleBackupCloud}
+                          disabled={cloudBusy !== null}
+                          icon={cloudBusy === 'backup' ? Loader2 : CloudUpload}
+                          tone="action"
+                          className={cloudBusy === 'backup' ? 'animate-pulse' : ''}
+                        >
+                          {cloudBusy === 'backup' ? 'Uploading...' : 'Upload Now'}
+                        </GlassButton>
+                        <GlassButton
+                          onClick={handleRestoreCloud}
+                          disabled={cloudBusy !== null || driveFiles.length === 0}
+                          icon={cloudBusy === 'restore' ? Loader2 : CloudDownload}
+                          tone="positive"
+                          className={cloudBusy === 'restore' ? 'animate-pulse' : ''}
+                        >
+                          {cloudBusy === 'restore' ? 'Restoring...' : 'Restore'}
+                        </GlassButton>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         )}
 
         <div className="flex justify-end gap-2 mt-6">
           <GlassIconButton icon={X} label="Cancel" onClick={onBack} />
-          <GlassIconButton icon={Save} label="Save Settings" tone="action" onClick={save} disabled={!model || !apiKey} />
+          <GlassIconButton icon={Check} label="Save Settings" tone="action" onClick={save} disabled={!model || !apiKey} />
         </div>
       </div>
     </div>

@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import {
   Bookmark,
   CheckCircle2,
@@ -131,13 +130,8 @@ export default function WorldNodeModal({
   })
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md">
-      <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl bg-[#091524] border border-sky-500/40 shadow-2xl text-[#f5dfa0] overflow-hidden"
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80">
+      <div className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl bg-[#091524] border border-sky-500/40 shadow-2xl text-[#f5dfa0] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-[#0f2034] border-b border-sky-500/20">
           <div className="flex items-center gap-2">
@@ -177,19 +171,12 @@ export default function WorldNodeModal({
         </div>
 
         {/* Save Toast */}
-        <AnimatePresence>
-          {saveToast && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="bg-emerald-950/90 border-b border-emerald-500/30 px-4 py-1.5 flex items-center gap-2 text-xs font-mono text-emerald-300"
-            >
-              <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
-              <span>{saveToast}</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {saveToast && (
+          <div className="bg-emerald-950/90 border-b border-emerald-500/30 px-4 py-1.5 flex items-center gap-2 text-xs font-mono text-emerald-300">
+            <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
+            <span>{saveToast}</span>
+          </div>
+        )}
 
         {/* Subtabs */}
         <div className="flex border-b border-sky-500/20 bg-[#0c1a2d] px-3 pt-2 gap-2">
@@ -415,7 +402,7 @@ export default function WorldNodeModal({
 
         {/* Sub-Editor Modal for Location */}
         {editingLocIdx !== null && data.locationsList?.[editingLocIdx] && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm">
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/80">
             <div className="w-full max-w-md p-4 rounded-2xl bg-[#0e1d30] border border-sky-500/40 text-[#f5dfa0] space-y-3 shadow-2xl">
               <div className="flex items-center justify-between border-b border-sky-500/20 pb-2">
                 <h3 className="font-display font-bold text-xs uppercase text-sky-200 flex items-center gap-1.5">
@@ -519,7 +506,7 @@ export default function WorldNodeModal({
 
         {/* Sub-Editor Modal for Faction */}
         {editingFacIdx !== null && data.factionsList?.[editingFacIdx] && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm">
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/80">
             <div className="w-full max-w-md p-4 rounded-2xl bg-[#0e1d30] border border-sky-500/40 text-[#f5dfa0] space-y-3 shadow-2xl">
               <div className="flex items-center justify-between border-b border-sky-500/20 pb-2">
                 <h3 className="font-display font-bold text-xs uppercase text-sky-200 flex items-center gap-1.5">
@@ -596,7 +583,7 @@ export default function WorldNodeModal({
 
         {/* Presets Browser Sub-Modal */}
         {presetModalOpen && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/85 backdrop-blur-md">
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/85">
             <div className="w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl bg-[#091524] border border-sky-500/50 text-[#f5dfa0] shadow-2xl overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 bg-[#0f2034] border-b border-sky-500/20">
                 <div className="flex items-center gap-2">
@@ -680,7 +667,7 @@ export default function WorldNodeModal({
             <span>Save Realm</span>
           </button>
         </div>
-      </motion.div>
+      </div>
     </div>
   )
 }

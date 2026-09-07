@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import {
   Bookmark,
   CheckCircle2,
@@ -139,13 +138,8 @@ export default function NpcNodeModal({
   })
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md">
-      <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl bg-[#091a13] border border-emerald-500/40 shadow-2xl text-[#f5dfa0] overflow-hidden"
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80">
+      <div className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl bg-[#091a13] border border-emerald-500/40 shadow-2xl text-[#f5dfa0] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-[#0d261c] border-b border-emerald-500/20">
           <div className="flex items-center gap-2">
@@ -186,19 +180,12 @@ export default function NpcNodeModal({
         </div>
 
         {/* Save Toast */}
-        <AnimatePresence>
-          {saveToast && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="bg-emerald-950/90 border-b border-emerald-500/30 px-4 py-1.5 flex items-center gap-2 text-xs font-mono text-emerald-300"
-            >
-              <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
-              <span>{saveToast}</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {saveToast && (
+          <div className="bg-emerald-950/90 border-b border-emerald-500/30 px-4 py-1.5 flex items-center gap-2 text-xs font-mono text-emerald-300">
+            <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
+            <span>{saveToast}</span>
+          </div>
+        )}
 
         {/* Action bar */}
         <div className="px-4 py-2 bg-[#0b2017] border-b border-emerald-500/15 flex items-center justify-between">
@@ -287,7 +274,7 @@ export default function NpcNodeModal({
 
         {/* Sub-Editor Modal for NPC */}
         {editingNpcIdx !== null && list[editingNpcIdx] && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm">
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/80">
             <div className="w-full max-w-md max-h-[90vh] flex flex-col rounded-2xl bg-[#0c2219] border border-emerald-500/40 text-[#f5dfa0] shadow-2xl overflow-hidden">
               <div className="flex items-center justify-between border-b border-emerald-500/20 px-4 py-2.5 bg-[#0e291e]">
                 <h3 className="font-display font-bold text-xs uppercase text-emerald-200 flex items-center gap-1.5">
@@ -441,7 +428,7 @@ export default function NpcNodeModal({
 
         {/* Presets Browser Sub-Modal */}
         {packModalOpen && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/85 backdrop-blur-md">
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/85">
             <div className="w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl bg-[#091a13] border border-emerald-500/50 text-[#f5dfa0] shadow-2xl overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 bg-[#0d261c] border-b border-emerald-500/20">
                 <div className="flex items-center gap-2">
@@ -525,7 +512,7 @@ export default function NpcNodeModal({
 
         {/* Save Pack Modal */}
         {savePackModalOpen && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/85 backdrop-blur-md">
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/85">
             <div className="w-full max-w-sm p-4 rounded-2xl bg-[#091a13] border border-emerald-500/50 text-[#f5dfa0] shadow-2xl space-y-3">
               <div className="flex items-center justify-between border-b border-emerald-500/20 pb-2">
                 <h3 className="font-display font-bold text-xs uppercase text-emerald-200 flex items-center gap-1.5">
@@ -589,7 +576,7 @@ export default function NpcNodeModal({
             <span>Save Cast</span>
           </button>
         </div>
-      </motion.div>
+      </div>
     </div>
   )
 }

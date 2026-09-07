@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import {
   ArrowLeft,
   Sparkles,
@@ -138,11 +138,16 @@ export default function WorldSeedWeaver({
           blurred at a large radius, pulsing forever). Hidden on mobile via
           .sw-spark (index.css) rather than lightened, since they carry no
           information and desktop is where the GPU headroom to render them
-          nicely actually exists. */}
-      <div className="absolute inset-0 z-0 pointer-events-none opacity-40 overflow-hidden">
-        <div className="sw-spark absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-amber-500/10 blur-3xl animate-pulse" />
-        <div className="sw-spark absolute bottom-1/3 right-1/4 w-96 h-96 rounded-full bg-purple-600/15 blur-3xl animate-pulse" />
-      </div>
+          nicely actually exists. Also unmounted outright whenever a node
+          modal is open (see the !activeModal gate on <main> below) — a
+          node form's own backdrop was sitting over these still-animating
+          layers, forcing continuous re-blur on every frame while editing. */}
+      {!activeModal && (
+        <div className="absolute inset-0 z-0 pointer-events-none opacity-40 overflow-hidden">
+          <div className="sw-spark absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-amber-500/10 blur-3xl animate-pulse" />
+          <div className="sw-spark absolute bottom-1/3 right-1/4 w-96 h-96 rounded-full bg-purple-600/15 blur-3xl animate-pulse" />
+        </div>
+      )}
 
       {/* Screen Header Bar */}
       <header
@@ -190,7 +195,15 @@ export default function WorldSeedWeaver({
         </button>
       </header>
 
-      {/* Main Celestial Nexus / Leyline Constellation Container */}
+      {/* Main Celestial Nexus / Leyline Constellation Container — gated
+          behind !activeModal so it (and its several continuously-animated,
+          blurred glow layers) stops rendering entirely the moment a node
+          modal opens, instead of running on underneath a backdrop-blur
+          that then has to re-sample it every frame. This was the real
+          cause of lag on typing/tab-switching inside a node form, not
+          just on open — a modal's own React work is cheap; a live,
+          animating layer behind a blurred glass sheet is not. */}
+      {!activeModal && (
       <main className="relative z-10 flex-1 flex flex-col items-center justify-center p-2 sm:p-4 min-h-0 overflow-y-auto">
         <div className="relative w-full max-w-2xl aspect-[3/4] sm:aspect-square max-h-[72vh] flex items-center justify-center my-auto">
           {/* Animated SVG Ley-Lines & Star Nexus */}
@@ -599,11 +612,15 @@ export default function WorldSeedWeaver({
           )}
         </div>
       </main>
+      )}
 
       {/* ========================================================================= */}
-      {/* 5. MODAL DIALOGS FOR EACH NODE */}
+      {/* 5. MODAL DIALOGS FOR EACH NODE — plain conditional render, no
+          enter/exit animation (instant open/close, per explicit direction;
+          also lets the constellation behind it finish unmounting on the
+          same frame instead of an animation racing it). */}
       {/* ========================================================================= */}
-      <AnimatePresence>
+      <>
         {activeModal === 'protagonist' && (
           <ProtagonistNodeModal
             protagonist={protagonist}
@@ -665,7 +682,7 @@ export default function WorldSeedWeaver({
             onClose={() => setActiveModal(null)}
           />
         )}
-      </AnimatePresence>
+      </>
     </div>
   )
 }

@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import {
   Bookmark,
   Check,
@@ -201,13 +200,8 @@ export default function ProtagonistNodeModal({
   })
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md">
-      <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl bg-[#120d1c] border border-amber-500/40 shadow-2xl text-[#f5dfa0] overflow-hidden"
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80">
+      <div className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl bg-[#120d1c] border border-amber-500/40 shadow-2xl text-[#f5dfa0] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-[#181126] border-b border-amber-500/20">
           <div className="flex items-center gap-2">
@@ -247,19 +241,12 @@ export default function ProtagonistNodeModal({
         </div>
 
         {/* Save Toast */}
-        <AnimatePresence>
-          {saveToast && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="bg-emerald-950/90 border-b border-emerald-500/30 px-4 py-1.5 flex items-center gap-2 text-xs font-mono text-emerald-300"
-            >
-              <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
-              <span>{saveToast}</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {saveToast && (
+          <div className="bg-emerald-950/90 border-b border-emerald-500/30 px-4 py-1.5 flex items-center gap-2 text-xs font-mono text-emerald-300">
+            <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
+            <span>{saveToast}</span>
+          </div>
+        )}
 
         {/* Subtabs (Reorganized with Archetype & Skills, Identity, Personality) */}
         <div className="flex border-b border-amber-500/20 bg-[#140e22] px-3 pt-2 gap-2">
@@ -360,11 +347,7 @@ export default function ProtagonistNodeModal({
 
               {/* Custom Class Configuration Panel */}
               {isCustomClass && (
-                <motion.div
-                  initial={{ opacity: 0, y: -5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-3.5 rounded-xl bg-[#1d1430] border border-amber-400/40 space-y-2.5 shadow-lg"
-                >
+                <div className="p-3.5 rounded-xl bg-[#1d1430] border border-amber-400/40 space-y-2.5 shadow-lg">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-display font-bold text-amber-200 flex items-center gap-1.5">
                       <Wand2 size={13} className="text-amber-300" />
@@ -385,7 +368,7 @@ export default function ProtagonistNodeModal({
                       className="w-full px-3 py-2 rounded-xl bg-[#140e22] border border-amber-500/40 text-sm font-display font-semibold text-[#fbf4e2] focus:border-amber-300 outline-none"
                     />
                   </div>
-                </motion.div>
+                </div>
               )}
 
               {/* Derived Pools HUD */}
@@ -649,7 +632,7 @@ export default function ProtagonistNodeModal({
 
         {/* Sub-Editor Modal for Skill */}
         {editingSkillIdx !== null && data.startingSkills?.[editingSkillIdx] && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm">
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/80">
             <div className="w-full max-w-md p-4 rounded-2xl bg-[#1a1228] border border-amber-500/40 text-[#f5dfa0] space-y-3 shadow-2xl">
               <div className="flex items-center justify-between border-b border-amber-500/20 pb-2">
                 <h3 className="font-display font-bold text-xs uppercase text-amber-200 flex items-center gap-1.5">
@@ -762,7 +745,7 @@ export default function ProtagonistNodeModal({
 
         {/* Presets Browser Sub-Modal */}
         {presetModalOpen && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/85 backdrop-blur-md">
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/85">
             <div className="w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl bg-[#170f26] border border-amber-500/50 text-[#f5dfa0] shadow-2xl overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 bg-[#1e1333] border-b border-amber-500/20">
                 <div className="flex items-center gap-2">
@@ -840,7 +823,7 @@ export default function ProtagonistNodeModal({
             <span>Save Hero</span>
           </button>
         </div>
-      </motion.div>
+      </div>
     </div>
   )
 }

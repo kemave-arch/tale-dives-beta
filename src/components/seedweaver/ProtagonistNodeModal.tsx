@@ -211,18 +211,18 @@ export default function ProtagonistNodeModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80">
-      <div className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl bg-[#120d1c] border border-amber-500/40 shadow-2xl text-[#f5dfa0] overflow-hidden">
+      <div className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl bg-[#150d24] border border-purple-400/50 shadow-2xl text-[#f5dfa0] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-[#181126] border-b border-amber-500/20">
+        <div className="flex items-center justify-between px-4 py-3 bg-[#1d1232] border-b border-purple-500/20">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-300">
+            <div className="w-8 h-8 rounded-lg bg-purple-500/20 border border-purple-400/40 flex items-center justify-center text-purple-300">
               <User size={18} />
             </div>
             <div>
-              <h2 className="font-display font-bold text-sm sm:text-base text-[#fae5b5] uppercase tracking-wide">
+              <h2 className="font-display font-bold text-sm sm:text-base text-[#e9d5ff] uppercase tracking-wide">
                 Protagonist Forge
               </h2>
-              <p className="font-narrative text-xs text-[#d8c49e]/70">
+              <p className="font-narrative text-xs text-[#d8b4fe]/70">
                 Shape class archetype, abilities, attributes, and origin
               </p>
             </div>
@@ -230,21 +230,21 @@ export default function ProtagonistNodeModal({
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setPresetModalOpen(true)}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#201734] hover:bg-[#2c2048] border border-amber-500/30 text-xs font-display font-semibold text-[#fae5b5] transition-colors"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#261742] hover:bg-[#321f57] border border-purple-500/30 text-xs font-display font-semibold text-[#e9d5ff] transition-colors"
               title="Load Hero Preset"
             >
-              <Bookmark size={13} className="text-amber-300" />
+              <Bookmark size={13} className="text-purple-300" />
               <span>Presets</span>
             </button>
             <button
               onClick={handleSaveToPresets}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-xs font-display font-semibold text-amber-200 transition-colors"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/40 text-xs font-display font-semibold text-purple-200 transition-colors"
               title="Save current hero as a preset"
             >
               <Save size={13} />
               <span className="hidden sm:inline">Save Preset</span>
             </button>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 text-amber-300/80">
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 text-purple-300/80">
               <X size={18} />
             </button>
           </div>
@@ -258,49 +258,47 @@ export default function ProtagonistNodeModal({
           </div>
         )}
 
-        {/* Presets panel — slides into the normal document flow rather than
-            floating as a second full-screen dialog over this one; one
-            overlay layer instead of two. */}
+        {/* Presets panel — slides into the normal document flow */}
         {presetModalOpen && (
-          <div className="border-b border-amber-500/20 bg-[#140c22] flex flex-col max-h-64">
-            <div className="p-3 border-b border-amber-500/15 flex items-center gap-2">
+          <div className="border-b border-purple-500/20 bg-[#180e2a] flex flex-col max-h-64">
+            <div className="p-3 border-b border-purple-500/15 flex items-center gap-2">
               <div className="relative flex-1">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-400/60" />
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-400/60" />
                 <input
                   type="text"
                   value={presetSearch}
                   onChange={(e) => setPresetSearch(e.target.value)}
                   placeholder="Search presets..."
-                  className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-[#1b102e] border border-amber-500/30 text-xs text-[#fae5b5] outline-none"
+                  className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-[#1f1337] border border-purple-500/30 text-xs text-[#e9d5ff] outline-none"
                 />
               </div>
-              <button onClick={() => setPresetModalOpen(false)} className="text-amber-300/80 hover:text-white shrink-0">
+              <button onClick={() => setPresetModalOpen(false)} className="text-purple-300/80 hover:text-white shrink-0">
                 <X size={16} />
               </button>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
               {filteredPresets.length === 0 ? (
-                <div className="text-center py-6 text-xs text-amber-200/60">No matching presets found.</div>
+                <div className="text-center py-6 text-xs text-purple-200/60 font-narrative italic">No matching presets found.</div>
               ) : (
                 filteredPresets.map((t) => (
                   <div
                     key={t.id || t.name}
-                    className="p-3 rounded-xl bg-[#1e1333] border border-amber-500/25 hover:border-amber-400/60 transition-all flex items-center justify-between gap-3"
+                    className="p-3 rounded-xl bg-[#1d1233] border border-purple-500/25 hover:border-purple-400/70 transition-all flex items-center justify-between gap-3 shadow-md group"
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="font-display font-bold text-xs text-amber-200 flex items-center gap-2">
-                        <span>{t.name}</span>
-                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      <div className="font-display font-bold text-xs text-[#fae5b5] flex items-center gap-2">
+                        <span className="truncate">{t.name}</span>
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-200 border border-purple-500/30 shrink-0">
                           {t.className || (t.classId ? getClassById(t.classId).name : 'Hero')}
                         </span>
                       </div>
                       {t.background && (
-                        <p className="text-[11px] font-narrative text-[#d8c49e]/70 line-clamp-1 mt-0.5">{t.background}</p>
+                        <p className="text-[11px] font-narrative text-[#d8b4fe]/80 line-clamp-1 mt-0.5">{t.background}</p>
                       )}
                     </div>
                     <button
                       onClick={() => handleLoadPreset(t)}
-                      className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-display font-bold text-xs shrink-0 uppercase tracking-wider"
+                      className="px-3 py-1.5 rounded-lg bg-purple-500 hover:bg-purple-400 text-white font-display font-bold text-xs shrink-0 uppercase tracking-wider transition-colors shadow"
                     >
                       Load
                     </button>
@@ -311,8 +309,8 @@ export default function ProtagonistNodeModal({
           </div>
         )}
 
-        {/* Subtabs (Reorganized with Archetype & Skills, Identity, Personality) */}
-        <div className="flex border-b border-amber-500/20 bg-[#140e22] px-3 pt-2 gap-2">
+        {/* Subtabs */}
+        <div className="flex border-b border-purple-500/20 bg-[#180e2a] px-3 pt-2 gap-2">
           {[
             { id: 'archetype', label: 'Archetype & Skills', icon: Sword },
             { id: 'identity', label: 'Identity & Origin', icon: User },
@@ -326,8 +324,8 @@ export default function ProtagonistNodeModal({
                 onClick={() => setSubTab(tab.id as any)}
                 className={`flex items-center gap-1.5 px-3 py-2 text-xs font-display font-semibold transition-colors border-b-2 ${
                   active
-                    ? 'border-amber-400 text-amber-300 bg-amber-500/10'
-                    : 'border-transparent text-[#d8c49e]/70 hover:text-white'
+                    ? 'border-purple-400 text-purple-300 bg-purple-500/10'
+                    : 'border-transparent text-[#d8b4fe]/70 hover:text-white'
                 }`}
               >
                 <Icon size={14} />
@@ -339,20 +337,16 @@ export default function ProtagonistNodeModal({
 
         {/* Content Area */}
         <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
-          {/* TAB 1: ARCHETYPE & SKILLS — always mounted, hidden via CSS
-              rather than conditionally rendered, so switching subtabs is a
-              cheap style toggle instead of destroying and rebuilding ~100
-              DOM nodes (class grid, attributes, abilities list) on every
-              switch. */}
+          {/* TAB 1: ARCHETYPE & SKILLS */}
           <div className={subTab === 'archetype' ? 'space-y-4' : 'hidden'}>
               {/* Class & Archetype Presets + Custom Class Grid */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-display font-semibold text-amber-200/90 flex items-center gap-1.5">
-                    <Sparkles size={13} className="text-amber-300" />
+                  <label className="text-xs font-display font-semibold text-purple-200/90 flex items-center gap-1.5">
+                    <Sparkles size={13} className="text-purple-300" />
                     <span>Class</span>
                   </label>
-                  <span className="text-[10px] font-mono text-amber-300/70">
+                  <span className="text-[10px] font-mono text-purple-300/70">
                     Active: <strong>{data.className || currentClass.name}</strong>
                   </span>
                 </div>
@@ -372,16 +366,15 @@ export default function ProtagonistNodeModal({
                         onClick={() => handleSelectPresetClass(cls.id)}
                         className={`p-2.5 rounded-xl text-left border transition-all relative ${
                           selected
-                            ? 'bg-amber-500/25 border-amber-400 text-amber-200 shadow-md shadow-amber-500/20'
-                            : 'bg-[#181126] border-amber-500/15 text-[#d8c49e] hover:border-amber-500/40 hover:bg-[#201734]'
+                            ? 'bg-purple-500/25 border-purple-400 text-purple-200 shadow-md shadow-purple-500/20'
+                            : 'bg-[#180e2a] border-purple-500/20 text-[#d8b4fe] hover:border-purple-500/40 hover:bg-[#201438]'
                         }`}
                       >
                         <div className="font-display font-bold text-xs flex items-center justify-between">
                           <span>{cls.name}</span>
-                          {selected && <Check size={12} className="text-amber-300" />}
+                          {selected && <Check size={12} className="text-purple-300" />}
                         </div>
-                        {/* Displaying STR%, INT%, and AGI% clearly */}
-                        <div className="text-[10px] font-mono opacity-80 mt-0.5 text-amber-300/80">
+                        <div className="text-[10px] font-mono opacity-80 mt-0.5 text-purple-300/80">
                           STR {strPct}% • INT {intPct}% • AGI {agiPct}%
                         </div>
                       </button>
@@ -394,17 +387,17 @@ export default function ProtagonistNodeModal({
                     onClick={handleSelectCustomClass}
                     className={`p-2.5 rounded-xl text-left border transition-all relative col-span-2 sm:col-span-1 ${
                       isCustomClass
-                        ? 'bg-gradient-to-r from-amber-500/25 to-purple-500/25 border-amber-300 text-amber-100 shadow-md shadow-amber-500/25'
-                        : 'bg-[#1e1530] border-amber-500/30 text-amber-200/90 hover:border-amber-400 hover:bg-[#281c40]'
+                        ? 'bg-gradient-to-r from-purple-500/25 to-indigo-500/25 border-purple-300 text-purple-100 shadow-md shadow-purple-500/25'
+                        : 'bg-[#1e1433] border-purple-500/30 text-purple-200/90 hover:border-purple-400 hover:bg-[#2a1a45]'
                     }`}
                   >
                     <div className="font-display font-bold text-xs flex items-center justify-between">
-                      <span className="flex items-center gap-1 text-amber-300">
+                      <span className="flex items-center gap-1 text-purple-300">
                         <Wand2 size={12} /> Custom Class
                       </span>
-                      {isCustomClass && <Check size={12} className="text-amber-300" />}
+                      {isCustomClass && <Check size={12} className="text-purple-300" />}
                     </div>
-                    <div className="text-[10px] font-mono opacity-80 mt-0.5 text-amber-300/80">
+                    <div className="text-[10px] font-mono opacity-80 mt-0.5 text-purple-300/80">
                       User-Defined Discipline
                     </div>
                   </button>
@@ -413,39 +406,39 @@ export default function ProtagonistNodeModal({
 
               {/* Custom Class Configuration Panel */}
               {isCustomClass && (
-                <div className="p-3.5 rounded-xl bg-[#1d1430] border border-amber-400/40 space-y-2.5 shadow-lg">
+                <div className="p-3.5 rounded-xl bg-[#1d1232] border border-purple-400/40 space-y-2.5 shadow-lg">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-display font-bold text-amber-200 flex items-center gap-1.5">
-                      <Wand2 size={13} className="text-amber-300" />
+                    <span className="text-xs font-display font-bold text-purple-200 flex items-center gap-1.5">
+                      <Wand2 size={13} className="text-purple-300" />
                       <span>Custom Class</span>
                     </span>
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">Class Name *</label>
+                    <label className="block text-[10px] font-mono text-purple-300/80 uppercase mb-1">Class Name *</label>
                     <input
                       type="text"
                       value={customClassNameDraft}
                       onChange={(e) => handleCustomClassNameChange(e.target.value)}
                       placeholder="e.g. Shadow Bladesinger, Rune Engineer, Blood Alchemist"
-                      className="w-full px-3 py-2 rounded-xl bg-[#140e22] border border-amber-500/40 text-sm font-display font-semibold text-[#fbf4e2] focus:border-amber-300 outline-none"
+                      className="w-full px-3 py-2 rounded-xl bg-[#150d24] border border-purple-500/40 text-sm font-display font-semibold text-[#fbf4e2] focus:border-purple-300 outline-none"
                     />
                   </div>
                 </div>
               )}
 
               {/* Attributes Allocator */}
-              <div className="space-y-2 p-3 rounded-xl bg-[#181126] border border-amber-500/20">
+              <div className="space-y-2 p-3 rounded-xl bg-[#180e2a] border border-purple-500/20">
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-display font-semibold text-amber-200/90">Attributes</label>
+                  <label className="text-xs font-display font-semibold text-purple-200/90">Attributes</label>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-mono text-amber-300">
-                      Points: <strong className="text-amber-100">{unassignedPoints}</strong> / {TOTAL_ASSIGNABLE_POINTS}
+                    <span className="text-[10px] font-mono text-purple-300">
+                      Points: <strong className="text-purple-100">{unassignedPoints}</strong> / {TOTAL_ASSIGNABLE_POINTS}
                     </span>
                     <button
                       type="button"
                       onClick={handleResetAttributes}
-                      className="text-[10px] font-mono text-amber-400/80 hover:text-amber-200 flex items-center gap-1"
+                      className="text-[10px] font-mono text-purple-400/80 hover:text-purple-200 flex items-center gap-1"
                       title="Reset attributes to base 10"
                     >
                       <RotateCcw size={10} /> Reset
@@ -457,10 +450,10 @@ export default function ProtagonistNodeModal({
                   {(['STR', 'INT', 'AGI'] as const).map((attr) => (
                     <div
                       key={attr}
-                      className="flex flex-col items-center justify-between p-2 rounded-xl bg-[#140e22] border border-amber-500/20"
+                      className="flex flex-col items-center justify-between p-2 rounded-xl bg-[#150d24] border border-purple-500/20"
                     >
-                      <span className="font-display text-xs font-bold text-[#fae5b5]">{attr}</span>
-                      <span className="my-1 font-mono font-bold text-base text-amber-200">
+                      <span className="font-display text-xs font-bold text-[#e9d5ff]">{attr}</span>
+                      <span className="my-1 font-mono font-bold text-base text-purple-200">
                         {currentAttrs[attr] || BASE_ATTR_VALUE}
                       </span>
                       <div className="flex items-center gap-1">
@@ -468,7 +461,7 @@ export default function ProtagonistNodeModal({
                           type="button"
                           onClick={() => handleAttrChange(attr, -1)}
                           disabled={(currentAttrs[attr] || BASE_ATTR_VALUE) <= BASE_ATTR_VALUE}
-                          className="w-7 h-6 rounded-lg bg-amber-500/20 hover:bg-amber-500/40 disabled:opacity-30 text-amber-300 flex items-center justify-center font-mono font-bold text-xs"
+                          className="w-7 h-6 rounded-lg bg-purple-500/20 hover:bg-purple-500/40 disabled:opacity-30 text-purple-300 flex items-center justify-center font-mono font-bold text-xs"
                         >
                           -
                         </button>
@@ -476,7 +469,7 @@ export default function ProtagonistNodeModal({
                           type="button"
                           onClick={() => handleAttrChange(attr, 1)}
                           disabled={unassignedPoints <= 0}
-                          className="w-7 h-6 rounded-lg bg-amber-500/20 hover:bg-amber-500/40 disabled:opacity-30 text-amber-300 flex items-center justify-center font-mono font-bold text-xs"
+                          className="w-7 h-6 rounded-lg bg-purple-500/20 hover:bg-purple-500/40 disabled:opacity-30 text-purple-300 flex items-center justify-center font-mono font-bold text-xs"
                         >
                           +
                         </button>
@@ -489,14 +482,14 @@ export default function ProtagonistNodeModal({
               {/* Starting Abilities & Spells List */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-display font-semibold text-amber-200/90 flex items-center gap-1.5">
-                    <Flame size={13} className="text-amber-300" />
+                  <label className="text-xs font-display font-semibold text-purple-200/90 flex items-center gap-1.5">
+                    <Flame size={13} className="text-purple-300" />
                     <span>Abilities</span>
                   </label>
                   <button
                     type="button"
                     onClick={handleAddSkill}
-                    className="flex items-center gap-1 text-[11px] font-display font-semibold text-amber-300 hover:text-amber-200 px-2 py-0.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/30"
+                    className="flex items-center gap-1 text-[11px] font-display font-semibold text-purple-300 hover:text-purple-200 px-2 py-0.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/30"
                   >
                     <Plus size={13} /> Add Ability
                   </button>
@@ -506,20 +499,20 @@ export default function ProtagonistNodeModal({
                   {(data.startingSkills || []).map((skill, idx) => {
                     const expanded = editingSkillIdx === idx
                     return (
-                      <div key={idx} className="rounded-xl bg-[#181126] border border-amber-500/20 overflow-hidden">
+                      <div key={idx} className="rounded-xl bg-[#180e2a] border border-purple-500/20 overflow-hidden">
                         <button
                           type="button"
                           onClick={() => setEditingSkillIdx(expanded ? null : idx)}
                           className="w-full p-2.5 flex items-center justify-between gap-2 text-left"
                         >
                           <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <span className="font-display font-bold text-xs text-amber-200 truncate">
+                            <span className="font-display font-bold text-xs text-purple-200 truncate">
                               {skill.name || 'Unnamed Ability'}
                             </span>
-                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">
+                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">
                               {skill.skillType || 'Active'}
                             </span>
-                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">
+                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shrink-0">
                               {skill.tier !== undefined ? tierToWord(skill.tier, COMPETENCY_TIERS) : 'Novice'}
                             </span>
                             {skill.effort && (
@@ -538,40 +531,37 @@ export default function ProtagonistNodeModal({
                             </span>
                             <ChevronDown
                               size={15}
-                              className={`text-amber-300/80 transition-transform ${expanded ? 'rotate-180' : ''}`}
+                              className={`text-purple-300/80 transition-transform ${expanded ? 'rotate-180' : ''}`}
                             />
                           </div>
                         </button>
 
                         {!expanded && skill.description && (
-                          <p className="px-2.5 pb-2 text-xs font-narrative text-[#d8c49e]/80 line-clamp-1">
+                          <p className="px-2.5 pb-2 text-xs font-narrative text-[#d8b4fe]/80 line-clamp-1">
                             {skill.description}
                           </p>
                         )}
 
-                        {/* Inline editor — was a stacked full-screen sub-modal;
-                            expanding in place avoids a second overlay layer
-                            on top of this already-open form. */}
                         {expanded && (
-                          <div className="p-2.5 pt-0 space-y-2.5 text-xs border-t border-amber-500/20">
+                          <div className="p-2.5 pt-0 space-y-2.5 text-xs border-t border-purple-500/20">
                             <div>
-                              <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">Name *</label>
+                              <label className="block text-[10px] font-mono text-purple-300/80 uppercase mb-1">Name *</label>
                               <input
                                 type="text"
                                 value={skill.name}
                                 onChange={(e) => handleUpdateSkill(idx, { name: e.target.value })}
                                 placeholder="e.g. Lightning Strike, Shadow Step"
-                                className="w-full px-3 py-1.5 rounded-xl bg-[#221735] border border-amber-500/30 text-amber-100 outline-none"
+                                className="w-full px-3 py-1.5 rounded-xl bg-[#22153b] border border-purple-500/30 text-purple-100 outline-none"
                               />
                             </div>
 
                             <div className="grid grid-cols-2 gap-2">
                               <div>
-                                <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">Type</label>
+                                <label className="block text-[10px] font-mono text-purple-300/80 uppercase mb-1">Type</label>
                                 <select
                                   value={skill.skillType || 'Active'}
                                   onChange={(e) => handleUpdateSkill(idx, { skillType: e.target.value })}
-                                  className="w-full px-2 py-1.5 rounded-xl bg-[#221735] border border-amber-500/30 text-amber-100 outline-none"
+                                  className="w-full px-2 py-1.5 rounded-xl bg-[#22153b] border border-purple-500/30 text-purple-100 outline-none"
                                 >
                                   <option value="Active">Active</option>
                                   <option value="Spell">Spell</option>
@@ -581,11 +571,11 @@ export default function ProtagonistNodeModal({
                                 </select>
                               </div>
                               <div>
-                                <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">Tier</label>
+                                <label className="block text-[10px] font-mono text-purple-300/80 uppercase mb-1">Tier</label>
                                 <select
                                   value={skill.tier !== undefined ? tierToWord(skill.tier, COMPETENCY_TIERS) : 'Novice'}
                                   onChange={(e) => handleUpdateSkill(idx, { tier: wordToTier(e.target.value, COMPETENCY_TIERS) })}
-                                  className="w-full px-2 py-1.5 rounded-xl bg-[#221735] border border-amber-500/30 text-amber-100 outline-none"
+                                  className="w-full px-2 py-1.5 rounded-xl bg-[#22153b] border border-purple-500/30 text-purple-100 outline-none"
                                 >
                                   {COMPETENCY_TIERS.map((t) => (
                                     <option key={t} value={t}>{t}</option>
@@ -595,11 +585,11 @@ export default function ProtagonistNodeModal({
                             </div>
 
                             <div>
-                              <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">Effort</label>
+                              <label className="block text-[10px] font-mono text-purple-300/80 uppercase mb-1">Effort</label>
                               <select
                                 value={skill.effort ?? ''}
                                 onChange={(e) => handleUpdateSkill(idx, { effort: (e.target.value || undefined) as EffortTier | undefined })}
-                                className="w-full px-2 py-1.5 rounded-xl bg-[#221735] border border-amber-500/30 text-amber-100 outline-none"
+                                className="w-full px-2 py-1.5 rounded-xl bg-[#22153b] border border-purple-500/30 text-purple-100 outline-none"
                               >
                                 <option value="">— none —</option>
                                 <option value="minor">Minor</option>
@@ -609,24 +599,24 @@ export default function ProtagonistNodeModal({
                             </div>
 
                             <div>
-                              <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">Description</label>
+                              <label className="block text-[10px] font-mono text-purple-300/80 uppercase mb-1">Description</label>
                               <textarea
                                 rows={2}
                                 value={skill.description || ''}
                                 onChange={(e) => handleUpdateSkill(idx, { description: e.target.value })}
                                 placeholder="Mechanical combat effect, range, impact..."
-                                className="w-full px-3 py-1.5 rounded-xl bg-[#221735] border border-amber-500/30 text-xs font-narrative text-amber-100 outline-none resize-none"
+                                className="w-full px-3 py-1.5 rounded-xl bg-[#22153b] border border-purple-500/30 text-xs font-narrative text-purple-100 outline-none resize-none"
                               />
                             </div>
 
                             <div>
-                              <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">Flavor Quote</label>
+                              <label className="block text-[10px] font-mono text-purple-300/80 uppercase mb-1">Flavor Quote</label>
                               <input
                                 type="text"
                                 value={skill.flavorText || ''}
                                 onChange={(e) => handleUpdateSkill(idx, { flavorText: e.target.value })}
                                 placeholder="e.g. 'A single arc of lightning clears the horizon.'"
-                                className="w-full px-3 py-1.5 rounded-xl bg-[#221735] border border-amber-500/30 text-xs italic font-narrative text-amber-200/80 outline-none"
+                                className="w-full px-3 py-1.5 rounded-xl bg-[#22153b] border border-purple-500/30 text-xs italic font-narrative text-purple-200/80 outline-none"
                               />
                             </div>
                           </div>
@@ -641,57 +631,61 @@ export default function ProtagonistNodeModal({
           {/* TAB 2: IDENTITY & ORIGIN */}
           <div className={subTab === 'identity' ? 'space-y-3' : 'hidden'}>
               <div>
-                <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">Name *</label>
+                <label className="block text-xs font-display font-semibold text-purple-200/90 mb-1">Name *</label>
                 <input
                   type="text"
                   value={data.name}
                   onChange={(e) => setData({ ...data, name: e.target.value })}
                   placeholder="e.g. Violet Sorrengail, Roland Deschain"
-                  className="w-full px-3 py-2 rounded-xl bg-[#1b1429] border border-amber-500/30 text-sm text-[#fbf4e2] focus:border-amber-400 outline-none"
+                  className="w-full px-3 py-2 rounded-xl bg-[#1b122e] border border-purple-500/30 text-sm text-[#fbf4e2] focus:border-purple-400 outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">Gender</label>
+                  <label className="block text-xs font-display font-semibold text-purple-200/90 mb-1">Gender</label>
                   <input
                     type="text"
                     value={data.gender || ''}
                     onChange={(e) => setData({ ...data, gender: e.target.value })}
                     placeholder="e.g. Female, Male, Non-binary"
-                    className="w-full px-3 py-2 rounded-xl bg-[#1b1429] border border-amber-500/30 text-sm text-[#fbf4e2] focus:border-amber-400 outline-none"
+                    className="w-full px-3 py-2 rounded-xl bg-[#1b122e] border border-purple-500/30 text-sm text-[#fbf4e2] focus:border-purple-400 outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">Age</label>
+                  <label className="block text-xs font-display font-semibold text-purple-200/90 mb-1">Age</label>
                   <input
                     type="number"
-                    value={data.age || 20}
-                    onChange={(e) => setData({ ...data, age: Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-xl bg-[#1b1429] border border-amber-500/30 text-sm text-[#fbf4e2] focus:border-amber-400 outline-none"
+                    min="0"
+                    max="999"
+                    value={data.age ?? ''}
+                    placeholder="20"
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setData({ ...data, age: e.target.value === '' ? undefined : Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl bg-[#1b122e] border border-purple-500/30 text-sm text-[#fbf4e2] focus:border-purple-400 outline-none placeholder:text-purple-300/40"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">Background</label>
+                <label className="block text-xs font-display font-semibold text-purple-200/90 mb-1">Background</label>
                 <textarea
                   rows={3}
                   value={data.background || ''}
                   onChange={(e) => setData({ ...data, background: e.target.value })}
                   placeholder="Where do they hail from? Family lineage, upbringing, or past training..."
-                  className="w-full px-3 py-2 rounded-xl bg-[#1b1429] border border-amber-500/30 text-xs font-narrative text-[#fbf4e2] focus:border-amber-400 outline-none resize-none leading-relaxed"
+                  className="w-full px-3 py-2 rounded-xl bg-[#1b122e] border border-purple-500/30 text-xs font-narrative text-[#fbf4e2] focus:border-purple-400 outline-none resize-none leading-relaxed"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">Key Item</label>
+                <label className="block text-xs font-display font-semibold text-purple-200/90 mb-1">Key Item</label>
                 <input
                   type="text"
                   value={data.keyItem || ''}
                   onChange={(e) => setData({ ...data, keyItem: e.target.value })}
                   placeholder="e.g. Mother's poisoned dagger, grandfather's pocket watch, cipher crystal"
-                  className="w-full px-3 py-2 rounded-xl bg-[#1b1429] border border-amber-500/30 text-xs font-narrative text-[#fbf4e2] focus:border-amber-400 outline-none"
+                  className="w-full px-3 py-2 rounded-xl bg-[#1b122e] border border-purple-500/30 text-xs font-narrative text-[#fbf4e2] focus:border-purple-400 outline-none"
                 />
               </div>
           </div>
@@ -699,63 +693,63 @@ export default function ProtagonistNodeModal({
           {/* TAB 3: PERSONALITY & SECRET */}
           <div className={subTab === 'personality' ? 'space-y-3' : 'hidden'}>
               <div>
-                <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">Personality</label>
+                <label className="block text-xs font-display font-semibold text-purple-200/90 mb-1">Personality</label>
                 <textarea
                   rows={2}
                   value={data.personality || ''}
                   onChange={(e) => setData({ ...data, personality: e.target.value })}
                   placeholder="e.g. Sharp-tongued under pressure, book-smart, unyielding stubbornness..."
-                  className="w-full px-3 py-2 rounded-xl bg-[#1b1429] border border-amber-500/30 text-xs font-narrative text-[#fbf4e2] focus:border-amber-400 outline-none resize-none"
+                  className="w-full px-3 py-2 rounded-xl bg-[#1b122e] border border-purple-500/30 text-xs font-narrative text-[#fbf4e2] focus:border-purple-400 outline-none resize-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">Motivation</label>
+                <label className="block text-xs font-display font-semibold text-purple-200/90 mb-1">Motivation</label>
                 <textarea
                   rows={2}
                   value={data.motivation || ''}
                   onChange={(e) => setData({ ...data, motivation: e.target.value })}
                   placeholder="e.g. Survive the Parapet, bond a dragon, avenge her betrayed father..."
-                  className="w-full px-3 py-2 rounded-xl bg-[#1b1429] border border-amber-500/30 text-xs font-narrative text-[#fbf4e2] focus:border-amber-400 outline-none resize-none"
+                  className="w-full px-3 py-2 rounded-xl bg-[#1b122e] border border-purple-500/30 text-xs font-narrative text-[#fbf4e2] focus:border-purple-400 outline-none resize-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">Trait</label>
+                <label className="block text-xs font-display font-semibold text-purple-200/90 mb-1">Trait</label>
                 <input
                   type="text"
                   value={data.physicalTrait || ''}
                   onChange={(e) => setData({ ...data, physicalTrait: e.target.value })}
                   placeholder="e.g. Frail bone density, silver hair tips, runic scar on forearm..."
-                  className="w-full px-3 py-2 rounded-xl bg-[#1b1429] border border-amber-500/30 text-sm text-[#fbf4e2] focus:border-amber-400 outline-none"
+                  className="w-full px-3 py-2 rounded-xl bg-[#1b122e] border border-purple-500/30 text-sm text-[#fbf4e2] focus:border-purple-400 outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">Secret</label>
+                <label className="block text-xs font-display font-semibold text-purple-200/90 mb-1">Secret</label>
                 <textarea
                   rows={2}
                   value={data.secret || ''}
                   onChange={(e) => setData({ ...data, secret: e.target.value })}
                   placeholder="e.g. Carries concealed vial of dragon poison, holds secret rebellion notes..."
-                  className="w-full px-3 py-2 rounded-xl bg-[#1b1429] border border-amber-500/30 text-xs font-narrative text-[#fbf4e2] focus:border-amber-400 outline-none resize-none"
+                  className="w-full px-3 py-2 rounded-xl bg-[#1b122e] border border-purple-500/30 text-xs font-narrative text-[#fbf4e2] focus:border-purple-400 outline-none resize-none"
                 />
               </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-3 bg-[#181126] border-t border-amber-500/20">
+        <div className="flex items-center justify-between px-4 py-3 bg-[#1d1232] border-t border-purple-500/20">
           <button
             onClick={onClose}
-            className="px-3.5 sm:px-4 py-2 rounded-xl bg-[#221836] hover:bg-[#2c2045] text-xs font-display font-semibold text-[#d8c49e]"
+            className="px-3.5 sm:px-4 py-2 rounded-xl bg-[#261742] hover:bg-[#321f57] text-xs font-display font-semibold text-[#d8b4fe]"
           >
             Cancel
           </button>
           <button
             onClick={() => onSave(data)}
             disabled={!data.name.trim()}
-            className="px-4 sm:px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-display font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-lg shadow-amber-500/30 disabled:opacity-40"
+            className="px-4 sm:px-5 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 text-white font-display font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-lg shadow-purple-500/30 disabled:opacity-40"
           >
             <CheckCircle2 size={15} />
             <span>Save Hero</span>

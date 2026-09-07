@@ -60,11 +60,12 @@ interface GlassCTAButtonProps {
   children: ReactNode
   className?: string
   disabled?: boolean
+  fillClassName?: string
 }
 
 // Primary call-to-action — tapered rectangle, gradient ring, glass interior
 // that's invisible at rest and blurs + glows on hover/press.
-export function GlassCTAButton({ onClick, icon: Icon, children, className = '', disabled = false }: GlassCTAButtonProps) {
+export function GlassCTAButton({ onClick, icon: Icon, children, className = '', disabled = false, fillClassName = '' }: GlassCTAButtonProps) {
   return (
     <button
       onClick={onClick}
@@ -79,7 +80,9 @@ export function GlassCTAButton({ onClick, icon: Icon, children, className = '', 
           stuck. focus-visible mirrors hover so keyboard users get the same
           affordance. */}
       <span
-        className="absolute inset-0 bg-white/0 backdrop-blur-none transition-[background-color,box-shadow] duration-200 group-hover:bg-white/25 group-hover:backdrop-blur-md group-hover:shadow-[0_0_18px_2px_rgba(240,202,101,0.35)] group-focus-visible:bg-white/25 group-focus-visible:backdrop-blur-md group-active:bg-white/30 group-active:backdrop-blur-md group-active:shadow-[0_0_34px_10px_rgba(240,202,101,0.7)]"
+        className={`absolute inset-0 transition-[background-color,box-shadow] duration-200 group-hover:bg-white/25 group-hover:backdrop-blur-md group-hover:shadow-[0_0_18px_2px_rgba(240,202,101,0.35)] group-focus-visible:bg-white/25 group-focus-visible:backdrop-blur-md group-active:bg-white/30 group-active:backdrop-blur-md group-active:shadow-[0_0_34px_10px_rgba(240,202,101,0.7)] ${
+          fillClassName || 'bg-white/0 backdrop-blur-none'
+        }`}
         style={{ clipPath: TAPER_CLIP }}
       />
       <GradientRing tapered />

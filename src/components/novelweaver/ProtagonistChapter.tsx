@@ -127,8 +127,12 @@ export default function ProtagonistChapter({ value, onChange, ready, onFinalize,
             <Field label="Age">
               <input
                 type="number"
+                min="0"
+                max="999"
+                placeholder="24"
                 className={FIELD}
                 value={value.age ?? ''}
+                onFocus={(e) => e.target.select()}
                 onChange={(e) => set('age', e.target.value ? Number(e.target.value) : undefined)}
               />
             </Field>

@@ -689,6 +689,7 @@ export default function NewGame({
               min="0"
               max="999"
               value={age}
+              onFocus={(e) => e.target.select()}
               onChange={(e) => setAge(e.target.value)}
               placeholder="24"
               className={FIELD_CLASS}

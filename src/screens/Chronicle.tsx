@@ -635,15 +635,18 @@ const TurnBlock = memo(function TurnBlock({
 
   if (entry.chapterSummary) {
     return (
-      <div ref={setRef} className="flex flex-col items-center gap-2 py-3">
+      <div ref={setRef} className="my-4 p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#161208]/90 via-[#10131e]/92 to-[#0a0c14]/95 border border-[#f0ca65]/35 shadow-xl relative overflow-hidden flex flex-col items-center gap-2.5">
         <div className="w-full flex items-center gap-3">
-          <div className="flex-1 h-px bg-gold-accent/30" />
-          <span className="flex items-center gap-1.5 font-display text-xs text-gold-primary shrink-0">
-            <BookOpen size={13} /> Chapter {entry.chapterNumber}
-          </span>
-          <div className="flex-1 h-px bg-gold-accent/30" />
+          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#f0ca65]/40 to-transparent" />
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#241a0a] border border-[#f0ca65]/40 text-[#fae5b5] font-display font-bold text-xs uppercase tracking-wider shrink-0 shadow-md">
+            <BookOpen size={13} className="text-[#f0ca65]" />
+            <span>Chapter {entry.chapterNumber} Milestone</span>
+          </div>
+          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#f0ca65]/40 to-transparent" />
         </div>
-        <p className="font-narrative italic text-xs text-ink-muted text-center max-w-md">{entry.chapterSummary}</p>
+        <p className="font-narrative italic text-xs sm:text-sm text-[#f5ebd7]/90 text-center leading-relaxed max-w-xl">
+          "{entry.chapterSummary}"
+        </p>
       </div>
     )
   }

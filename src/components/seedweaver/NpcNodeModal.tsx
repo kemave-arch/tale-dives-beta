@@ -212,30 +212,30 @@ export default function NpcNodeModal({
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
               {filteredPacks.length === 0 ? (
-                <div className="text-center py-6 text-xs text-emerald-200/60">No matching cast packs found.</div>
+                <div className="text-center py-6 text-xs text-emerald-200/60 font-narrative italic">No matching cast packs found.</div>
               ) : (
                 filteredPacks.map((pack) => (
                   <div
                     key={pack.id}
-                    className="p-3 rounded-xl bg-[#0e2a1f] border border-emerald-500/25 hover:border-emerald-400/60 transition-all flex items-center justify-between gap-3"
+                    className="p-3 rounded-xl bg-[#0d261b] border border-emerald-500/30 hover:border-emerald-400/80 transition-all flex items-center justify-between gap-3 shadow-md group"
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="font-display font-bold text-xs text-emerald-200 flex items-center gap-2">
-                        <span>{pack.name}</span>
+                      <div className="font-display font-bold text-xs text-[#a7f3d0] flex items-center gap-2">
+                        <span className="truncate">{pack.name}</span>
                         {pack.isCustom && (
-                          <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">
                             Custom
                           </span>
                         )}
                         {pack.worldTheme && (
-                          <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-200 border border-emerald-500/30 shrink-0">
                             {pack.worldTheme}
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] font-narrative text-[#6ee7b7]/70 line-clamp-1 mt-0.5">{pack.description}</p>
-                      <div className="flex items-center gap-2 text-[9px] font-mono text-emerald-300/60 mt-1">
-                        <span>👥 {pack.npcs.length} Characters:</span>
+                      <p className="text-[11px] font-narrative text-[#6ee7b7]/80 line-clamp-1 mt-0.5">{pack.description}</p>
+                      <div className="flex items-center gap-2 text-[9px] font-mono text-emerald-300/70 mt-1">
+                        <span>👥 {pack.npcs.length} Cast:</span>
                         <span className="truncate">{pack.npcs.map((n) => n.name).join(', ')}</span>
                       </div>
                     </div>
@@ -244,7 +244,7 @@ export default function NpcNodeModal({
                         <button
                           type="button"
                           onClick={(e) => handleDeleteCustomPack(pack.id, e)}
-                          className="p-1.5 text-red-400 hover:text-red-300"
+                          className="p-1.5 text-red-400 hover:text-red-300 transition-colors"
                           title="Delete custom pack"
                         >
                           <Trash2 size={13} />
@@ -252,7 +252,7 @@ export default function NpcNodeModal({
                       )}
                       <button
                         onClick={() => handleLoadPack(pack)}
-                        className="px-3 py-1.5 rounded-lg bg-emerald-400 hover:bg-emerald-300 text-black font-display font-bold text-xs uppercase tracking-wider"
+                        className="px-3 py-1.5 rounded-lg bg-emerald-400 hover:bg-emerald-300 text-black font-display font-bold text-xs uppercase tracking-wider transition-colors shadow"
                       >
                         Load
                       </button>

@@ -92,8 +92,26 @@ export default function CastChapter({ value, onChange, ready, onFinalize, onBack
             </div>
             <Field label="Affection / Trust">
               <div className="grid grid-cols-2 gap-1.5">
-                <input type="number" min={-100} max={100} className={`${FIELD} !py-1.5`} value={draft.affection} onChange={(e) => setDraft({ ...draft, affection: Number(e.target.value) || 0 })} />
-                <input type="number" min={-100} max={100} className={`${FIELD} !py-1.5`} value={draft.trust} onChange={(e) => setDraft({ ...draft, trust: Number(e.target.value) || 0 })} />
+                <input
+                  type="number"
+                  min={-100}
+                  max={100}
+                  placeholder="0"
+                  className={`${FIELD} !py-1.5`}
+                  value={draft.affection === 0 ? '' : draft.affection}
+                  onFocus={(e) => e.target.select()}
+                  onChange={(e) => setDraft({ ...draft, affection: e.target.value === '' || e.target.value === '-' ? 0 : (Number(e.target.value) || 0) })}
+                />
+                <input
+                  type="number"
+                  min={-100}
+                  max={100}
+                  placeholder="0"
+                  className={`${FIELD} !py-1.5`}
+                  value={draft.trust === 0 ? '' : draft.trust}
+                  onFocus={(e) => e.target.select()}
+                  onChange={(e) => setDraft({ ...draft, trust: e.target.value === '' || e.target.value === '-' ? 0 : (Number(e.target.value) || 0) })}
+                />
               </div>
             </Field>
             <div className="grid grid-cols-2 gap-1.5">

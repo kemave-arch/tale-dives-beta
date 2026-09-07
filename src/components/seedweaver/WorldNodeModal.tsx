@@ -203,24 +203,24 @@ export default function WorldNodeModal({
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
               {filteredPresets.length === 0 ? (
-                <div className="text-center py-6 text-xs text-sky-200/60">No matching presets found.</div>
+                <div className="text-center py-6 text-xs text-sky-200/60 font-narrative italic">No matching presets found.</div>
               ) : (
                 filteredPresets.map((t) => (
                   <div
                     key={t.id || t.name}
-                    className="p-3 rounded-xl bg-[#0e1d30] border border-sky-500/25 hover:border-sky-400/60 transition-all flex items-center justify-between gap-3"
+                    className="p-3 rounded-xl bg-[#0c1a2d] border border-sky-500/30 hover:border-sky-400/80 transition-all flex items-center justify-between gap-3 shadow-md group"
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="font-display font-bold text-xs text-sky-200 flex items-center gap-2">
-                        <span>{t.name}</span>
+                      <div className="font-display font-bold text-xs text-[#bae6fd] flex items-center gap-2">
+                        <span className="truncate">{t.name}</span>
                         {t.genreTone && (
-                          <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-200 border border-sky-500/30 shrink-0">
                             {t.genreTone}
                           </span>
                         )}
                       </div>
                       {t.conflict && (
-                        <p className="text-[11px] font-narrative text-[#93c5fd]/70 line-clamp-1 mt-0.5">{t.conflict}</p>
+                        <p className="text-[11px] font-narrative text-[#93c5fd]/80 line-clamp-1 mt-0.5">{t.conflict}</p>
                       )}
                       <div className="flex items-center gap-2 text-[9px] font-mono text-[#93c5fd]/60 mt-1">
                         <span>📍 {t.locationsList?.length || 0} Sites</span>
@@ -229,7 +229,7 @@ export default function WorldNodeModal({
                     </div>
                     <button
                       onClick={() => handleLoadPreset(t)}
-                      className="px-3 py-1.5 rounded-lg bg-sky-400 hover:bg-sky-300 text-black font-display font-bold text-xs shrink-0 uppercase tracking-wider"
+                      className="px-3 py-1.5 rounded-lg bg-sky-400 hover:bg-sky-300 text-black font-display font-bold text-xs shrink-0 uppercase tracking-wider transition-colors shadow"
                     >
                       Load
                     </button>

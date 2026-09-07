@@ -4,6 +4,7 @@ import {
   Globe, BookOpen, Users, ShieldCheck, Map, ScrollText, Target, Skull, Backpack,
   Pencil, Save, X, Trash2, Plus, Lock, User, Hammer, Clock, Sparkles, CheckCircle2, XCircle, ArrowRight, Ghost,
   Swords, Star, EyeOff, Search, MapPin, Heart, Coins, Gift, Zap, Compass, AlertTriangle, Shield, Flame, Milestone, ListChecks,
+  ChevronRight,
 } from 'lucide-react'
 import { DASHED_ROW_CLASS, GLASS_SURFACE_LIST, GlassHeader, GlassIconButton, GlassScreen, SELECT_CLASS } from '../lib/glassChrome.tsx'
 import { slugify } from '../lib/slug.ts'
@@ -18,11 +19,35 @@ import { useConfirm } from '../lib/useConfirm.tsx'
 import { useLongTextEditor } from '../lib/useLongTextEditor.tsx'
 import { EQUIPPABLE_TYPES, LOCATION_DANGER_LEVELS, LOCATION_TYPES } from '../types.ts'
 import type {
-  BestiaryEntry, CraftingJob, Discovery, EquipSlot, FactionEntry, ItemEntry, ItemType, LocationEntry, LogEntry, LoreEntry, NpcEntry, Player,
+  BestiaryEntry, CompetencyTier, CraftingJob, Discovery, EquipSlot, FactionEntry, ItemEntry, ItemType, LocationEntry, LogEntry, LoreEntry, NpcEntry, Player,
   ProjectEntry, ProjectStage, QuestEntry, RevealTrigger, SkillEntry, ThreatTierToken, WorldData,
 } from '../types.ts'
 import { COMPETENCY_TIERS, THREAT_TIERS, tierToWord, wordToTier, displayThreatLabel } from '../lib/tiers.ts'
 import { trustWord } from '../lib/npcs.ts'
+
+import codexArchiveBanner from '../assets/images/codex_archive_banner.webp'
+import codexRealmArt from '../assets/images/codex_realm_art.webp'
+import codexCharactersArt from '../assets/images/codex_characters_art.webp'
+import codexBestiaryArt from '../assets/images/codex_bestiary_art.webp'
+import codexFactionsArt from '../assets/images/codex_factions_art.webp'
+import codexLocationsArt from '../assets/images/codex_locations_art.webp'
+import codexSkillsArt from '../assets/images/codex_skills_art.webp'
+import codexItemsArt from '../assets/images/codex_items_art.webp'
+
+const CATEGORY_ART: Record<string, string> = {
+  campaign: codexRealmArt,
+  chapters: codexArchiveBanner,
+  npcs: codexCharactersArt,
+  factions: codexFactionsArt,
+  locations: codexLocationsArt,
+  lore: codexArchiveBanner,
+  skills: codexSkillsArt,
+  items: codexItemsArt,
+  quests: codexArchiveBanner,
+  crafting: codexItemsArt,
+  projects: codexLocationsArt,
+  bestiary: codexBestiaryArt,
+}
 
 const ITEM_TYPES: ItemType[] = ['weapon', 'armor', 'accessory', 'tool', 'key', 'consumable', 'material']
 
@@ -244,15 +269,62 @@ function TextField({
   )
 }
 
-function NumberField({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+function NumberField({
+  label,
+  value,
+  onChange,
+  placeholder = '0',
+  min,
+  max,
+  step,
+}: {
+  label: string
+  value: number | string | undefined | null
+  onChange: (v: number) => void
+  placeholder?: string
+  min?: number
+  max?: number
+  step?: number
+}) {
+  const [editingText, setEditingText] = useState<string | null>(null)
+
+  const numVal = typeof value === 'number' ? value : (value !== undefined && value !== null && value !== '' ? Number(value) : undefined)
+  const displayVal = editingText !== null
+    ? editingText
+    : (numVal === undefined || Number.isNaN(numVal) ? '' : (numVal === 0 ? '' : String(numVal)))
+
   return (
     <label className="block">
       <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">{label}</span>
       <input
         type="number"
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="mt-1 w-full rounded-lg border border-[#e8ca8a]/25 bg-[#e8ca8a]/[0.04] backdrop-blur-sm px-3 py-2 font-mono text-sm text-ink"
+        value={displayVal}
+        placeholder={placeholder}
+        min={min}
+        max={max}
+        step={step}
+        onFocus={(e) => {
+          if (editingText === null) {
+            setEditingText(numVal !== undefined && !Number.isNaN(numVal) && numVal !== 0 ? String(numVal) : '')
+          }
+          e.target.select()
+        }}
+        onChange={(e) => {
+          const raw = e.target.value
+          setEditingText(raw)
+          if (raw === '' || raw === '-') {
+            onChange(0)
+          } else {
+            const parsed = Number(raw)
+            if (!Number.isNaN(parsed)) {
+              onChange(parsed)
+            }
+          }
+        }}
+        onBlur={() => {
+          setEditingText(null)
+        }}
+        className="mt-1 w-full rounded-lg border border-[#e8ca8a]/25 bg-[#e8ca8a]/[0.04] backdrop-blur-sm px-3 py-2 font-mono text-sm text-ink placeholder:text-[#8e94a8]/50"
       />
     </label>
   )
@@ -358,171 +430,173 @@ interface CategoryAccent {
   activeTab: string // styling for active category subtab
 }
 
+// Unified classic antique light-gold / obsidian palette for all Codex categories
+const GOLD_CARD_STYLE = `${GLASS_SURFACE_LIST} bg-gradient-to-r from-[#121622] via-[#0e111a] to-[#0a0d14] border-[#c4a259]/30 rounded-xl p-3 sm:p-3.5 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#f0ca65]/70 hover:bg-[#161a28] hover:shadow-[0_4px_16px_rgba(240,202,101,0.18)] cursor-pointer group`
+const GOLD_ICON_BADGE = 'w-9 h-9 rounded-full bg-[#18130a] border border-[#c4a259]/40 flex items-center justify-center text-[#f0ca65] shrink-0 group-hover:scale-105 group-hover:border-[#f0ca65]/80 group-hover:shadow-[0_0_10px_rgba(240,202,101,0.25)] transition-all'
+const GOLD_KICKER = 'font-mono text-[9px] text-[#a8a18c] uppercase tracking-wider group-hover:text-[#fae5b5]/90'
+const GOLD_BADGE = 'rounded-lg bg-[#18130a] border border-[#c4a259]/40 text-[#fae5b5] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#f0ca65]/80 group-hover:bg-[#f0ca65]/15 transition-all'
+const GOLD_TAG = 'rounded-full border border-[#c4a259]/35 bg-[#c4a259]/10 px-2 py-0.5 text-[9px] font-mono text-[#fae5b5]'
+const GOLD_ACTIVE_TAB = 'bg-[#f0ca65]/20 text-[#fae5b5] border-[#f0ca65]/70 shadow-[0_0_12px_rgba(240,202,101,0.25)]'
+
 const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
   npcs: {
     icon: Users,
-    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#23283b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#fb7185]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(251,113,133,0.2)] cursor-pointer group`,
-    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#fb7185] shrink-0 group-hover:scale-105 group-hover:border-[#fb7185]/60 group-hover:bg-[#2e1823] transition-all',
-    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#fb7185]/90',
-    badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#fb7185]/60 group-hover:text-[#fecdd3] group-hover:bg-[#fb7185]/20 transition-all',
-    sectionIcon: 'text-[#fb7185]',
-    tag: 'rounded-full border border-[#fb7185]/35 bg-[#fb7185]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#fecdd3]',
-    activeTab: 'bg-[#fb7185]/20 text-[#fecdd3] border-[#fb7185]/60 shadow-[0_0_12px_rgba(251,113,133,0.25)]',
+    card: GOLD_CARD_STYLE,
+    iconBadge: GOLD_ICON_BADGE,
+    kicker: GOLD_KICKER,
+    badge: GOLD_BADGE,
+    sectionIcon: 'text-[#f0ca65]',
+    tag: GOLD_TAG,
+    activeTab: GOLD_ACTIVE_TAB,
   },
   factions: {
     icon: ShieldCheck,
-    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#23283b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#fbbf24]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(251,191,36,0.2)] cursor-pointer group`,
-    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#fbbf24] shrink-0 group-hover:scale-105 group-hover:border-[#fbbf24]/60 group-hover:bg-[#2b2414] transition-all',
-    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#fde68a]/90',
-    badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#fbbf24]/60 group-hover:text-[#fde68a] group-hover:bg-[#fbbf24]/20 transition-all',
-    sectionIcon: 'text-[#fbbf24]',
-    tag: 'rounded-full border border-[#fbbf24]/35 bg-[#fbbf24]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#fde68a]',
-    solid: 'bg-[#fbbf24]',
-    activeTab: 'bg-[#fbbf24]/20 text-[#fde68a] border-[#fbbf24]/60 shadow-[0_0_12px_rgba(251,191,36,0.25)]',
+    card: GOLD_CARD_STYLE,
+    iconBadge: GOLD_ICON_BADGE,
+    kicker: GOLD_KICKER,
+    badge: GOLD_BADGE,
+    sectionIcon: 'text-[#f0ca65]',
+    tag: GOLD_TAG,
+    solid: 'bg-[#f0ca65]',
+    activeTab: GOLD_ACTIVE_TAB,
   },
   locations: {
     icon: Map,
-    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#23283b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#38bdf8]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(56,189,248,0.2)] cursor-pointer group`,
-    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#38bdf8] shrink-0 group-hover:scale-105 group-hover:border-[#38bdf8]/60 group-hover:bg-[#142636] transition-all',
-    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#7dd3fc]/90',
-    badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#38bdf8]/60 group-hover:text-[#7dd3fc] group-hover:bg-[#38bdf8]/20 transition-all',
-    sectionIcon: 'text-[#38bdf8]',
-    tag: 'rounded-full border border-[#38bdf8]/35 bg-[#38bdf8]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#7dd3fc]',
-    activeTab: 'bg-[#38bdf8]/20 text-[#7dd3fc] border-[#38bdf8]/60 shadow-[0_0_12px_rgba(56,189,248,0.25)]',
+    card: GOLD_CARD_STYLE,
+    iconBadge: GOLD_ICON_BADGE,
+    kicker: GOLD_KICKER,
+    badge: GOLD_BADGE,
+    sectionIcon: 'text-[#f0ca65]',
+    tag: GOLD_TAG,
+    activeTab: GOLD_ACTIVE_TAB,
   },
   lore: {
     icon: ScrollText,
-    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#23283b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#c084fc]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(192,132,252,0.2)] cursor-pointer group`,
-    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#c084fc] shrink-0 group-hover:scale-105 group-hover:border-[#c084fc]/60 group-hover:bg-[#251838] transition-all',
-    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#d8b4fe]/90',
-    badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#c084fc]/60 group-hover:text-[#d8b4fe] group-hover:bg-[#c084fc]/20 transition-all',
-    sectionIcon: 'text-[#c084fc]',
-    tag: 'rounded-full border border-[#c084fc]/35 bg-[#c084fc]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#d8b4fe]',
-    activeTab: 'bg-[#c084fc]/20 text-[#d8b4fe] border-[#c084fc]/60 shadow-[0_0_12px_rgba(192,132,252,0.25)]',
+    card: GOLD_CARD_STYLE,
+    iconBadge: GOLD_ICON_BADGE,
+    kicker: GOLD_KICKER,
+    badge: GOLD_BADGE,
+    sectionIcon: 'text-[#f0ca65]',
+    tag: GOLD_TAG,
+    activeTab: GOLD_ACTIVE_TAB,
   },
   quests: {
     icon: Target,
-    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#23283b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#34d399]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(52,211,153,0.2)] cursor-pointer group`,
-    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#34d399] shrink-0 group-hover:scale-105 group-hover:border-[#34d399]/60 group-hover:bg-[#142e23] transition-all',
-    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#6ee7b7]/90',
-    badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#34d399]/60 group-hover:text-[#6ee7b7] group-hover:bg-[#34d399]/20 transition-all',
-    sectionIcon: 'text-[#34d399]',
-    tag: 'rounded-full border border-[#34d399]/35 bg-[#34d399]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#6ee7b7]',
-    activeTab: 'bg-[#34d399]/20 text-[#6ee7b7] border-[#34d399]/60 shadow-[0_0_12px_rgba(52,211,153,0.25)]',
+    card: GOLD_CARD_STYLE,
+    iconBadge: GOLD_ICON_BADGE,
+    kicker: GOLD_KICKER,
+    badge: GOLD_BADGE,
+    sectionIcon: 'text-[#f0ca65]',
+    tag: GOLD_TAG,
+    activeTab: GOLD_ACTIVE_TAB,
   },
   bestiary: {
     icon: Skull,
-    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#23283b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#ef4444]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(239,68,68,0.2)] cursor-pointer group`,
-    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#ef4444] shrink-0 group-hover:scale-105 group-hover:border-[#ef4444]/60 group-hover:bg-[#2e1414] transition-all',
-    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#fca5a5]/90',
-    badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#ef4444]/60 group-hover:text-[#fca5a5] group-hover:bg-[#ef4444]/20 transition-all',
-    sectionIcon: 'text-[#ef4444]',
-    tag: 'rounded-full border border-[#ef4444]/35 bg-[#ef4444]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#fca5a5]',
-    solid: 'bg-[#ef4444]',
-    activeTab: 'bg-[#ef4444]/20 text-[#fca5a5] border-[#ef4444]/60 shadow-[0_0_12px_rgba(239,68,68,0.25)]',
+    card: GOLD_CARD_STYLE,
+    iconBadge: GOLD_ICON_BADGE,
+    kicker: GOLD_KICKER,
+    badge: GOLD_BADGE,
+    sectionIcon: 'text-[#f0ca65]',
+    tag: GOLD_TAG,
+    solid: 'bg-[#f0ca65]',
+    activeTab: GOLD_ACTIVE_TAB,
   },
   skills: {
     icon: Sparkles,
-    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#23283b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#818cf8]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(129,140,248,0.2)] cursor-pointer group`,
-    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#818cf8] shrink-0 group-hover:scale-105 group-hover:border-[#818cf8]/60 group-hover:bg-[#1e1a38] transition-all',
-    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#c7d2fe]/90',
-    badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#818cf8]/60 group-hover:text-[#c7d2fe] group-hover:bg-[#818cf8]/20 transition-all',
-    sectionIcon: 'text-[#818cf8]',
-    tag: 'rounded-full border border-[#818cf8]/35 bg-[#818cf8]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#c7d2fe]',
-    activeTab: 'bg-[#818cf8]/20 text-[#c7d2fe] border-[#818cf8]/60 shadow-[0_0_12px_rgba(129,140,248,0.25)]',
+    card: GOLD_CARD_STYLE,
+    iconBadge: GOLD_ICON_BADGE,
+    kicker: GOLD_KICKER,
+    badge: GOLD_BADGE,
+    sectionIcon: 'text-[#f0ca65]',
+    tag: GOLD_TAG,
+    activeTab: GOLD_ACTIVE_TAB,
   },
   items: {
     icon: Backpack,
-    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#23283b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#f0ca65]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(240,202,101,0.2)] cursor-pointer group`,
-    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#f0ca65] shrink-0 group-hover:scale-105 group-hover:border-[#f0ca65]/60 group-hover:bg-[#2b2414] transition-all',
-    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#fae5b5]/90',
-    badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#f0ca65]/60 group-hover:text-[#fae5b5] group-hover:bg-[#f0ca65]/20 transition-all',
+    card: GOLD_CARD_STYLE,
+    iconBadge: GOLD_ICON_BADGE,
+    kicker: GOLD_KICKER,
+    badge: GOLD_BADGE,
     sectionIcon: 'text-[#f0ca65]',
-    tag: 'rounded-full border border-[#f0ca65]/35 bg-[#f0ca65]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#fae5b5]',
-    activeTab: 'bg-[#f0ca65]/20 text-[#fae5b5] border-[#f0ca65]/60 shadow-[0_0_12px_rgba(240,202,101,0.25)]',
+    tag: GOLD_TAG,
+    activeTab: GOLD_ACTIVE_TAB,
   },
   projects: {
     icon: Milestone,
-    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#23283b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#2dd4bf]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(45,212,191,0.2)] cursor-pointer group`,
-    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#2dd4bf] shrink-0 group-hover:scale-105 group-hover:border-[#2dd4bf]/60 group-hover:bg-[#132e2b] transition-all',
-    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#5eead4]/90',
-    badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#2dd4bf]/60 group-hover:text-[#5eead4] group-hover:bg-[#2dd4bf]/20 transition-all',
-    sectionIcon: 'text-[#2dd4bf]',
-    tag: 'rounded-full border border-[#2dd4bf]/35 bg-[#2dd4bf]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#5eead4]',
-    solid: 'bg-[#2dd4bf]',
-    activeTab: 'bg-[#2dd4bf]/20 text-[#5eead4] border-[#2dd4bf]/60 shadow-[0_0_12px_rgba(45,212,191,0.25)]',
+    card: GOLD_CARD_STYLE,
+    iconBadge: GOLD_ICON_BADGE,
+    kicker: GOLD_KICKER,
+    badge: GOLD_BADGE,
+    sectionIcon: 'text-[#f0ca65]',
+    tag: GOLD_TAG,
+    solid: 'bg-[#f0ca65]',
+    activeTab: GOLD_ACTIVE_TAB,
   },
 }
 
-// For the non-CRUD categories (Campaign/Crafting/Chapters) at the
-// top-level category grid — a shared gold-accent identity matching the sleek dark deck.
+// For non-CRUD categories (Campaign/Crafting/Chapters) — shared light-gold identity
 const NEUTRAL_ACCENT: CategoryAccent = {
   icon: Globe,
-  card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#23283b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#f0ca65]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(240,202,101,0.18)] cursor-pointer group`,
-  iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#e8ca8a] shrink-0 group-hover:scale-105 group-hover:border-[#f0ca65]/60 group-hover:text-[#f0ca65] group-hover:bg-[#2b2414] transition-all',
-  kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#fae5b5]/90',
-  badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#f0ca65]/60 group-hover:text-[#fae5b5] group-hover:bg-[#f0ca65]/20 transition-all',
-  sectionIcon: 'text-[#e8ca8a]',
-  tag: 'rounded-full border border-[#e8ca8a]/35 bg-[#e8ca8a]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#fae5b5]',
-  activeTab: 'bg-[#f0ca65]/20 text-[#fae5b5] border-[#f0ca65]/60 shadow-[0_0_12px_rgba(240,202,101,0.25)]',
+  card: GOLD_CARD_STYLE,
+  iconBadge: GOLD_ICON_BADGE,
+  kicker: GOLD_KICKER,
+  badge: GOLD_BADGE,
+  sectionIcon: 'text-[#f0ca65]',
+  tag: GOLD_TAG,
+  activeTab: GOLD_ACTIVE_TAB,
 }
 
-// Item rarity gets its own accent set, in the same shape as CATEGORY_ACCENTS
-// — the classic loot-tier convention (grey/green/blue/purple/gold border and
-// glow, rising in intensity) reads instantly to anyone who's played an RPG,
-// and does more to distinguish one item from another than a single flat
-// "gold = item" color ever could. Falls back to CATEGORY_ACCENTS.items
-// (plain gold) when `rarity` is unset or doesn't match one of these five.
+// Item rarity accents: tasteful RPG borders with subdued ambient glows
 const ITEM_RARITY_ACCENTS: Record<string, CategoryAccent> = {
   common: {
     icon: Backpack,
-    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#2d3348] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#9ca3af]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(156,163,175,0.15)] cursor-pointer group`,
-    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#9ca3af] shrink-0 group-hover:scale-105 group-hover:border-[#9ca3af]/60 transition-all',
-    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#d1d5db]',
-    badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#9ca3af]/60 group-hover:text-[#d1d5db] transition-all',
+    card: `${GLASS_SURFACE_LIST} bg-[#121622]/90 border-[#3b4256] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#9ca3af]/80 hover:bg-[#191c2c] cursor-pointer group`,
+    iconBadge: 'w-9 h-9 rounded-full bg-[#181d2a] border border-[#3b4256] flex items-center justify-center text-[#9ca3af] shrink-0 group-hover:scale-105 transition-all',
+    kicker: 'font-mono text-[9px] text-[#a8a18c] uppercase tracking-wider group-hover:text-[#d1d5db]',
+    badge: 'rounded-lg bg-[#181d2a] border border-[#3b4256] text-[#9ca3af] px-2.5 py-0.5 text-[11px] font-mono shrink-0 transition-all',
     sectionIcon: 'text-[#9ca3af]',
-    tag: 'rounded-full border border-[#9ca3af]/35 bg-[#9ca3af]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#d1d5db]',
+    tag: 'rounded-full border border-[#9ca3af]/35 bg-[#9ca3af]/10 px-2 py-0.5 text-[9px] font-mono text-[#d1d5db]',
     activeTab: 'bg-[#9ca3af]/20 text-[#d1d5db] border-[#9ca3af]/60',
   },
   uncommon: {
     icon: Backpack,
-    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#23283b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#4ade80]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(74,222,128,0.2)] cursor-pointer group`,
-    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#4ade80] shrink-0 group-hover:scale-105 group-hover:border-[#4ade80]/60 group-hover:bg-[#142e23] transition-all',
-    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#86efac]',
-    badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#4ade80]/60 group-hover:text-[#86efac] group-hover:bg-[#4ade80]/20 transition-all',
+    card: `${GLASS_SURFACE_LIST} bg-[#121622]/90 border-[#1f382a] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#4ade80]/70 hover:bg-[#191c2c] cursor-pointer group`,
+    iconBadge: 'w-9 h-9 rounded-full bg-[#102419] border border-[#274836] flex items-center justify-center text-[#4ade80] shrink-0 group-hover:scale-105 transition-all',
+    kicker: 'font-mono text-[9px] text-[#a8a18c] uppercase tracking-wider group-hover:text-[#86efac]',
+    badge: 'rounded-lg bg-[#102419] border border-[#274836] text-[#86efac] px-2.5 py-0.5 text-[11px] font-mono shrink-0 transition-all',
     sectionIcon: 'text-[#4ade80]',
-    tag: 'rounded-full border border-[#4ade80]/35 bg-[#4ade80]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#86efac]',
+    tag: 'rounded-full border border-[#4ade80]/35 bg-[#4ade80]/10 px-2 py-0.5 text-[9px] font-mono text-[#86efac]',
     activeTab: 'bg-[#4ade80]/20 text-[#86efac] border-[#4ade80]/60',
   },
   rare: {
     icon: Backpack,
-    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#23283b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#60a5fa]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(96,165,250,0.2)] cursor-pointer group`,
-    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#60a5fa] shrink-0 group-hover:scale-105 group-hover:border-[#60a5fa]/60 group-hover:bg-[#142636] transition-all',
-    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#93c5fd]',
-    badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#60a5fa]/60 group-hover:text-[#93c5fd] group-hover:bg-[#60a5fa]/20 transition-all',
+    card: `${GLASS_SURFACE_LIST} bg-[#121622]/90 border-[#1c324b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#60a5fa]/70 hover:bg-[#191c2c] cursor-pointer group`,
+    iconBadge: 'w-9 h-9 rounded-full bg-[#0e2136] border border-[#224469] flex items-center justify-center text-[#60a5fa] shrink-0 group-hover:scale-105 transition-all',
+    kicker: 'font-mono text-[9px] text-[#a8a18c] uppercase tracking-wider group-hover:text-[#93c5fd]',
+    badge: 'rounded-lg bg-[#0e2136] border border-[#224469] text-[#93c5fd] px-2.5 py-0.5 text-[11px] font-mono shrink-0 transition-all',
     sectionIcon: 'text-[#60a5fa]',
-    tag: 'rounded-full border border-[#60a5fa]/35 bg-[#60a5fa]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#93c5fd]',
+    tag: 'rounded-full border border-[#60a5fa]/35 bg-[#60a5fa]/10 px-2 py-0.5 text-[9px] font-mono text-[#93c5fd]',
     activeTab: 'bg-[#60a5fa]/20 text-[#93c5fd] border-[#60a5fa]/60',
   },
   epic: {
     icon: Backpack,
-    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#23283b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#c084fc]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(192,132,252,0.25)] cursor-pointer group`,
-    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#c084fc] shrink-0 group-hover:scale-105 group-hover:border-[#c084fc]/60 group-hover:bg-[#251838] transition-all',
-    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#d8b4fe]',
-    badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#c084fc]/60 group-hover:text-[#d8b4fe] group-hover:bg-[#c084fc]/20 transition-all',
+    card: `${GLASS_SURFACE_LIST} bg-[#121622]/90 border-[#371f4b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#c084fc]/70 hover:bg-[#191c2c] cursor-pointer group`,
+    iconBadge: 'w-9 h-9 rounded-full bg-[#251336] border border-[#482869] flex items-center justify-center text-[#c084fc] shrink-0 group-hover:scale-105 transition-all',
+    kicker: 'font-mono text-[9px] text-[#a8a18c] uppercase tracking-wider group-hover:text-[#d8b4fe]',
+    badge: 'rounded-lg bg-[#251336] border border-[#482869] text-[#d8b4fe] px-2.5 py-0.5 text-[11px] font-mono shrink-0 transition-all',
     sectionIcon: 'text-[#c084fc]',
-    tag: 'rounded-full border border-[#c084fc]/35 bg-[#c084fc]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#d8b4fe]',
+    tag: 'rounded-full border border-[#c084fc]/35 bg-[#c084fc]/10 px-2 py-0.5 text-[9px] font-mono text-[#d8b4fe]',
     activeTab: 'bg-[#c084fc]/20 text-[#d8b4fe] border-[#c084fc]/60',
   },
   legendary: {
     icon: Backpack,
-    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#fbbf24]/40 rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#fbbf24]/90 hover:bg-[#191c2c] hover:shadow-[0_4px_20px_rgba(251,191,36,0.35)] cursor-pointer group`,
-    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#fbbf24]/40 flex items-center justify-center text-[#fbbf24] shrink-0 group-hover:scale-105 group-hover:border-[#fbbf24]/70 group-hover:bg-[#2b2414] transition-all',
-    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#fde68a]',
-    badge: 'rounded-lg bg-[#1a1d2b] border border-[#fbbf24]/40 text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#fbbf24]/70 group-hover:text-[#fde68a] group-hover:bg-[#fbbf24]/20 transition-all',
-    sectionIcon: 'text-[#fbbf24]',
-    tag: 'rounded-full border border-[#fbbf24]/40 bg-[#fbbf24]/15 px-1.5 py-0.25 text-[9px] font-mono text-[#fde68a]',
-    activeTab: 'bg-[#fbbf24]/20 text-[#fde68a] border-[#fbbf24]/60',
+    card: `${GLASS_SURFACE_LIST} bg-[#121622]/90 border-[#c4a259]/50 rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#f0ca65]/90 hover:bg-[#191c2c] hover:shadow-[0_4px_20px_rgba(240,202,101,0.3)] cursor-pointer group`,
+    iconBadge: 'w-9 h-9 rounded-full bg-[#18130a] border border-[#c4a259]/50 flex items-center justify-center text-[#f0ca65] shrink-0 group-hover:scale-105 group-hover:border-[#f0ca65]/80 transition-all',
+    kicker: 'font-mono text-[9px] text-[#a8a18c] uppercase tracking-wider group-hover:text-[#fae5b5]',
+    badge: 'rounded-lg bg-[#18130a] border border-[#c4a259]/50 text-[#fae5b5] px-2.5 py-0.5 text-[11px] font-mono shrink-0 transition-all',
+    sectionIcon: 'text-[#f0ca65]',
+    tag: 'rounded-full border border-[#c4a259]/40 bg-[#c4a259]/15 px-2 py-0.5 text-[9px] font-mono text-[#fae5b5]',
+    activeTab: 'bg-[#f0ca65]/20 text-[#fae5b5] border-[#f0ca65]/60',
   },
 }
 
@@ -693,54 +767,85 @@ function DeckEntryCard({
   )
 }
 
-// Codex Archives — the top-level Category List, styled as a single-column
-// ornate archive-tome row list: one consistent gold accent throughout rather
-// than the multi-hued per-category accent grid DeckEntryCard uses everywhere
-// else (entry grids inside each category keep their own color identity,
-// untouched — this restyle is scoped to the outermost list only, mobile-first
-// with a single full-width tap target per row instead of a 2-column grid).
+// Codex Archives — the top-level Category List, styled as classic high-end fantasy RPG cards
+// with illuminated gold icon rings, warm gold typography, and framed count badges.
 function CodexArchiveRow({
-  icon: Icon, title, subtitle, count, onClick,
+  categoryId,
+  icon: Icon,
+  title,
+  subtitle,
+  count,
+  onClick,
 }: {
+  categoryId?: CategoryId
   icon: LucideIcon
   title: string
   subtitle: string
   count: number
   onClick: () => void
 }) {
+  const artImage = categoryId ? CATEGORY_ART[categoryId] : undefined
+
   return (
     <div
       onClick={onClick}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick() }}
-      className="group flex items-center gap-3 sm:gap-4 rounded-xl border border-[#332b18] bg-[#0d0f18]/70 px-3.5 py-3 sm:px-4 sm:py-3.5 cursor-pointer transition-all duration-200 active:scale-[0.99] hover:border-[#e8ca8a]/70 hover:bg-[#171308]/60 hover:shadow-[0_0_16px_rgba(232,202,138,0.15)]"
+      className="group relative flex items-center gap-3.5 sm:gap-4 rounded-xl border border-[#c4a259]/30 hover:border-[#f0ca65]/80 bg-gradient-to-r from-[#121622] via-[#0e111a] to-[#0a0d14] hover:bg-[#161a28] p-2.5 sm:p-3 cursor-pointer transition-all duration-200 active:scale-[0.99] hover:shadow-[0_4px_20px_rgba(240,202,101,0.22)] overflow-hidden"
     >
-      <div className="w-11 h-11 sm:w-12 sm:h-12 shrink-0 rounded-lg border border-[#e8ca8a]/40 bg-[#171308]/80 flex items-center justify-center text-[#e8ca8a] group-hover:border-[#f0ca65]/80 group-hover:text-[#f0ca65] group-hover:scale-105 transition-all">
-        <Icon size={20} />
+      {/* Visual Artwork Thumbnail with Gold Frame & Icon Badge */}
+      <div className="w-13 h-13 sm:w-14 sm:h-14 shrink-0 rounded-lg border border-[#c4a259]/50 overflow-hidden relative shadow-md group-hover:border-[#f0ca65] group-hover:shadow-[0_0_12px_rgba(240,202,101,0.35)] transition-all bg-[#17130b]">
+        {artImage ? (
+          <img
+            src={artImage}
+            alt=""
+            className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-300 filter brightness-95 contrast-105"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-[#f0ca65]">
+            <Icon size={22} />
+          </div>
+        )}
+        {/* Subtle Scrim & Floating Icon Pill */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        <div className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-[#121622]/90 border border-[#f0ca65]/60 flex items-center justify-center text-[#f0ca65] shadow">
+          <Icon size={11} />
+        </div>
       </div>
+
+      {/* Title & Subtitle */}
       <div className="min-w-0 flex-1">
-        <h3 className="font-display font-bold text-sm sm:text-base text-[#f5dfa0] uppercase tracking-wide truncate group-hover:text-[#fde68a]">
+        <h3 className="font-display font-bold text-sm sm:text-base text-[#fae5b5] group-hover:text-white uppercase tracking-[0.14em] truncate transition-colors">
           {title}
         </h3>
-        <p className="font-narrative text-[11px] sm:text-xs text-[#8b93ab] truncate mt-0.5">
+        <p className="font-narrative text-xs text-[#a8a18c] group-hover:text-[#dcd2be] truncate mt-0.5 leading-snug transition-colors">
           {subtitle}
         </p>
       </div>
-      <div
-        className={`shrink-0 min-w-[2.5rem] text-center rounded-lg border px-2.5 py-1 font-mono text-sm ${
-          count > 0
-            ? 'border-[#e8ca8a]/45 bg-[#e8ca8a]/10 text-[#f0ca65]'
-            : 'border-[#2d3348] bg-[#141724]/60 text-[#5c6178]'
-        }`}
-      >
-        {count}
+
+      {/* Framed Gold Count Box & Arrow */}
+      <div className="flex items-center gap-2 shrink-0">
+        <div
+          className={`w-10 sm:w-11 h-9 sm:h-10 rounded-md border flex items-center justify-center font-serif font-bold text-sm sm:text-base transition-all ${
+            count > 0
+              ? 'border-[#c4a259]/50 bg-[#16130b] text-[#fae5b5] group-hover:border-[#f0ca65]/80 group-hover:text-[#fff4d1] group-hover:bg-[#f0ca65]/15 shadow-inner'
+              : 'border-[#2d3348] bg-[#141724]/60 text-[#5c6178]'
+          }`}
+        >
+          {count}
+        </div>
+        <ChevronRight
+          size={16}
+          className="text-[#72788e] group-hover:text-[#f0ca65] group-hover:translate-x-0.5 transition-all shrink-0"
+        />
       </div>
     </div>
   )
 }
 
-// Modern horizontal subtab navigator for category entries.
+// Compact horizontal filter subtab navigator for category entries.
 interface SubtabItem {
   id: string
   label: string
@@ -760,7 +865,7 @@ function SubtabsBar({
   accent: CategoryAccent
 }) {
   return (
-    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 px-0.5 -mx-0.5 shrink-0 scroll-smooth">
+    <div className="w-full max-w-full flex flex-wrap items-center gap-1 sm:gap-1.5 py-0.5 px-0.5 shrink-0">
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id
         const Icon = tab.icon
@@ -769,18 +874,18 @@ function SubtabsBar({
             key={tab.id}
             onClick={() => onSelectTab(tab.id)}
             type="button"
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-medium shrink-0 transition-all border cursor-pointer active:scale-95 ${
+            className={`flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-mono font-medium whitespace-nowrap transition-all border cursor-pointer active:scale-95 ${
               isActive
                 ? `${accent.activeTab} font-semibold`
-                : 'bg-[#141724]/90 border-[#262c3e] text-[#8e94a8] hover:text-[#cdd2e5] hover:border-[#384058] hover:bg-[#1a1f30]'
+                : 'bg-[#141724]/90 border-[#262c3e] text-[#8e94a8] hover:text-[#fae5b5] hover:border-[#c4a259]/40 hover:bg-[#1a1f30]'
             }`}
           >
-            {Icon && <Icon size={12} className={isActive ? accent.sectionIcon : 'text-[#7e8498]'} />}
+            {Icon && <Icon size={12} className={`shrink-0 ${isActive ? accent.sectionIcon : 'text-[#7e8498]'}`} />}
             <span>{tab.label}</span>
             {tab.count !== undefined && (
               <span
-                className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
-                  isActive ? 'bg-black/30 text-ink' : 'bg-[#1e2333] text-[#72788e]'
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono shrink-0 ${
+                  isActive ? 'bg-black/40 text-[#fae5b5]' : 'bg-[#1e2333] text-[#72788e]'
                 }`}
               >
                 {tab.count}
@@ -960,11 +1065,12 @@ export default function Codex({
   const [searchQuery, setSearchQuery] = useState('')
   const [activeSubtab, setActiveSubtab] = useState('all')
 
-  // Reset filters on category change
+  // Reset filters and scroll to top on category or entry navigation
   useEffect(() => {
     setSearchQuery('')
     setActiveSubtab('all')
-  }, [category])
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior })
+  }, [category, entryId])
 
   // Unique collections for filter selectors
   const loreCategories = useMemo(() => {
@@ -989,7 +1095,7 @@ export default function Codex({
   }
 
   // Helper location checkers
-  const isHavenLocation = (l: LocationEntry) => {
+  const isTownLocation = (l: LocationEntry) => {
     const danger = (l.dangerLevel || '').toLowerCase()
     const type = (l.locationType || '').toLowerCase()
     return ['safe', 'low', 'minimal'].includes(danger) || ['settlement', 'city', 'town', 'tavern', 'temple', 'haven', 'sanctuary', 'camp'].includes(type)
@@ -1000,7 +1106,7 @@ export default function Codex({
     return ['deadly', 'extreme', 'high', 'cursed', 'lethal'].includes(danger) || ['dungeon', 'ruin', 'cave', 'lair', 'abyss', 'crypt', 'tomb'].includes(type)
   }
   const isWildLocation = (l: LocationEntry) => {
-    return !isHavenLocation(l) && !isPerilLocation(l)
+    return !isTownLocation(l) && !isPerilLocation(l)
   }
 
   // Helper bestiary threat checkers
@@ -1056,7 +1162,7 @@ export default function Codex({
         const matchesTurn = l.loggedAt?.toLowerCase().includes(q)
         if (!matchesName && !matchesRegion && !matchesDesc && !matchesType && !matchesTurn) return false
       }
-      if (activeSubtab === 'havens' && !isHavenLocation(l)) return false
+      if (activeSubtab === 'towns' && !isTownLocation(l)) return false
       if (activeSubtab === 'wilderness' && !isWildLocation(l)) return false
       if (activeSubtab === 'perilous' && !isPerilLocation(l)) return false
       return true
@@ -1188,7 +1294,7 @@ export default function Codex({
       const strangersCount = Object.values(npcs).filter((n) => isStrangerStage(n.stage)).length
       return [
         { id: 'all', label: 'All', count: allCount, icon: Users },
-        { id: 'allies', label: 'Allies & Bonds', count: alliesCount, icon: Heart },
+        { id: 'allies', label: 'Allies', count: alliesCount, icon: Heart },
         { id: 'contacts', label: 'Contacts', count: contactsCount, icon: User },
         { id: 'strangers', label: 'Strangers', count: strangersCount, icon: EyeOff },
       ]
@@ -1209,14 +1315,14 @@ export default function Codex({
 
     if (category === 'locations') {
       const allCount = Object.keys(locations).length
-      const havensCount = Object.values(locations).filter(isHavenLocation).length
+      const townsCount = Object.values(locations).filter(isTownLocation).length
       const wildCount = Object.values(locations).filter(isWildLocation).length
       const perilCount = Object.values(locations).filter(isPerilLocation).length
       return [
         { id: 'all', label: 'All', count: allCount, icon: Map },
-        { id: 'havens', label: 'Havens & Towns', count: havensCount, icon: ShieldCheck },
+        { id: 'towns', label: 'Towns', count: townsCount, icon: ShieldCheck },
         { id: 'wilderness', label: 'Wilds', count: wildCount, icon: Compass },
-        { id: 'perilous', label: 'Perilous & Ruins', count: perilCount, icon: AlertTriangle },
+        { id: 'perilous', label: 'Perils', count: perilCount, icon: AlertTriangle },
       ]
     }
 
@@ -1239,9 +1345,9 @@ export default function Codex({
       return [
         { id: 'all', label: 'All', count: allCount, icon: Target },
         { id: 'active', label: 'Active', count: activeCount, icon: Zap },
-        { id: 'main', label: 'Main Story', count: mainCount, icon: Star },
-        { id: 'side', label: 'Side Quests', count: sideCount, icon: Compass },
-        { id: 'completed', label: 'Completed', count: doneCount, icon: CheckCircle2 },
+        { id: 'main', label: 'Main', count: mainCount, icon: Star },
+        { id: 'side', label: 'Side', count: sideCount, icon: Compass },
+        { id: 'completed', label: 'Done', count: doneCount, icon: CheckCircle2 },
       ]
     }
 
@@ -1253,8 +1359,8 @@ export default function Codex({
       return [
         { id: 'all', label: 'All', count: allCount, icon: Skull },
         { id: 'minions', label: 'Minions', count: minionCount, icon: Skull },
-        { id: 'standard', label: 'Beasts & Foes', count: standardCount, icon: Swords },
-        { id: 'elite', label: 'Elites & Bosses', count: eliteCount, icon: Flame },
+        { id: 'standard', label: 'Beasts', count: standardCount, icon: Swords },
+        { id: 'elite', label: 'Elites', count: eliteCount, icon: Flame },
       ]
     }
 
@@ -1267,7 +1373,7 @@ export default function Codex({
         { id: 'all', label: 'All', count: allCount, icon: Milestone },
         { id: 'active', label: 'Active', count: activeCount, icon: Hammer },
         { id: 'stalled', label: 'Stalled', count: stalledCount, icon: AlertTriangle },
-        { id: 'completed', label: 'Completed', count: doneCount, icon: CheckCircle2 },
+        { id: 'completed', label: 'Done', count: doneCount, icon: CheckCircle2 },
       ]
     }
 
@@ -1278,9 +1384,9 @@ export default function Codex({
       const passiveCount = Object.values(skills).filter((s) => (s.skillType || '').toLowerCase() === 'passive' || !s.effort).length
       return [
         { id: 'all', label: 'All', count: allCount, icon: Sparkles },
-        { id: 'class', label: 'Class Skills', count: classCount, icon: Star },
-        { id: 'active', label: 'Spells & Arts', count: activeCount, icon: Zap },
-        { id: 'passive', label: 'Passives', count: passiveCount, icon: Shield },
+        { id: 'class', label: 'Class', count: classCount, icon: Star },
+        { id: 'active', label: 'Active', count: activeCount, icon: Zap },
+        { id: 'passive', label: 'Passive', count: passiveCount, icon: Shield },
       ]
     }
 
@@ -1298,7 +1404,7 @@ export default function Codex({
         { id: 'weapons', label: 'Weapons', count: weaponsCount, icon: Swords },
         { id: 'armor', label: 'Armor', count: armorCount, icon: Shield },
         { id: 'accessories', label: 'Relics', count: accessoryCount, icon: Sparkles },
-        { id: 'consumables', label: 'Potions & Food', count: consumablesCount, icon: Heart },
+        { id: 'consumables', label: 'Potions', count: consumablesCount, icon: Heart },
         { id: 'materials', label: 'Materials', count: materialsCount, icon: Hammer },
       ]
     }
@@ -1316,7 +1422,7 @@ export default function Codex({
     }
 
     return (
-      <div className="mb-4 flex flex-col gap-2 p-2.5 sm:p-3 rounded-2xl border border-[#252b3e] bg-[#0f121d]/90 shadow-[0_2px_12px_rgba(0,0,0,0.4)]">
+      <div className="w-full max-w-full min-w-0 mb-4 flex flex-col gap-2 p-2.5 sm:p-3 rounded-2xl border border-[#252b3e] bg-[#0f121d]/90 shadow-[0_2px_12px_rgba(0,0,0,0.4)] overflow-hidden">
         {/* Search Input */}
         <div className="relative flex-1">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7f869e] pointer-events-none">
@@ -1355,24 +1461,21 @@ export default function Codex({
 
   const chapters = log.filter((e) => e.chapterSummary)
 
-  // Ordered by how often a player actually opens each category during play —
-  // quests/NPCs/items/locations/bestiary are live-reference lookups made mid-turn,
-  // faction/lore/projects are occasional check-ins, chapters/campaign are read once and rarely revisited.
+  // Ordered matching classic RPG Codex hierarchy: Realm -> Chapters -> NPCs -> Factions -> Locations -> Lore -> Skills -> Items -> Quests -> Crafting -> Projects -> Bestiary
   const categories: { id: CategoryId; label: string; description: string; icon: LucideIcon; count: number }[] = [
-    { id: 'quests', label: 'Quests', description: 'Active, completed & tracked objectives', icon: Target, count: Object.keys(quests).length },
-    { id: 'npcs', label: 'NPCs', description: 'Companions, allies & trust ratings', icon: Users, count: Object.keys(npcs).length },
-    { id: 'skills', label: 'Skills', description: 'Spells & abilities you have learned', icon: Sparkles, count: Object.keys(skills).length },
-    { id: 'items', label: 'Items', description: 'Equipment, relics & carried goods', icon: Backpack, count: Object.keys(inventory).length },
-    { id: 'locations', label: 'Locations', description: 'Regions, danger levels & standing', icon: Map, count: Object.keys(locations).length },
-    { id: 'bestiary', label: 'Bestiary', description: 'Adversaries encountered in the field — including the recently slain', icon: Skull, count: Object.keys(bestiary).length },
-    { id: 'projects', label: 'Projects', description: 'Builds, repairs & long-running endeavors', icon: Milestone, count: Object.keys(projects).length },
-    { id: 'factions', label: 'Faction', description: 'Political groups, guilds & reputation', icon: ShieldCheck, count: Object.keys(factions).length },
-    { id: 'lore', label: 'Lore', description: 'Legends, myths & discovered secrets', icon: ScrollText, count: Object.keys(lore).length },
-    { id: 'chapters', label: 'Chapters', description: 'Chronological recap of the tale so far', icon: BookOpen, count: chapters.length },
-    { id: 'campaign', label: 'Campaign', description: 'Character attributes & realm cosmology', icon: Globe, count: 1 },
-    { id: 'crafting', label: 'Crafting', description: 'Craft items from held materials', icon: Hammer, count: crafting.length },
+    { id: 'campaign', label: 'Realm', description: 'Cosmology, Setting, Tone & Arcs', icon: Globe, count: 1 },
+    { id: 'chapters', label: 'Chapters', description: 'Chronological Records & Turning Points', icon: BookOpen, count: chapters.length },
+    { id: 'npcs', label: 'NPCs', description: 'NPCs, Companions & Trust Ratings', icon: Users, count: Object.keys(npcs).length },
+    { id: 'factions', label: 'Factions', description: 'Political Cabals, Guilds & Territory', icon: ShieldCheck, count: Object.keys(factions).length },
+    { id: 'locations', label: 'Locations', description: 'Regions, Danger Levels & Map Conditions', icon: Map, count: Object.keys(locations).length },
+    { id: 'lore', label: 'Lore', description: 'Historical Legends, Secrets & Magic', icon: ScrollText, count: Object.keys(lore).length },
+    { id: 'skills', label: 'Skills', description: 'Combat Spells, Techniques & Abilities', icon: Sparkles, count: Object.keys(skills).length },
+    { id: 'items', label: 'Items', description: 'Equipment, Artifacts & Quest Items', icon: Backpack, count: Object.keys(inventory).length },
+    { id: 'quests', label: 'Quests', description: 'Main, Side & Secret Objectives', icon: Target, count: Object.keys(quests).length },
+    { id: 'crafting', label: 'Crafting', description: 'Item Recipes & Material Forging', icon: Hammer, count: crafting.length },
+    { id: 'projects', label: 'Projects', description: 'Endeavors, Builds & Settlements', icon: Milestone, count: Object.keys(projects).length },
+    { id: 'bestiary', label: 'Bestiary', description: 'Adversaries & Field Threats', icon: Skull, count: Object.keys(bestiary).length },
   ]
-  const totalCodexEntries = categories.reduce((sum, c) => sum + c.count, 0)
 
   function back() {
     if (editing) return cancelEdit()
@@ -1409,6 +1512,7 @@ export default function Codex({
       stage: draft.stage,
       trust: draft.trust,
       affection: draft.affection,
+      resolve: draft.resolve ? Number(draft.resolve) as CompetencyTier : undefined,
       memSummary: draft.memSummary,
       deeds: typeof draft.deeds === 'string' ? draft.deeds.split(',').map((s: string) => s.trim()).filter(Boolean) : draft.deeds,
       role: draft.role?.trim() || undefined,
@@ -1646,44 +1750,27 @@ export default function Codex({
     // heavily scrolled reference reading, where a picture behind the text
     // would fight it.
     <LongTextEditorContext.Provider value={editLongText}>
-    <GlassScreen ground="dark" className="px-4 pb-16">
-      <GlassHeader title={title} onBack={back} className="!px-0 mb-5" />
+    <GlassScreen ground="dark" className="px-3 sm:px-4 pb-16 pt-2">
+      <GlassHeader title={title} onBack={back} className="!px-0 mb-3 sm:mb-4" />
 
       {searchFilterBar}
 
-      {/* Level 1 — Category List. Restyled as a single-column "archive tome"
-          list (one gold accent throughout, ornate header) rather than the
-          2-column multi-hued deck grid — mobile-first: one full-width tap
-          target per row instead of two competing for thumb width. Entry
-          grids inside each category (below) keep their own per-category
-          accent identity via DeckEntryCard, untouched. */}
+      {/* Level 1 — Category List. High-end fantasy RPG cards with per-category
+          theming, illuminated icon frames, responsive 1/2-column grid, and clean
+          interactive feedback. */}
       {!category && (
-        <div className="rounded-2xl border border-[#332b18] bg-[#0a0c14]/90 p-4 sm:p-5">
-          <div className="text-center mb-4">
-            <h2 className="font-display font-bold text-lg sm:text-xl uppercase tracking-[0.2em] text-[#f5dfa0]">
-              Codex Archives
-            </h2>
-            <div className="flex items-center justify-center gap-2 mt-2.5 mb-2">
-              <span className="h-px flex-1 max-w-16 bg-gradient-to-r from-transparent to-[#e8ca8a]/50" />
-              <span className="w-1.5 h-1.5 rotate-45 bg-[#e8ca8a]/60 shrink-0" />
-              <span className="h-px flex-1 max-w-16 bg-gradient-to-l from-transparent to-[#e8ca8a]/50" />
-            </div>
-            <span className="font-mono text-[10px] tracking-[0.2em] text-[#a0a5b8]">
-              {totalCodexEntries} TOTAL
-            </span>
-          </div>
-          <div className="flex flex-col gap-2">
-            {categories.map(({ id, label, description, icon: Icon, count }) => (
-              <CodexArchiveRow
-                key={id}
-                icon={Icon}
-                title={label}
-                subtitle={description}
-                count={count}
-                onClick={() => setCategory(id)}
-              />
-            ))}
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          {categories.map(({ id, label, description, icon: Icon, count }) => (
+            <CodexArchiveRow
+              key={id}
+              categoryId={id}
+              icon={Icon}
+              title={label}
+              subtitle={description}
+              count={count}
+              onClick={() => setCategory(id)}
+            />
+          ))}
         </div>
       )}
 
@@ -1820,25 +1907,34 @@ export default function Codex({
         </>
       )}
 
-      {/* Workbenches & Recipes — §5.8 Crafting, its own category (v1.7) rather
-          than an eighth Relics & Vault filter. Station requirements are shown
-          as flavor text only — there's no location-station-type data model
-          yet, so any recipe can currently be queued from wherever the player
-          is standing (see the scope note in lib/crafting.ts). */}
+      {/* Workbenches & Recipes — §5.8 Crafting */}
       {category === 'crafting' && (
         <div className="flex flex-col gap-4">
           {crafting.length > 0 && (
             <div>
-              <p className="text-[11px] font-display text-ink-muted uppercase tracking-wide mb-1.5">In Progress</p>
+              <p className="text-[11px] font-display text-[#fbbf24] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Clock size={12} />
+                <span>In Progress</span>
+              </p>
               <div className="flex flex-col gap-2">
                 {crafting.map((job) => {
                   const recipe = RECIPES.find((r) => r.id === job.recipeId)
                   const remaining = hoursRemaining(player.time, job.completeTime)
                   return (
-                    <div key={job.jobId} className="rounded-xl border border-[#e8ca8a]/25 bg-transparent backdrop-blur-sm px-3 py-2.5 flex items-center justify-between gap-2">
-                      <span className="font-display font-semibold text-sm text-[#e8ca8a]">{recipe?.name ?? job.recipeId}</span>
-                      <span className="inline-flex items-center gap-1 font-mono text-xs text-ink-muted">
-                        <Clock size={12} /> {remaining > 0 ? `${remaining}h remaining` : 'Ready'}
+                    <div
+                      key={job.jobId}
+                      className="rounded-xl border border-amber-500/30 bg-gradient-to-r from-[#181308]/90 to-[#0e1017]/90 px-3.5 py-2.5 flex items-center justify-between gap-3 shadow-md"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-300 shrink-0">
+                          <Hammer size={14} />
+                        </div>
+                        <span className="font-display font-semibold text-sm text-[#fae5b5] truncate">
+                          {recipe?.name ?? job.recipeId}
+                        </span>
+                      </div>
+                      <span className="inline-flex items-center gap-1.5 font-mono text-xs px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 shrink-0">
+                        <Clock size={12} /> {remaining > 0 ? `${remaining}h left` : 'Ready'}
                       </span>
                     </div>
                   )
@@ -1848,28 +1944,57 @@ export default function Codex({
           )}
 
           <div>
-            <p className="text-[11px] font-display text-ink-muted uppercase tracking-wide mb-1.5">Recipes</p>
+            <p className="text-[11px] font-display text-ink-muted uppercase tracking-wider mb-2">
+              Available Blueprints & Recipes
+            </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {RECIPES.map((recipe) => {
                 const affordable = canAffordRecipe(inventory, recipe)
                 return (
-                  <div key={recipe.id} className="rounded-xl p-3 flex flex-col gap-1.5 border border-[#e8ca8a]/25 bg-transparent backdrop-blur-sm">
-                    <div className="flex items-center justify-between gap-2">
-                      <h3 className="font-display font-bold text-sm text-[#e8ca8a]">{recipe.name}</h3>
-                      <span className="inline-flex items-center gap-1 font-mono text-[10px] text-ink-muted">
-                        <Clock size={11} /> {recipe.craftHours}h
-                      </span>
+                  <div
+                    key={recipe.id}
+                    className="rounded-xl p-3.5 flex flex-col justify-between gap-2.5 border border-[#2b3145] bg-gradient-to-br from-[#141724]/90 to-[#0e1017]/90 hover:border-amber-400/60 transition-all shadow-md group"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-display font-bold text-sm text-[#fae5b5] group-hover:text-amber-200 uppercase tracking-wide">
+                          {recipe.name}
+                        </h3>
+                        <span className="inline-flex items-center gap-1 font-mono text-[10px] px-2 py-0.5 rounded-md bg-[#1a1f30] border border-[#2d354e] text-[#a5adc6] shrink-0">
+                          <Clock size={10} className="text-amber-400" /> {recipe.craftHours}h
+                        </span>
+                      </div>
+                      {recipe.stationRequired && (
+                        <p className="font-mono text-[10px] text-amber-300/80 mt-0.5">
+                          Station: {recipe.stationRequired}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {recipe.ingredients.map((i) => {
+                          const held = inventory[i.id] ?? 0
+                          const hasEnough = held >= i.qty
+                          return (
+                            <span
+                              key={i.id}
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono border ${
+                                hasEnough
+                                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                                  : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+                              }`}
+                            >
+                              <span>{i.qty}× {i.id.replace(/_/g, ' ')}</span>
+                              <span className="opacity-70">({held})</span>
+                            </span>
+                          )
+                        })}
+                      </div>
                     </div>
-                    {recipe.stationRequired && <p className="font-narrative text-[11px] text-ink-muted">Station: {recipe.stationRequired}</p>}
-                    <p className="font-narrative text-xs text-ink-muted">
-                      {recipe.ingredients.map((i) => `${i.qty}x ${i.id.replace(/_/g, ' ')} (${inventory[i.id] ?? 0} held)`).join(', ')}
-                    </p>
                     <button
                       onClick={() => onStartCraft(recipe.id)}
                       disabled={!affordable}
-                      className="mt-1 inline-flex items-center justify-center gap-1.5 rounded-full bg-[#e8ca8a] px-4 py-1.5 font-display text-xs font-semibold text-[#0e1017] disabled:opacity-30"
+                      className="mt-1 w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:bg-[#1a1f30] disabled:text-[#64748b] px-3 py-1.5 font-display text-xs font-bold uppercase tracking-wider text-black transition-colors disabled:border disabled:border-[#2d354e]"
                     >
-                      <Hammer size={13} /> Craft
+                      <Hammer size={12} /> Craft Item
                     </button>
                   </div>
                 )
@@ -1879,14 +2004,33 @@ export default function Codex({
         </div>
       )}
 
-      {/* Chapters — generated recap, read-only, no CRUD */}
+      {/* Chapters — generated recap, read-only */}
       {category === 'chapters' && (
         <div className="flex flex-col gap-3">
-          {chapters.length === 0 && <p className="font-narrative italic text-sm text-ink-muted">No chapters recorded yet.</p>}
+          {chapters.length === 0 && (
+            <p className="font-narrative italic text-sm text-ink-muted">No chapters recorded yet.</p>
+          )}
           {chapters.map((c, i) => (
-            <div key={i} className="rounded-2xl p-4 border border-[#e8ca8a]/25 bg-transparent backdrop-blur-sm">
-              <h3 className="font-display font-bold text-sm text-[#e8ca8a] mb-1">Chapter {c.chapterNumber}</h3>
-              <p className="font-narrative text-sm italic text-ink-muted">{c.chapterSummary}</p>
+            <div
+              key={i}
+              className="rounded-xl p-4 border border-[#38bdf8]/30 bg-gradient-to-br from-[#0c1829]/90 via-[#0a1422]/90 to-[#070e17]/95 shadow-lg flex flex-col gap-2 relative overflow-hidden"
+            >
+              <div className="flex items-center justify-between gap-2 border-b border-sky-500/20 pb-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-sky-500/20 border border-sky-400/40 flex items-center justify-center text-sky-300 shrink-0">
+                    <BookOpen size={14} />
+                  </div>
+                  <h3 className="font-display font-bold text-sm text-[#bae6fd] uppercase tracking-wide">
+                    Chapter {c.chapterNumber}
+                  </h3>
+                </div>
+                <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-sky-500/15 border border-sky-500/30 text-sky-300">
+                  Archived
+                </span>
+              </div>
+              <p className="font-narrative text-xs sm:text-sm text-[#d4e7f8] leading-relaxed italic">
+                "{c.chapterSummary}"
+              </p>
             </div>
           ))}
         </div>
@@ -1944,6 +2088,7 @@ export default function Codex({
               <TextField label="Stage" value={draft.stage ?? ''} onChange={(v) => setDraft((d) => ({ ...d, stage: v }))} placeholder="Stranger, Acquaintance, Friend…" />
               <TierField label="Trust" value={draft.trust ?? 1} scale={COMPETENCY_TIERS} onChange={(v) => setDraft((d) => ({ ...d, trust: v }))} />
               <TierField label="Affection" value={draft.affection ?? 1} scale={COMPETENCY_TIERS} onChange={(v) => setDraft((d) => ({ ...d, affection: v }))} />
+              <TierField label="Resolve (Social Defense)" value={draft.resolve ?? 1} scale={COMPETENCY_TIERS} onChange={(v) => setDraft((d) => ({ ...d, resolve: v }))} />
               <label className="block">
                 <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Faction</span>
                 <select
@@ -1986,6 +2131,9 @@ export default function Codex({
                 <div className="flex flex-col gap-2 pt-1">
                   <StatBar label="Trust" value={npcs[entryId].trust} max={5} displayValue={trustWord(npcs[entryId].trust)} />
                   <StatBar label="Affection" value={npcs[entryId].affection} max={5} displayValue={npcs[entryId].stage} />
+                  {npcs[entryId].resolve !== undefined && (
+                    <StatBar label="Resolve" value={npcs[entryId].resolve!} max={5} displayValue={tierToWord(npcs[entryId].resolve!, COMPETENCY_TIERS)} />
+                  )}
                 </div>
               </SectionCard>
               <SectionCard accent={CATEGORY_ACCENTS.npcs} icon={User} title="Profile">

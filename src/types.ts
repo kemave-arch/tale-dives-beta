@@ -500,6 +500,7 @@ export interface UiPrefs {
   debugMode?: boolean // Debug mode toggle in Settings — when ON, bypasses 4s Title delay & enables dev diagnostics
   introGazeDelay?: boolean // When true (default), Dive In pauses for 4s showing "Initializing..." to admire wallpapers
   autoCloudBackup?: boolean // Automatically save backup to Google Drive Slot 1 on chapter completion & milestones
+  graphicsMode?: 'glass' | 'performance' // Graphics tab — 'performance' strips backdrop-filter blur app-wide (flat transparency, same colors) for weaker mobile GPUs
 }
 
 // §7.3 JSON Schema — the shape of a single turn response from the model.

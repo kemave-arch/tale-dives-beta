@@ -85,6 +85,7 @@ export function loadUiPrefs(): UiPrefs {
     debugMode: false,
     introGazeDelay: true,
     autoCloudBackup: false,
+    graphicsMode: 'glass',
     ...load<Partial<UiPrefs>>(KEYS.uiPrefs, {}),
   }
 }

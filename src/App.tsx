@@ -414,6 +414,13 @@ export default function App() {
 
   useEffect(() => { store.saveApiSettings(apiSettings) }, [apiSettings])
   useEffect(() => { store.saveUiPrefs(uiPrefs) }, [uiPrefs])
+  // Graphics > Performance (Settings) — strips backdrop-filter blur app-wide
+  // via a CSS override keyed on this class (index.css), rather than a
+  // per-component prop thread — every glass surface in the app picks it up
+  // for free since they're all the same Tailwind backdrop-blur-* utilities.
+  useEffect(() => {
+    document.documentElement.classList.toggle('gfx-performance', uiPrefs.graphicsMode === 'performance')
+  }, [uiPrefs.graphicsMode])
   useEffect(() => { store.saveWorlds(worlds) }, [worlds])
   useEffect(() => { store.saveProtagonists(protagonists) }, [protagonists])
   useEffect(() => { store.saveCampaigns(campaigns) }, [campaigns])

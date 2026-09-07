@@ -3,7 +3,7 @@ import {
   Cpu, SlidersHorizontal, HardDrive, Cloud, X, Download, Upload, RotateCcw,
   FolderOpen, FolderX, Maximize, Minimize, Trash2, Volume2, VolumeX,
   CloudUpload, CloudDownload, Loader2, Check, RefreshCw, KeyRound, Bot, Server,
-  Dice5, Layers, Swords, Monitor, Bug, UserCircle, History, AlertTriangle, LogOut,
+  Dice5, Layers, Swords, Monitor, Bug, UserCircle, History, AlertTriangle, LogOut, Gauge,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { PROSE_DEPTHS } from '../api/turnContract.ts'
@@ -21,6 +21,7 @@ import type { ApiSettings, Campaign, CombatMode, UiPrefs } from '../types.ts'
 const TABS = [
   { id: 'model', label: 'AI Model', icon: Cpu },
   { id: 'gameplay', label: 'Gameplay', icon: SlidersHorizontal },
+  { id: 'graphics', label: 'Graphics', icon: Gauge },
   { id: 'local', label: 'Local', icon: HardDrive },
   { id: 'cloud', label: 'Cloud', icon: Cloud },
 ] as const
@@ -99,6 +100,7 @@ export default function Settings({
   const [temperature, setTemperature] = useState(apiSettings.temperature)
   const [chromeOpacity, setChromeOpacity] = useState(uiPrefs.chromeOpacity)
   const [debugMode, setDebugMode] = useState<boolean>(uiPrefs.debugMode ?? false)
+  const [graphicsMode, setGraphicsMode] = useState<'glass' | 'performance'>(uiPrefs.graphicsMode ?? 'glass')
   const [introGazeDelay, setIntroGazeDelay] = useState<boolean>(uiPrefs.introGazeDelay ?? true)
   const [proseDepthKey, setProseDepthKey] = useState<keyof typeof PROSE_DEPTHS>(
     (game?.proseDepth?.label as keyof typeof PROSE_DEPTHS) ?? 'BALANCED',
@@ -300,7 +302,7 @@ export default function Settings({
   function save() {
     onSave({
       apiSettings: { provider, model, apiKey, temperature },
-      uiPrefs: { chromeOpacity, debugMode, introGazeDelay, autoCloudBackup },
+      uiPrefs: { chromeOpacity, debugMode, introGazeDelay, autoCloudBackup, graphicsMode },
       proseDepthKey,
       combatMode,
     })
@@ -338,10 +340,10 @@ export default function Settings({
           </div>
         </div>
 
-        {/* 4 flat icon tabs — Local/Cloud used to be a subtab nested inside
+        {/* 5 flat icon tabs — Local/Cloud used to be a subtab nested inside
             a 3rd "Storage" tab; now peers, so nothing reads as buried a
             level down, and each tab's own content stays shorter. */}
-        <nav className="shrink-0 grid grid-cols-4 gap-1 px-5 pb-1">
+        <nav className="shrink-0 grid grid-cols-5 gap-1 px-5 pb-1">
           {TABS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -507,6 +509,33 @@ export default function Settings({
                     else setIntroGazeDelay(true)
                   }}
                 />
+              </div>
+            </div>
+          )}
+
+          {tab === 'graphics' && (
+            <div className="flex flex-col gap-5">
+              <div>
+                <FieldLabel
+                  icon={Gauge}
+                  tip="Glass keeps the frosted-blur look on every panel, card, and popup. Performance drops the blur entirely (same colors, same borders, just flat and see-through) — the single biggest thing you can turn off if the app feels laggy or stuttery on your phone."
+                >
+                  Rendering
+                </FieldLabel>
+                <GlassSegmented
+                  className="mt-2"
+                  options={[
+                    { id: 'glass', label: 'Glass' },
+                    { id: 'performance', label: 'Performance' },
+                  ] as const}
+                  value={graphicsMode}
+                  onChange={setGraphicsMode}
+                />
+                <p className="font-narrative italic text-xs text-[#d8c49e] mt-1.5">
+                  {graphicsMode === 'performance'
+                    ? 'Blur is off everywhere — lighter on weaker GPUs.'
+                    : 'Frosted glass on every surface — the full look, heavier to render.'}
+                </p>
               </div>
             </div>
           )}

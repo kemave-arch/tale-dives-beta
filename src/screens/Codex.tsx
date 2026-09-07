@@ -693,6 +693,53 @@ function DeckEntryCard({
   )
 }
 
+// Codex Archives — the top-level Category List, styled as a single-column
+// ornate archive-tome row list: one consistent gold accent throughout rather
+// than the multi-hued per-category accent grid DeckEntryCard uses everywhere
+// else (entry grids inside each category keep their own color identity,
+// untouched — this restyle is scoped to the outermost list only, mobile-first
+// with a single full-width tap target per row instead of a 2-column grid).
+function CodexArchiveRow({
+  icon: Icon, title, subtitle, count, onClick,
+}: {
+  icon: LucideIcon
+  title: string
+  subtitle: string
+  count: number
+  onClick: () => void
+}) {
+  return (
+    <div
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick() }}
+      className="group flex items-center gap-3 sm:gap-4 rounded-xl border border-[#332b18] bg-[#0d0f18]/70 px-3.5 py-3 sm:px-4 sm:py-3.5 cursor-pointer transition-all duration-200 active:scale-[0.99] hover:border-[#e8ca8a]/70 hover:bg-[#171308]/60 hover:shadow-[0_0_16px_rgba(232,202,138,0.15)]"
+    >
+      <div className="w-11 h-11 sm:w-12 sm:h-12 shrink-0 rounded-lg border border-[#e8ca8a]/40 bg-[#171308]/80 flex items-center justify-center text-[#e8ca8a] group-hover:border-[#f0ca65]/80 group-hover:text-[#f0ca65] group-hover:scale-105 transition-all">
+        <Icon size={20} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <h3 className="font-display font-bold text-sm sm:text-base text-[#f5dfa0] uppercase tracking-wide truncate group-hover:text-[#fde68a]">
+          {title}
+        </h3>
+        <p className="font-narrative text-[11px] sm:text-xs text-[#8b93ab] truncate mt-0.5">
+          {subtitle}
+        </p>
+      </div>
+      <div
+        className={`shrink-0 min-w-[2.5rem] text-center rounded-lg border px-2.5 py-1 font-mono text-sm ${
+          count > 0
+            ? 'border-[#e8ca8a]/45 bg-[#e8ca8a]/10 text-[#f0ca65]'
+            : 'border-[#2d3348] bg-[#141724]/60 text-[#5c6178]'
+        }`}
+      >
+        {count}
+      </div>
+    </div>
+  )
+}
+
 // Modern horizontal subtab navigator for category entries.
 interface SubtabItem {
   id: string
@@ -1325,6 +1372,7 @@ export default function Codex({
     { id: 'campaign', label: 'Campaign', description: 'Character attributes & realm cosmology', icon: Globe, count: 1 },
     { id: 'crafting', label: 'Crafting', description: 'Craft items from held materials', icon: Hammer, count: crafting.length },
   ]
+  const totalCodexEntries = categories.reduce((sum, c) => sum + c.count, 0)
 
   function back() {
     if (editing) return cancelEdit()
@@ -1603,38 +1651,38 @@ export default function Codex({
 
       {searchFilterBar}
 
-      {/* Level 1 — Category List, one accent identity per category (see
-          CATEGORY_ACCENTS above) so this reads as a deck of distinct card
-          kinds rather than a flat settings-style list. */}
+      {/* Level 1 — Category List. Restyled as a single-column "archive tome"
+          list (one gold accent throughout, ornate header) rather than the
+          2-column multi-hued deck grid — mobile-first: one full-width tap
+          target per row instead of two competing for thumb width. Entry
+          grids inside each category (below) keep their own per-category
+          accent identity via DeckEntryCard, untouched. */}
       {!category && (
-        <div className="rounded-2xl border border-[#23283b] bg-[#0d0f18]/80 p-3.5 sm:p-4">
-          <div className="flex items-center justify-between mb-3 px-1">
-            <h2 className="font-display font-bold text-xs uppercase tracking-widest text-[#e8ca8a]/90">
-              CODEX ARCHIVES
+        <div className="rounded-2xl border border-[#332b18] bg-[#0a0c14]/90 p-4 sm:p-5">
+          <div className="text-center mb-4">
+            <h2 className="font-display font-bold text-lg sm:text-xl uppercase tracking-[0.2em] text-[#f5dfa0]">
+              Codex Archives
             </h2>
-            <span className="font-mono text-[10px] text-[#a0a5b8]">
-              {categories.length} CATEGORIES
+            <div className="flex items-center justify-center gap-2 mt-2.5 mb-2">
+              <span className="h-px flex-1 max-w-16 bg-gradient-to-r from-transparent to-[#e8ca8a]/50" />
+              <span className="w-1.5 h-1.5 rotate-45 bg-[#e8ca8a]/60 shrink-0" />
+              <span className="h-px flex-1 max-w-16 bg-gradient-to-l from-transparent to-[#e8ca8a]/50" />
+            </div>
+            <span className="font-mono text-[10px] tracking-[0.2em] text-[#a0a5b8]">
+              {totalCodexEntries} TOTAL
             </span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {categories.map(({ id, label, description, icon: Icon, count }) => {
-              const accent = (CATEGORY_ACCENTS as Record<string, CategoryAccent>)[id] ?? NEUTRAL_ACCENT
-              return (
-                <DeckEntryCard
-                  key={id}
-                  accent={accent}
-                  icon={Icon}
-                  title={label}
-                  subtitle={description}
-                  badge={
-                    <span className={count > 0 ? accent.badge : `${accent.badge} opacity-60`}>
-                      {count}
-                    </span>
-                  }
-                  onClick={() => setCategory(id)}
-                />
-              )
-            })}
+          <div className="flex flex-col gap-2">
+            {categories.map(({ id, label, description, icon: Icon, count }) => (
+              <CodexArchiveRow
+                key={id}
+                icon={Icon}
+                title={label}
+                subtitle={description}
+                count={count}
+                onClick={() => setCategory(id)}
+              />
+            ))}
           </div>
         </div>
       )}

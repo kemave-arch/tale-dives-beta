@@ -1604,7 +1604,7 @@ export default function Codex({
               <DetailField label="Level" value={String(player.level)} />
               <DetailField
                 label="Attributes"
-                value={`STR ${Math.round(player.attrs.STR)} · INT ${Math.round(player.attrs.INT)} · AGI ${Math.round(player.attrs.AGI)}`}
+                value={`STR ${tierToWord(player.attrs.STR, COMPETENCY_TIERS)} · INT ${tierToWord(player.attrs.INT, COMPETENCY_TIERS)} · AGI ${tierToWord(player.attrs.AGI, COMPETENCY_TIERS)}`}
               />
               <DetailField
                 label="Conditions"

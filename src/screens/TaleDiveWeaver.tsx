@@ -149,10 +149,10 @@ export default function TaleDiveWeaver({
           modal is open (see the !activeModal gate on <main> below) — a
           node form's own backdrop was sitting over these still-animating
           layers, forcing continuous re-blur on every frame while editing. */}
+      {/* Ambient background scrim (GPU-friendly, no distracting pulsing) */}
       {!activeModal && (
-        <div className="absolute inset-0 z-0 pointer-events-none opacity-40 overflow-hidden">
-          <div className="sw-spark absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-amber-500/10 blur-3xl animate-pulse" />
-          <div className="sw-spark absolute bottom-1/3 right-1/4 w-96 h-96 rounded-full bg-purple-600/15 blur-3xl animate-pulse" />
+        <div className="absolute inset-0 z-0 pointer-events-none opacity-30 overflow-hidden">
+          <div className="sw-spark absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-amber-500/10 blur-3xl" />
         </div>
       )}
 
@@ -212,7 +212,7 @@ export default function TaleDiveWeaver({
           animating layer behind a blurred glass sheet is not. */}
       {!activeModal && (
       <main className="relative z-10 flex-1 flex flex-col items-center justify-center p-2 sm:p-4 min-h-0 overflow-y-auto">
-        <div className="relative w-full max-w-2xl aspect-[3/4] sm:aspect-square max-h-[72vh] flex items-center justify-center my-auto">
+        <div className="relative w-full max-w-xl aspect-square max-h-[70vh] flex items-center justify-center my-auto">
           {/* Animated SVG Ley-Lines & Star Nexus */}
           <svg
             className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-visible"
@@ -236,6 +236,29 @@ export default function TaleDiveWeaver({
                 <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.8" />
               </linearGradient>
 
+              {/* Radiant Diamond Gradients connecting the 4 nodes */}
+              <linearGradient id="diamond-gradient" x1="200" y1="65" x2="200" y2="285" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.8" />
+                <stop offset="50%" stopColor="#38bdf8" stopOpacity="0.8" />
+                <stop offset="100%" stopColor="#c084fc" stopOpacity="0.85" />
+              </linearGradient>
+              <linearGradient id="leyline-top-left" x1="200" y1="65" x2="90" y2="175" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.85" />
+                <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.85" />
+              </linearGradient>
+              <linearGradient id="leyline-top-right" x1="200" y1="65" x2="310" y2="175" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.85" />
+                <stop offset="100%" stopColor="#10b981" stopOpacity="0.85" />
+              </linearGradient>
+              <linearGradient id="leyline-left-bottom" x1="90" y1="175" x2="200" y2="285" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.85" />
+                <stop offset="100%" stopColor="#a855f7" stopOpacity="0.85" />
+              </linearGradient>
+              <linearGradient id="leyline-right-bottom" x1="310" y1="175" x2="200" y2="285" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#10b981" stopOpacity="0.85" />
+                <stop offset="100%" stopColor="#a855f7" stopOpacity="0.85" />
+              </linearGradient>
+
               {/* Glowing Filter */}
               <filter id="glow-leyline" x="-20%" y="-20%" width="140%" height="140%">
                 <feGaussianBlur stdDeviation="3" result="blur" />
@@ -243,75 +266,85 @@ export default function TaleDiveWeaver({
               </filter>
             </defs>
 
-            {/* Diamond Outer Boundary Ring */}
+            {/* Spinning Dashed Outer Boundary Ring */}
             <polygon
-              points="200,45 355,200 200,355 45,200"
+              points="200,65 310,175 200,285 90,175"
               fill="none"
               stroke="rgba(232,202,138,0.2)"
               strokeWidth="1.5"
               strokeDasharray="4 6"
               className="animate-[spin_120s_linear_infinite]"
-              style={{ transformOrigin: '200px 200px' }}
+              style={{ transformOrigin: '200px 175px' }}
+            />
+
+            {/* Fixed Diamond Shape with Gradient aligned to all 4 node centers */}
+            <polygon
+              points="200,65 310,175 200,285 90,175"
+              fill="none"
+              stroke="url(#diamond-gradient)"
+              strokeWidth="2"
+              filter="url(#glow-leyline)"
             />
 
             {/* Central Leyline Cross connecting all 4 nodes */}
             <line
               x1="200"
-              y1="45"
+              y1="65"
               x2="200"
-              y2="355"
+              y2="285"
               stroke={canUnlockNarrative ? 'url(#leyline-purple)' : 'rgba(232,202,138,0.3)'}
               strokeWidth={canUnlockNarrative ? '2.5' : '1.5'}
               filter="url(#glow-leyline)"
               className="transition-all duration-700"
             />
             <line
-              x1="45"
-              y1="200"
-              x2="355"
-              y2="200"
+              x1="90"
+              y1="175"
+              x2="310"
+              y2="175"
               stroke="url(#leyline-gold)"
               strokeWidth="2"
               filter="url(#glow-leyline)"
             />
 
-            {/* Diagonal Ley Lines */}
-            <line x1="200" y1="45" x2="45" y2="200" stroke="rgba(56,189,248,0.4)" strokeWidth="1.5" />
-            <line x1="200" y1="45" x2="355" y2="200" stroke="rgba(16,185,129,0.4)" strokeWidth="1.5" />
+            {/* Diagonal Ley Lines connecting corner tips */}
+            <line x1="200" y1="65" x2="90" y2="175" stroke="url(#leyline-top-left)" strokeWidth="1.5" filter="url(#glow-leyline)" />
+            <line x1="200" y1="65" x2="310" y2="175" stroke="url(#leyline-top-right)" strokeWidth="1.5" filter="url(#glow-leyline)" />
             <line
-              x1="45"
-              y1="200"
+              x1="90"
+              y1="175"
               x2="200"
-              y2="355"
-              stroke={canUnlockNarrative ? 'rgba(168,85,247,0.5)' : 'rgba(255,255,255,0.1)'}
+              y2="285"
+              stroke={canUnlockNarrative ? 'url(#leyline-left-bottom)' : 'rgba(56,189,248,0.25)'}
               strokeWidth="1.5"
+              filter="url(#glow-leyline)"
             />
             <line
-              x1="355"
-              y1="200"
+              x1="310"
+              y1="175"
               x2="200"
-              y2="355"
-              stroke={canUnlockNarrative ? 'rgba(168,85,247,0.5)' : 'rgba(255,255,255,0.1)'}
+              y2="285"
+              stroke={canUnlockNarrative ? 'url(#leyline-right-bottom)' : 'rgba(16,185,129,0.25)'}
               strokeWidth="1.5"
+              filter="url(#glow-leyline)"
             />
 
-            {/* Central Astral Starburst Nexus */}
+            {/* Central Astral Starburst Nexus (Stationary, Clean, No Ping) */}
             <circle
               cx="200"
-              cy="200"
-              r={canUnlockNarrative ? '18' : '12'}
-              fill={canUnlockNarrative ? 'rgba(168,85,247,0.3)' : 'rgba(232,202,138,0.2)'}
-              className="animate-ping opacity-75 duration-1000"
+              cy="175"
+              r={canUnlockNarrative ? '14' : '10'}
+              fill={canUnlockNarrative ? 'rgba(168,85,247,0.25)' : 'rgba(232,202,138,0.15)'}
             />
             <circle
               cx="200"
-              cy="200"
-              r="8"
+              cy="175"
+              r="7"
               fill={canUnlockNarrative ? '#d8b4fe' : '#f0ca65'}
               filter="url(#glow-leyline)"
             />
             <path
-              d="M200,185 L203,197 L215,200 L203,203 L200,215 L197,203 L185,200 L197,197 Z"
+              d="M200,160 L203,172 L215,175 L203,178 L200,190 L197,178 L185,175 L197,172 Z"
               fill="#ffffff"
             />
           </svg>
@@ -319,7 +352,7 @@ export default function TaleDiveWeaver({
           {/* ========================================================= */}
           {/* 1. TOP NODE: PROTAGONIST (Gold / Amber) */}
           {/* ========================================================= */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 z-10 flex flex-col items-center">
+          <div className="absolute top-[16.25%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -365,7 +398,7 @@ export default function TaleDiveWeaver({
             {/* Information Card Banner */}
             <div
               onClick={() => setActiveModal('protagonist')}
-              className="mt-1.5 px-3 py-1.5 rounded-xl bg-[#151022]/90 border border-amber-500/40 backdrop-blur-md shadow-xl text-center max-w-[170px] sm:max-w-[200px] cursor-pointer hover:border-amber-400 transition-colors"
+              className="absolute top-full mt-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-[#151022]/90 border border-amber-500/40 backdrop-blur-md shadow-xl text-center w-max max-w-[150px] sm:max-w-[185px] cursor-pointer hover:border-amber-400 transition-colors pointer-events-auto"
             >
               <h3 className="font-display font-bold text-xs sm:text-sm text-[#fae5b5] tracking-wide uppercase flex items-center justify-center gap-1">
                 <User size={12} className="text-amber-400" />
@@ -374,7 +407,7 @@ export default function TaleDiveWeaver({
               <p className="font-display text-[10px] text-amber-300/90 truncate font-semibold">
                 {protagonist.name || 'Unnamed Hero'}
               </p>
-              <ul className="text-[9px] text-[#d8c49e]/80 text-left mt-0.5 space-y-0.2 font-narrative">
+              <ul className="text-[9px] text-[#d8c49e]/80 text-left mt-0.5 space-y-0.2 font-sans">
                 <li className="truncate">• Class: {protagonist.className || 'Adventurer'}</li>
                 <li className="truncate">• Origin: {protagonist.gender || 'Any'}, {protagonist.age || 20}y</li>
                 <li className="truncate">• Skills: {protagonist.startingSkills?.length || 0} Abilities</li>
@@ -385,7 +418,7 @@ export default function TaleDiveWeaver({
           {/* ========================================================= */}
           {/* 2. LEFT NODE: WORLD (Cyan / Azure) */}
           {/* ========================================================= */}
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 z-10 flex flex-col items-center">
+          <div className="absolute top-[43.75%] left-[22.5%] -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -427,7 +460,7 @@ export default function TaleDiveWeaver({
 
             <div
               onClick={() => setActiveModal('world')}
-              className="mt-1.5 px-3 py-1.5 rounded-xl bg-[#0b1622]/90 border border-sky-500/40 backdrop-blur-md shadow-xl text-center max-w-[155px] sm:max-w-[185px] cursor-pointer hover:border-sky-400 transition-colors"
+              className="absolute top-full mt-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-[#0b1622]/90 border border-sky-500/40 backdrop-blur-md shadow-xl text-center w-max max-w-[145px] sm:max-w-[175px] cursor-pointer hover:border-sky-400 transition-colors pointer-events-auto"
             >
               <h3 className="font-display font-bold text-xs sm:text-sm text-[#bae6fd] tracking-wide uppercase flex items-center justify-center gap-1">
                 <Globe size={12} className="text-sky-400" />
@@ -436,7 +469,7 @@ export default function TaleDiveWeaver({
               <p className="font-display text-[10px] text-sky-300/90 truncate font-semibold">
                 {world.name || 'Custom Realm'}
               </p>
-              <ul className="text-[9px] text-[#93c5fd]/80 text-left mt-0.5 space-y-0.2 font-narrative">
+              <ul className="text-[9px] text-[#93c5fd]/80 text-left mt-0.5 space-y-0.2 font-sans">
                 <li className="truncate">• Tone: {world.genreTone || 'Fantasy'}</li>
                 <li className="truncate">• Sites: {world.locationsList?.length || 0} Locations</li>
                 <li className="truncate">• Powers: {world.factionsList?.length || 0} Factions</li>
@@ -447,7 +480,7 @@ export default function TaleDiveWeaver({
           {/* ========================================================= */}
           {/* 3. RIGHT NODE: NPCs (Emerald / Jade) */}
           {/* ========================================================= */}
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 z-10 flex flex-col items-center">
+          <div className="absolute top-[43.75%] left-[77.5%] -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -489,7 +522,7 @@ export default function TaleDiveWeaver({
 
             <div
               onClick={() => setActiveModal('npcs')}
-              className="mt-1.5 px-3 py-1.5 rounded-xl bg-[#091a13]/90 border border-emerald-500/40 backdrop-blur-md shadow-xl text-center max-w-[155px] sm:max-w-[185px] cursor-pointer hover:border-emerald-400 transition-colors"
+              className="absolute top-full mt-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-[#091a13]/90 border border-emerald-500/40 backdrop-blur-md shadow-xl text-center w-max max-w-[145px] sm:max-w-[175px] cursor-pointer hover:border-emerald-400 transition-colors pointer-events-auto"
             >
               <h3 className="font-display font-bold text-xs sm:text-sm text-[#a7f3d0] tracking-wide uppercase flex items-center justify-center gap-1">
                 <Users size={12} className="text-emerald-400" />
@@ -498,7 +531,7 @@ export default function TaleDiveWeaver({
               <p className="font-display text-[10px] text-emerald-300/90 truncate font-semibold">
                 {npcs.length} Key Characters
               </p>
-              <ul className="text-[9px] text-[#6ee7b7]/80 text-left mt-0.5 space-y-0.2 font-narrative">
+              <ul className="text-[9px] text-[#6ee7b7]/80 text-left mt-0.5 space-y-0.2 font-sans">
                 <li className="truncate">• Starting Roster: Mapped</li>
                 <li className="truncate">• Bonds & Gear: Configured</li>
               </ul>
@@ -508,7 +541,7 @@ export default function TaleDiveWeaver({
           {/* ========================================================= */}
           {/* 4. BOTTOM NODE: NARRATIVE (Purple / Arcane Violet) */}
           {/* ========================================================= */}
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-2 z-10 flex flex-col items-center">
+          <div className="absolute top-[71.25%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center">
             <motion.button
               whileHover={canUnlockNarrative ? { scale: 1.08 } : {}}
               whileTap={canUnlockNarrative ? { scale: 0.95 } : {}}
@@ -532,7 +565,7 @@ export default function TaleDiveWeaver({
               />
 
               <div
-                className={`relative w-22 h-22 sm:w-26 sm:h-26 rounded-full overflow-hidden border-2 transition-all duration-500 bg-[#160c24] ${
+                className={`relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-2 transition-all duration-500 bg-[#160c24] ${
                   canUnlockNarrative
                     ? 'border-[#c084fc] shadow-[0_0_30px_rgba(192,132,252,0.8)] ring-4 ring-purple-500/30'
                     : 'border-purple-900/60 shadow-none'
@@ -574,7 +607,7 @@ export default function TaleDiveWeaver({
               onClick={() => {
                 if (canUnlockNarrative) setActiveModal('narrative')
               }}
-              className={`mt-1.5 px-3 py-1.5 rounded-xl backdrop-blur-md shadow-xl text-center max-w-[170px] sm:max-w-[200px] transition-all ${
+              className={`absolute top-full mt-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl backdrop-blur-md shadow-xl text-center w-max max-w-[150px] sm:max-w-[185px] transition-all pointer-events-auto ${
                 canUnlockNarrative
                   ? 'bg-[#1b0f2e]/95 border border-purple-400/60 hover:border-purple-300 cursor-pointer shadow-purple-950/50'
                   : 'bg-[#120a20]/75 border border-purple-900/30 text-purple-400/60'
@@ -587,7 +620,7 @@ export default function TaleDiveWeaver({
               <p className="font-display text-[10px] text-purple-300/90 truncate font-semibold">
                 {narrative.title || 'Prologue & Dive'}
               </p>
-              <ul className="text-[9px] text-[#d8b4fe]/80 text-left mt-0.5 space-y-0.2 font-narrative">
+              <ul className="text-[9px] text-[#d8b4fe]/80 text-left mt-0.5 space-y-0.2 font-sans">
                 <li className="truncate">• Style: {narrative.narrationStyle ? 'Configured' : 'Default'}</li>
                 <li className="truncate">• Hook: {narrative.opening ? 'Defined' : 'Default'}</li>
               </ul>

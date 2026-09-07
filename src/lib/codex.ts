@@ -4,7 +4,7 @@ import { parseKeywordLinks } from './keywordLinks.ts'
 import { ensureLocation } from './locations.ts'
 import { emptyNpc } from './npcs.ts'
 import { emptySkill } from './skills.ts'
-import type { BestiaryEntry, Dict, FactionEntry, LocationEntry, LoreEntry, NpcEntry, QuestEntry, SkillEntry } from '../types.ts'
+import type { BestiaryEntry, Dict, EnrichUpdate, FactionEntry, LocationEntry, LoreEntry, NpcEntry, QuestEntry, SkillEntry } from '../types.ts'
 
 function ensureStub<T extends { autoLogged?: boolean; loggedAt?: string }>(
   dict: Dict<T> | undefined,
@@ -90,4 +90,34 @@ export function applyKeywordLinks(codex: CodexDicts, nar: string | undefined, tu
   }
 
   return { locations, npcs, factions, lore, quests, bestiary, skills }
+}
+
+// §Narrative-First Overhaul — applies this turn's <enrich lore/beast> tags,
+// the one per-turn content-update path Lore never had at all and Bestiary's
+// own {{Term|beast}} stub otherwise never grows past a bare name/threatTier.
+// Mirrors ensureLocation's own "auto-register a stub if genuinely new, then
+// layer this turn's real content onto it" shape — an <enrich> can arrive for
+// an id no {{Term}} tag or prior turn ever mentioned, so it still needs to
+// stand up a fresh stub rather than assume the entry already exists.
+export function applyEnrichUpdates(
+  lore: Dict<LoreEntry> | undefined,
+  bestiary: Dict<BestiaryEntry> | undefined,
+  updates: EnrichUpdate[] = [],
+  turnRef?: string,
+): { lore: Dict<LoreEntry>; bestiary: Dict<BestiaryEntry> } {
+  let loreDict = lore ?? {}
+  let bestiaryDict = bestiary ?? {}
+
+  for (const u of updates) {
+    if (!u.id) continue
+    if (u.kind === 'lore') {
+      loreDict = ensureStub(loreDict, u.id, () => ({ name: u.id, category: 'Unknown' }), turnRef)
+      loreDict = { ...loreDict, [u.id]: { ...loreDict[u.id], content: u.desc } }
+    } else {
+      bestiaryDict = ensureStub(bestiaryDict, u.id, () => ({ name: u.id, threatTier: 'unknown' as const }), turnRef)
+      bestiaryDict = { ...bestiaryDict, [u.id]: { ...bestiaryDict[u.id], description: u.desc } }
+    }
+  }
+
+  return { lore: loreDict, bestiary: bestiaryDict }
 }

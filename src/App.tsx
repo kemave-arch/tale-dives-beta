@@ -26,7 +26,7 @@ import { buildContextSlice } from './lib/jitContext.ts'
 import { applyTurn } from './lib/shadowReferee.ts'
 import { ensureLocation } from './lib/locations.ts'
 import { applyNpcUpdates } from './lib/npcs.ts'
-import { applyKeywordLinks } from './lib/codex.ts'
+import { applyKeywordLinks, applyEnrichUpdates } from './lib/codex.ts'
 import { applyQuestUpdate } from './lib/quests.ts'
 import { applySkillLearn } from './lib/skills.ts'
 import { applyInventoryChanges, equipItem, unequipSlot } from './lib/inventory.ts'
@@ -971,11 +971,17 @@ export default function App() {
         }
       }
 
+      // §Narrative-First Overhaul — <enrich lore/beast> fills in or expands
+      // Codex content for an entity type that otherwise has no per-turn
+      // update path (Lore) or whose stub the {{Term|beast}} keyword pass
+      // alone never grows past a bare name/threatTier (Bestiary).
+      const enriched = applyEnrichUpdates(linked.lore, nextBestiary, turn.enrich, turnRef)
+
       // §5.12 Codex Discovery — zero-token reveal check against this turn's
       // own deltas (flag_add/loc_id/npc_mem_up/quest_update), run last so it
       // sees the final merged flag list from above.
       const reveals = checkCodexReveals(
-        { npcs: nextNpcs, locations: nextLocations, factions: nextFactions, lore: linked.lore, quests: nextQuests, bestiary: nextBestiary },
+        { npcs: nextNpcs, locations: nextLocations, factions: nextFactions, lore: enriched.lore, quests: nextQuests, bestiary: enriched.bestiary },
         turn,
         nextFlags,
       )

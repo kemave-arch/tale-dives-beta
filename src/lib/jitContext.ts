@@ -138,18 +138,28 @@ export function buildContextSlice(state: Campaign, craftReadyLine?: string | nul
   // model itself named and gave an id to, but not for one that already
   // existed in the Codex before the model ever saw it (player-authored, or
   // World-Seeded).
+  // §5.12 Discovery — a hidden entry's bare name must not leak here even
+  // though it costs 0 tokens to mask elsewhere: without this filter, the
+  // model sees "Locations: The Hollow Vault (id: hollow_vault)" every turn
+  // regardless of whether the player has actually discovered it yet, which
+  // both spoils the tease and invites the narrator to reference a place the
+  // player has no in-fiction way of knowing about.
   const otherLocationNames = Object.entries(locations ?? {})
-    .filter(([id]) => id !== player.locId)
+    .filter(([id, l]) => id !== player.locId && !isHidden(l))
     .map(([id, l]) => `${l.name} (id: ${id})`)
     .slice(-MAX_KNOWN_NAMES)
   const elsewhereNpcNames = Object.entries(npcs ?? {})
-    .filter(([, n]) => n.lastSeenLocId !== player.locId)
+    .filter(([, n]) => n.lastSeenLocId !== player.locId && !isHidden(n))
     .map(([id, n]) => `${n.name} (id: ${id})`)
     .slice(-MAX_KNOWN_NAMES)
   const factionNames = Object.entries(factions ?? {})
+    .filter(([, f]) => !isHidden(f))
     .map(([id, f]) => `${f.name} (id: ${id})`)
     .slice(-MAX_KNOWN_NAMES)
-  const loreNames = Object.values(lore ?? {}).map((l) => l.name).slice(-MAX_KNOWN_NAMES)
+  const loreNames = Object.values(lore ?? {})
+    .filter((l) => !isHidden(l))
+    .map((l) => l.name)
+    .slice(-MAX_KNOWN_NAMES)
 
   const knownSegments = [
     otherLocationNames.length && `Locations: ${otherLocationNames.join(', ')}`,

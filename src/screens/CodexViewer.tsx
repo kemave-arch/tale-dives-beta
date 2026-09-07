@@ -156,7 +156,7 @@ function ViewField({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div>
       <p className={LABEL_CLASS}>{label}</p>
-      <div className="font-narrative text-sm text-[#f0e9fb]">{value}</div>
+      <div className="font-narrative text-sm text-[#2a241e]">{value}</div>
     </div>
   )
 }
@@ -165,7 +165,7 @@ function AddRow({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#4a3d6b] py-2.5 text-xs font-display text-[#c4a8ff] hover:bg-white/5"
+      className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#c9a961] py-2.5 text-xs font-display text-[#8a6a24] hover:bg-black/5"
     >
       <Plus size={14} /> {label}
     </button>
@@ -180,18 +180,18 @@ function EntryRow({ icon: Icon, title, subtitle, badge, onClick }: {
   onClick: () => void
 }) {
   return (
-    <button onClick={onClick} className="w-full text-left bg-[#161221] border border-[#2c2440] hover:border-[#4a3d6b] rounded-xl p-3 flex items-center gap-3 transition-colors">
+    <button onClick={onClick} className="w-full text-left bg-[#fffdf6] border border-[#e0d3ba] hover:border-[#c9a961] rounded-xl p-3 flex items-center gap-3 transition-colors">
       {Icon && (
-        <div className="w-8 h-8 rounded-lg bg-[#1e1830] border border-[#2c2440] flex items-center justify-center text-[#c4a8ff] shrink-0">
+        <div className="w-8 h-8 rounded-lg bg-[#ede0c0] border border-[#e0d3ba] flex items-center justify-center text-[#8a6a24] shrink-0">
           <Icon size={15} />
         </div>
       )}
       <div className="min-w-0 flex-1">
-        <p className="font-display font-semibold text-sm text-[#f0e9fb] truncate">{title}</p>
-        {subtitle && <p className="font-narrative text-xs text-[#a89bc4] truncate">{subtitle}</p>}
+        <p className="font-display font-semibold text-sm text-[#2a241e] truncate">{title}</p>
+        {subtitle && <p className="font-narrative text-xs text-[#6b6152] truncate">{subtitle}</p>}
       </div>
       {badge}
-      <ChevronRight size={14} className="text-[#4a3d6b] shrink-0" />
+      <ChevronRight size={14} className="text-[#c9a961] shrink-0" />
     </button>
   )
 }
@@ -223,11 +223,11 @@ function CrudBar({ editing, canDelete, onEdit, onSave, onCancel, onDelete }: {
 function DiscoveryEditor({ discovery, onChange }: { discovery: Discovery | undefined; onChange: (d: Discovery | undefined) => void }) {
   const hidden = discovery?.state === 'hidden'
   return (
-    <div className="rounded-lg border border-[#2c2440] p-3 flex flex-col gap-2.5">
-      <span className="text-[10px] font-display text-[#a89bc4] uppercase tracking-wider flex items-center gap-1">
+    <div className="rounded-lg border border-[#e0d3ba] p-3 flex flex-col gap-2.5">
+      <span className="text-[10px] font-display text-[#6b6152] uppercase tracking-wider flex items-center gap-1">
         <Lock size={11} /> Discovery (Fog of Lore)
       </span>
-      <label className="flex items-center gap-2 text-xs text-[#a89bc4]">
+      <label className="flex items-center gap-2 text-xs text-[#6b6152]">
         <input
           type="checkbox"
           checked={hidden}
@@ -238,7 +238,7 @@ function DiscoveryEditor({ discovery, onChange }: { discovery: Discovery | undef
                 : undefined,
             )
           }
-          className="accent-[#c4a8ff]"
+          className="accent-[#8a6a24]"
         />
         Hidden until discovered
       </label>
@@ -553,13 +553,13 @@ export default function CodexViewer({
     ) : categories.find((c) => c.id === category)?.label ?? 'Codex'
 
   return (
-    <div className="fixed inset-0 overflow-hidden text-[#f0e9fb] bg-[#0a0812] flex flex-col">
-      <header className="shrink-0 flex items-center gap-3 px-3 py-2 border-b border-[#2c2440] bg-[#12101c]" style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))' }}>
-        <button onClick={back} aria-label="Back" className="w-8 h-8 rounded-xl inline-flex items-center justify-center text-[#c4a8ff] hover:bg-white/5">
+    <div className="fixed inset-0 overflow-hidden text-[#2a241e] bg-[#f8f1de] flex flex-col">
+      <header className="shrink-0 flex items-center gap-3 px-3 py-2 border-b border-[#e0d3ba] bg-[#f3ead2]" style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))' }}>
+        <button onClick={back} aria-label="Back" className="w-8 h-8 rounded-xl inline-flex items-center justify-center text-[#8a6a24] hover:bg-black/5">
           <Home size={16} />
         </button>
-        <h2 className="font-display font-bold text-sm text-[#f0e9fb] truncate flex-1">{title}</h2>
-        <button onClick={onOpenCodex} aria-label="Classic Codex" title="Switch to the classic Codex view" className="w-8 h-8 rounded-xl inline-flex items-center justify-center text-[#c4a8ff] hover:bg-white/5">
+        <h2 className="font-display font-bold text-sm text-[#2a241e] truncate flex-1">{title}</h2>
+        <button onClick={onOpenCodex} aria-label="Classic Codex" title="Switch to the classic Codex view" className="w-8 h-8 rounded-xl inline-flex items-center justify-center text-[#8a6a24] hover:bg-black/5">
           <LayoutGrid size={16} />
         </button>
       </header>
@@ -569,15 +569,15 @@ export default function CodexViewer({
           {/* Search — shown for the 8 CRUD list views only */}
           {category && !entryId && ['npcs', 'factions', 'locations', 'lore', 'quests', 'bestiary', 'skills', 'items'].includes(category) && (
             <div className="relative">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a89bc4]" />
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6b6152]" />
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search entries..."
-                className="w-full h-9 rounded-xl border border-[#2c2440] bg-[#161221] pl-8 pr-8 text-xs text-[#f0e9fb] placeholder:text-[#a89bc4]/50 outline-none focus:border-[#c4a8ff]/60"
+                className="w-full h-9 rounded-xl border border-[#e0d3ba] bg-[#fffdf6] pl-8 pr-8 text-xs text-[#2a241e] placeholder:text-[#6b6152]/50 outline-none focus:border-[#8a6a24]/60"
               />
               {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#a89bc4] hover:text-[#f0e9fb]">
+                <button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#6b6152] hover:text-[#2a241e]">
                   <X size={13} />
                 </button>
               )}
@@ -593,13 +593,13 @@ export default function CodexViewer({
                   <button
                     key={c.id}
                     onClick={() => setCategory(c.id)}
-                    className="bg-[#161221] border border-[#2c2440] hover:border-[#4a3d6b] rounded-xl p-3 flex flex-col gap-1.5 text-left transition-colors"
+                    className="bg-[#fffdf6] border border-[#e0d3ba] hover:border-[#c9a961] rounded-xl p-3 flex flex-col gap-1.5 text-left transition-colors"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-[#1e1830] border border-[#2c2440] flex items-center justify-center text-[#c4a8ff]">
+                    <div className="w-8 h-8 rounded-lg bg-[#ede0c0] border border-[#e0d3ba] flex items-center justify-center text-[#8a6a24]">
                       <Icon size={16} />
                     </div>
-                    <span className="font-display font-semibold text-xs text-[#f0e9fb]">{c.label}</span>
-                    <span className="font-mono text-[10px] text-[#a89bc4]">{c.count}</span>
+                    <span className="font-display font-semibold text-xs text-[#2a241e]">{c.label}</span>
+                    <span className="font-mono text-[10px] text-[#6b6152]">{c.count}</span>
                   </button>
                 )
               })}
@@ -618,12 +618,12 @@ export default function CodexViewer({
                     icon={Users}
                     title={hidden ? '???' : n.name}
                     subtitle={hidden ? n.discovery?.teaser || 'Not yet discovered.' : n.role || n.stage}
-                    badge={hidden ? <Lock size={13} className="text-[#c4a8ff]" /> : undefined}
+                    badge={hidden ? <Lock size={13} className="text-[#8a6a24]" /> : undefined}
                     onClick={() => setEntryId(id)}
                   />
                 )
               })}
-              {Object.keys(npcs).length === 0 && <p className="font-narrative italic text-sm text-[#a89bc4]">No NPCs met yet.</p>}
+              {Object.keys(npcs).length === 0 && <p className="font-narrative italic text-sm text-[#6b6152]">No NPCs met yet.</p>}
             </div>
           )}
           {category === 'npcs' && entryId && (editing || npcs[entryId]) && (
@@ -663,7 +663,7 @@ export default function CodexViewer({
                   <DiscoveryEditor discovery={draft.discovery} onChange={(d) => setDraft((dr) => ({ ...dr, discovery: d }))} />
                 </InkPanel>
               ) : isHidden(npcs[entryId]) ? (
-                <InkPanel className="p-4"><p className="font-narrative text-sm text-[#a89bc4] italic">{npcs[entryId].discovery?.teaser || 'Not yet discovered.'}</p></InkPanel>
+                <InkPanel className="p-4"><p className="font-narrative text-sm text-[#6b6152] italic">{npcs[entryId].discovery?.teaser || 'Not yet discovered.'}</p></InkPanel>
               ) : (
                 <InkPanel className="p-4 flex flex-col gap-3">
                   <ViewField label="Role" value={npcs[entryId].role} />
@@ -693,10 +693,10 @@ export default function CodexViewer({
               {Object.entries(factions).filter(([, f]) => matchesQuery(f.name, f.description)).map(([id, f]) => {
                 const hidden = isHidden(f)
                 return (
-                  <EntryRow key={id} icon={ShieldCheck} title={hidden ? '???' : f.name} subtitle={hidden ? f.discovery?.teaser || 'Not yet discovered.' : `Rep ${f.repTier}`} badge={hidden ? <Lock size={13} className="text-[#c4a8ff]" /> : undefined} onClick={() => setEntryId(id)} />
+                  <EntryRow key={id} icon={ShieldCheck} title={hidden ? '???' : f.name} subtitle={hidden ? f.discovery?.teaser || 'Not yet discovered.' : `Rep ${f.repTier}`} badge={hidden ? <Lock size={13} className="text-[#8a6a24]" /> : undefined} onClick={() => setEntryId(id)} />
                 )
               })}
-              {Object.keys(factions).length === 0 && <p className="font-narrative italic text-sm text-[#a89bc4]">No factions known yet.</p>}
+              {Object.keys(factions).length === 0 && <p className="font-narrative italic text-sm text-[#6b6152]">No factions known yet.</p>}
             </div>
           )}
           {category === 'factions' && entryId && (editing || factions[entryId]) && (
@@ -722,7 +722,7 @@ export default function CodexViewer({
                   <DiscoveryEditor discovery={draft.discovery} onChange={(d) => setDraft((dr) => ({ ...dr, discovery: d }))} />
                 </InkPanel>
               ) : isHidden(factions[entryId]) ? (
-                <InkPanel className="p-4"><p className="font-narrative text-sm text-[#a89bc4] italic">{factions[entryId].discovery?.teaser || 'Not yet discovered.'}</p></InkPanel>
+                <InkPanel className="p-4"><p className="font-narrative text-sm text-[#6b6152] italic">{factions[entryId].discovery?.teaser || 'Not yet discovered.'}</p></InkPanel>
               ) : (
                 <InkPanel className="p-4 flex flex-col gap-3">
                   <ViewField label="Reputation Tier" value={factions[entryId].repTier} />
@@ -746,10 +746,10 @@ export default function CodexViewer({
               {Object.entries(locations).filter(([, l]) => matchesQuery(l.name, l.region, l.description)).map(([id, l]) => {
                 const hidden = isHidden(l)
                 return (
-                  <EntryRow key={id} icon={Map} title={hidden ? '???' : l.name} subtitle={hidden ? l.discovery?.teaser || 'Not yet discovered.' : `${l.region} · ${l.dangerLevel}`} badge={hidden ? <Lock size={13} className="text-[#c4a8ff]" /> : undefined} onClick={() => setEntryId(id)} />
+                  <EntryRow key={id} icon={Map} title={hidden ? '???' : l.name} subtitle={hidden ? l.discovery?.teaser || 'Not yet discovered.' : `${l.region} · ${l.dangerLevel}`} badge={hidden ? <Lock size={13} className="text-[#8a6a24]" /> : undefined} onClick={() => setEntryId(id)} />
                 )
               })}
-              {Object.keys(locations).length === 0 && <p className="font-narrative italic text-sm text-[#a89bc4]">No locations visited yet.</p>}
+              {Object.keys(locations).length === 0 && <p className="font-narrative italic text-sm text-[#6b6152]">No locations visited yet.</p>}
             </div>
           )}
           {category === 'locations' && entryId && (editing || locations[entryId]) && (
@@ -779,7 +779,7 @@ export default function CodexViewer({
                   <DiscoveryEditor discovery={draft.discovery} onChange={(d) => setDraft((dr) => ({ ...dr, discovery: d }))} />
                 </InkPanel>
               ) : isHidden(locations[entryId]) ? (
-                <InkPanel className="p-4"><p className="font-narrative text-sm text-[#a89bc4] italic">{locations[entryId].discovery?.teaser || 'Not yet discovered.'}</p></InkPanel>
+                <InkPanel className="p-4"><p className="font-narrative text-sm text-[#6b6152] italic">{locations[entryId].discovery?.teaser || 'Not yet discovered.'}</p></InkPanel>
               ) : (
                 <InkPanel className="p-4 flex flex-col gap-3">
                   <ViewField label="Region" value={locations[entryId].region} />
@@ -805,10 +805,10 @@ export default function CodexViewer({
               {Object.entries(lore).filter(([, l]) => matchesQuery(l.name, l.category, l.content)).map(([id, l]) => {
                 const hidden = isHidden(l)
                 return (
-                  <EntryRow key={id} icon={ScrollText} title={hidden ? '???' : l.name} subtitle={hidden ? l.discovery?.teaser || 'Not yet discovered.' : l.category} badge={hidden ? <Lock size={13} className="text-[#c4a8ff]" /> : undefined} onClick={() => setEntryId(id)} />
+                  <EntryRow key={id} icon={ScrollText} title={hidden ? '???' : l.name} subtitle={hidden ? l.discovery?.teaser || 'Not yet discovered.' : l.category} badge={hidden ? <Lock size={13} className="text-[#8a6a24]" /> : undefined} onClick={() => setEntryId(id)} />
                 )
               })}
-              {Object.keys(lore).length === 0 && <p className="font-narrative italic text-sm text-[#a89bc4]">No lore discovered yet.</p>}
+              {Object.keys(lore).length === 0 && <p className="font-narrative italic text-sm text-[#6b6152]">No lore discovered yet.</p>}
             </div>
           )}
           {category === 'lore' && entryId && (editing || lore[entryId]) && (
@@ -826,7 +826,7 @@ export default function CodexViewer({
                   <DiscoveryEditor discovery={draft.discovery} onChange={(d) => setDraft((dr) => ({ ...dr, discovery: d }))} />
                 </InkPanel>
               ) : isHidden(lore[entryId]) ? (
-                <InkPanel className="p-4"><p className="font-narrative text-sm text-[#a89bc4] italic">{lore[entryId].discovery?.teaser || 'Not yet discovered.'}</p></InkPanel>
+                <InkPanel className="p-4"><p className="font-narrative text-sm text-[#6b6152] italic">{lore[entryId].discovery?.teaser || 'Not yet discovered.'}</p></InkPanel>
               ) : (
                 <InkPanel className="p-4 flex flex-col gap-3">
                   <ViewField label="Category" value={lore[entryId].category} />
@@ -847,10 +847,10 @@ export default function CodexViewer({
               {Object.entries(quests).filter(([, q]) => matchesQuery(q.name, q.note, q.description)).map(([id, q]) => {
                 const hidden = isHidden(q)
                 return (
-                  <EntryRow key={id} icon={Target} title={hidden ? '???' : q.name} subtitle={hidden ? q.discovery?.teaser || 'Not yet discovered.' : [q.status, q.type].filter(Boolean).join(' · ')} badge={hidden ? <Lock size={13} className="text-[#c4a8ff]" /> : undefined} onClick={() => setEntryId(id)} />
+                  <EntryRow key={id} icon={Target} title={hidden ? '???' : q.name} subtitle={hidden ? q.discovery?.teaser || 'Not yet discovered.' : [q.status, q.type].filter(Boolean).join(' · ')} badge={hidden ? <Lock size={13} className="text-[#8a6a24]" /> : undefined} onClick={() => setEntryId(id)} />
                 )
               })}
-              {Object.keys(quests).length === 0 && <p className="font-narrative italic text-sm text-[#a89bc4]">No quests tracked yet.</p>}
+              {Object.keys(quests).length === 0 && <p className="font-narrative italic text-sm text-[#6b6152]">No quests tracked yet.</p>}
             </div>
           )}
           {category === 'quests' && entryId && (editing || quests[entryId]) && (
@@ -873,7 +873,7 @@ export default function CodexViewer({
                   <DiscoveryEditor discovery={draft.discovery} onChange={(d) => setDraft((dr) => ({ ...dr, discovery: d }))} />
                 </InkPanel>
               ) : isHidden(quests[entryId]) ? (
-                <InkPanel className="p-4"><p className="font-narrative text-sm text-[#a89bc4] italic">{quests[entryId].discovery?.teaser || 'Not yet discovered.'}</p></InkPanel>
+                <InkPanel className="p-4"><p className="font-narrative text-sm text-[#6b6152] italic">{quests[entryId].discovery?.teaser || 'Not yet discovered.'}</p></InkPanel>
               ) : (
                 <InkPanel className="p-4 flex flex-col gap-3">
                   <ViewField label="Status" value={quests[entryId].status} />
@@ -897,10 +897,10 @@ export default function CodexViewer({
               {Object.entries(bestiary).filter(([, b]) => matchesQuery(b.name, b.threatTier, b.description)).map(([id, b]) => {
                 const hidden = isHidden(b)
                 return (
-                  <EntryRow key={id} icon={Skull} title={hidden ? '???' : b.name} subtitle={hidden ? b.discovery?.teaser || 'Not yet discovered.' : b.threatTier} badge={hidden ? <Lock size={13} className="text-[#c4a8ff]" /> : undefined} onClick={() => setEntryId(id)} />
+                  <EntryRow key={id} icon={Skull} title={hidden ? '???' : b.name} subtitle={hidden ? b.discovery?.teaser || 'Not yet discovered.' : b.threatTier} badge={hidden ? <Lock size={13} className="text-[#8a6a24]" /> : undefined} onClick={() => setEntryId(id)} />
                 )
               })}
-              {Object.keys(bestiary).length === 0 && <p className="font-narrative italic text-sm text-[#a89bc4]">No adversaries encountered yet.</p>}
+              {Object.keys(bestiary).length === 0 && <p className="font-narrative italic text-sm text-[#6b6152]">No adversaries encountered yet.</p>}
             </div>
           )}
           {category === 'bestiary' && entryId && (editing || bestiary[entryId]) && (
@@ -924,7 +924,7 @@ export default function CodexViewer({
                   <DiscoveryEditor discovery={draft.discovery} onChange={(d) => setDraft((dr) => ({ ...dr, discovery: d }))} />
                 </InkPanel>
               ) : isHidden(bestiary[entryId]) ? (
-                <InkPanel className="p-4"><p className="font-narrative text-sm text-[#a89bc4] italic">{bestiary[entryId].discovery?.teaser || 'Not yet discovered.'}</p></InkPanel>
+                <InkPanel className="p-4"><p className="font-narrative text-sm text-[#6b6152] italic">{bestiary[entryId].discovery?.teaser || 'Not yet discovered.'}</p></InkPanel>
               ) : (
                 <InkPanel className="p-4 flex flex-col gap-3">
                   <ViewField label="Threat Tier" value={bestiary[entryId].threatTier} />
@@ -949,10 +949,10 @@ export default function CodexViewer({
                 const hidden = isHidden(s)
                 const parts = [s.mpCost ? `${s.mpCost} MP` : null, s.stCost ? `${s.stCost} ST` : null].filter(Boolean).join(' · ')
                 return (
-                  <EntryRow key={id} icon={Sparkles} title={hidden ? '???' : s.name} subtitle={hidden ? s.discovery?.teaser || 'Not yet discovered.' : parts || s.skillType} badge={hidden ? <Lock size={13} className="text-[#c4a8ff]" /> : undefined} onClick={() => setEntryId(id)} />
+                  <EntryRow key={id} icon={Sparkles} title={hidden ? '???' : s.name} subtitle={hidden ? s.discovery?.teaser || 'Not yet discovered.' : parts || s.skillType} badge={hidden ? <Lock size={13} className="text-[#8a6a24]" /> : undefined} onClick={() => setEntryId(id)} />
                 )
               })}
-              {Object.keys(skills).length === 0 && <p className="font-narrative italic text-sm text-[#a89bc4]">No skills learned yet.</p>}
+              {Object.keys(skills).length === 0 && <p className="font-narrative italic text-sm text-[#6b6152]">No skills learned yet.</p>}
             </div>
           )}
           {category === 'skills' && entryId && (editing || skills[entryId]) && (
@@ -982,7 +982,7 @@ export default function CodexViewer({
                   <DiscoveryEditor discovery={draft.discovery} onChange={(d) => setDraft((dr) => ({ ...dr, discovery: d }))} />
                 </InkPanel>
               ) : isHidden(skills[entryId]) ? (
-                <InkPanel className="p-4"><p className="font-narrative text-sm text-[#a89bc4] italic">{skills[entryId].discovery?.teaser || 'Not yet discovered.'}</p></InkPanel>
+                <InkPanel className="p-4"><p className="font-narrative text-sm text-[#6b6152] italic">{skills[entryId].discovery?.teaser || 'Not yet discovered.'}</p></InkPanel>
               ) : (
                 <InkPanel className="p-4 flex flex-col gap-3">
                   <ViewField label="Description" value={skills[entryId].description} />
@@ -1016,7 +1016,7 @@ export default function CodexViewer({
                   />
                 )
               })}
-              {Object.keys(inventory).length === 0 && <p className="font-narrative italic text-sm text-[#a89bc4]">No items carried yet.</p>}
+              {Object.keys(inventory).length === 0 && <p className="font-narrative italic text-sm text-[#6b6152]">No items carried yet.</p>}
             </div>
           )}
           {category === 'items' && entryId && (editing || inventory[entryId] !== undefined) && (
@@ -1078,19 +1078,19 @@ export default function CodexViewer({
           {/* Corpses — read-only */}
           {category === 'corpses' && (
             <div className="flex flex-col gap-2">
-              <p className="font-narrative text-xs text-[#a89bc4]">Harvestable essence from the slain — extracted via <span className="font-mono">!arise</span>, most recently fallen first.</p>
+              <p className="font-narrative text-xs text-[#6b6152]">Harvestable essence from the slain — extracted via <span className="font-mono">!arise</span>, most recently fallen first.</p>
               {corpseCounts.length === 0 ? (
-                <p className="font-narrative italic text-sm text-[#a89bc4]">No harvestable corpses yet — defeat an enemy first.</p>
+                <p className="font-narrative italic text-sm text-[#6b6152]">No harvestable corpses yet — defeat an enemy first.</p>
               ) : (
                 corpseCounts.map(([tag, qty]) => {
                   const beast = bestiary[slugify(tag)]
                   return (
                     <InkPanel key={tag} className="p-3 flex items-center justify-between">
                       <div>
-                        <p className="font-display font-semibold text-sm text-[#f0e9fb]">{beast?.name ?? titleCaseId(tag)}</p>
-                        {beast?.threatTier && <p className="font-narrative text-xs text-[#a89bc4]">{beast.threatTier}</p>}
+                        <p className="font-display font-semibold text-sm text-[#2a241e]">{beast?.name ?? titleCaseId(tag)}</p>
+                        {beast?.threatTier && <p className="font-narrative text-xs text-[#6b6152]">{beast.threatTier}</p>}
                       </div>
-                      <span className="font-mono text-xs text-[#a89bc4]">×{qty}</span>
+                      <span className="font-mono text-xs text-[#6b6152]">×{qty}</span>
                     </InkPanel>
                   )
                 })
@@ -1116,7 +1116,7 @@ export default function CodexViewer({
               {editing ? (
                 <InkPanel className="p-4 flex flex-col gap-3">
                   <EditSelect label="Class" value={draft.classId ?? player.classId} onChange={(v) => setDraft((d) => ({ ...d, classId: v }))} options={PRESET_CLASSES.map((c) => ({ value: c.id, label: c.name }))} />
-                  <p className="font-narrative text-xs italic text-[#a89bc4]">
+                  <p className="font-narrative text-xs italic text-[#6b6152]">
                     Class Evolution — the class slot is replaced outright, no blending. Points already earned are never recalculated; only points earned from here forward follow the new class's growth.
                   </p>
                 </InkPanel>
@@ -1147,8 +1147,8 @@ export default function CodexViewer({
                     const remaining = hoursRemaining(player.time, job.completeTime)
                     return (
                       <InkPanel key={job.jobId} className="px-3 py-2.5 flex items-center justify-between">
-                        <span className="font-display font-semibold text-sm text-[#f0e9fb]">{recipe?.name ?? job.recipeId}</span>
-                        <span className="inline-flex items-center gap-1 font-mono text-xs text-[#a89bc4]">
+                        <span className="font-display font-semibold text-sm text-[#2a241e]">{recipe?.name ?? job.recipeId}</span>
+                        <span className="inline-flex items-center gap-1 font-mono text-xs text-[#6b6152]">
                           <Clock size={12} /> {remaining > 0 ? `${remaining}h remaining` : 'Ready'}
                         </span>
                       </InkPanel>
@@ -1163,11 +1163,11 @@ export default function CodexViewer({
                   return (
                     <InkPanel key={recipe.id} className="p-3 flex flex-col gap-1.5">
                       <div className="flex items-center justify-between gap-2">
-                        <h3 className="font-display font-bold text-sm text-[#f0e9fb]">{recipe.name}</h3>
-                        <span className="inline-flex items-center gap-1 font-mono text-[10px] text-[#a89bc4]"><Clock size={11} /> {recipe.craftHours}h</span>
+                        <h3 className="font-display font-bold text-sm text-[#2a241e]">{recipe.name}</h3>
+                        <span className="inline-flex items-center gap-1 font-mono text-[10px] text-[#6b6152]"><Clock size={11} /> {recipe.craftHours}h</span>
                       </div>
-                      {recipe.stationRequired && <p className="font-narrative text-[11px] text-[#a89bc4]">Station: {recipe.stationRequired}</p>}
-                      <p className="font-narrative text-xs text-[#a89bc4]">
+                      {recipe.stationRequired && <p className="font-narrative text-[11px] text-[#6b6152]">Station: {recipe.stationRequired}</p>}
+                      <p className="font-narrative text-xs text-[#6b6152]">
                         {recipe.ingredients.map((i) => `${i.qty}x ${i.id.replace(/_/g, ' ')} (${inventory[i.id] ?? 0} held)`).join(', ')}
                       </p>
                       <InkButton tone="action" disabled={!affordable} onClick={() => onStartCraft(recipe.id)} className="mt-1 self-start">
@@ -1220,11 +1220,11 @@ export default function CodexViewer({
           {/* Chapters — read-only */}
           {category === 'chapters' && (
             <div className="flex flex-col gap-2">
-              {chapters.length === 0 && <p className="font-narrative italic text-sm text-[#a89bc4]">No chapters recorded yet.</p>}
+              {chapters.length === 0 && <p className="font-narrative italic text-sm text-[#6b6152]">No chapters recorded yet.</p>}
               {chapters.map((c, i) => (
                 <InkPanel key={i} className="p-4">
-                  <h3 className="font-display font-bold text-sm text-[#f0e9fb] mb-1">Chapter {c.chapterNumber}</h3>
-                  <p className="font-narrative text-sm italic text-[#a89bc4]">{c.chapterSummary}</p>
+                  <h3 className="font-display font-bold text-sm text-[#2a241e] mb-1">Chapter {c.chapterNumber}</h3>
+                  <p className="font-narrative text-sm italic text-[#6b6152]">{c.chapterSummary}</p>
                 </InkPanel>
               ))}
             </div>

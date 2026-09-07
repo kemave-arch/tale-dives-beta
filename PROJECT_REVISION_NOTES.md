@@ -1,5 +1,23 @@
 # Tale Dives — Project Revision Notes
 
+**Last updated:** 2026-09-07 — Repainted the new flat Story Viewer/Codex
+Viewer (see previous entry) from a dark ink-purple palette to a near-white
+parchment/gold one, per direct feedback that the dark-purple choice was
+both too dark and off-brand — the flat build was only ever meant to drop
+`backdrop-filter`, not invent a new color identity. `src/lib/flatChrome.tsx`'s
+palette and every literal color class in `StoryViewer.tsx`/`CodexViewer.tsx`
+now reuse the exact same values as the app's own existing `.parchment-surface`
+light-mode tokens (`index.css`) — warm cream/near-white panels (`#f8f1de`
+canvas, `#fffdf6` panel), dark ink text (`#2a241e`), and gold accents
+(`#8a6a24`/`#b08d3f`) — plus the same gold-CTA-pill convention already used
+elsewhere in the app (`#e8ca8a` fill / dark text) for the Send button and
+other filled action buttons. `hover:bg-white/5` (invisible on a light
+surface) swapped to `hover:bg-black/5` throughout. Re-verified with the same
+Playwright passes as the previous entry — all functional checks unchanged,
+now against the corrected palette.
+
+Previous note:
+
 **Last updated:** 2026-09-07 — Built a full-parity alternate flat/opaque
 in-session experience (`StoryViewer.tsx` + `CodexViewer.tsx`), reachable via
 toggle buttons alongside the existing Chronicle/Codex, prompted by a
@@ -7,11 +25,11 @@ mobile-dark-fantasy-UI review that argued for dropping glassmorphism in a
 text-heavy narrative reader. Also flipped the app's default Graphics Mode
 from Glass to Performance and fixed a bug that made `.glass-panel` read as
 near-invisible glass with the blur stripped out from under it.
-- **`src/lib/flatChrome.tsx`** (new) — a small shared kit of solid ink-purple
-  primitives (`InkPanel`, `InkButton`, `InkField`, `InkTagPill`,
-  `InkAccordion`) with no `backdrop-filter` anywhere, a deliberately distinct
-  palette from `glassChrome.tsx`'s gold/parchment so the two skins read as
-  two different rooms rather than the same one with a filter removed.
+- **`src/lib/flatChrome.tsx`** (new) — a small shared kit of solid primitives
+  (`InkPanel`, `InkButton`, `InkField`, `InkTagPill`, `InkAccordion`) with no
+  `backdrop-filter` anywhere. (Its first version used a dark ink-purple
+  palette distinct from the app's gold/parchment identity — corrected to
+  match the app's own parchment/gold tokens in the dated entry above.)
 - **`src/screens/StoryViewer.tsx`** (new) — full-parity alternate Chronicle:
   same turn log, HUD (HP/MP/ST/currency/combat bar), Codex-shortcut drawer,
   input/bang/slash handling, edit/retry/delete controls and debug payload

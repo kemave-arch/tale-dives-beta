@@ -1,5 +1,28 @@
 # Tale Dives — Project Revision Notes
 
+**Last updated:** 2026-09-07 — Restyled the Codex's top-level Category List
+(`src/screens/Codex.tsx`) from the 2-column multi-hued `DeckEntryCard` grid
+to a single-column, gold-accented "archive tome" row list (ornate
+"CODEX ARCHIVES" title, a diamond divider, per-row icon badge + title/
+description + count box), per a reference mockup the user supplied. New
+`CodexArchiveRow` component, scoped only to this outermost list — every
+per-category entry grid underneath still uses `DeckEntryCard` with its own
+per-category accent color, untouched. Category set, icons, and order are
+unchanged (the real 12 categories, already ordered by actual play
+frequency: Quests → NPCs → Skills → Items → Locations → Bestiary →
+Projects → Faction → Lore → Chapters → Campaign → Crafting) — only the
+row's visual treatment was borrowed from the reference photo, not its
+category labels or the "Raw JSON & DB" row it also showed. Header now also
+shows a computed `{totalCodexEntries} TOTAL` (summed across all category
+counts) instead of a category count. Verified: `tsc --noEmit`/`vite build`
+clean, plus a live check — seeded a mock `Campaign` object directly into
+`localStorage` (`td_campaigns`/`td_active_campaign`) against a running dev
+server, drove it through Playwright (Title → Continue → Codex) at a 420px
+mobile viewport, and screenshotted the real rendered result rather than a
+static mockup.
+
+Previous note:
+
 **Last updated:** 2026-09-07 — Rewrote `Tale-Dives-Blueprint-v3_0.md` →
 `Tale-Dives-Blueprint-v3_2.md` (renamed) to describe the Narrative-First
 Overhaul (previous entry below) as its current, real state rather than the

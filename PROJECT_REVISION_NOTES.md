@@ -1,6 +1,33 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-07 — Restyled the Codex's top-level Category List
+**Last updated:** 2026-09-07 — Verified an external "Gemini 3.0 Context
+Caching Architecture Guide" doc the user was handed against the real
+codebase before trusting any of it (per this file's own "don't present
+unverified claims as fact" discipline). Confirmed accurate: `src/api/
+providers/gemini.ts`'s `sanitizeHistoryForPrompt` genuinely strips
+`<sync>...</sync>` before a past turn is resent, so history stays an
+append-only, prefix-stable log of `<nar>` prose; `systemInstructions` is
+a static string (no timestamp/non-deterministic content) and JIT context
+(`buildContextSlice`) is appended only to the final user turn, never the
+system prompt — both required for cache-prefix stability. Rejected as
+false: the doc's framing that caching itself improves recall/reduces
+hallucination — caching only skips recomputing KV vectors for a
+byte-identical prefix; the attention computation and its accuracy are
+identical whether a request hits cache or not, so long-term memory
+fidelity in this app comes entirely from Codex state/JIT injection/
+chapter compaction, not the cache layer. Also flagged as unverifiable
+LLM-estimation artifacts (not to be trusted as fact): the doc's specific
+dollar pricing, token thresholds, and a speculative `gemini-3-flash-
+preview` model string — none of it has been checked against a live
+Gemini pricing page. Separately: the uploaded copy of
+`AI_Studio_Instructions v1.md` the user pasted in chat had a live-looking
+Gemini API key hardcoded on line 1 — the repo's own copy of that file has
+no such key, but the user was told to rotate/revoke it since it was
+pasted in plaintext.
+
+Previous note:
+
+**2026-09-07** — Restyled the Codex's top-level Category List
 (`src/screens/Codex.tsx`) from the 2-column multi-hued `DeckEntryCard` grid
 to a single-column, gold-accented "archive tome" row list (ornate
 "CODEX ARCHIVES" title, a diamond divider, per-row icon badge + title/

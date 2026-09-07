@@ -266,10 +266,12 @@ export default function WorldNodeModal({
           })}
         </div>
 
-        {/* Content Area */}
+        {/* Content Area — all 3 subtabs stay mounted, hidden via CSS rather
+            than conditionally rendered, so switching is a cheap style
+            toggle instead of destroying and rebuilding the sites/factions
+            lists (each with their own inline expand state) every switch. */}
         <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
-          {subTab === 'overview' && (
-            <div className="space-y-3">
+          <div className={subTab === 'overview' ? 'space-y-3' : 'hidden'}>
               <div>
                 <label className="block text-xs font-display font-semibold text-sky-200/90 mb-1">Name *</label>
                 <input
@@ -327,11 +329,9 @@ export default function WorldNodeModal({
                   className="w-full px-3 py-2 rounded-xl bg-[#122238] border border-sky-500/30 text-xs font-narrative text-sky-100 focus:border-sky-400 outline-none resize-none leading-relaxed"
                 />
               </div>
-            </div>
-          )}
+          </div>
 
-          {subTab === 'locations' && (
-            <div className="space-y-3">
+          <div className={subTab === 'locations' ? 'space-y-3' : 'hidden'}>
               <div className="flex items-center justify-between">
                 <span className="text-xs font-display font-semibold text-sky-200/90">Sites</span>
                 <button
@@ -476,11 +476,9 @@ export default function WorldNodeModal({
                   )
                 })}
               </div>
-            </div>
-          )}
+          </div>
 
-          {subTab === 'factions' && (
-            <div className="space-y-3">
+          <div className={subTab === 'factions' ? 'space-y-3' : 'hidden'}>
               <div className="flex items-center justify-between">
                 <span className="text-xs font-display font-semibold text-sky-200/90">Factions</span>
                 <button
@@ -597,8 +595,7 @@ export default function WorldNodeModal({
                   )
                 })}
               </div>
-            </div>
-          )}
+          </div>
         </div>
 
         {/* Footer */}

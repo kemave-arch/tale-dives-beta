@@ -333,9 +333,12 @@ export default function ProtagonistNodeModal({
 
         {/* Content Area */}
         <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
-          {/* TAB 1: ARCHETYPE & SKILLS */}
-          {subTab === 'archetype' && (
-            <div className="space-y-4">
+          {/* TAB 1: ARCHETYPE & SKILLS — always mounted, hidden via CSS
+              rather than conditionally rendered, so switching subtabs is a
+              cheap style toggle instead of destroying and rebuilding ~100
+              DOM nodes (class grid, attributes, abilities list) on every
+              switch. */}
+          <div className={subTab === 'archetype' ? 'space-y-4' : 'hidden'}>
               {/* Class & Archetype Presets + Custom Class Grid */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
@@ -654,12 +657,10 @@ export default function ProtagonistNodeModal({
                   })}
                 </div>
               </div>
-            </div>
-          )}
+          </div>
 
           {/* TAB 2: IDENTITY & ORIGIN */}
-          {subTab === 'identity' && (
-            <div className="space-y-3">
+          <div className={subTab === 'identity' ? 'space-y-3' : 'hidden'}>
               <div>
                 <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">Name *</label>
                 <input
@@ -714,12 +715,10 @@ export default function ProtagonistNodeModal({
                   className="w-full px-3 py-2 rounded-xl bg-[#1b1429] border border-amber-500/30 text-xs font-narrative text-[#fbf4e2] focus:border-amber-400 outline-none"
                 />
               </div>
-            </div>
-          )}
+          </div>
 
           {/* TAB 3: PERSONALITY & SECRET */}
-          {subTab === 'personality' && (
-            <div className="space-y-3">
+          <div className={subTab === 'personality' ? 'space-y-3' : 'hidden'}>
               <div>
                 <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">Personality</label>
                 <textarea
@@ -763,8 +762,7 @@ export default function ProtagonistNodeModal({
                   className="w-full px-3 py-2 rounded-xl bg-[#1b1429] border border-amber-500/30 text-xs font-narrative text-[#fbf4e2] focus:border-amber-400 outline-none resize-none"
                 />
               </div>
-            </div>
-          )}
+          </div>
         </div>
 
         {/* Footer */}

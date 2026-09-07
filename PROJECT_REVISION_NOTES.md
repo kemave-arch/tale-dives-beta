@@ -1,5 +1,26 @@
 # Tale Dives — Project Revision Notes
 
+**Last updated:** 2026-09-07 — Reverted the alternate flat Story Viewer /
+Codex Viewer feature (both entries below) entirely, per direct user
+feedback that it wasn't to their taste — not just the repainted palette,
+the whole alternate-screen concept. Removed `src/screens/StoryViewer.tsx`,
+`src/screens/CodexViewer.tsx`, and `src/lib/flatChrome.tsx`; reverted
+`App.tsx` (dropped the `'storyviewer'`/`'codexviewer'` Screen values, their
+lazy imports, and both render branches), `Chronicle.tsx` (dropped the
+`onOpenStoryViewer` prop/button and the `export` keywords added solely so
+StoryViewer.tsx could reuse its sub-components), and `Codex.tsx` (dropped
+the `onOpenCodexViewer` prop/button and the `export` on `CodexProps`) —
+all three files are now byte-identical to the commit before this feature
+started. Kept the independent fixes bundled in alongside it that aren't
+about the alternate screens themselves: `graphicsMode`'s default flip to
+Performance, the `.glass-panel` opacity fix under `gfx-performance`, and
+the global `touch-action: manipulation` addition — those stand on their
+own merits. Verified: `tsc --noEmit` and `vite build` both clean, and
+`Chronicle.tsx`/`Codex.tsx`/`App.tsx` diffed byte-for-byte against the
+pre-feature commit to confirm a complete, clean revert.
+
+Previous note:
+
 **Last updated:** 2026-09-07 — Repainted the new flat Story Viewer/Codex
 Viewer (see previous entry) from a dark ink-purple palette to a near-white
 parchment/gold one, per direct feedback that the dark-purple choice was

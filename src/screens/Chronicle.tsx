@@ -19,7 +19,7 @@ import type {
   ProseDepthConfig, QuestEntry, SkillEntry, SlashCommand, ItemEntry, StatBonus,
 } from '../types.ts'
 
-export function statBonusText(bonus: StatBonus | undefined): string | null {
+function statBonusText(bonus: StatBonus | undefined): string | null {
   if (!bonus) return null
   const parts = Object.entries(bonus)
     .filter(([, v]) => v)
@@ -64,14 +64,13 @@ interface ChronicleProps {
   onOpenCodex: () => void
   onOpenCodexEntry: (category: KeywordLink['category'], id: string) => void
   onOpenCodexCategory: (category: CategoryId) => void
-  onOpenStoryViewer: () => void
   debugMode?: boolean // Settings' own toggle — also gates the per-turn/session debug-payload tools below
 }
 
 const WINDOW_SIZE = 20 // §9.2 — cap how many turns stay mounted; older ones load in on demand
 const INPUT_MAX_HEIGHT = 160
 
-export function PoolBar({
+function PoolBar({
   icon: Icon,
   label,
   value,
@@ -103,7 +102,7 @@ export function PoolBar({
   )
 }
 
-export function CurrencyBadge({ copper }: { copper: number }) {
+function CurrencyBadge({ copper }: { copper: number }) {
   const { p, g, s, c } = formatCurrency(copper)
   return (
     <div className="flex items-center gap-1.5 shrink-0 font-mono text-[10px] font-semibold bg-black/30 border border-white/10 px-2 py-0.5 rounded-full">
@@ -118,7 +117,7 @@ export function CurrencyBadge({ copper }: { copper: number }) {
   )
 }
 
-export function DesktopLeftSidebar({
+function DesktopLeftSidebar({
   player,
   items,
   combat,
@@ -262,7 +261,7 @@ export function DesktopLeftSidebar({
 // §6.6 Bang Commands — in-game-styled framing per category (icon + a dossier
 // title), no raw "!command" console text, so the paused-roleplay moment
 // still reads as part of the game's own UI rather than a debug console.
-export const BANG_DISPLAY: Record<string, { icon: LucideIcon; label: string }> = {
+const BANG_DISPLAY: Record<string, { icon: LucideIcon; label: string }> = {
   npc: { icon: Users, label: 'NPC Dossier' },
   items: { icon: Backpack, label: 'Inventory Ledger' },
   location: { icon: MapIcon, label: 'Known Locations' },
@@ -281,20 +280,20 @@ export const BANG_DISPLAY: Record<string, { icon: LucideIcon; label: string }> =
   unequip: { icon: Swords, label: 'Unequipped' },
 }
 
-export function bangDisplay(command: string): { icon: LucideIcon; label: string } {
+function bangDisplay(command: string): { icon: LucideIcon; label: string } {
   return BANG_DISPLAY[command.toLowerCase()] ?? { icon: HelpCircle, label: 'Unclear Reference' }
 }
 
-export function formatTimestamp(time: GameTime, locDisp: string): string {
+function formatTimestamp(time: GameTime, locDisp: string): string {
   return `D-${String(time.d).padStart(2, '0')} ${time.h} | ${locDisp.toUpperCase()}`
 }
 
-export interface PopupTarget {
+interface PopupTarget {
   category: KeywordLink['category']
   id: string
 }
 
-export interface TurnBlockProps {
+interface TurnBlockProps {
   entry: LogEntry
   globalIndex: number
   onTapTerm: TapTermHandler
@@ -317,7 +316,7 @@ export interface TurnBlockProps {
 // one turn at a time (DebugPayloadButton below covers the single-turn case).
 // Synthetic entries (bang/chapter-recap/class-evolution) carry no
 // `rawPayload` and are skipped — there's no API call to show.
-export function buildSessionPayloadText(log: LogEntry[], title: string, seedDebug?: Campaign['seedDebug']): string {
+function buildSessionPayloadText(log: LogEntry[], title: string, seedDebug?: Campaign['seedDebug']): string {
   const withPayload = log
     .map((entry, index) => ({ entry, index }))
     .filter(({ entry }) => entry.rawPayload)
@@ -369,7 +368,7 @@ export function buildSessionPayloadText(log: LogEntry[], title: string, seedDebu
 // parchment reflows underneath it automatically) rather than living inline
 // in the scrolling log, since this covers every turn at once, not one.
 // Only ever rendered when Debug Mode is on (see Chronicle's own render).
-export function SessionPayloadPanel({ log, title, seedDebug }: { log: LogEntry[]; title: string; seedDebug?: Campaign['seedDebug'] }) {
+function SessionPayloadPanel({ log, title, seedDebug }: { log: LogEntry[]; title: string; seedDebug?: Campaign['seedDebug'] }) {
   const [copied, setCopied] = useState(false)
   const text = useMemo(() => buildSessionPayloadText(log, title, seedDebug), [log, title, seedDebug])
 
@@ -418,11 +417,11 @@ export function SessionPayloadPanel({ log, title, seedDebug }: { log: LogEntry[]
 // out separately from the full request+response so it can be copied on its
 // own, e.g. to cross-check against what actually landed in the Codex without
 // wading through the narrative prose alongside it.
-export function extractSyncBlock(raw: string): string | null {
+function extractSyncBlock(raw: string): string | null {
   return raw.match(/<sync>[\s\S]*?<\/sync>/)?.[0] ?? null
 }
 
-export function DebugPayloadButton({ entry }: { entry: LogEntry }) {
+function DebugPayloadButton({ entry }: { entry: LogEntry }) {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const [syncCopied, setSyncCopied] = useState(false)
@@ -512,7 +511,7 @@ export function DebugPayloadButton({ entry }: { entry: LogEntry }) {
   )
 }
 
-export interface TurnActionsRowProps {
+interface TurnActionsRowProps {
   entry: LogEntry
   debugMode?: boolean
   onEdit: () => void
@@ -526,7 +525,7 @@ export interface TurnActionsRowProps {
 // turn. View Payload stays tucked under "More" here too, alongside Delete,
 // rather than duplicating DebugPayloadButton's own standalone rendering —
 // gated on Debug Mode same as everywhere else; Edit/Retry/Delete are not.
-export function TurnActionsRow({ entry, debugMode, onEdit, onRetry, onDelete }: TurnActionsRowProps) {
+function TurnActionsRow({ entry, debugMode, onEdit, onRetry, onDelete }: TurnActionsRowProps) {
   const [moreOpen, setMoreOpen] = useState(false)
   if (!entry.rawPayload) return null
 
@@ -557,7 +556,7 @@ export function TurnActionsRow({ entry, debugMode, onEdit, onRetry, onDelete }: 
 
 // Isolated from `input` state (§9.2 perf fix) — memoized so a keystroke in the
 // input bar doesn't re-render/re-parse rich text for every mounted turn block.
-export const TurnBlock = memo(function TurnBlock({
+const TurnBlock = memo(function TurnBlock({
   entry,
   globalIndex,
   onTapTerm,
@@ -802,7 +801,7 @@ export const TurnBlock = memo(function TurnBlock({
   )
 })
 
-export interface ApiErrorPanelProps {
+interface ApiErrorPanelProps {
   error: string
   apiSettings?: ApiSettings
   proseDepth?: ProseDepthConfig
@@ -813,7 +812,7 @@ export interface ApiErrorPanelProps {
   setInput: (val: string) => void
 }
 
-export function ApiErrorPanel({
+function ApiErrorPanel({
   error,
   apiSettings,
   proseDepth,
@@ -993,7 +992,6 @@ export default function Chronicle({
   onOpenCodex,
   onOpenCodexEntry,
   onOpenCodexCategory,
-  onOpenStoryViewer,
   debugMode,
 }: ChronicleProps) {
   const [input, setInput] = useState('')
@@ -1331,14 +1329,6 @@ export default function Chronicle({
                 <Bug size={16} />
               </button>
             )}
-            <button
-              onClick={onOpenStoryViewer}
-              aria-label="Story Viewer"
-              title="Read this Tale so far in a distraction-free page"
-              className="w-8 h-8 rounded-xl inline-flex items-center justify-center text-[#e8ca8a] hover:bg-white/10"
-            >
-              <BookOpen size={16} />
-            </button>
             <button onClick={onOpenCodex} aria-label="Codex" className="w-8 h-8 rounded-xl inline-flex items-center justify-center text-[#e8ca8a] hover:bg-white/10">
               <Library size={16} />
             </button>

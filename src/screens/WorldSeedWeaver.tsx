@@ -23,12 +23,22 @@ import WorldNodeModal from '../components/seedweaver/WorldNodeModal.tsx'
 import NpcNodeModal from '../components/seedweaver/NpcNodeModal.tsx'
 import NarrativeNodeModal from '../components/seedweaver/NarrativeNodeModal.tsx'
 
-// Asset imports for the 4 island nodes and background
+// Asset imports for the 4 island nodes and background — each is a
+// 1024x1024 (or larger) source photo, way past what an 80-104px circular
+// thumbnail or a mobile background ever needs. A matching *_mobile.webp
+// (generated once via sharp, see PROJECT_REVISION_NOTES.md) is served
+// below (min-width:769px) so phones don't pay for ~1MB/image they can't
+// even resolve the detail of; desktop keeps the original, untouched.
 import seedBgImg from '../assets/images/seed_bg_1788724454395.jpg'
+import seedBgImgMobile from '../assets/images/seed_bg_mobile.webp'
 import seedProtagImg from '../assets/images/seed_protag_1788724469363.jpg'
+import seedProtagImgMobile from '../assets/images/seed_protag_mobile.webp'
 import seedWorldImg from '../assets/images/seed_world_1788724489697.jpg'
+import seedWorldImgMobile from '../assets/images/seed_world_mobile.webp'
 import seedNpcsImg from '../assets/images/seed_npcs_1788724503157.jpg'
+import seedNpcsImgMobile from '../assets/images/seed_npcs_mobile.webp'
 import seedNarrativeImg from '../assets/images/seed_narrative_1788724534669.jpg'
+import seedNarrativeImgMobile from '../assets/images/seed_narrative_mobile.webp'
 
 export default function WorldSeedWeaver({
   worldTemplates = [],
@@ -109,21 +119,29 @@ export default function WorldSeedWeaver({
     <div className="relative min-h-dvh max-h-dvh flex flex-col text-[#f5dfa0] overflow-hidden bg-[#07050d] select-none">
       {/* Background artwork with atmospheric parallax & celestial light */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <img
-          src={seedBgImg}
-          alt="World Seed Background"
-          decoding="async"
-          className="w-full h-full object-cover object-center scale-105 filter brightness-[0.7] contrast-[1.1] transition-all duration-1000"
-        />
+        <picture>
+          <source media="(min-width: 769px)" srcSet={seedBgImg} />
+          <img
+            src={seedBgImgMobile}
+            alt="World Seed Background"
+            decoding="async"
+            className="w-full h-full object-cover object-center scale-105 filter brightness-[0.7] contrast-[1.1] transition-all duration-1000"
+          />
+        </picture>
         {/* Mystic Vignette & Astral Gradients */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#050308]/75 via-[#080512]/45 to-[#05030a]/90" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,0.12),transparent_70%)]" />
       </div>
 
-      {/* Atmospheric Central Sparks */}
+      {/* Atmospheric Central Sparks — purely decorative, and the single
+          heaviest continuous cost on this screen (two 384px layers, each
+          blurred at a large radius, pulsing forever). Hidden on mobile via
+          .sw-spark (index.css) rather than lightened, since they carry no
+          information and desktop is where the GPU headroom to render them
+          nicely actually exists. */}
       <div className="absolute inset-0 z-0 pointer-events-none opacity-40 overflow-hidden">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-amber-500/10 blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/3 right-1/4 w-96 h-96 rounded-full bg-purple-600/15 blur-3xl animate-pulse" />
+        <div className="sw-spark absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-amber-500/10 blur-3xl animate-pulse" />
+        <div className="sw-spark absolute bottom-1/3 right-1/4 w-96 h-96 rounded-full bg-purple-600/15 blur-3xl animate-pulse" />
       </div>
 
       {/* Screen Header Bar */}
@@ -290,7 +308,7 @@ export default function WorldSeedWeaver({
             >
               {/* Glowing Aura Ring */}
               <div
-                className={`absolute -inset-2 rounded-full transition-all duration-500 blur-md ${
+                className={`sw-aura absolute -inset-2 rounded-full transition-all duration-500 blur-md ${
                   finalizedNodes.protagonist
                     ? 'bg-gradient-to-tr from-amber-500/60 to-yellow-300/40 opacity-100 animate-pulse'
                     : 'bg-amber-500/20 opacity-40 group-hover:opacity-75'
@@ -298,13 +316,16 @@ export default function WorldSeedWeaver({
               />
               {/* Island Circular Frame */}
               <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-2 border-[#f0ca65] shadow-[0_0_20px_rgba(245,158,11,0.5)] bg-[#120e1d]">
-                <img
-                  src={seedProtagImg}
-                  alt="Protagonist"
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
+                <picture>
+                  <source media="(min-width: 769px)" srcSet={seedProtagImg} />
+                  <img
+                    src={seedProtagImgMobile}
+                    alt="Protagonist"
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  />
+                </picture>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                 <div className="absolute bottom-1.5 inset-x-0 flex justify-center">
                   <span className="px-1.5 py-0.5 rounded bg-amber-950/80 border border-amber-400/50 text-[9px] font-mono text-amber-200 uppercase font-bold truncate max-w-[85%]">
@@ -352,20 +373,23 @@ export default function WorldSeedWeaver({
               className="relative group cursor-pointer focus:outline-none"
             >
               <div
-                className={`absolute -inset-2 rounded-full transition-all duration-500 blur-md ${
+                className={`sw-aura absolute -inset-2 rounded-full transition-all duration-500 blur-md ${
                   finalizedNodes.world
                     ? 'bg-gradient-to-tr from-sky-500/60 to-cyan-300/40 opacity-100 animate-pulse'
                     : 'bg-sky-500/20 opacity-40 group-hover:opacity-75'
                 }`}
               />
               <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-2 border-[#38bdf8] shadow-[0_0_20px_rgba(56,189,248,0.5)] bg-[#0c1a24]">
-                <img
-                  src={seedWorldImg}
-                  alt="World"
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
+                <picture>
+                  <source media="(min-width: 769px)" srcSet={seedWorldImg} />
+                  <img
+                    src={seedWorldImgMobile}
+                    alt="World"
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  />
+                </picture>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                 <div className="absolute bottom-1.5 inset-x-0 flex justify-center">
                   <span className="px-1.5 py-0.5 rounded bg-sky-950/80 border border-sky-400/50 text-[9px] font-mono text-sky-200 uppercase font-bold truncate max-w-[85%]">
@@ -411,20 +435,23 @@ export default function WorldSeedWeaver({
               className="relative group cursor-pointer focus:outline-none"
             >
               <div
-                className={`absolute -inset-2 rounded-full transition-all duration-500 blur-md ${
+                className={`sw-aura absolute -inset-2 rounded-full transition-all duration-500 blur-md ${
                   finalizedNodes.npcs
                     ? 'bg-gradient-to-tr from-emerald-500/60 to-teal-300/40 opacity-100 animate-pulse'
                     : 'bg-emerald-500/20 opacity-40 group-hover:opacity-75'
                 }`}
               />
               <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-2 border-[#10b981] shadow-[0_0_20px_rgba(16,185,129,0.5)] bg-[#0a1a14]">
-                <img
-                  src={seedNpcsImg}
-                  alt="NPCs"
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
+                <picture>
+                  <source media="(min-width: 769px)" srcSet={seedNpcsImg} />
+                  <img
+                    src={seedNpcsImgMobile}
+                    alt="NPCs"
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  />
+                </picture>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                 <div className="absolute bottom-1.5 inset-x-0 flex justify-center">
                   <span className="px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-400/50 text-[9px] font-mono text-emerald-200 uppercase font-bold">
@@ -477,7 +504,7 @@ export default function WorldSeedWeaver({
             >
               {/* Glowing Radiant Purple Aura */}
               <div
-                className={`absolute -inset-3 rounded-full transition-all duration-700 blur-lg ${
+                className={`sw-aura absolute -inset-3 rounded-full transition-all duration-700 blur-lg ${
                   canUnlockNarrative
                     ? 'bg-gradient-to-tr from-purple-600 via-fuchsia-500 to-indigo-400 opacity-90 animate-pulse'
                     : 'bg-purple-900/20 opacity-30'
@@ -491,13 +518,16 @@ export default function WorldSeedWeaver({
                     : 'border-purple-900/60 shadow-none'
                 }`}
               >
-                <img
-                  src={seedNarrativeImg}
-                  alt="Narrative Portal"
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                />
+                <picture>
+                  <source media="(min-width: 769px)" srcSet={seedNarrativeImg} />
+                  <img
+                    src={seedNarrativeImgMobile}
+                    alt="Narrative Portal"
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                  />
+                </picture>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
 
                 {/* Arcane Lock overlay when sealed */}

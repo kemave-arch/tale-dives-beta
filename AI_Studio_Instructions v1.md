@@ -6,7 +6,7 @@ The project is version-controlled on GitHub, deployed via GitHub Pages
 (may later move behind Cloudflare + a custom domain).
 
 REFERENCE MATERIALS — NOT ABSOLUTE SOURCE OF TRUTH
-You'll be given the Project Revision Notes and Tale-Dives-Blueprint-v2_4.md
+You'll be given the Project Revision Notes and Tale-Dives-Blueprint-v3_2.md
 as reference. Neither is the ultimate source of truth. If you see a
 better, more optimized solution that still aligns with the app's
 purpose and good design principles, propose it first — explain the
@@ -17,6 +17,36 @@ something that has already shipped and diverges from the original
 blueprint text (the turn-response output format is the current example:
 the blueprint doesn't anticipate it, the Revision Notes do), treat the
 Revision Notes' description as what's actually running today.
+
+RECENT MAJOR CHANGE — NARRATIVE-FIRST OVERHAUL (2026-09-07)
+Tale Dives dropped its entire numeric RPG core in favor of a small,
+fixed, ordinal word vocabulary — this is the single most important
+thing to internalize before touching any mechanic-adjacent code, since
+it invalidates a lot of what an older mental model of this project
+would assume:
+- No more HP/MP/ST pools, no derived-stat formulas, no STR/INT/AGI as
+  raw numbers. Attributes are a `CompetencyTier` (`Untrained → Novice →
+  Adept → Expert → Master`, `lib/tiers.ts`). A protagonist's or
+  adversary's current state is a `conditions: ConditionTag[]` array
+  (`lib/conditions.ts`) — named narrative statuses like "Bleeding" or
+  "Exhausted," never a number.
+- Combat has no Tactical Mode anymore and never will — it is always
+  fully narrative-adjudicated by the model, bounded by Condition Tags
+  and a `compareTiers()` ordinal hint, never by client-precomputed
+  damage math. `lib/combat.ts`/`lib/derivedStats.ts` are gone.
+- Bestiary adversaries carry a `threatTier` word (`trivial` ...
+  `mythic`, 8-word scale) instead of `hp_max`/`dmg_base`. NPC
+  affection/trust are independent `CompetencyTier` ladders, moved by a
+  bare `+`/`-` sign in the turn schema, never a numeric delta.
+- The one numeric channel that survives on purpose is currency
+  (`copper_delta`, base-copper integer) — everything else mechanical is
+  a canonical word, enforced at the XML parser boundary
+  (`lib/xmlHelpers.ts`'s `reqTierWord` throws on anything off-vocabulary
+  or number-shaped).
+Full details, including the exact current XML grammar and system
+instructions text, are in Tale-Dives-Blueprint-v3_2.md §5 and §7 — those
+two sections are the ones most likely to have changed since whatever
+mental model you're carrying in from an earlier session.
 
 DON'T PRESENT UNVERIFIED CLAIMS AS MEASURED FACT
 This has gone wrong before on this project, so it gets its own callout.
@@ -48,7 +78,7 @@ it's just a throwaway prototype stub.
 
 MEMORY ARCHITECTURE — FOLLOW THE BLUEPRINT, DON'T REINVENT IT
 This project already has a fully specified memory system in
-Tale-Dives-Blueprint-v2_4.md, since extended in practice — check the
+Tale-Dives-Blueprint-v3_2.md, since extended in practice — check the
 Revision Notes for the current shape of each piece before assuming the
 blueprint's original numbers still hold:
 - Phase E Chapter Milestone & Memory Reset: full raw conversation
@@ -89,8 +119,12 @@ guess). The model's raw response is exactly two top-level elements:
 `<nar>...</nar>` (plain narrative prose, using the existing inline
 markup below) followed by `<sync>...</sync>` (a compact block of
 self-closing XML tags with shorthand attributes covering every
-mechanical field — turn state, vitals/currency deltas, items gained or
-lost, quest/NPC/faction updates, and so on). There is no
+mechanical field — turn state, Condition Tag add/remove, a currency
+delta, items gained or lost, quest/NPC/faction/project updates, and so
+on). Per the Narrative-First Overhaul above, there are no vitals deltas
+anymore — "vitals" is now entirely Condition Tags (`<cond>`), not a
+numeric field of any kind; currency (`c=`) remains the one genuine
+numeric delta in the whole schema. There is no
 `responseSchema`/`responseMimeType: application/json` on this call
 anymore, and there shouldn't be — the whole point was moving off that
 for a real, measured reduction in output tokens.

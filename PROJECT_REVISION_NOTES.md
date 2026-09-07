@@ -1,5 +1,41 @@
 # Tale Dives — Project Revision Notes
 
+**Last updated:** 2026-09-07 — Rewrote `Tale-Dives-Blueprint-v3_0.md` →
+`Tale-Dives-Blueprint-v3_2.md` (renamed) to describe the Narrative-First
+Overhaul (previous entry below) as its current, real state rather than the
+now-obsolete numeric engine — every section grounded in a direct re-read of
+the actual source (`lib/tiers.ts`, `lib/conditions.ts`, `data/classes.ts`,
+`lib/leveling.ts`, `lib/projects.ts`, `types.ts`, `turnContract.ts`,
+`xmlTurnContract.ts`), not memory of the overhaul work itself. Notable
+corrections caught only by re-reading source rather than assuming: class
+`weights` did NOT go fully dead as an earlier pass had assumed — it still
+drives the starting-attribute point-buy split at creation AND which single
+attribute a Milestone Breakthrough favors (`applyLevelUps` picks the
+class's highest-weight attribute); the starting-attribute picker itself
+(`NewGame.tsx` et al.) still hands out a raw ~10-22 point range rather than
+a true `CompetencyTier` UI, which is called out as an open gap in the
+blueprint's §8 rather than glossed over; the live default model in
+`store.ts` is `gemini-3.5-flash-lite`, not `gemini-3.1-flash-lite` as the
+old blueprint's §7.1 table claimed; the blueprint's own §9 carried a stale
+`3,584`-token IMMERSIVE ceiling left over from before that value was raised
+to `6,144` elsewhere in the same document (fixed, two occurrences). §7.2/
+§7.3 were replaced with byte-identical copies of the live
+`SYSTEM_INSTRUCTIONS`/`XML_OUTPUT_GRAMMAR` constants, not paraphrases.
+Also updated `AI_Studio_Instructions v1.md` (the periodically-refreshed,
+not-auto-synced project-instructions doc for whichever assistant is doing
+further dev work while the primary session is unavailable) — fixed its two
+stale `Tale-Dives-Blueprint-v2_4.md` references to point at v3_2, replaced
+its "vitals/currency deltas" LLM-output-validation phrasing (vitals aren't
+deltas anymore), and added a compact "RECENT MAJOR CHANGE" callout
+summarizing the overhaul up front so a fresh assistant session doesn't
+reintroduce numeric HP/MP/ST-shaped mechanics from an outdated mental
+model. Verification for this pass was read-and-cross-reference against
+live source, not `tsc`/`vite build` (no code changed) — every specific
+claim above was checked directly against the file/line it describes rather
+than asserted from memory.
+
+Previous note:
+
 **Last updated:** 2026-09-07 — The Narrative-First Overhaul (Phases 0-7):
 dropped the entire numeric HP/MP/ST/attribute engine and TACTICAL combat
 mode for a small, fixed, ordinal-word vocabulary the LLM must always use

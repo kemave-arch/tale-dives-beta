@@ -470,7 +470,7 @@ html.gfx-performance .glass-panel {
    a GPU re-blur + re-composite on every animation frame for as long as the
    screen is mounted — the main cause of "screen response is slow" on
    weaker mobile GPUs, separate from the image-weight fix (see the
-   *_mobile.webp assets wired into WorldSeedWeaver.tsx). The sparks are
+   *_mobile.webp assets wired into TaleDiveWeaver.tsx). The sparks are
    pure atmosphere with no information value, so they're hidden outright
    on mobile rather than just shrunk; the node auras stay (they mark
    finalization state) but at a much cheaper blur radius. */

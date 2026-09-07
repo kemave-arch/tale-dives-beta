@@ -15,8 +15,8 @@ import {
 import type { CombatMode, ProtagonistData, WorldData } from '../types.ts'
 import { FOURTH_WING_WORLD, VIOLET_SORRENGAIL } from '../data/starterTemplates.ts'
 import { DEFAULT_NARRATION_STYLE } from '../api/turnContract.ts'
-import type { NodeType, SeedNpcData, WorldSeedWeaverProps } from '../components/seedweaver/types.ts'
-export type { SeedNpcData, WorldSeedWeaverProps } from '../components/seedweaver/types.ts'
+import type { NodeType, SeedNpcData, TaleDiveWeaverProps } from '../components/seedweaver/types.ts'
+export type { SeedNpcData, TaleDiveWeaverProps } from '../components/seedweaver/types.ts'
 import { DEFAULT_STARTER_NPCS } from '../components/seedweaver/defaultPacks.ts'
 import ProtagonistNodeModal from '../components/seedweaver/ProtagonistNodeModal.tsx'
 import WorldNodeModal from '../components/seedweaver/WorldNodeModal.tsx'
@@ -40,7 +40,7 @@ import seedNpcsImgMobile from '../assets/images/seed_npcs_mobile.webp'
 import seedNarrativeImg from '../assets/images/seed_narrative_1788724534669.jpg'
 import seedNarrativeImgMobile from '../assets/images/seed_narrative_mobile.webp'
 
-export default function WorldSeedWeaver({
+export default function TaleDiveWeaver({
   worldTemplates = [],
   protagonistTemplates = [],
   existingTitles = [],
@@ -50,7 +50,7 @@ export default function WorldSeedWeaver({
   onDeleteProtagonistPreset,
   onDeleteWorldPreset,
   onBeginTale,
-}: WorldSeedWeaverProps) {
+}: TaleDiveWeaverProps) {
   // --- Active Seed Data State ---
   const [protagonist, setProtagonist] = useState<ProtagonistData>(() => ({
     ...VIOLET_SORRENGAIL,

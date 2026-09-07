@@ -40,7 +40,7 @@ export interface SeedNarrativePreset {
 
 export type NodeType = 'protagonist' | 'world' | 'npcs' | 'narrative'
 
-export interface WorldSeedWeaverProps {
+export interface TaleDiveWeaverProps {
   worldTemplates?: WorldData[]
   protagonistTemplates?: ProtagonistData[]
   existingTitles?: string[]

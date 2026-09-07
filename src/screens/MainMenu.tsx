@@ -46,7 +46,7 @@ interface MainMenuProps {
   onSetDefaultProtagonist: (id: string) => void
   onDeleteProtagonist: (id: string) => void
   onOpenSettings: () => void
-  onOpenWorldSeed?: () => void
+  onOpenTaleDiveWeaver?: () => void
   onOpenNovelWeaver?: () => void
   // Same soundtrack controls as Title, so the toggle is reachable from
   // wherever the player happens to be rather than only the entry screen.
@@ -83,7 +83,7 @@ export default function MainMenu({
   onSetDefaultProtagonist,
   onDeleteProtagonist,
   onOpenSettings,
-  onOpenWorldSeed,
+  onOpenTaleDiveWeaver,
   onOpenNovelWeaver,
   onBackToTitle,
   musicMuted,
@@ -208,10 +208,10 @@ export default function MainMenu({
                 ))}
 
                 <DashedCard icon={Plus} label="New Story" onClick={() => onNewSession()} />
-                {onOpenWorldSeed && (
+                {onOpenTaleDiveWeaver && (
                   <button
                     type="button"
-                    onClick={onOpenWorldSeed}
+                    onClick={onOpenTaleDiveWeaver}
                     className="relative group col-span-1 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 border-2 border-purple-500/40 bg-gradient-to-br from-[#1b1030]/90 to-[#0e071c]/95 hover:border-purple-400 hover:from-[#251545] hover:to-[#170c2e] transition-all duration-300 shadow-[0_0_20px_rgba(168,85,247,0.25)] hover:shadow-[0_0_25px_rgba(168,85,247,0.45)] text-center cursor-pointer min-h-[110px]"
                   >
                     <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-400 to-purple-500 p-[1.5px] shadow-lg shadow-purple-950">

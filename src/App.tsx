@@ -6,7 +6,7 @@ import type { SettingsSavePayload } from './screens/Settings.tsx'
 import type { CategoryId } from './screens/Codex.tsx'
 import type { SeedNpcData } from './components/seedweaver/types.ts'
 // Everything below Title/MainMenu is code-split — mobile's first paint only
-// needs to parse those two, not the whole app (Codex, WorldSeedWeaver + its
+// needs to parse those two, not the whole app (Codex, TaleDiveWeaver + its
 // 4 modals, Chronicle, etc. run well past 5,000 lines combined). Each only
 // loads once the player actually navigates to it; the Suspense fallback
 // around `content` below covers the brief gap on that first visit.
@@ -19,7 +19,7 @@ const DiveLoadingScreen = lazy(() => import('./screens/DiveLoadingScreen.tsx'))
 const Chronicle = lazy(() => import('./screens/Chronicle.tsx'))
 const Codex = lazy(() => import('./screens/Codex.tsx'))
 const SlashCommandManager = lazy(() => import('./screens/SlashCommandManager.tsx'))
-const WorldSeedWeaver = lazy(() => import('./screens/WorldSeedWeaver.tsx'))
+const TaleDiveWeaver = lazy(() => import('./screens/TaleDiveWeaver.tsx'))
 const NovelWeaver = lazy(() => import('./screens/NovelWeaver.tsx'))
 import { getClassById, findClassById } from './data/classes.ts'
 import { startingAttributes, derivedPools } from './lib/derivedStats.ts'
@@ -82,7 +82,7 @@ const KEYWORD_CATEGORY_TO_CODEX: Record<KeywordLink['category'], CategoryId> = {
 // screen is current (same as SlashCommandManager), not a screen that replaces
 // it — that's what lets its glass read against the live Chronicle parchment or
 // the Title artwork behind it rather than a flat ground.
-type Screen = 'title' | 'mainmenu' | 'storymode' | 'worldsetup' | 'newgame' | 'talebrief' | 'chronicle' | 'codex' | 'diveloading' | 'seedingreview' | 'worldseed' | 'novelweaver'
+type Screen = 'title' | 'mainmenu' | 'storymode' | 'worldsetup' | 'newgame' | 'talebrief' | 'chronicle' | 'codex' | 'diveloading' | 'seedingreview' | 'talediveweaver' | 'novelweaver'
 type CreationMode = 'tale' | 'library'
 
 // §5.7 Player Defeat State — soft-fail recovery, client-owned.
@@ -1629,7 +1629,7 @@ export default function App() {
           })
         }}
         onOpenSettings={() => openSettings()}
-        onOpenWorldSeed={() => navigateTo('worldseed')}
+        onOpenTaleDiveWeaver={() => navigateTo('talediveweaver')}
         onOpenNovelWeaver={() => navigateTo('novelweaver')}
         onBackToTitle={() => goBack('title')}
         musicMuted={musicMuted}
@@ -1645,9 +1645,9 @@ export default function App() {
         onResumeSoundtrack={onResumeSoundtrack}
       />
     )
-  } else if (screen === 'worldseed') {
+  } else if (screen === 'talediveweaver') {
     content = (
-      <WorldSeedWeaver
+      <TaleDiveWeaver
         worldTemplates={Object.values(worlds)}
         protagonistTemplates={Object.values(protagonists)}
         existingTitles={Object.values(campaigns).map((c) => c.title)}

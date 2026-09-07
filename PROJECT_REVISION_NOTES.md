@@ -1,6 +1,14 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-07 — Verified an external "Gemini 3.0 Context
+**Last updated:** 2026-09-07 — TaleDiveWeaver Constellation Alignment & Cleanup (`src/screens/TaleDiveWeaver.tsx`):
+1. **Removed Purple Diagonal Moving Animation**: Diagnosed the root cause — an SVG `<circle cx="200" cy="200" ... className="animate-ping opacity-75 duration-1000" fill="rgba(168,85,247,0.3)">` in the SVG center nexus. Because SVG elements do not default CSS transform-origin to their local center without fill-box styling, Tailwind's `animate-ping` (scale 2x) transformed relative to SVG `(0, 0)`, launching the purple circle diagonally down-right towards `(400, 400)` once every 1000ms. Removed the ping circle in favor of a clean, stationary, glowing astral nexus star, and cleaned up pulsing background blurs.
+2. **Scaled Down, Recentered & Aligned Diamond Shape**: The previous fixed diamond (`points="200,45 355,200 200,355 45,200"`) was oversized and misaligned because Left and Right node cards had shifted the circle buttons upward away from `y=200`. Refactored the constellation layout to an equilateral diamond scaled down ~20% and centered at `(200, 175)`, with its 4 corner tips at `(200, 65)` (Top Protagonist), `(90, 175)` (Left World), `(310, 175)` (Right NPCs), and `(200, 285)` (Bottom Narrative). Node buttons are now anchored directly at these percentage coordinates with cards positioned relative to the button without altering the button's center point.
+3. **Subinfo Typography**: Updated all 4 node subinfo bullet lists from `font-narrative` (Lora) to `font-sans` (Plus Jakarta Sans).
+Verified: `tsc --noEmit` and `vite build` completed with zero errors.
+
+Previous note:
+
+**2026-09-07** — Verified an external "Gemini 3.0 Context
 Caching Architecture Guide" doc the user was handed against the real
 codebase before trusting any of it (per this file's own "don't present
 unverified claims as fact" discipline). Confirmed accurate: `src/api/

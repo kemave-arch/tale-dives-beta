@@ -2,7 +2,8 @@ import { describeKnownLocation, territoryHostileLine } from './locations.ts'
 import { describePresentNpc, presentNpcs } from './npcs.ts'
 import { isHidden } from './discovery.ts'
 import { checkAffordability } from './skills.ts'
-import type { Campaign, ConditionTag, Dict, EquipSlot, ItemEntry, Player, SkillEntry } from '../types.ts'
+import { compareTiers, wordToTier, COMPETENCY_TIERS, THREAT_TIERS } from './tiers.ts'
+import type { Campaign, ConditionTag, Dict, EquipSlot, ItemEntry, LogEntry, Player, SkillEntry } from '../types.ts'
 
 const RECENT_CHAPTER_DIGEST_COUNT = 3
 const MAX_FLAGS_SHOWN = 20
@@ -46,11 +47,24 @@ function describeSkills(skills: Dict<SkillEntry> | undefined, player: Player): s
   return parts.length ? `Skills: ${parts.join(' | ')}` : null
 }
 
+// The last *narrated* turn's state — a bang command or synthetic entry
+// (chapterSummary, classEvolution) carries no turnState of its own, so it's
+// skipped the same way App.tsx's own findLastNarratedIndex does when driving
+// turn-state music. Used below only to gate the SOCIAL adjudication hint;
+// COMBAT's own hint is gated on the more authoritative combat.active instead.
+function lastNarratedTurnState(log: LogEntry[] | undefined): string | undefined {
+  if (!log) return undefined
+  for (let i = log.length - 1; i >= 0; i--) {
+    if (log[i].nar && log[i].turnState) return log[i].turnState
+  }
+  return undefined
+}
+
 // Just-In-Time Context Slicing — Blueprint §3.1.
 // Builds the compact per-turn header re-sent alongside the player's action;
 // this (not model memory) is what keeps state consistent turn to turn.
 export function buildContextSlice(state: Campaign, craftReadyLine?: string | null): string {
-  const { player, proseDepth, narrationStyle, locations, npcs, factions, lore, world, flags, quests, log, items, combat } = state
+  const { player, proseDepth, narrationStyle, locations, npcs, factions, lore, world, flags, quests, log, items, combat, bestiary } = state
 
   const playerIdentity = [player.gender && `Gender: ${player.gender}`, player.age !== undefined && `Age: ${player.age}`]
     .filter(Boolean)
@@ -103,8 +117,24 @@ export function buildContextSlice(state: Campaign, craftReadyLine?: string | nul
   }
 
   // §5.5 Proximity Slicing — an NPC not currently here costs 0 context tokens.
-  for (const [npcId, npc] of presentNpcs(npcs, player.locId)) {
+  const present = presentNpcs(npcs, player.locId)
+  for (const [npcId, npc] of present) {
     lines.push(describePresentNpc(npcId, npc))
+  }
+
+  // SOCIAL adjudication hint — the protagonist's INT tier vs. the present
+  // NPC's own `resolve` (their rhetorical/social resistance), the same
+  // compareTiers() primitive COMBAT uses below for prowess vs. threat: one
+  // call site on a shared utility, not a second one. Only fires during an
+  // actual SOCIAL scene and only for an NPC who's had `resolve` established —
+  // most NPCs never need it, so this is 0 tokens the rest of the time.
+  if (lastNarratedTurnState(log) === 'SOCIAL') {
+    const socialTarget = present.find(([, npc]) => npc.resolve !== undefined)
+    if (socialTarget) {
+      const [, npc] = socialTarget
+      const hint = compareTiers(player.attrs.INT, npc.resolve!, COMPETENCY_TIERS.length, COMPETENCY_TIERS.length)
+      lines.push(`Social Read: ${npc.name}'s resolve vs. your INT — ${hint}`)
+    }
   }
 
   // Combat is fully narrative-adjudicated now — the opponent's live state is
@@ -112,6 +142,17 @@ export function buildContextSlice(state: Campaign, craftReadyLine?: string | nul
   // same way an equipped weapon or a present NPC is.
   if (combat?.active) {
     lines.push(`Combat: vs ${combat.enemyName ?? combat.enemyId ?? 'unknown adversary'} | Conditions: ${describeConditions(combat.enemyConditions)}`)
+    // COMBAT adjudication hint — protagonist's physical prowess (the higher
+    // of STR/AGI — either a brute-force or finesse build reads as "combat
+    // competent") vs. the adversary's Bestiary threatTier. Skipped for
+    // 'unknown' — a bare {{Name|beast}} mention that hasn't actually been
+    // established in a scene yet has no real threat rank to compare against.
+    const enemyThreat = combat.enemyId ? bestiary?.[combat.enemyId]?.threatTier : undefined
+    if (enemyThreat && enemyThreat !== 'unknown') {
+      const prowess = Math.max(player.attrs.STR, player.attrs.AGI)
+      const hint = compareTiers(prowess, wordToTier(enemyThreat, THREAT_TIERS), COMPETENCY_TIERS.length, THREAT_TIERS.length)
+      lines.push(`Combat Read: your prowess vs. this threat — ${hint}`)
+    }
   }
 
   // Memory retention — everything below this point exists because the

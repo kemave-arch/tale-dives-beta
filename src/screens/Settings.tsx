@@ -3,7 +3,7 @@ import {
   Cpu, SlidersHorizontal, HardDrive, Cloud, X, Download, Upload, RotateCcw,
   FolderOpen, FolderX, Maximize, Minimize, Trash2, Volume2, VolumeX,
   CloudUpload, CloudDownload, Loader2, Check, RefreshCw, KeyRound, Bot, Server,
-  Dice5, Layers, Swords, Monitor, Bug, UserCircle, History, AlertTriangle, LogOut, Gauge,
+  Dice5, Layers, Monitor, Bug, UserCircle, History, AlertTriangle, LogOut, Gauge,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { PROSE_DEPTHS } from '../api/turnContract.ts'
@@ -16,7 +16,7 @@ import {
   initGoogleAuth, signOutGoogle, listDriveBackups, signInWithGoogle, getGoogleAccessToken,
   type GoogleDriveFile, type User,
 } from '../lib/googleDrive.ts'
-import type { ApiSettings, Campaign, CombatMode, UiPrefs } from '../types.ts'
+import type { ApiSettings, Campaign, UiPrefs } from '../types.ts'
 
 const TABS = [
   { id: 'model', label: 'AI Model', icon: Cpu },
@@ -30,7 +30,6 @@ export interface SettingsSavePayload {
   apiSettings: ApiSettings
   uiPrefs: UiPrefs
   proseDepthKey: keyof typeof PROSE_DEPTHS
-  combatMode: CombatMode
 }
 
 interface SettingsProps {
@@ -105,7 +104,6 @@ export default function Settings({
   const [proseDepthKey, setProseDepthKey] = useState<keyof typeof PROSE_DEPTHS>(
     (game?.proseDepth?.label as keyof typeof PROSE_DEPTHS) ?? 'BALANCED',
   )
-  const [combatMode, setCombatMode] = useState<CombatMode>(game?.combatMode ?? 'NARRATIVE')
   const [folderLinked, setFolderLinked] = useState<boolean | null>(null) // null = still checking
   const [isFullscreen, setIsFullscreen] = useState(!!document.fullscreenElement)
   const [googleUser, setGoogleUser] = useState<User | null>(null)
@@ -304,7 +302,6 @@ export default function Settings({
       apiSettings: { provider, model, apiKey, temperature },
       uiPrefs: { chromeOpacity, debugMode, introGazeDelay, autoCloudBackup, graphicsMode },
       proseDepthKey,
-      combatMode,
     })
   }
 
@@ -443,25 +440,6 @@ export default function Settings({
                   value={proseDepthKey}
                   onChange={setProseDepthKey}
                 />
-              </div>
-
-              <div>
-                <FieldLabel
-                  icon={Swords}
-                  tip="Narrative: the Narrator resolves fights from context — your move, footwork, and cleverness matter, no hidden math. Tactical: damage is computed client-side from your stats before the Narrator ever sees it."
-                >
-                  Combat Resolution Mode
-                </FieldLabel>
-                <GlassSegmented
-                  className="mt-2"
-                  options={[
-                    { id: 'TACTICAL', label: 'Tactical' },
-                    { id: 'NARRATIVE', label: 'Narrative' },
-                  ] as const}
-                  value={combatMode}
-                  onChange={setCombatMode}
-                />
-                {!game && <p className="font-narrative italic text-xs text-[#d8c49e] mt-1.5">Applies once a Tale is active.</p>}
               </div>
 
               <div>

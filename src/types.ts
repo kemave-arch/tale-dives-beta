@@ -18,10 +18,37 @@ export interface SavedPreset {
   savedAt: number
 }
 
+// Narrative-First Overhaul — every numeric HP/MP/ST-style pool and delta the
+// LLM used to have to compute (a recurring hallucination/desync risk — see
+// the since-removed NaN-repair pass this schema bump finally retires) is
+// replaced by a small, fixed ordinal-word vocabulary: an internal 1-based
+// rank into a closed word scale (lib/tiers.ts's COMPETENCY_TIERS/
+// THREAT_TIERS), expressed to and by the model only as the word itself,
+// never a number. Kept as a plain `number` rather than a `1|2|3|4|5` literal
+// union — see lib/tiers.ts's own comment for why (the existing point-buy
+// attribute allocators still hand out a wider raw range, and rescaling that
+// UI to a true tier picker is out of scope for this pass); the real anti-
+// drift enforcement is wordToTier/reqTierWord at the LLM/XML boundary, not
+// the static type of this field.
+export type CompetencyTier = number
+
+// Bestiary/hazard severity — the internal, LLM-facing token set (separate
+// from any player-facing display reskin, a client-side-only concern layered
+// on top in a later pass). Mirrors lib/tiers.ts's THREAT_TIERS 8-word scale,
+// plus 'unknown' — a client-only placeholder for a bare {{Name|beast}}
+// mention that hasn't actually been established in a scene yet (never a
+// value the model itself is asked to emit).
+export type ThreatTierToken = 'unknown' | 'trivial' | 'minor' | 'notable' | 'dangerous' | 'severe' | 'extreme' | 'legendary' | 'mythic'
+
+// A skill's qualitative cost — how much a cast visibly takes out of the
+// protagonist, judged narratively against their current Condition Tags
+// rather than a numeric pool (lib/skills.ts's checkAffordability).
+export type EffortTier = 'minor' | 'focused' | 'taxing'
+
 export interface Attributes {
-  STR: number
-  INT: number
-  AGI: number
+  STR: CompetencyTier
+  INT: CompetencyTier
+  AGI: CompetencyTier
 }
 
 export interface ClassWeights extends Attributes {}
@@ -35,6 +62,18 @@ export interface ClassDef {
 export interface GameTime {
   d: number
   h: string
+}
+
+// Condition Tags — replaces the old numeric HP/MP/ST pools entirely
+// (lib/conditions.ts). 'duration' conditions clear themselves once enough
+// in-fiction time passes (Bleeding, Exhausted); 'narrative' ones persist
+// until the story itself lifts them (<cond rem>) — an unrecognized condition
+// name always defaults to 'narrative', never auto-expiring silently.
+export interface ConditionTag {
+  id: string
+  label: string
+  kind: 'duration' | 'narrative'
+  expiresAt?: GameTime // only meaningful when kind === 'duration'
 }
 
 // §5.8 Crafting — a local static dictionary, same pattern as the Preset
@@ -68,6 +107,11 @@ export interface CraftingJob {
 // Monarch), `!raise_skeleton` (Necromancer), `!summon` (Summoner).
 // A minion persists on the Campaign until dismissed or (for
 // a `familiar`) its upkeep can no longer be paid.
+//
+// Deliberately OUT OF SCOPE for the Narrative-First Overhaul — a separate,
+// narrow, class-gated mechanic the user explicitly excluded from it. Minion
+// keeps its own numeric hpMax untouched; do not fold it into ConditionTag or
+// the Bestiary's qualitative threat model.
 export type SummonBranch = 'shadow' | 'skeleton' | 'familiar'
 
 export interface Minion {
@@ -92,12 +136,7 @@ export interface Player {
   className: string
   level: number
   attrs: Attributes
-  hp: number
-  hpMax: number
-  mp: number
-  mpMax: number
-  st: number
-  stMax: number
+  conditions: ConditionTag[] // replaces hp/hpMax/mp/mpMax/st/stMax entirely
   copper: number
   locId: string
   locDisp: string
@@ -105,23 +144,11 @@ export interface Player {
   equipped?: Partial<Record<EquipSlot, string>> // §5.9 — slot -> equipped item id
 }
 
-// §5.9 Item Type Taxonomy — a closed set; only these three carry a
-// stat_bonus and occupy an equip slot (1:1 with ItemType, one slot each).
+// §5.9 Item Type Taxonomy — a closed set; only these three occupy an equip
+// slot (1:1 with ItemType, one slot each) and can carry `traits`.
 export type ItemType = 'weapon' | 'armor' | 'accessory' | 'tool' | 'key' | 'consumable' | 'material'
 export type EquipSlot = 'weapon' | 'armor' | 'accessory'
 export const EQUIPPABLE_TYPES: ItemType[] = ['weapon', 'armor', 'accessory']
-
-// Flat, all-optional deltas applied on equip and reversed (negated) on
-// unequip — STR/INT/AGI recompute derived HP/MP/ST max (same math as
-// stat_grant); hp/mp/st bonuses add directly to that pool's max.
-export interface StatBonus {
-  STR?: number
-  INT?: number
-  AGI?: number
-  hp?: number
-  mp?: number
-  st?: number
-}
 
 // The item Codex — one entry per item id the player has ever carried.
 // Deliberately not a full "every item in the world" registry (§5.9 scope is
@@ -133,7 +160,11 @@ export interface ItemEntry {
   name: string
   type: ItemType
   description?: string
-  statBonus?: StatBonus // only meaningful when type is weapon/armor/accessory
+  // Freeform narrative flavor tags (e.g. ["reach","heavy"]) — replaces the
+  // old numeric StatBonus entirely. Pure narration fuel for the model to
+  // factor into how a fight/scene reads; no mechanical bookkeeping on the
+  // client (no tier-bump math on equip/unequip).
+  traits?: string[]
   rarity?: string // freeform, e.g. "Common"/"Rare"/"Legendary" — flavor, not a game-mechanical gate
   loreText?: string // an evocative line distinct from `description`'s mechanical summary
   value?: number // freeform currency worth, player/CRUD-set only
@@ -182,13 +213,19 @@ export interface LocationEntry {
   discovery?: Discovery
 }
 
-// §5.5/§5.14 NPC Codex entry.
+// §5.5/§5.14 NPC Codex entry. affection/trust are two INDEPENDENT
+// CompetencyTier ladders (own words each, see lib/npcs.ts) — never
+// collapsed into one shared relationship axis: a mercenary can respect the
+// protagonist's competence (high trust) while disliking them personally (low
+// affection), a real narrative state the single `stage` ladder (driven by
+// affection alone) already supports today and must keep supporting.
 export interface NpcEntry {
   name: string
   gender?: string // player-set via Codex CRUD only — never asked of the model (§3.6, no new schema field)
   age?: number
-  affection: number
-  trust: number
+  affection: CompetencyTier
+  trust: CompetencyTier
+  resolve?: CompetencyTier // this NPC's social/rhetorical resistance — set/revised by the LLM on introduction, same as Bestiary's threatTier; used only for the SOCIAL compareTiers() hint, omitted for minor NPCs who never need it
   stage: string
   deeds: string[]
   memSummary: string
@@ -258,14 +295,14 @@ export interface QuestEntry {
   discovery?: Discovery
 }
 
-// §5.13 Bestiary entry — hpMax/dmgBase are only present once a beast has
-// actually entered Tactical combat (§2 Phase D.2); a passing {{Name|beast}}
-// mention alone only registers name/threatTier.
+// §5.13 Bestiary entry — threatTier is a fixed canonical word (lib/tiers.ts's
+// THREAT_TIERS, or 'unknown' for a bare name-only mention that hasn't been
+// established yet). `conditions` mirrors Player's — a beast/hazard can carry
+// the same narrative status tags (Bleeding, Stunned, ...) the protagonist can.
 export interface BestiaryEntry {
   name: string
-  threatTier: string
-  hpMax?: number
-  dmgBase?: number
+  threatTier: ThreatTierToken
+  conditions?: ConditionTag[]
   description?: string // freeform appearance/behavior
   habitat?: string // freeform
   weaknesses?: string // freeform
@@ -278,18 +315,17 @@ export interface BestiaryEntry {
 
 // §6.4D Codex category 6 — Skills (Spells & Abilities). Every field past the
 // name is optional on purpose: a skill is usually *mentioned* in prose (as
-// [Shadow Step], §4.2) well before it has agreed numbers, and the blueprint
-// deliberately leaves skill base values open rather than pre-specced (§8).
-// §3.2 affordability therefore only gates a skill that actually declares a
-// cost — an unpriced skill is never blocked, just narrated.
+// [Shadow Step], §4.2) well before it has agreed particulars, and the
+// blueprint deliberately leaves skill specifics open rather than pre-specced
+// (§8). §3.2 affordability therefore only gates a skill that actually
+// declares an `effort`  — an effortless skill is never blocked, just narrated.
 export interface SkillEntry {
   name: string
   description?: string
   classId?: string // owning class, a Preset Class Dictionary id (§6.4D card shows its icon)
-  mpCost?: number
-  stCost?: number
+  effort?: EffortTier // how taxing a cast visibly is, judged against the player's current Condition Tags — replaces mpCost/stCost
   skillType?: string // freeform, e.g. "Offensive"/"Defensive"/"Utility"/"Passive"
-  tier?: string // freeform progression marker, e.g. "Novice"/"Adept"/"Master"
+  tier?: CompetencyTier // mastery rank — formalizes the old freeform string field onto the same 5-word scale as Attributes
   flavorText?: string // a short evocative line, distinct from `description`'s mechanical summary
   autoLogged?: boolean
   loggedAt?: string // see LocationEntry.loggedAt
@@ -298,13 +334,14 @@ export interface SkillEntry {
 
 // §2 Phase D.2 — ephemeral per-encounter state, reset each fight (not part
 // of the persistent Bestiary, which tracks per-species knowledge instead).
+// Combat is fully narrative-adjudicated now (TACTICAL mode is gone) — the
+// opponent's live state is just its own Condition Tags, same shape as the
+// player's.
 export interface CombatState {
   active: boolean
   enemyId?: string
   enemyName?: string
-  enemyHp?: number
-  enemyHpMax?: number
-  enemyDmgBase?: number
+  enemyConditions?: ConditionTag[]
 }
 
 export interface ProseDepthConfig {
@@ -312,8 +349,6 @@ export interface ProseDepthConfig {
   targetTokens: string
   maxOutputTokens: number
 }
-
-export type CombatMode = 'TACTICAL' | 'NARRATIVE'
 
 // §Phase A World Setup — also the World Library's stored shape (§6.4B).
 export interface WorldFaction {
@@ -404,6 +439,7 @@ export interface LogEntry {
   defeated?: boolean
   act?: string[]
   levelUp?: number // §5.1a — set when this turn triggered a Milestone Level-up
+  breakthrough?: { attr: 'STR' | 'INT' | 'AGI'; tier: string } // §5.1c — a narrated permanent attribute breakthrough (tier is the canonical word, for display)
   chapterSummary?: string // §2 Phase E — a synthetic entry marking a chapter boundary
   chapterNumber?: number
   time?: GameTime // per-turn timestamp, absent on entries logged before this field existed
@@ -443,9 +479,13 @@ export interface SlashCommand {
 // migrated on load rather than just picking up a new field as `undefined`.
 // Written on every new campaign and export; backfilled onto any older
 // campaign missing it the first time it's loaded (see store.ts's
-// loadCampaigns). No migration logic exists yet because nothing has needed
-// one yet — this only pays off the day something does.
-export const CURRENT_SCHEMA_VERSION = 1
+// loadCampaigns). Bumped to 2 for the Narrative-First Overhaul (numeric HP/
+// MP/ST pools, StatGrant/StatBonus, and TACTICAL combat mode all gone) — no
+// migration logic exists for this bump: a pre-2 save is qualitatively a
+// different shape (numeric pools, not Condition Tags) that can't be
+// mechanically transformed into the new one, so store.ts's loadCampaigns
+// rejects/flags it rather than attempting one.
+export const CURRENT_SCHEMA_VERSION = 2
 
 // A Tale — the full persisted campaign shape (§6.4B Tales library).
 export interface Campaign {
@@ -457,7 +497,6 @@ export interface Campaign {
   protagonistId?: string
   world: WorldData
   player: Player
-  combatMode: CombatMode
   proseDepth: ProseDepthConfig
   narrationStyle: string
   locations: Dict<LocationEntry>
@@ -470,7 +509,7 @@ export interface Campaign {
   combat: CombatState
   flags: string[] // §5.6 World Impact Ledger
   inventory: Dict<number> // item id -> quantity (§5.9)
-  items?: Dict<ItemEntry> // §5.9 — item id -> name/type/description/statBonus, the item Codex
+  items?: Dict<ItemEntry> // §5.9 — item id -> name/type/description/traits, the item Codex
   crafting?: CraftingJob[] // §5.8 — queued/in-progress crafting jobs, never sent to Gemini
   minions?: Dict<Minion> // §5.3 — the player's persistent summoned army
   corpses?: string[] // §5.3 — harvestable slain-enemy tags accumulated from corpse_add, consumed by `!arise`
@@ -503,14 +542,6 @@ export interface UiPrefs {
   graphicsMode?: 'glass' | 'performance' // Graphics tab — 'performance' strips backdrop-filter blur app-wide (flat transparency, same colors) for weaker mobile GPUs
 }
 
-// §7.3 JSON Schema — the shape of a single turn response from the model.
-export interface TurnDelta {
-  hp?: number
-  mp?: number
-  st?: number
-  c?: number
-}
-
 export interface InventoryChange {
   id: string
   qty: number
@@ -524,13 +555,41 @@ export interface InventoryAcquisition extends InventoryChange {
   name: string
   type: ItemType
   description?: string
-  statBonus?: StatBonus
+  traits?: string[] // freeform narrative flavor tags — replaces the old numeric statBonus
 }
 
-export interface StatGrant {
-  attr?: 'STR' | 'INT' | 'AGI'
-  pool?: 'hp' | 'mp' | 'st'
-  amount: number
+// A single Condition Tag add/remove this turn — player-targeted by default,
+// or the current combat opponent via `target: 'enemy'`. `kind`/`durationHours`
+// are optional escape hatches for a genuinely novel condition name the
+// client's COMMON_CONDITIONS table (lib/conditions.ts) doesn't recognize;
+// the common case (a known name) needs neither.
+export interface ConditionUpdate {
+  target: 'player' | 'enemy'
+  action: 'add' | 'remove'
+  label: string
+  kind?: 'duration' | 'narrative'
+  durationHours?: number
+}
+
+// §5.1c Direct Stat Modification — a genuine permanent attribute breakthrough
+// (a blessing, a hard-won transformation), narrated the same way
+// class_evolution already is. `tier` is the canonical word for the
+// attribute's new rank (never a raw number, never an increment amount) —
+// the client resolves what that means for play, the model just names it.
+export interface BreakthroughUpdate {
+  attr: 'STR' | 'INT' | 'AGI'
+  tier: CompetencyTier
+}
+
+// A per-turn content-enrichment update for an entity type that otherwise has
+// no update path of its own — Lore has none at all today, and Bestiary's is
+// being rebuilt in this same pass anyway. `kind` doubles as the discriminant
+// and the entity-type key, mirroring the new <enrich lore="ID"|beast="ID">
+// tag's own "the attribute key IS the type" grammar.
+export interface EnrichUpdate {
+  kind: 'lore' | 'beast'
+  id: string
+  desc: string
 }
 
 export interface QuestUpdate {
@@ -541,10 +600,16 @@ export interface QuestUpdate {
   description?: string // the quest's premise/objective — only sent the turn it's first introduced or its scope changes; see QuestEntry.description
 }
 
+// aff_delta/trust_delta are bare +1/-1 single-step nudges against the
+// receiving CompetencyTier ladder — never a raw magnitude, never both
+// omitted-as-zero vs. genuinely zero ambiguity (omit the field entirely for
+// "no change"). This is the strictest version of this channel after several
+// rounds of review: no signed integer string, no small-int allowance.
 export interface NpcMemoryUpdate {
   npc_id: string
-  aff_delta?: number
-  trust_delta?: number
+  aff_delta?: -1 | 1
+  trust_delta?: -1 | 1
+  resolve?: CompetencyTier // sets/revises this NPC's social resistance — see NpcEntry.resolve
   deed?: string
   mem_summary?: string
   held_weapon?: string // only sent when first established or visibly changed — see NpcEntry.heldWeapon
@@ -583,16 +648,19 @@ export interface TurnResponse {
   nar: string
   turn_state: TurnState
   time: GameTime
-  loc_disp: string
   loc_id: string
+  // Optional now, like loc_desc already was — sent only on first visit or a
+  // genuine rename; the client falls back to locations[loc_id].name
+  // (App.tsx) when it's omitted on an ordinary same-location turn.
+  loc_disp?: string
   loc_desc?: string // only sent when loc_id is first visited or its description genuinely changes — see lib/locations.ts
-  dist?: 'c' | 'm' | 'f' | 'none'
   mood?: string
-  deltas?: TurnDelta
+  copper_delta?: number // currency delta only — the numeric HP/MP/ST deltas this used to ride alongside are gone, replaced by cond_updates
+  cond_updates?: ConditionUpdate[]
   inv_add?: InventoryAcquisition[]
   inv_rem?: InventoryChange[]
   corpse_add?: string[]
-  stat_grant?: StatGrant
+  breakthrough?: BreakthroughUpdate
   act: string[]
   flag_add?: string[]
   quest_update?: QuestUpdate
@@ -600,6 +668,7 @@ export interface TurnResponse {
   class_evolution?: ClassEvolutionUpdate
   fac_rep?: FactionRepChange[]
   skill_learn?: SkillLearn[]
+  enrich?: EnrichUpdate[]
 }
 
 // §6.4D — the model's side of a newly-learned skill. Snake_case mirrors the
@@ -609,8 +678,8 @@ export interface SkillLearn {
   name: string
   description?: string
   class_id?: string
-  mp_cost?: number
-  st_cost?: number
+  effort?: EffortTier
+  tier?: CompetencyTier
 }
 
 // Gemini `contents` sliding window (§3.1).
@@ -627,7 +696,8 @@ export interface RunTurnResult {
   turn?: TurnResponse
   fallbackText?: string
   finishReason?: string
-  raw: string
+  raw: string // the full model response, <sync> included — kept for the debug-payload tools (LogEntry.rawPayload)
+  historyText: string // `raw` with <sync>...</sync> stripped — what actually gets resent as this turn's own `model` history entry, so a turn's mechanical bookkeeping isn't replayed back to the model on every later call
 }
 
 export interface KeywordLink {

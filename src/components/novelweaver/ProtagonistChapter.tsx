@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Plus, Trash2, Wand2 } from 'lucide-react'
-import type { Attributes, ProtagonistData, SkillEntry } from '../../types.ts'
+import type { Attributes, ProtagonistData } from '../../types.ts'
 import { PRESET_CLASSES, getClassById } from '../../data/classes.ts'
+import { COMPETENCY_TIERS, tierToWord, wordToTier } from '../../lib/tiers.ts'
 import { ChapterShell, Field, FIELD, GhostButton, LibraryPresetBar, Pill, PrimaryButton } from './shared.tsx'
 
 const BASE_ATTR = 10
@@ -32,7 +33,9 @@ function blankAttrs(classId: string): Attributes {
 export default function ProtagonistChapter({ value, onChange, ready, onFinalize, onBack, templates, onSavePreset, onDeletePreset }: Props) {
   const [sub, setSub] = useState<Sub>('identity')
   const [skillOpen, setSkillOpen] = useState(false)
-  const [draft, setDraft] = useState<SkillEntry>({ name: '', skillType: 'Active', tier: 'Novice', mpCost: 0, stCost: 10 })
+  // Local draft keeps `tier` as its display word (for the <select> below) —
+  // converted to SkillEntry's numeric CompetencyTier only when added.
+  const [draft, setDraft] = useState({ name: '', skillType: 'Active', tier: 'Novice' })
 
   const attrs = value.customAttributes ?? blankAttrs(value.classId || 'warrior')
   const spent = Math.max(0, attrs.STR - BASE_ATTR) + Math.max(0, attrs.INT - BASE_ATTR) + Math.max(0, attrs.AGI - BASE_ATTR)
@@ -51,8 +54,8 @@ export default function ProtagonistChapter({ value, onChange, ready, onFinalize,
 
   function addSkill() {
     if (!draft.name.trim() || skills.length >= SKILL_CAP) return
-    set('startingSkills', [...skills, { ...draft, name: draft.name.trim() }])
-    setDraft({ name: '', skillType: 'Active', tier: 'Novice', mpCost: 0, stCost: 10 })
+    set('startingSkills', [...skills, { name: draft.name.trim(), skillType: draft.skillType, tier: wordToTier(draft.tier, COMPETENCY_TIERS) }])
+    setDraft({ name: '', skillType: 'Active', tier: 'Novice' })
     setSkillOpen(false)
   }
 
@@ -177,7 +180,7 @@ export default function ProtagonistChapter({ value, onChange, ready, onFinalize,
             <div className="flex flex-col gap-1.5">
               {skills.map((s, i) => (
                 <div key={i} className="flex items-center justify-between rounded-lg border border-[#3a3252] bg-[#100d1a] px-2.5 py-1.5">
-                  <span className="font-sans text-[12px] text-[#d8cbb0] truncate">{s.name} <span className="text-[#6b6285]">· {s.tier}</span></span>
+                  <span className="font-sans text-[12px] text-[#d8cbb0] truncate">{s.name} <span className="text-[#6b6285]">· {s.tier !== undefined ? tierToWord(s.tier, COMPETENCY_TIERS) : 'Novice'}</span></span>
                   <button type="button" onClick={() => removeSkill(i)} className="text-[#9d93bd] hover:text-rose-300 shrink-0"><Trash2 size={12} /></button>
                 </div>
               ))}

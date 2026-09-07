@@ -31,7 +31,7 @@ NARRATIVE & TONE RULES:
 
 9-TIER TURN STATE GUIDELINES — each entry's mechanical rule (where present) is fixed; the craft direction after it is how to actually make that state feel distinct rather than a reskinned version of any other:
 - PEACE: Ambient travel, town interaction, downtime, environmental sensory detail. Let sentences breathe — longer, unhurried rhythm; layer ambient sound, smell, light, and weather; spend quiet beats on small worldbuilding or character texture (an NPC's habits, incidental business, banter) without infodumping. Warmth and dry humor belong here more than in any other state.
-- COMBAT: Check "Combat Mode." TACTICAL: narrate the exact "Combat Result" given — no invented misses, crits, or damage; treat this mode as the optional, mechanical layer, not where combat's real texture lives. NARRATIVE: no Combat Result is given; resolve the exchange yourself from context (stakes, target's actual defenses) — same discipline as SOCIAL/EXPLORE, not an auto-win, but this is where combat is meant to actually live: honor exactly what the player described (weapon, angle, footwork, improvisation) and let a genuinely clever or creative action earn a better outcome than a generic "I attack," the way a skilled human GM would reward inventive play. Either mode: write it as epic, dramatic, action-packed prose — weapon strikes, spell effects, footwork, and every combatant's hostile intent described in motion, with the actual physical effect of each blow or skill landing on whoever it hits (player, NPC, or beast alike). This is graphic, uncensored violence, not a fade-to-black — commit to it. Let sentence rhythm mirror the fight: short, hard fragments at the instant of impact, fuller sentences in the beats between exchanges where a combatant reads a stance or catches a breath.
+- COMBAT: Fully narrative-adjudicated — there is no numeric hit/miss/damage math anywhere, client-side or otherwise. Resolve every exchange yourself from context (stakes, the target's actual defenses and Condition Tags, the JIT context slice's own narrative-adjudication hint when one is given) — same discipline as SOCIAL/EXPLORE, not an auto-win, but this is where combat is meant to actually live: honor exactly what the player described (weapon, angle, footwork, improvisation) and let a genuinely clever or creative action earn a better outcome than a generic "I attack," the way a skilled human GM would reward inventive play. A blow that draws real consequence should register as a Condition Tag (cond add="Bleeding", "Winded", "Stunned", ...) on whoever it hits, player or adversary alike — never a numeric pool. If the protagonist is genuinely struck down (not merely hurt), add cond add="Defeated" on the SAME turn you narrate the fall — this is the one signal the client watches for to trigger a soft-fail recovery beat next turn, so never omit it when the story has the protagonist go down. Write it as epic, dramatic, action-packed prose — weapon strikes, spell effects, footwork, and every combatant's hostile intent described in motion, with the actual physical effect of each blow or skill landing on whoever it hits (player, NPC, or beast alike). This is graphic, uncensored violence, not a fade-to-black — commit to it. Let sentence rhythm mirror the fight: short, hard fragments at the instant of impact, fuller sentences in the beats between exchanges where a combatant reads a stance or catches a breath.
 - STEALTH: High-tension shadow navigation. Focus on line-of-sight, footsteps, masking magic signatures, concealment. Resolve narratively — there is no hidden check. Sharpen every ambient sound — a drip, a distant voice, the character's own pulse — since stealth lives or dies on small sensory detail; let sentences go clipped and held during a near-discovery, then loosen into a full exhale once the danger passes. Describe the space precisely enough (cover, sightlines, patrol rhythm) that the player can actually read it and plan the next move from it, not just be told they're hidden or not.
 - DESPAIR: Claustrophobic dread, psychological strain, overwhelming odds, high stakes, physical exhaustion. Show it in the body, not the label — shaking hands, a ragged breath, tunnel vision, an exit that looks farther than it is — rather than naming the emotion outright. Let pacing drag as exhaustion sets in, then let a flicker of stubborn resolve or dark humor cut through, so the scene reads as harrowing, not merely miserable.
 - EXPLORE: Searching rooms, lockpicking, disarming traps, investigating oddities, spatial geometry. Resolve narratively — there is no hidden check. Ground it in texture — the specific give of an old lock, dust disturbed by recent passage, the particular smell of a sealed room — and reward attentiveness with small unclaimed environmental details (a hint of history, danger, or treasure) instead of handing information over for free. Keep spatial description precise enough that the player can hold a real mental map of the space.
@@ -41,18 +41,19 @@ NARRATIVE & TONE RULES:
 - PAUSE: Freeze narrative output entirely (system command processing) — no prose, no scene continuation, until the state changes back.
 
 MECHANICS & GROUNDING DEFENSE:
-1. Numeric Fidelity: No dice, checks, or hidden randomness anywhere. Combat resolution already follows "COMBAT" above — never recalculate or override a given Combat Result in Tactical Mode.
+1. No Numbers, Ever: No dice, checks, hidden randomness, or numeric stats/pools of any kind anywhere in the mechanical fields below. Every mechanical channel in this schema is expressed as one of a small set of fixed, canonical WORDS (a Condition Tag name, a competency tier like "Adept," a threat tier like "dangerous") — never a number, never an invented synonym for one of those words, never your own numeric scale layered on top. Combat resolution already follows "COMBAT" above.
 2. Grounded Entities: ONLY reference NPCs, exits, items, and quest objectives provided in the [ACTIVE CONTEXT SLICE].
 2a. Established Detail Consistency: A present NPC's line in [ACTIVE CONTEXT SLICE] may list their currently held weapon and/or worn armor — that is ground truth, not a suggestion; never contradict it or silently reinvent a different item under time pressure to produce a vivid re-description. The moment such a detail is first established on-page (or genuinely changes — drawn a different weapon, disarmed, changed clothes), report it via npc_mem_up's held_weapon/worn_armor so the client can track it and hold you to it on later turns. Other described physical details not covered by those two fields follow the same no-silent-swap rule by narration discipline alone.
 2b. Name/ID Consistency: Once a location or NPC has a name in the Known Entities list or [ACTIVE CONTEXT SLICE], reuse that exact spelling and hyphenation on every later mention and in every {{Term|category}} tag — never rename, re-hyphenate, or invent a shorter/longer alias for the same place or person (e.g. don't call one settlement "Ironheart" on one turn and "Ironheart Crag" on the next). A genuinely new, more specific sub-area gets its own loc_id, not a renamed copy of one already visited. Set loc_desc only on the turn a loc_id is first visited or its description genuinely changes; omit it on every ordinary turn back through a place already described. Every NPC, Faction, and Location shown in a present-NPC line or the Known Entities list carries its real id in parens, e.g. "General Lilith Sorrengail (id: lilith_sorrengail)" or "Draconic Ruins of Ignis (id: loc_draconic_ruins_of_ignis)" — an npc_mem_up, fac_rep, or loc_id for that same person/group/place MUST reuse that exact id verbatim, including the very first turn you narrate arriving there (never leave loc_id at whatever generic placeholder the protagonist started on). Never invent your own abbreviation (an initial+surname guess, a shortened nickname) for an id already shown — that forks a duplicate entry instead of updating the real one. Only mint a new id yourself for a genuinely new NPC/faction/location that has no id shown anywhere yet.
 3. Corpse Drops: On killing an enemy, output its identifier tag(s) in "corpse_add" (array) to allow necromancy harvest/extraction. Include every enemy killed this turn, not just one.
-4. Currency Storage: Deduct or reward currency in base copper ("c" delta field).
-5. Permanent Stat Grants: Only use "stat_grant" for a genuine permanent boost (a blessing, a hard-won transformation) — never for ordinary damage/healing, which belongs in "deltas". Supply only the attribute/pool and the amount; never compute or state a resulting HP/MP/ST max yourself, the client derives that.
+4. Currency Storage: Deduct or reward currency in base copper via the turn's own "c" delta attribute.
+5. Condition Tags: A physical, magical, or mental state worth tracking beyond this one scene (Bleeding, Exhausted, Poisoned, Blessed, Stunned, Cursed, ...) is a Condition Tag ("cond"), added or removed by name — never a numeric pool, never invented mid-combat "HP." Use a plain, recognizable name; the client already knows how common ones like Bleeding or Exhausted resolve on their own, so you almost never need to say more than the name itself.
+5a. Breakthroughs: Only use "breakthrough" for a genuine PERMANENT attribute advancement (a blessing, a hard-won transformation) — never for ordinary damage/healing (a Condition Tag) or a temporary in-the-moment surge. Supply only the attribute and its new canonical tier word (Novice/Adept/Expert/Master — never a number, never "Untrained," since a breakthrough always moves forward); never compute or narrate a specific numeric stat yourself.
 6. Class Evolution: Only use "class_evolution" when the story has undeniably and permanently redefined the protagonist's role — a forced transformation, a binding oath, an irreversible awakening — never for ordinary skill growth, a single dramatic action, or a temporary disguise. This should be rare, at most once or twice in a whole campaign. "class_id" is constrained to a fixed enum — pick whichever listed option is the closest thematic match; do not omit "reason" (a short in-fiction justification).
 7. Faction Reputation: Use "fac_rep" only when the player's actions meaningfully shift standing with a named, already-established faction — a small nudge (±1) for a notable act, never a large jump, and never for a faction that hasn't been introduced. Gaining standing with one faction may cost standing with a bitter rival — the client applies that automatically; you never need to account for a rival's reaction yourself.
-8. Item Acquisition: Whenever the narration has the player receive, find, loot, craft, or buy an item, add it via "inv_add" in that SAME turn — id, name, type, and qty are all required; never narrate an item into the player's possession without it, and never invent an id for an item that isn't actually entering inventory. Only set "description" for something worth remembering later (a named weapon, a key item, a personal keepsake) — skip it for ordinary loot like raw materials or a common potion. Only set "stat_bonus" when type is weapon, armor, or accessory, and only for a genuinely notable piece of gear, not routine loot — most weapons and armor the player finds should NOT have one.
-8a. Skills: Use "skill_learn" ONLY on a turn where the protagonist genuinely gains a new named ability — taught by a mentor, unlocked by a trial, awakened under pressure. Never for using a skill they already have, and never for an ordinary physical action. Give it an MP or ST cost only if one is narratively justified; the client treats a costless skill as always available. When the context slice marks a skill UNAFFORDABLE, the player may still attempt it — narrate the strain, backfire, or exhaustion of reaching past their reserves rather than refusing the action.
-8b. Quest Types: Give quest_update a "type" the first time that quest_id appears — Main (world/story-driven, imposed by the game world's own narrative), Side (guild/NPC/tactical support missions alongside the main story), Ambition (a player-driven personal goal — founding an order, a business, an empire), or Secret Ambition (a hidden high-risk/high-reward personal quest). Only originate or advance a Secret Ambition quest_update on a turn whose turn_state is INSIGHT or EXPLORE — never surface one mid-combat or in an ordinary social scene.
+8. Item Acquisition: Whenever the narration has the player receive, find, loot, craft, or buy an item, add it via "inv_add" in that SAME turn — id, name, type, and qty are all required; never narrate an item into the player's possession without it, and never invent an id for an item that isn't actually entering inventory. Only set "description" for something worth remembering later (a named weapon, a key item, a personal keepsake) — skip it for ordinary loot like raw materials or a common potion. Only set "traits" (freeform flavor words like "reach, heavy" — never a numeric bonus) when type is weapon, armor, or accessory, and only for a genuinely notable piece of gear, not routine loot — most weapons and armor the player finds should NOT have any.
+8a. Skills: Use "skill_learn" ONLY on a turn where the protagonist genuinely gains a new named ability — taught by a mentor, unlocked by a trial, awakened under pressure. Never for using a skill they already have, and never for an ordinary physical action. Give it an "effort" (minor/focused/taxing) only if one is narratively justified; the client treats an effortless skill as always available. When the context slice marks a skill strained by the protagonist's current condition, they may still attempt it — narrate the strain, backfire, or exhaustion of reaching past their limits rather than refusing the action.
+8b. Quest Types: Give quest_update a "type" the first time that quest_id appears — Main (world/story-driven, imposed by the game world's own narrative), Side (guild/NPC/tactical support missions alongside the main story), Ambition (a player-driven personal goal — founding an order, a business, an empire), or Secret Ambition (a hidden high-risk/high-reward personal quest). Only originate or advance a Secret Ambition quest_update on a turn whose turn_state is INSIGHT or EXPLORE — never surface one mid-combat or in an ordinary social scene. Give it a "stat" (advanced/completed/failed, always the full word) every time it appears.
 9. Output Format Strictness: Follow the OUTPUT FORMAT section below exactly — do not deviate from its required structure, and do not wrap output in markdown code blocks.`
 
 export const TURN_SCHEMA = {
@@ -74,6 +75,9 @@ export const TURN_SCHEMA = {
       },
       required: ['d', 'h'],
     },
+    // loc_disp is optional now — only sent on first visit or a genuine
+    // rename, same economy loc_desc already has; the client falls back to
+    // its own registry's stored name otherwise.
     loc_disp: { type: 'STRING' },
     loc_id: { type: 'STRING' },
     loc_desc: {
@@ -81,26 +85,36 @@ export const TURN_SCHEMA = {
       description:
         "This location's actual character/atmosphere/notable features, 1-2 sentences — only on the turn this loc_id is first visited, or if its description has genuinely changed (rebuilt, destroyed, transformed). Omit on ordinary turns; the client keeps whatever was last given instead of a generic placeholder.",
     },
-    dist: { type: 'STRING', enum: ['c', 'm', 'f', 'none'] },
     mood: {
       type: 'STRING',
       description: 'A short 3-6 word ambient sensory tag for this turn, e.g. "Cold mountain mist, swirling ash motes".',
     },
-    deltas: {
-      type: 'OBJECT',
+    copper_delta: {
+      type: 'INTEGER',
+      minimum: -5000000,
+      maximum: 5000000,
+      description: 'Currency gained or spent this turn, in base copper. The only numeric delta left in this schema — everything vitals-related is a Condition Tag instead (see cond_updates).',
+    },
+    cond_updates: {
+      type: 'ARRAY',
       description:
-        'Tactical Mode: must match the given Combat Result exactly. Narrative Mode: your own bounded amount (no Combat Result given). Also required whenever "nar" itself narrates a stat change outside combat — resting, healing, mana/stamina restoration, potion use, poison, exhaustion, currency gained or spent, etc. Never narrate a vitals or wealth change without emitting the matching delta here.',
-      properties: {
-        hp: { type: 'INTEGER', minimum: -500, maximum: 500 },
-        mp: { type: 'INTEGER', minimum: -500, maximum: 500 },
-        st: { type: 'INTEGER', minimum: -500, maximum: 500 },
-        c: { type: 'INTEGER', minimum: -5000000, maximum: 5000000 },
+        'Condition Tag adds/removes — replaces the old numeric hp/mp/st deltas entirely. A named narrative status (Bleeding, Exhausted, Blessed, Cursed, ...), never a number.',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          target: { type: 'STRING', enum: ['player', 'enemy'] },
+          action: { type: 'STRING', enum: ['add', 'remove'] },
+          label: { type: 'STRING' },
+          kind: { type: 'STRING', enum: ['duration', 'narrative'], description: 'Escape hatch — only for a condition name the client would not already recognize.' },
+          durationHours: { type: 'INTEGER', minimum: 0, maximum: 500, description: 'Escape hatch, paired with kind: "duration".' },
+        },
+        required: ['target', 'action', 'label'],
       },
     },
     inv_add: {
       type: 'ARRAY',
       description:
-        '§5.9 Item Acquisition — id/name/type/qty required every time (even a restock of an item already carried); description and stat_bonus optional, see rule 8.',
+        '§5.9 Item Acquisition — id/name/type/qty required every time (even a restock of an item already carried); description and traits optional, see rule 8.',
       items: {
         type: 'OBJECT',
         properties: {
@@ -109,17 +123,10 @@ export const TURN_SCHEMA = {
           type: { type: 'STRING', enum: ['weapon', 'armor', 'accessory', 'tool', 'key', 'consumable', 'material'] },
           qty: { type: 'INTEGER', minimum: 1, maximum: 999 },
           description: { type: 'STRING' },
-          stat_bonus: {
-            type: 'OBJECT',
-            description: 'Only for a genuinely notable weapon/armor/accessory — set only the fields that actually apply.',
-            properties: {
-              STR: { type: 'INTEGER', minimum: -20, maximum: 20 },
-              INT: { type: 'INTEGER', minimum: -20, maximum: 20 },
-              AGI: { type: 'INTEGER', minimum: -20, maximum: 20 },
-              hp: { type: 'INTEGER', minimum: -100, maximum: 100 },
-              mp: { type: 'INTEGER', minimum: -100, maximum: 100 },
-              st: { type: 'INTEGER', minimum: -100, maximum: 100 },
-            },
+          traits: {
+            type: 'ARRAY',
+            items: { type: 'STRING' },
+            description: 'Freeform narrative flavor tags (e.g. ["reach","heavy"]) for a genuinely notable weapon/armor/accessory — never a numeric bonus.',
           },
         },
         required: ['id', 'name', 'type', 'qty'],
@@ -138,16 +145,15 @@ export const TURN_SCHEMA = {
       items: { type: 'STRING' },
       description: 'One entry per enemy killed this turn.',
     },
-    stat_grant: {
+    breakthrough: {
       type: 'OBJECT',
       description:
-        "Permanent attribute/pool bonus only — never for a temporary in-the-moment surge (a combat power spike, a drug/potion effect, a spell's duration), which belongs in \"deltas\" instead even when the player's own phrasing sounds dramatic (\"overloading myself with power\"). Only for a change that outlasts this scene. Set exactly one of attr or pool, and always include amount — omitting it produces a grant with no actual effect.",
+        'Permanent attribute advancement only — never for a temporary in-the-moment surge (a combat power spike, a drug/potion effect, a spell\'s duration), which belongs in a Condition Tag instead even when the player\'s own phrasing sounds dramatic ("overloading myself with power"). Only for a change that outlasts this scene.',
       properties: {
         attr: { type: 'STRING', enum: ['STR', 'INT', 'AGI'] },
-        pool: { type: 'STRING', enum: ['hp', 'mp', 'st'] },
-        amount: { type: 'INTEGER', minimum: 0, maximum: 50 },
+        tier: { type: 'STRING', enum: ['Novice', 'Adept', 'Expert', 'Master'], description: 'The canonical word for the attribute\'s new rank — never a number.' },
       },
-      required: ['amount'],
+      required: ['attr', 'tier'],
     },
     act: {
       type: 'ARRAY',
@@ -163,7 +169,7 @@ export const TURN_SCHEMA = {
       description: 'Optional. Present only when this turn advances or completes a tracked objective.',
       properties: {
         quest_id: { type: 'STRING' },
-        status: { type: 'STRING', enum: ['advanced', 'completed', 'failed'] },
+        stat: { type: 'STRING', enum: ['advanced', 'completed', 'failed'], description: 'Always the full word — never abbreviated.' },
         type: {
           type: 'STRING',
           enum: ['main', 'side', 'ambition', 'secret_ambition'],
@@ -184,8 +190,9 @@ export const TURN_SCHEMA = {
         type: 'OBJECT',
         properties: {
           npc_id: { type: 'STRING' },
-          aff_delta: { type: 'INTEGER', minimum: -20, maximum: 20 },
-          trust_delta: { type: 'INTEGER', minimum: -20, maximum: 20 },
+          aff_delta: { type: 'STRING', enum: ['+', '-'], description: 'A bare sign only — never a magnitude. Omit the field entirely for "no change."' },
+          trust_delta: { type: 'STRING', enum: ['+', '-'], description: 'Independent of aff_delta — an NPC can gain Trust while losing Affection in the same update.' },
+          resolve: { type: 'STRING', enum: ['Untrained', 'Novice', 'Adept', 'Expert', 'Master'], description: "Sets/revises this NPC's social resistance, used only for SOCIAL-scene adjudication." },
           deed: { type: 'STRING' },
           mem_summary: { type: 'STRING' },
           held_weapon: {
@@ -235,14 +242,27 @@ export const TURN_SCHEMA = {
           name: { type: 'STRING', description: 'Display name, e.g. Shadow Step.' },
           description: { type: 'STRING', description: 'One sentence on what it does.' },
           class_id: { type: 'STRING', enum: PRESET_CLASSES.map((c) => c.id) },
-          mp_cost: { type: 'INTEGER', minimum: 0, maximum: 500 },
-          st_cost: { type: 'INTEGER', minimum: 0, maximum: 500 },
+          effort: { type: 'STRING', enum: ['minor', 'focused', 'taxing'] },
+          tier: { type: 'STRING', enum: ['Untrained', 'Novice', 'Adept', 'Expert', 'Master'] },
         },
         required: ['id', 'name'],
       },
     },
+    enrich: {
+      type: 'ARRAY',
+      description: 'Fills in or expands Lore/Bestiary content using the entity type as the key itself — set exactly one of lore/beast per entry, never both.',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          lore: { type: 'STRING', description: 'A Lore entry id, when enriching Lore.' },
+          beast: { type: 'STRING', description: 'A Bestiary entry id, when enriching Bestiary.' },
+          desc: { type: 'STRING' },
+        },
+        required: ['desc'],
+      },
+    },
   },
-  required: ['nar', 'turn_state', 'time', 'loc_disp', 'loc_id', 'act'],
+  required: ['nar', 'turn_state', 'time', 'loc_id', 'act'],
 }
 
 // §4.4/§7.1 shared Prose Depth table — token ceiling only, never model choice.

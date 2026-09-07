@@ -6,7 +6,17 @@ import { parseWorldSeedResponse } from './worldSeedParser.ts'
 import { validateDiscovery } from './discovery.ts'
 import { attitudeToRepTier } from './factions.ts'
 import { slugify } from './slug.ts'
-import { parseStatBonus } from './xmlHelpers.ts'
+import type { CompetencyTier } from '../types.ts'
+
+// The world-seed grammar's own <npc aff="±N" trust="±N"> is still the old
+// signed-offset-from-neutral shape (untouched in this pass — a full seed-
+// grammar rewrite to the fixed-tier vocabulary is Phase 6 scope, not this
+// one). This just folds that old ~-100..100 offset onto the new 1-5
+// CompetencyTier scale (default/unset -> 1, "Stranger"-equivalent) rather
+// than letting a raw seed number leak straight into a tier-typed field.
+function seedRelationTier(offset: number | undefined): CompetencyTier {
+  return Math.max(1, Math.min(5, Math.round(1 + (offset ?? 0) / 25)))
+}
 
 // The one-time World Seeding pass — fires once at campaign creation,
 // between the player-authored setup (World Setup's Key Factions/Locations
@@ -126,8 +136,8 @@ export async function seedCampaign(input: SeedCampaignInput): Promise<SeedCampai
       role: n.role?.trim() || undefined,
       personality: n.personality?.trim() || undefined,
       appearance: n.appearance?.trim() || undefined,
-      affection: n.aff ?? 0,
-      trust: n.trust ?? 0,
+      affection: seedRelationTier(n.aff),
+      trust: seedRelationTier(n.trust),
       stage: 'Stranger',
       deeds: [],
       memSummary: '',
@@ -184,7 +194,9 @@ export async function seedCampaign(input: SeedCampaignInput): Promise<SeedCampai
         name: seed.item.name,
         type: seed.item.type,
         description: seed.item.desc?.trim() || undefined,
-        statBonus: seed.item.bonus?.trim() ? parseStatBonus(seed.item.bonus) : undefined,
+        // Freeform flavor tags now (traits), not a numeric stat bonus — a
+        // "+2 AGI, +5 hp"-style seed string just reads as trait tokens.
+        traits: seed.item.bonus?.trim() ? seed.item.bonus.split(',').map((s) => s.trim()).filter(Boolean) : undefined,
       }
       inventory[id] = 1
     }

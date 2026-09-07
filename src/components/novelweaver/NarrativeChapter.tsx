@@ -60,23 +60,6 @@ export default function NarrativeChapter({ value, onChange, existingTitles, onBe
         <textarea rows={2} className={FIELD} value={value.narrationStyle} onChange={(e) => set('narrationStyle', e.target.value)} />
       </Field>
 
-      <Field label="Combat Mode">
-        <div className="flex gap-2">
-          {(['NARRATIVE', 'TACTICAL'] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => set('combatMode', m)}
-              className={`flex-1 rounded-lg py-2 font-display text-[11px] font-bold uppercase tracking-wide transition-colors ${
-                value.combatMode === m ? 'bg-[#e8a8c6] text-[#22101a]' : 'bg-[#100d1a] border border-[#3a3252] text-[#9d93bd]'
-              }`}
-            >
-              {m}
-            </button>
-          ))}
-        </div>
-      </Field>
-
       <Pill>Turn 1 fires the moment you begin — this is the last stop.</Pill>
     </ChapterShell>
   )

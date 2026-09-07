@@ -1,16 +1,14 @@
 import { useState } from 'react'
 import {
-  GLASS_SURFACE, GlassCTAButton, GlassField, GlassHeader, GlassLongTextarea, GlassScreen, InfoTooltip, LABEL_CLASS,
+  GLASS_SURFACE, GlassCTAButton, GlassField, GlassHeader, GlassLongTextarea, GlassScreen, LABEL_CLASS,
 } from '../lib/glassChrome.tsx'
 import { NARRATION_STYLE_EXAMPLES, OPENING_BRIEF_EXAMPLES } from '../data/formExamples.ts'
 import { deleteTextPreset, loadTextPresets, saveTextPreset } from '../lib/store.ts'
-import type { CombatMode } from '../types.ts'
 
 interface TaleBriefPayload {
   opening: string
   narrationStyle: string
   temperature: number
-  combatMode: CombatMode
   title: string
 }
 
@@ -18,7 +16,6 @@ interface TaleBriefProps {
   initialOpening?: string
   initialNarrationStyle: string
   initialTemperature: number
-  initialCombatMode?: CombatMode
   // A pre-filled suggestion (e.g. "Violet Sorrengail's Tale"), not a locked
   // value — the player can freely overwrite it before diving in.
   suggestedTitle: string
@@ -28,11 +25,6 @@ interface TaleBriefProps {
   editLongText: (label: string, value: string, hint?: string, placeholder?: string) => Promise<string | null>
   onBack: () => void
   onBegin: (payload: TaleBriefPayload) => void
-}
-
-const COMBAT_MODE_INFO: Record<CombatMode, string> = {
-  NARRATIVE: 'The Narrator resolves fights from context — your exact move, footwork, and cleverness matter, the same way SOCIAL or EXPLORE turns are judged. No hidden math.',
-  TACTICAL: 'Damage is computed client-side from your stats before the Narrator ever sees it — deterministic and precise, but the Narrator just describes the given result rather than judging your approach.',
 }
 
 
@@ -46,7 +38,6 @@ export default function TaleBrief({
   initialOpening = '',
   initialNarrationStyle,
   initialTemperature,
-  initialCombatMode = 'NARRATIVE',
   suggestedTitle,
   existingTitles,
   editLongText,
@@ -56,7 +47,6 @@ export default function TaleBrief({
   const [opening, setOpening] = useState(initialOpening)
   const [narrationStyle, setNarrationStyle] = useState(initialNarrationStyle)
   const [temperature, setTemperature] = useState(initialTemperature)
-  const [combatMode, setCombatMode] = useState<CombatMode>(initialCombatMode)
   const [title, setTitle] = useState(suggestedTitle)
 
   const [openingPresets, setOpeningPresets] = useState(() => loadTextPresets('openingBrief'))
@@ -139,50 +129,23 @@ export default function TaleBrief({
             />
           </GlassField>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <div className="flex items-baseline justify-between">
-                <span className={LABEL_CLASS}>Creativity Randomness</span>
-                <span className="font-mono text-xs font-semibold text-[#fae5b5]">{temperature.toFixed(1)}</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="2"
-                step="0.1"
-                value={temperature}
-                onChange={(e) => setTemperature(Number(e.target.value))}
-                className="w-full mt-2 accent-[#f0ca65] cursor-pointer"
-              />
-              <p className="font-narrative italic text-xs text-[#d8c49e] mt-1">
-                How unpredictable the prose gets. Low keeps the Narrator steady; high adds more creative flourish.
-              </p>
+          <div>
+            <div className="flex items-baseline justify-between">
+              <span className={LABEL_CLASS}>Creativity Randomness</span>
+              <span className="font-mono text-xs font-semibold text-[#fae5b5]">{temperature.toFixed(1)}</span>
             </div>
-
-            <div>
-              <p className={LABEL_CLASS}>Combat Resolution Mode</p>
-              {/* Not GlassSegmented: each option carries its own InfoTooltip, so
-                  the row stays hand-rolled — but matched to GlassSegmented's
-                  active/inactive treatment so it reads as the same control. */}
-              <div className="flex gap-2 mt-2">
-                {(['NARRATIVE', 'TACTICAL'] as const).map((m) => (
-                  <div
-                    key={m}
-                    className={`flex-1 rounded-xl border px-3 py-2.5 flex items-center justify-center gap-1.5 transition-colors duration-150 ${
-                      combatMode === m
-                        ? 'border-[#f0ca65] bg-[#f0ca65]/20 text-[#fbf4e2] font-semibold shadow-[0_0_8px_rgba(240,202,101,0.2)]'
-                        : 'border-[#e8ca8a]/25 bg-[#181324]/60 text-[#d8c49e] hover:border-[#e8ca8a]/50 hover:text-[#fae5b5]'
-                    }`}
-                  >
-                    <button onClick={() => setCombatMode(m)} className="font-display text-xs">
-                      {m === 'NARRATIVE' ? 'Narrative' : 'Tactical'}
-                    </button>
-                    <InfoTooltip text={COMBAT_MODE_INFO[m]} />
-                  </div>
-                ))}
-              </div>
-              <p className="font-narrative italic text-xs text-[#d8c49e] mt-1.5">Changeable anytime later from Settings.</p>
-            </div>
+            <input
+              type="range"
+              min="0"
+              max="2"
+              step="0.1"
+              value={temperature}
+              onChange={(e) => setTemperature(Number(e.target.value))}
+              className="w-full mt-2 accent-[#f0ca65] cursor-pointer"
+            />
+            <p className="font-narrative italic text-xs text-[#d8c49e] mt-1">
+              How unpredictable the prose gets. Low keeps the Narrator steady; high adds more creative flourish.
+            </p>
           </div>
         </div>
       </div>
@@ -194,7 +157,7 @@ export default function TaleBrief({
         <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl flex justify-center">
           <GlassCTAButton
             disabled={!!titleError}
-            onClick={() => onBegin({ opening, narrationStyle, temperature, combatMode, title: trimmedTitle })}
+            onClick={() => onBegin({ opening, narrationStyle, temperature, title: trimmedTitle })}
           >
             DIVE IN
           </GlassCTAButton>

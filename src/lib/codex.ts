@@ -81,7 +81,7 @@ export function applyKeywordLinks(codex: CodexDicts, nar: string | undefined, tu
         quests = ensureStub(quests, id, () => ({ name: term }), turnRef)
         break
       case 'beast':
-        bestiary = ensureStub(bestiary, id, () => ({ name: term, threatTier: 'Unknown' }), turnRef)
+        bestiary = ensureStub(bestiary, id, () => ({ name: term, threatTier: 'unknown' as const }), turnRef)
         break
       case 'skill':
         skills = ensureStub(skills, id, () => emptySkill(term), turnRef)

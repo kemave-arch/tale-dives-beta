@@ -1,6 +1,5 @@
 import { FOURTH_WING_WORLD, VIOLET_SORRENGAIL } from '../data/starterTemplates.ts'
 import { CURRENT_SCHEMA_VERSION } from '../types.ts'
-import { derivedPools } from './derivedStats.ts'
 import type { ApiSettings, Campaign, Dict, ProtagonistData, SavedPreset, SlashCommand, UiPrefs, WorldData } from '../types.ts'
 
 // Centralized localStorage persistence. Splits the old single-save shape
@@ -175,37 +174,29 @@ export const saveProtagonists = (p: Dict<ProtagonistData>): void => {
 export function loadCampaigns(): Dict<Campaign> {
   const campaigns = load<Dict<Campaign> | null>(KEYS.campaigns, null)
   if (campaigns) {
-    // §8 — backfill campaigns saved before schemaVersion existed, so the
-    // field is universally present going forward rather than only on ones
-    // created after this was added.
+    // §8 — a pre-2 save is a genuinely different shape (numeric hp/mp/st
+    // pools, StatGrant/StatBonus, a combatMode field) that the Narrative-
+    // First Overhaul has no mechanical transform for — CURRENT_SCHEMA_VERSION
+    // bumped to 2 specifically so this is caught and flagged rather than
+    // silently loaded into code that no longer understands its shape (which
+    // would corrupt state, not gracefully degrade). No migration is
+    // attempted; the save is simply dropped from what's returned, with a
+    // console warning — the same "warn and continue" convention this file
+    // already uses for a corrupt localStorage read (see `load` above).
     let touched = false
-    for (const c of Object.values(campaigns)) {
-      if (c.schemaVersion === undefined) {
-        c.schemaVersion = CURRENT_SCHEMA_VERSION
+    const upgradable: Dict<Campaign> = {}
+    for (const [id, c] of Object.entries(campaigns)) {
+      if (c.schemaVersion === undefined || c.schemaVersion < CURRENT_SCHEMA_VERSION) {
+        console.warn(
+          `[store] Tale "${c.title ?? id}" was saved under schema v${c.schemaVersion ?? 1} (current is v${CURRENT_SCHEMA_VERSION}) and can't be loaded — it predates this overhaul and has no automatic upgrade path. Start a fresh Tale instead.`,
+        )
         touched = true
+        continue
       }
+      upgradable[id] = c
     }
-    // Repair a NaN-corrupted vitals pool — caused by a since-fixed bug where
-    // a stat_grant with no `amount` produced `hpMax + undefined = NaN`.
-    // Nothing downstream self-heals this: Math.min/max(NaN, x) is always
-    // NaN, and NaN round-trips through JSON.stringify/parse as `null`, which
-    // Number.isFinite also rejects — so this check catches it either way.
-    // Falls back to the attribute-derived base pool, full — not a
-    // reconstruction of what was actually granted, just a safe recovery so
-    // the player isn't stuck at NaN/NaN forever.
-    for (const c of Object.values(campaigns)) {
-      const p = c.player
-      if (!p) continue
-      const pools = derivedPools(p.attrs)
-      if (!Number.isFinite(p.hpMax)) { p.hpMax = pools.hpMax; touched = true }
-      if (!Number.isFinite(p.mpMax)) { p.mpMax = pools.mpMax; touched = true }
-      if (!Number.isFinite(p.stMax)) { p.stMax = pools.stMax; touched = true }
-      if (!Number.isFinite(p.hp)) { p.hp = p.hpMax; touched = true }
-      if (!Number.isFinite(p.mp)) { p.mp = p.mpMax; touched = true }
-      if (!Number.isFinite(p.st)) { p.st = p.stMax; touched = true }
-    }
-    if (touched) save(KEYS.campaigns, campaigns)
-    return campaigns
+    if (touched) save(KEYS.campaigns, upgradable)
+    return upgradable
   }
 
   const legacy = load<(Partial<Campaign> & { player?: { name?: string }; world?: { background?: string } }) | null>(

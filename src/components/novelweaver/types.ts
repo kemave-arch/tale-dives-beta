@@ -1,4 +1,4 @@
-import type { CombatMode, ProtagonistData, WorldData } from '../../types.ts'
+import type { ProtagonistData, WorldData } from '../../types.ts'
 
 // Novel Weaver — an isolated alternate Tale-creation UI (see the main
 // screen, screens/NovelWeaver.tsx). Deliberately its own module, not a
@@ -33,7 +33,6 @@ export interface NarrativeSeed {
   title: string
   opening: string
   narrationStyle: string
-  combatMode: CombatMode
 }
 
 export interface FinalizedState {
@@ -54,7 +53,6 @@ export interface NovelWeaverProps {
   onDeleteWorldPreset?: (id: string) => void
   onBeginTale: (
     protagonist: ProtagonistData,
-    combatMode: CombatMode,
     worldOverride: Partial<WorldData>,
     customTitle: string,
     cast: CastMember[],

@@ -1,4 +1,3 @@
-import { attributesAfterLevelUp, derivedPools } from './derivedStats.ts'
 import type { ClassWeights, Player } from '../types.ts'
 
 // §5.1a Milestone Leveling — ties leveling to story progress the schema
@@ -10,32 +9,40 @@ import type { ClassWeights, Player } from '../types.ts'
 // deliberate simplification, revisit if quest tiers get tracked later.
 export const CHAPTER_TURN_INTERVAL = 15
 
+// Milestone rank ceiling — the top of the 5-word CompetencyTier scale
+// (lib/tiers.ts's COMPETENCY_TIERS: Untrained..Master). Kept as a literal
+// here rather than importing COMPETENCY_TIERS.length purely to avoid a
+// cross-module dependency for one constant; the two are meant to move
+// together if the scale itself ever changes.
+const MAX_COMPETENCY_TIER = 5
+
 export interface LevelUpResult {
   player: Player
   leveled: boolean
+  // The attribute actually bumped this call, and its resulting tier — set
+  // only when `leveled`, so App.tsx can log a narrative "breakthrough" beat
+  // the same way class_evolution already gets one, without a silent counter.
+  breakthrough?: { attr: 'STR' | 'INT' | 'AGI'; tier: number }
 }
 
-// Recompute rule (§5.1c, reused here): current pools grow by the same
-// delta as max — no free top-off, never exceeds the new max.
+// Narrative-First Overhaul — no more derived HP/MP/ST pools to recompute on
+// level-up; a Milestone now bumps the class's own primary attribute (its
+// highest weight in the Preset Class Dictionary) up one CompetencyTier rung
+// per level, capped at Master. Still a milestone hook, not silent bookkeeping
+// — App.tsx logs it the same way class_evolution already narrates a beat.
 export function applyLevelUps(player: Player, weights: ClassWeights, levels: number): LevelUpResult {
   if (levels <= 0) return { player, leveled: false }
 
-  const attrs = attributesAfterLevelUp(player.attrs, weights, levels)
-  const { hpMax, mpMax, stMax } = derivedPools(attrs)
+  const attrKeys = ['STR', 'INT', 'AGI'] as const
+  const primaryAttr = attrKeys.reduce((a, b) => (weights[a] >= weights[b] ? a : b))
 
-  const nextPlayer: Player = {
-    ...player,
-    level: player.level + levels,
-    attrs,
-    hp: Math.min(hpMax, player.hp + (hpMax - player.hpMax)),
-    hpMax,
-    mp: Math.min(mpMax, player.mp + (mpMax - player.mpMax)),
-    mpMax,
-    st: Math.min(stMax, player.st + (stMax - player.stMax)),
-    stMax,
+  const attrs = { ...player.attrs }
+  for (let i = 0; i < levels; i++) {
+    attrs[primaryAttr] = Math.min(MAX_COMPETENCY_TIER, attrs[primaryAttr] + 1)
   }
 
-  return { player: nextPlayer, leveled: true }
+  const nextPlayer: Player = { ...player, level: player.level + levels, attrs }
+  return { player: nextPlayer, leveled: true, breakthrough: { attr: primaryAttr, tier: attrs[primaryAttr] } }
 }
 
 // +1 level at every Chapter Milestone boundary, independent of quest

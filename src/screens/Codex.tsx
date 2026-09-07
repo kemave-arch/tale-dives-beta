@@ -19,18 +19,15 @@ import { useLongTextEditor } from '../lib/useLongTextEditor.tsx'
 import { EQUIPPABLE_TYPES, LOCATION_DANGER_LEVELS, LOCATION_TYPES } from '../types.ts'
 import type {
   BestiaryEntry, CraftingJob, Discovery, EquipSlot, FactionEntry, ItemEntry, ItemType, LocationEntry, LogEntry, LoreEntry, NpcEntry, Player,
-  QuestEntry, RevealTrigger, SkillEntry, StatBonus, WorldData,
+  QuestEntry, RevealTrigger, SkillEntry, ThreatTierToken, WorldData,
 } from '../types.ts'
+import { COMPETENCY_TIERS, THREAT_TIERS, tierToWord, wordToTier } from '../lib/tiers.ts'
+import { trustWord } from '../lib/npcs.ts'
 
 const ITEM_TYPES: ItemType[] = ['weapon', 'armor', 'accessory', 'tool', 'key', 'consumable', 'material']
-const STAT_BONUS_KEYS: (keyof StatBonus)[] = ['STR', 'INT', 'AGI', 'hp', 'mp', 'st']
 
-function statBonusText(bonus: StatBonus | undefined): string | null {
-  if (!bonus) return null
-  const parts = Object.entries(bonus)
-    .filter(([, v]) => v)
-    .map(([k, v]) => `${v! > 0 ? '+' : ''}${v} ${k}`)
-  return parts.length ? parts.join(', ') : null
+function traitsText(traits: ItemEntry['traits']): string | null {
+  return traits?.length ? traits.join(', ') : null
 }
 
 export type CategoryId =
@@ -176,14 +173,15 @@ function DiscoveryEditor({ discovery, onChange }: { discovery: Discovery | undef
   )
 }
 
-function StatBar({ label, value }: { label: string; value: number }) {
+function StatBar({ label, value, max = 100, displayValue }: { label: string; value: number; max?: number; displayValue?: string }) {
+  const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0
   return (
     <div className="flex items-center gap-2 text-xs">
       <span className="w-14 font-display text-ink-muted">{label}</span>
       <div className="flex-1 h-1.5 rounded-full bg-[#e8ca8a]/12 overflow-hidden">
-        <div className="h-full bg-[#e8ca8a]" style={{ width: `${value}%` }} />
+        <div className="h-full bg-[#e8ca8a]" style={{ width: `${pct}%` }} />
       </div>
-      <span className="font-mono w-8 text-right text-ink">{value}</span>
+      <span className="font-mono text-right text-ink">{displayValue ?? value}</span>
     </div>
   )
 }
@@ -268,6 +266,33 @@ function NumberField({ label, value, onChange }: { label: string; value: number;
   )
 }
 
+// A canonical-word tier picker (CompetencyTier or ThreatTierToken) — the
+// same "pick from a fixed word list" pattern the XML grammar itself enforces
+// on the model, mirrored here so hand-authored CRUD can't drift off it either.
+function TierField<T extends readonly string[]>({
+  label, value, scale, onChange,
+}: {
+  label: string
+  value: number
+  scale: T
+  onChange: (v: number) => void
+}) {
+  return (
+    <label className="block">
+      <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">{label}</span>
+      <select
+        value={tierToWord(value, scale)}
+        onChange={(e) => onChange(wordToTier(e.target.value, scale))}
+        className="mt-1 w-full rounded-lg border border-[#e8ca8a]/25 bg-[#e8ca8a]/[0.04] backdrop-blur-sm px-3 py-2 font-mono text-sm text-ink"
+      >
+        {scale.map((word) => (
+          <option key={word} value={word}>{word}</option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
 // §9 CRUD toolbar — swaps between "view" (Edit/Delete) and "edit" (Save/Cancel)
 // affordances, shown next to the header title on any editable detail view.
 function CrudToolbar({
@@ -296,15 +321,14 @@ function CrudToolbar({
   )
 }
 
-// §6.4D card badge — MP/ST cost pill in the same cool indigo the [Active
-// Skill] markup uses inline in narration (§4.2), so a skill reads as the same
+// §6.4D card badge — effort pill in the same cool indigo the [Active Skill]
+// markup uses inline in narration (§4.2), so a skill reads as the same
 // category of thing whether you meet it in prose or in the Codex.
 function SkillCostBadge({ skill }: { skill: SkillEntry }) {
-  const parts = [skill.mpCost ? `${skill.mpCost} MP` : null, skill.stCost ? `${skill.stCost} ST` : null].filter(Boolean)
-  if (!parts.length) return null
+  if (!skill.effort) return null
   return (
-    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-skill/40 bg-skill-bg text-skill">
-      {parts.join(' · ')}
+    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-skill/40 bg-skill-bg text-skill capitalize">
+      {skill.effort}
     </span>
   )
 }
@@ -1037,11 +1061,11 @@ export default function Codex({
       }
       if (activeSubtab === 'class' && (!s.classId || s.classId !== player.classId)) return false
       if (activeSubtab === 'active') {
-        const isActive = (s.mpCost ?? 0) > 0 || (s.stCost ?? 0) > 0 || (s.skillType || '').toLowerCase() === 'active'
+        const isActive = Boolean(s.effort) || (s.skillType || '').toLowerCase() === 'active'
         if (!isActive) return false
       }
       if (activeSubtab === 'passive') {
-        const isPassive = (s.skillType || '').toLowerCase() === 'passive' || (!(s.mpCost ?? 0) && !(s.stCost ?? 0))
+        const isPassive = (s.skillType || '').toLowerCase() === 'passive' || !s.effort
         if (!isPassive) return false
       }
       return true
@@ -1153,8 +1177,8 @@ export default function Codex({
     if (category === 'skills') {
       const allCount = Object.keys(skills).length
       const classCount = Object.values(skills).filter((s) => s.classId && s.classId === player.classId).length
-      const activeCount = Object.values(skills).filter((s) => (s.mpCost ?? 0) > 0 || (s.stCost ?? 0) > 0 || (s.skillType || '').toLowerCase() === 'active').length
-      const passiveCount = Object.values(skills).filter((s) => (s.skillType || '').toLowerCase() === 'passive' || (!(s.mpCost ?? 0) && !(s.stCost ?? 0))).length
+      const activeCount = Object.values(skills).filter((s) => Boolean(s.effort) || (s.skillType || '').toLowerCase() === 'active').length
+      const passiveCount = Object.values(skills).filter((s) => (s.skillType || '').toLowerCase() === 'passive' || !s.effort).length
       return [
         { id: 'all', label: 'All', count: allCount, icon: Sparkles },
         { id: 'class', label: 'Class Skills', count: classCount, icon: Star },
@@ -1383,9 +1407,7 @@ export default function Codex({
     const id = entryId === NEW_ID ? genId(draft.name, bestiary) : entryId!
     onUpdateBestiary(id, {
       name: draft.name,
-      threatTier: draft.threatTier,
-      hpMax: draft.hpMax === '' || draft.hpMax === undefined ? undefined : Number(draft.hpMax),
-      dmgBase: draft.dmgBase === '' || draft.dmgBase === undefined ? undefined : Number(draft.dmgBase),
+      threatTier: (draft.threatTier ?? 'unknown') as ThreatTierToken,
       description: draft.description?.trim() || undefined,
       habitat: draft.habitat?.trim() || undefined,
       weaknesses: draft.weaknesses?.trim() || undefined,
@@ -1405,13 +1427,12 @@ export default function Codex({
       name,
       description: draft.description?.trim() || undefined,
       classId: draft.classId || undefined,
-      // '' means "no cost declared" and must stay undefined rather than
-      // collapsing to 0 — a 0-cost skill and an unpriced one read the same
+      // An unset effort must stay undefined rather than collapsing to a
+      // default tier — an effortless skill and an unset one read the same
       // in the UI but only the latter skips the §3.2 affordability note.
-      mpCost: draft.mpCost === '' || draft.mpCost === undefined ? undefined : Number(draft.mpCost),
-      stCost: draft.stCost === '' || draft.stCost === undefined ? undefined : Number(draft.stCost),
+      effort: draft.effort || undefined,
       skillType: draft.skillType?.trim() || undefined,
-      tier: draft.tier?.trim() || undefined,
+      tier: draft.tier !== undefined && draft.tier !== '' ? wordToTier(draft.tier, COMPETENCY_TIERS) : undefined,
       flavorText: draft.flavorText?.trim() || undefined,
       discovery: validateDiscovery(draft.discovery, { locations, npcs, quests }),
     })
@@ -1450,15 +1471,15 @@ export default function Codex({
     const id = entryId === NEW_ID ? genId(name, inventory) : entryId!
     const qty = Math.max(1, Math.round(Number(draft.qty) || 1))
     const type: ItemType = draft.type ?? 'material'
-    const statBonus: StatBonus | undefined =
-      EQUIPPABLE_TYPES.includes(type) && draft.statBonus && STAT_BONUS_KEYS.some((k) => draft.statBonus[k])
-        ? Object.fromEntries(STAT_BONUS_KEYS.filter((k) => draft.statBonus[k]).map((k) => [k, Number(draft.statBonus[k])]))
+    const traitsList: string[] | undefined =
+      typeof draft.traits === 'string' && draft.traits.trim()
+        ? draft.traits.split(',').map((t: string) => t.trim()).filter(Boolean)
         : undefined
     onUpdateItem(id, qty, {
       name,
       type,
       description: draft.description?.trim() || undefined,
-      statBonus,
+      traits: traitsList,
       rarity: draft.rarity?.trim() || undefined,
       loreText: draft.loreText?.trim() || undefined,
       value: draft.value === '' || draft.value === undefined ? undefined : Number(draft.value),
@@ -1585,7 +1606,10 @@ export default function Codex({
                 label="Attributes"
                 value={`STR ${Math.round(player.attrs.STR)} · INT ${Math.round(player.attrs.INT)} · AGI ${Math.round(player.attrs.AGI)}`}
               />
-              <DetailField label="Pools" value={`HP ${player.hpMax} · MP ${player.mpMax} · ST ${player.stMax}`} />
+              <DetailField
+                label="Conditions"
+                value={player.conditions?.length ? player.conditions.map((c) => c.label).join(', ') : 'None'}
+              />
               {/* Set at creation only (WorldSetup/NewGame) — not editable here,
                   same as Background always was, so the reader can see their
                   own established identity at a glance without a second form. */}
@@ -1767,7 +1791,7 @@ export default function Codex({
       {/* NPCs */}
       {category === 'npcs' && !entryId && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <AddButton label="Add NPC" onClick={() => startCreate({ name: '', stage: 'Stranger', trust: 0, affection: 0, memSummary: '', deeds: '' })} />
+          <AddButton label="Add NPC" onClick={() => startCreate({ name: '', stage: 'Stranger', trust: 1, affection: 1, memSummary: '', deeds: '' })} />
           {filteredNpcs.map(([id, n]) => {
             const hidden = isHidden(n)
             const metaChips: MetaChip[] = hidden
@@ -1775,7 +1799,7 @@ export default function Codex({
               : [
                   n.stage ? { icon: User, label: n.stage } : null,
                   n.factionId && factions[n.factionId] ? { icon: ShieldCheck, label: factions[n.factionId].name } : null,
-                  { icon: Heart, label: `Trust ${n.trust} · Aff ${n.affection}` },
+                  { icon: Heart, label: `Trust: ${trustWord(n.trust)}` },
                 ].filter(Boolean) as MetaChip[]
             return (
               <DeckEntryCard
@@ -1814,8 +1838,8 @@ export default function Codex({
               <TextField label="Gender" value={draft.gender ?? ''} onChange={(v) => setDraft((d) => ({ ...d, gender: v }))} placeholder="she/her (optional)" />
               <TextField label="Age" value={draft.age !== undefined ? String(draft.age) : ''} onChange={(v) => setDraft((d) => ({ ...d, age: v }))} placeholder="Optional" />
               <TextField label="Stage" value={draft.stage ?? ''} onChange={(v) => setDraft((d) => ({ ...d, stage: v }))} placeholder="Stranger, Acquaintance, Friend…" />
-              <NumberField label="Trust" value={draft.trust ?? 0} onChange={(v) => setDraft((d) => ({ ...d, trust: v }))} />
-              <NumberField label="Affection" value={draft.affection ?? 0} onChange={(v) => setDraft((d) => ({ ...d, affection: v }))} />
+              <TierField label="Trust" value={draft.trust ?? 1} scale={COMPETENCY_TIERS} onChange={(v) => setDraft((d) => ({ ...d, trust: v }))} />
+              <TierField label="Affection" value={draft.affection ?? 1} scale={COMPETENCY_TIERS} onChange={(v) => setDraft((d) => ({ ...d, affection: v }))} />
               <label className="block">
                 <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Faction</span>
                 <select
@@ -1856,8 +1880,8 @@ export default function Codex({
               <SectionCard accent={CATEGORY_ACCENTS.npcs} icon={Heart} title="Bond & Status">
                 <FieldRow label="Stage" value={npcs[entryId].stage} icon={User} />
                 <div className="flex flex-col gap-2 pt-1">
-                  <StatBar label="Trust" value={npcs[entryId].trust} />
-                  <StatBar label="Affection" value={npcs[entryId].affection} />
+                  <StatBar label="Trust" value={npcs[entryId].trust} max={5} displayValue={trustWord(npcs[entryId].trust)} />
+                  <StatBar label="Affection" value={npcs[entryId].affection} max={5} displayValue={npcs[entryId].stage} />
                 </div>
               </SectionCard>
               <SectionCard accent={CATEGORY_ACCENTS.npcs} icon={User} title="Profile">
@@ -2274,14 +2298,14 @@ export default function Codex({
       {/* Bestiary */}
       {category === 'bestiary' && !entryId && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <AddButton label="Add Adversary" onClick={() => startCreate({ name: '', threatTier: '', hpMax: '', dmgBase: '' })} />
+          <AddButton label="Add Adversary" onClick={() => startCreate({ name: '', threatTier: 'notable' })} />
           {filteredBestiary.map(([id, b]) => {
             const hidden = isHidden(b)
             const metaChips: MetaChip[] = hidden
               ? []
               : [
                   b.threatTier ? { icon: Skull, label: b.threatTier } : null,
-                  b.hpMax !== undefined ? { icon: Heart, label: `HP ${b.hpMax}` } : null,
+                  b.conditions?.length ? { icon: Heart, label: b.conditions.map((c) => c.label).join(', ') } : null,
                   b.weaknesses ? { icon: Zap, label: `Weak: ${b.weaknesses}` } : null,
                 ].filter(Boolean) as MetaChip[]
             return (
@@ -2311,7 +2335,7 @@ export default function Codex({
             <CrudToolbar
               editing={editing}
               canDelete={entryId !== NEW_ID}
-              onEdit={() => startEdit(entryId, { ...bestiary[entryId], hpMax: bestiary[entryId].hpMax ?? '', dmgBase: bestiary[entryId].dmgBase ?? '' })}
+              onEdit={() => startEdit(entryId, { ...bestiary[entryId] })}
               onSave={saveBestiary}
               onCancel={cancelEdit}
               onDelete={() => deleteEntry('bestiary')}
@@ -2320,9 +2344,18 @@ export default function Codex({
           {editing ? (
             <DetailPanel>
               <TextField label="Name" value={draft.name ?? ''} onChange={(v) => setDraft((d) => ({ ...d, name: v }))} />
-              <TextField label="Threat Tier" value={draft.threatTier ?? ''} onChange={(v) => setDraft((d) => ({ ...d, threatTier: v }))} />
-              <NumberField label="HP" value={draft.hpMax === '' ? 0 : (draft.hpMax ?? 0)} onChange={(v) => setDraft((d) => ({ ...d, hpMax: v }))} />
-              <NumberField label="Base Damage" value={draft.dmgBase === '' ? 0 : (draft.dmgBase ?? 0)} onChange={(v) => setDraft((d) => ({ ...d, dmgBase: v }))} />
+              <label className="block">
+                <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Threat Tier</span>
+                <select
+                  value={draft.threatTier ?? 'notable'}
+                  onChange={(e) => setDraft((d) => ({ ...d, threatTier: e.target.value }))}
+                  className={`mt-1 ${SELECT_CLASS}`}
+                >
+                  {THREAT_TIERS.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </label>
               <TextField label="Description" value={draft.description ?? ''} onChange={(v) => setDraft((d) => ({ ...d, description: v }))} textarea placeholder="Appearance and behavior…" />
               <TextField label="Habitat" value={draft.habitat ?? ''} onChange={(v) => setDraft((d) => ({ ...d, habitat: v }))} />
               <TextField label="Weaknesses" value={draft.weaknesses ?? ''} onChange={(v) => setDraft((d) => ({ ...d, weaknesses: v }))} />
@@ -2342,12 +2375,9 @@ export default function Codex({
               />
               <SectionCard accent={CATEGORY_ACCENTS.bestiary} icon={Skull} title="Combat Profile">
                 <FieldRow label="Threat" value={bestiary[entryId].threatTier} icon={Skull} />
-                {(bestiary[entryId].hpMax !== undefined || bestiary[entryId].dmgBase !== undefined) && (
-                  <div className="flex gap-2">
-                    {bestiary[entryId].hpMax !== undefined && <StatTile label="HP" value={bestiary[entryId].hpMax!} accent={CATEGORY_ACCENTS.bestiary} />}
-                    {bestiary[entryId].dmgBase !== undefined && <StatTile label="Damage" value={bestiary[entryId].dmgBase!} accent={CATEGORY_ACCENTS.bestiary} />}
-                  </div>
-                )}
+                {bestiary[entryId].conditions?.length ? (
+                  <FieldRow label="Conditions" value={bestiary[entryId].conditions!.map((c) => c.label).join(', ')} icon={Heart} />
+                ) : null}
                 {bestiary[entryId].weaknesses && <FieldRow label="Weaknesses" value={bestiary[entryId].weaknesses} icon={Zap} />}
               </SectionCard>
               {(bestiary[entryId].habitat || bestiary[entryId].description || bestiary[entryId].lootTable) && (
@@ -2366,14 +2396,14 @@ export default function Codex({
       {/* Skills */}
       {category === 'skills' && !entryId && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <AddButton label="Add Skill" onClick={() => startCreate({ name: '', description: '', classId: '', mpCost: '', stCost: '' })} />
+          <AddButton label="Add Skill" onClick={() => startCreate({ name: '', description: '', classId: '' })} />
           {filteredSkills.map(([id, s]) => {
             const hidden = isHidden(s)
             const metaChips: MetaChip[] = hidden
               ? []
               : [
                   classNameFor(s.classId) ? { icon: Star, label: classNameFor(s.classId)! } : null,
-                  s.tier ? { icon: Sparkles, label: s.tier } : null,
+                  s.tier !== undefined ? { icon: Sparkles, label: tierToWord(s.tier, COMPETENCY_TIERS) } : null,
                 ].filter(Boolean) as MetaChip[]
             return (
               <DeckEntryCard
@@ -2411,8 +2441,8 @@ export default function Codex({
                 startEdit(entryId, {
                   ...skills[entryId],
                   classId: skills[entryId].classId ?? '',
-                  mpCost: skills[entryId].mpCost ?? '',
-                  stCost: skills[entryId].stCost ?? '',
+                  tier: skills[entryId].tier !== undefined ? tierToWord(skills[entryId].tier!, COMPETENCY_TIERS) : '',
+                  effort: skills[entryId].effort ?? '',
                 })
               }
               onSave={saveSkill}
@@ -2426,7 +2456,19 @@ export default function Codex({
               <TextField label="Description" value={draft.description ?? ''} onChange={(v) => setDraft((d) => ({ ...d, description: v }))} />
               <TextField label="Flavor Text" value={draft.flavorText ?? ''} onChange={(v) => setDraft((d) => ({ ...d, flavorText: v }))} placeholder="A short evocative line, distinct from the mechanical description." />
               <TextField label="Skill Type" value={draft.skillType ?? ''} onChange={(v) => setDraft((d) => ({ ...d, skillType: v }))} placeholder="Offensive, Defensive, Utility, Passive…" />
-              <TextField label="Tier" value={draft.tier ?? ''} onChange={(v) => setDraft((d) => ({ ...d, tier: v }))} placeholder="Novice, Adept, Master…" />
+              <label className="block">
+                <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Tier</span>
+                <select
+                  value={draft.tier || ''}
+                  onChange={(e) => setDraft((d) => ({ ...d, tier: e.target.value }))}
+                  className={`mt-1 ${SELECT_CLASS}`}
+                >
+                  <option value="">— unset —</option>
+                  {COMPETENCY_TIERS.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </label>
               <label className="block">
                 <span className="text-[11px] font-display uppercase tracking-[0.14em] text-[#f0d9a4]">Owning Class</span>
                 <select
@@ -2442,8 +2484,19 @@ export default function Codex({
                   ))}
                 </select>
               </label>
-              <NumberField label="MP Cost" value={draft.mpCost === '' ? 0 : (draft.mpCost ?? 0)} onChange={(v) => setDraft((d) => ({ ...d, mpCost: v }))} />
-              <NumberField label="ST Cost" value={draft.stCost === '' ? 0 : (draft.stCost ?? 0)} onChange={(v) => setDraft((d) => ({ ...d, stCost: v }))} />
+              <label className="block">
+                <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Effort</span>
+                <select
+                  value={draft.effort ?? ''}
+                  onChange={(e) => setDraft((d) => ({ ...d, effort: e.target.value }))}
+                  className={`mt-1 ${SELECT_CLASS}`}
+                >
+                  <option value="">— none —</option>
+                  <option value="minor">Minor</option>
+                  <option value="focused">Focused</option>
+                  <option value="taxing">Taxing</option>
+                </select>
+              </label>
               <DiscoveryEditor discovery={draft.discovery} onChange={(disc) => setDraft((d) => ({ ...d, discovery: disc }))} />
             </DetailPanel>
           ) : isHidden(skills[entryId]) ? (
@@ -2453,17 +2506,23 @@ export default function Codex({
               <EntryHeroHeader
                 accent={CATEGORY_ACCENTS.skills}
                 title={skills[entryId].name}
-                subtitle={skills[entryId].flavorText || [skills[entryId].skillType, skills[entryId].tier].filter(Boolean).join(' · ')}
+                subtitle={
+                  skills[entryId].flavorText ||
+                  [skills[entryId].skillType, skills[entryId].tier !== undefined ? tierToWord(skills[entryId].tier!, COMPETENCY_TIERS) : null]
+                    .filter(Boolean)
+                    .join(' · ')
+                }
                 badges={<SkillCostBadge skill={skills[entryId]} />}
               />
               <SectionCard accent={CATEGORY_ACCENTS.skills} icon={Sparkles} title="Ability Profile">
                 {classNameFor(skills[entryId].classId) && <FieldRow label="Class" value={classNameFor(skills[entryId].classId)!} icon={Star} />}
                 {skills[entryId].skillType && <FieldRow label="Type" value={skills[entryId].skillType!} />}
-                {skills[entryId].tier && <FieldRow label="Tier" value={skills[entryId].tier!} />}
-                <div className="flex gap-2">
-                  {skills[entryId].mpCost !== undefined && <StatTile label="MP Cost" value={skills[entryId].mpCost!} accent={CATEGORY_ACCENTS.skills} />}
-                  {skills[entryId].stCost !== undefined && <StatTile label="ST Cost" value={skills[entryId].stCost!} accent={CATEGORY_ACCENTS.skills} />}
-                </div>
+                {skills[entryId].tier !== undefined && <FieldRow label="Tier" value={tierToWord(skills[entryId].tier!, COMPETENCY_TIERS)} />}
+                {skills[entryId].effort && (
+                  <div className="flex gap-2">
+                    <StatTile label="Effort" value={skills[entryId].effort!} accent={CATEGORY_ACCENTS.skills} />
+                  </div>
+                )}
                 {/* Affordability preview */}
                 {(() => {
                   const { affordable, missing } = checkAffordability(skills[entryId], player)
@@ -2493,16 +2552,16 @@ export default function Codex({
       {/* Items */}
       {category === 'items' && !entryId && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <AddButton label="Add Item" onClick={() => startCreate({ name: '', type: 'material', qty: '1', description: '', statBonus: {} })} />
+          <AddButton label="Add Item" onClick={() => startCreate({ name: '', type: 'material', qty: '1', description: '', traits: '' })} />
           {filteredItems.map(([id]) => {
             const qty = inventory[id]
             const item = items[id]
             const slot = equippedSlotFor(id)
             const accent = itemAccentFor(item?.rarity)
-            const bonus = statBonusText(item?.statBonus)
+            const traits = traitsText(item?.traits)
             const metaChips: MetaChip[] = [
               { icon: Coins, label: `×${qty}` },
-              bonus ? { icon: Zap, label: bonus } : null,
+              traits ? { icon: Zap, label: traits } : null,
               item?.value ? { icon: Coins, label: `${item.value}g` } : null,
             ].filter(Boolean) as MetaChip[]
             return (
@@ -2538,7 +2597,7 @@ export default function Codex({
                   type: items[entryId]?.type ?? 'material',
                   qty: String(inventory[entryId] ?? 1),
                   description: items[entryId]?.description ?? '',
-                  statBonus: items[entryId]?.statBonus ?? {},
+                  traits: items[entryId]?.traits?.join(', ') ?? '',
                   rarity: items[entryId]?.rarity ?? '',
                   loreText: items[entryId]?.loreText ?? '',
                   value: items[entryId]?.value ?? '',
@@ -2574,19 +2633,12 @@ export default function Codex({
                 placeholder="Optional — worth writing for key items and notable gear, not routine loot"
               />
               {EQUIPPABLE_TYPES.includes(draft.type) && (
-                <div className="rounded-lg border border-[#e8ca8a]/25 p-3 flex flex-col gap-2">
-                  <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Stat Bonus (applied on equip)</span>
-                  <div className="grid grid-cols-3 gap-2">
-                    {STAT_BONUS_KEYS.map((k) => (
-                      <NumberField
-                        key={k}
-                        label={k}
-                        value={draft.statBonus?.[k] ?? 0}
-                        onChange={(v) => setDraft((d) => ({ ...d, statBonus: { ...d.statBonus, [k]: v || undefined } }))}
-                      />
-                    ))}
-                  </div>
-                </div>
+                <TextField
+                  label="Traits (comma-separated)"
+                  value={draft.traits ?? ''}
+                  onChange={(v) => setDraft((d) => ({ ...d, traits: v }))}
+                  placeholder="reach, heavy — pure narrative flavor, no mechanical effect"
+                />
               )}
               <TextField label="Rarity" value={draft.rarity ?? ''} onChange={(v) => setDraft((d) => ({ ...d, rarity: v }))} placeholder="Common, Rare, Legendary…" />
               <TextField label="Lore Text" value={draft.loreText ?? ''} onChange={(v) => setDraft((d) => ({ ...d, loreText: v }))} textarea placeholder="An evocative line, distinct from the mechanical description above." />
@@ -2605,7 +2657,7 @@ export default function Codex({
                 <FieldRow label="Type" value={items[entryId]?.type ?? 'unknown'} />
                 <FieldRow label="Quantity" value={String(inventory[entryId] ?? 0)} />
                 {items[entryId]?.value !== undefined && <FieldRow label="Value" value={`${items[entryId]!.value} gold`} icon={Coins} />}
-                {statBonusText(items[entryId]?.statBonus) && <FieldRow label="Stat Bonus" value={statBonusText(items[entryId]?.statBonus)!} icon={Zap} />}
+                {traitsText(items[entryId]?.traits) && <FieldRow label="Traits" value={traitsText(items[entryId]?.traits)!} icon={Zap} />}
                 {items[entryId]?.description && <FieldRow label="Description" value={items[entryId]!.description!} />}
                 {items[entryId] && EQUIPPABLE_TYPES.includes(items[entryId]!.type) && (
                   <div className="mt-2 pt-2 border-t border-[#e8ca8a]/15">

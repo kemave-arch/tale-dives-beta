@@ -125,25 +125,21 @@ export const VIOLET_SORRENGAIL: ProtagonistData = {
     {
       name: "Poisoner's Edge",
       skillType: 'Utility',
-      tier: 'Novice',
-      stCost: 6,
-      mpCost: 0,
+      tier: 2, // Novice
+      effort: 'minor',
       description: 'Leverages vast scribe knowledge of deadly botanicals to coat daggers and identify concealed venoms.',
     },
     {
       name: 'Anatomical Precision',
       skillType: 'Passive',
-      tier: 'Novice',
-      stCost: 0,
-      mpCost: 0,
+      tier: 2, // Novice
       description: 'Exploits intimate anatomical knowledge from scribe texts to maximize critical damage against human and beast joint gaps.',
     },
     {
       name: 'Dagger Parry & Feint',
       skillType: 'Martial',
-      tier: 'Novice',
-      stCost: 8,
-      mpCost: 0,
+      tier: 2, // Novice
+      effort: 'focused',
       description: 'Uses low center of gravity and dual daggers to deflect heavy weapon strikes and counter-attack frail spots.',
     },
   ],

@@ -7,10 +7,10 @@ import type { Dict, Player, SkillEntry, SkillLearn } from '../types.ts'
 // gets here, mirroring how NPCs/Locations already work:
 //   - a {{Term|skill}} keyword link in prose auto-registers a bare stub
 //     (lib/codex.ts), costing nothing extra; and
-//   - `skill_learn` on the turn response carries the real record (costs,
+//   - `skill_learn` on the turn response carries the real record (effort,
 //     owning class, description) for a skill the protagonist actually gains.
 // The stub path is why every field past `name` is optional — a skill is
-// routinely mentioned long before it has agreed numbers.
+// routinely mentioned long before it has agreed particulars.
 
 export function emptySkill(name: string): Omit<SkillEntry, 'autoLogged'> {
   return { name }
@@ -18,7 +18,7 @@ export function emptySkill(name: string): Omit<SkillEntry, 'autoLogged'> {
 
 // A learned skill overwrites a stub's blank fields but never clobbers a value
 // the player has since hand-authored via Codex CRUD with `undefined` — the
-// model re-teaching a known skill shouldn't silently erase its edited cost.
+// model re-teaching a known skill shouldn't silently erase its edited details.
 export function applySkillLearn(skills: Dict<SkillEntry> | undefined, learned: SkillLearn[] | undefined, turnRef?: string): Dict<SkillEntry> {
   if (!learned?.length) return skills ?? {}
   let dict = skills ?? {}
@@ -36,8 +36,8 @@ export function applySkillLearn(skills: Dict<SkillEntry> | undefined, learned: S
         name: s.name || prev.name,
         description: s.description ?? prev.description,
         classId: s.class_id ?? prev.classId,
-        mpCost: s.mp_cost ?? prev.mpCost,
-        stCost: s.st_cost ?? prev.stCost,
+        effort: s.effort ?? prev.effort,
+        tier: s.tier ?? prev.tier,
       },
     }
   }
@@ -48,20 +48,31 @@ export function applySkillLearn(skills: Dict<SkillEntry> | undefined, learned: S
 export interface SkillAffordability {
   skill: SkillEntry
   affordable: boolean
-  missing: string // e.g. "6 MP" — empty when affordable
+  missing: string // e.g. "strained by Exhausted" — empty when affordable
 }
 
+// Condition labels that read as a real physical/mental strain on the
+// protagonist — a "taxing" skill is advisable to narrate as harder (or
+// backfiring) while one of these is active. Deliberately a small, readable
+// substring match rather than a closed enum: new condition names the model
+// invents (COMMON_CONDITIONS' 'narrative' fallback, lib/conditions.ts) still
+// register here as long as they read as strain-flavored.
+const STRAIN_PATTERN = /exhausted|wounded|bleeding|drained|winded|nauseated|dazed|stunned/i
+
 // §3.2 Skill Affordability — a pure client-side read of whether the player can
-// currently pay for a skill. Deliberately NOT a gate: the blueprint's rule is
-// that the check always runs, but its job is to tell the narrator whether to
-// describe a successful cast or an exhaustion penalty, never to refuse the
-// player's action outright. A skill with no declared cost is always affordable
-// (see the SkillEntry comment on why costs are optional).
+// currently pay for a skill. Deliberately NOT a gate: the rule is that the
+// check always runs, but its job is to tell the narrator whether to describe
+// a successful cast or a strained one, never to refuse the player's action
+// outright. A skill with no declared `effort` is always affordable (see the
+// SkillEntry comment on why that field is optional). Narrative-First
+// Overhaul: judged against the player's active Condition Tags rather than a
+// numeric MP/ST pool — only a "taxing" skill is ever flagged, and only while
+// a strain-flavored condition is active.
 export function checkAffordability(skill: SkillEntry, player: Player): SkillAffordability {
-  const shortfalls: string[] = []
-  if (skill.mpCost && player.mp < skill.mpCost) shortfalls.push(`${skill.mpCost - player.mp} MP`)
-  if (skill.stCost && player.st < skill.stCost) shortfalls.push(`${skill.stCost - player.st} ST`)
-  return { skill, affordable: shortfalls.length === 0, missing: shortfalls.join(' and ') }
+  if (skill.effort !== 'taxing') return { skill, affordable: true, missing: '' }
+  const strained = (player.conditions ?? []).filter((c) => STRAIN_PATTERN.test(c.label))
+  if (strained.length === 0) return { skill, affordable: true, missing: '' }
+  return { skill, affordable: false, missing: `strained by ${strained.map((c) => c.label).join(', ')}` }
 }
 
 // Finds a known, already-discovered skill the player's typed action names, so

@@ -7,7 +7,6 @@ import {
   ChevronUp,
   Edit2,
   Eye,
-  Heart,
   HelpCircle,
   Plus,
   PlusCircle,
@@ -18,8 +17,6 @@ import {
   Sword,
   Trash2,
   UserCircle,
-  Wand2,
-  Wind,
   X,
   Zap,
 } from 'lucide-react'
@@ -47,8 +44,8 @@ import {
   PROTAGONIST_BACKGROUND_EXAMPLES,
   SECRET_EXAMPLES,
 } from '../data/formExamples.ts'
-import type { Attributes, ProtagonistData, SkillEntry } from '../types.ts'
-import { derivedPools } from '../lib/derivedStats.ts'
+import type { Attributes, EffortTier, ProtagonistData, SkillEntry } from '../types.ts'
+import { COMPETENCY_TIERS, tierToWord, wordToTier } from '../lib/tiers.ts'
 import { ProtagonistDetailModal } from '../components/PresetDetailModal.tsx'
 
 interface NewGameProps {
@@ -85,42 +82,46 @@ function getInitialClassName(data?: ProtagonistData | null): string {
   return PRESET_CLASSES[0].name
 }
 
-// Suggested starter skills by class archetype
+// Suggested starter skills by class archetype. Narrative-First Overhaul:
+// mp/st costs became a qualitative `effort` tier, and `tier` (mastery rank)
+// is a CompetencyTier number now (2 = Novice) rather than a freeform string
+// — every starter ability is a fresh Novice-level pickup, so they all share
+// the same rank; `effort` is picked from the old cost's rough magnitude.
 const CLASS_STARTER_SKILLS: Record<string, SkillEntry[]> = {
   warrior: [
-    { name: 'Power Strike', skillType: 'Active', tier: 'Novice', mpCost: 0, stCost: 8, description: 'A heavy martial strike with weapon force, dealing enhanced physical damage.' },
-    { name: 'Shield Block', skillType: 'Martial', tier: 'Novice', mpCost: 0, stCost: 10, description: 'Brace behind shield or guard, mitigating incoming physical impact.' },
-    { name: 'Battle Roar', skillType: 'Utility', tier: 'Novice', mpCost: 0, stCost: 12, description: 'Intimidating battle cry that bolsters resolve and rattles enemy focus.' },
+    { name: 'Power Strike', skillType: 'Active', tier: 2, effort: 'minor', description: 'A heavy martial strike with weapon force, dealing enhanced physical damage.' },
+    { name: 'Shield Block', skillType: 'Martial', tier: 2, effort: 'minor', description: 'Brace behind shield or guard, mitigating incoming physical impact.' },
+    { name: 'Battle Roar', skillType: 'Utility', tier: 2, effort: 'focused', description: 'Intimidating battle cry that bolsters resolve and rattles enemy focus.' },
   ],
   mage: [
-    { name: 'Arcane Bolt', skillType: 'Spell', tier: 'Novice', mpCost: 8, stCost: 0, description: 'Channels raw arcane energy into a concentrated piercing projectile.' },
-    { name: 'Mana Barrier', skillType: 'Spell', tier: 'Novice', mpCost: 14, stCost: 0, description: 'Erects a shimmering mana shield absorbing magical and physical harm.' },
-    { name: 'Elemental Spark', skillType: 'Utility', tier: 'Novice', mpCost: 5, stCost: 0, description: 'Conjures small controllable elemental fire or light for utility and ignition.' },
+    { name: 'Arcane Bolt', skillType: 'Spell', tier: 2, effort: 'minor', description: 'Channels raw arcane energy into a concentrated piercing projectile.' },
+    { name: 'Mana Barrier', skillType: 'Spell', tier: 2, effort: 'focused', description: 'Erects a shimmering mana shield absorbing magical and physical harm.' },
+    { name: 'Elemental Spark', skillType: 'Utility', tier: 2, effort: 'minor', description: 'Conjures small controllable elemental fire or light for utility and ignition.' },
   ],
   assassin: [
-    { name: 'Shadow Step', skillType: 'Martial', tier: 'Novice', mpCost: 0, stCost: 10, description: 'Rapid, silent burst of movement through shadows to flank unaware targets.' },
-    { name: 'Backstab', skillType: 'Active', tier: 'Novice', mpCost: 0, stCost: 14, description: 'High-damage precision strike exploiting weak points and blind spots.' },
-    { name: 'Venom Coat', skillType: 'Utility', tier: 'Novice', mpCost: 4, stCost: 6, description: 'Coats blade in paralyzing or damaging venom for subsequent strikes.' },
+    { name: 'Shadow Step', skillType: 'Martial', tier: 2, effort: 'minor', description: 'Rapid, silent burst of movement through shadows to flank unaware targets.' },
+    { name: 'Backstab', skillType: 'Active', tier: 2, effort: 'focused', description: 'High-damage precision strike exploiting weak points and blind spots.' },
+    { name: 'Venom Coat', skillType: 'Utility', tier: 2, effort: 'minor', description: 'Coats blade in paralyzing or damaging venom for subsequent strikes.' },
   ],
   paladin: [
-    { name: 'Holy Smite', skillType: 'Spell', tier: 'Novice', mpCost: 10, stCost: 8, description: 'Infuses weapon strike with righteous radiance to punish dark beings.' },
-    { name: 'Divine Ward', skillType: 'Spell', tier: 'Novice', mpCost: 12, stCost: 0, description: 'Bestows protective sacred blessing upon self or a nearby ally.' },
-    { name: 'Lay on Hands', skillType: 'Utility', tier: 'Novice', mpCost: 16, stCost: 0, description: 'Channels restoring divine energy to knit flesh and stabilize vitals.' },
+    { name: 'Holy Smite', skillType: 'Spell', tier: 2, effort: 'focused', description: 'Infuses weapon strike with righteous radiance to punish dark beings.' },
+    { name: 'Divine Ward', skillType: 'Spell', tier: 2, effort: 'focused', description: 'Bestows protective sacred blessing upon self or a nearby ally.' },
+    { name: 'Lay on Hands', skillType: 'Utility', tier: 2, effort: 'taxing', description: 'Channels restoring divine energy to knit flesh and stabilize vitals.' },
   ],
   dragon_rider: [
-    { name: 'Bond Channel', skillType: 'Active', tier: 'Novice', mpCost: 8, stCost: 6, description: 'Channels empathic dragon bond to enhance reflex and sensory clarity.' },
-    { name: 'Dragon Dive', skillType: 'Martial', tier: 'Novice', mpCost: 0, stCost: 16, description: 'Leaping descent strike carrying immense kinetic velocity.' },
-    { name: 'Searing Breath', skillType: 'Spell', tier: 'Novice', mpCost: 18, stCost: 0, description: 'Invokes dragon-fire embers across a forward cone.' },
+    { name: 'Bond Channel', skillType: 'Active', tier: 2, effort: 'minor', description: 'Channels empathic dragon bond to enhance reflex and sensory clarity.' },
+    { name: 'Dragon Dive', skillType: 'Martial', tier: 2, effort: 'taxing', description: 'Leaping descent strike carrying immense kinetic velocity.' },
+    { name: 'Searing Breath', skillType: 'Spell', tier: 2, effort: 'taxing', description: 'Invokes dragon-fire embers across a forward cone.' },
   ],
   dark_monarch: [
-    { name: 'Shadow Extraction', skillType: 'Active', tier: 'Innate', mpCost: 20, stCost: 0, description: 'Extracts mana and lingering will from defeated foes into shadowy thralls.' },
-    { name: 'Monarch Step', skillType: 'Martial', tier: 'Novice', mpCost: 5, stCost: 10, description: 'Instantaneous stride across shadowy ground.' },
-    { name: 'Dagger Flurry', skillType: 'Active', tier: 'Novice', mpCost: 0, stCost: 12, description: 'Rapid succession of dual-dagger thrusts and slashes.' },
+    { name: 'Shadow Extraction', skillType: 'Active', tier: 3, effort: 'taxing', description: 'Extracts mana and lingering will from defeated foes into shadowy thralls.' },
+    { name: 'Monarch Step', skillType: 'Martial', tier: 2, effort: 'minor', description: 'Instantaneous stride across shadowy ground.' },
+    { name: 'Dagger Flurry', skillType: 'Active', tier: 2, effort: 'focused', description: 'Rapid succession of dual-dagger thrusts and slashes.' },
   ],
   necromancer: [
-    { name: 'Soul Drain', skillType: 'Spell', tier: 'Novice', mpCost: 12, stCost: 0, description: 'Siphons vitality from targets to replenish caster reserves.' },
-    { name: 'Grave Chill', skillType: 'Spell', tier: 'Novice', mpCost: 8, stCost: 0, description: 'Releases numbing frost that slows enemy movement and reactions.' },
-    { name: 'Bone Armor', skillType: 'Spell', tier: 'Novice', mpCost: 14, stCost: 0, description: 'Hardens calcified bone armor around body to blunt physical trauma.' },
+    { name: 'Soul Drain', skillType: 'Spell', tier: 2, effort: 'focused', description: 'Siphons vitality from targets to replenish caster reserves.' },
+    { name: 'Grave Chill', skillType: 'Spell', tier: 2, effort: 'minor', description: 'Releases numbing frost that slows enemy movement and reactions.' },
+    { name: 'Bone Armor', skillType: 'Spell', tier: 2, effort: 'focused', description: 'Hardens calcified bone armor around body to blunt physical trauma.' },
   ],
 }
 
@@ -191,8 +192,7 @@ export default function NewGame({
   const [skillDraftName, setSkillDraftName] = useState('')
   const [skillDraftType, setSkillDraftType] = useState('Active')
   const [skillDraftTier, setSkillDraftTier] = useState('Novice')
-  const [skillDraftMp, setSkillDraftMp] = useState(0)
-  const [skillDraftSt, setSkillDraftSt] = useState(0)
+  const [skillDraftEffort, setSkillDraftEffort] = useState<EffortTier | ''>('')
   const [skillDraftDesc, setSkillDraftDesc] = useState('')
 
   // Special Key Item — one optional item name the protagonist brings into
@@ -213,9 +213,6 @@ export default function NewGame({
     Math.max(0, attrs.INT - BASE_ATTR_VALUE) +
     Math.max(0, attrs.AGI - BASE_ATTR_VALUE)
   const unassignedPoints = Math.max(0, TOTAL_ASSIGNABLE_POINTS - spentPoints)
-
-  // Live derived vitals
-  const vitals = derivedPools(attrs)
 
   function modifyAttr(key: keyof Attributes, delta: number) {
     if (delta > 0 && unassignedPoints <= 0) return
@@ -278,8 +275,7 @@ export default function NewGame({
     setSkillDraftName('')
     setSkillDraftType('Active')
     setSkillDraftTier('Novice')
-    setSkillDraftMp(0)
-    setSkillDraftSt(10)
+    setSkillDraftEffort('')
     setSkillDraftDesc('')
     setEditingSkillIdx(null)
     setSkillModalOpen(true)
@@ -290,9 +286,8 @@ export default function NewGame({
     if (!s) return
     setSkillDraftName(s.name)
     setSkillDraftType(s.skillType || 'Active')
-    setSkillDraftTier(s.tier || 'Novice')
-    setSkillDraftMp(s.mpCost ?? 0)
-    setSkillDraftSt(s.stCost ?? 0)
+    setSkillDraftTier(s.tier !== undefined ? tierToWord(s.tier, COMPETENCY_TIERS) : 'Novice')
+    setSkillDraftEffort(s.effort ?? '')
     setSkillDraftDesc(s.description ?? '')
     setEditingSkillIdx(index)
     setSkillModalOpen(true)
@@ -303,9 +298,8 @@ export default function NewGame({
     const updated: SkillEntry = {
       name: skillDraftName.trim(),
       skillType: skillDraftType,
-      tier: skillDraftTier,
-      mpCost: Number(skillDraftMp) || 0,
-      stCost: Number(skillDraftSt) || 0,
+      tier: wordToTier(skillDraftTier, COMPETENCY_TIERS),
+      effort: skillDraftEffort || undefined,
       description: skillDraftDesc.trim() || undefined,
     }
 
@@ -830,22 +824,17 @@ export default function NewGame({
             <div>
               {activeTooltip === 'STR' && (
                 <p>
-                  <strong>Strength (STR):</strong> Governs raw physical power, weapon damage, and carry capacity. Directly increases Health pool (+2.5 HP / STR point).
+                  <strong>Strength (STR):</strong> Raw physical power, weapon force, and carry capacity — the Narrator weighs this when judging a feat of strength or a melee exchange.
                 </p>
               )}
               {activeTooltip === 'INT' && (
                 <p>
-                  <strong>Intelligence (INT):</strong> Governs spell potency, magical affinity, and arcane knowledge. Directly increases Mana pool (+2.0 MP / INT point).
+                  <strong>Intelligence (INT):</strong> Spell potency, magical affinity, and arcane/scholarly knowledge — the Narrator weighs this for spellcraft, deduction, and lore recall.
                 </p>
               )}
               {activeTooltip === 'AGI' && (
                 <p>
-                  <strong>Agility (AGI):</strong> Governs speed, reflexes, stealth, and evasion. Directly increases Stamina pool (+1.5 ST / AGI point).
-                </p>
-              )}
-              {activeTooltip === 'VITALS' && (
-                <p>
-                  <strong>Derived Vitals:</strong> Calculated using the universal engine formulas (HP = 20 + 2.5×STR, MP = 10 + 2×INT, ST = 15 + 1×STR + 1.5×AGI).
+                  <strong>Agility (AGI):</strong> Speed, reflexes, stealth, and evasion — the Narrator weighs this for footwork, dodges, and quiet movement.
                 </p>
               )}
             </div>
@@ -859,45 +848,6 @@ export default function NewGame({
           </div>
         )}
 
-        {/* Derived Vitals Live Preview */}
-        <div className="pt-2 border-t border-[#e8ca8a]/15 flex flex-col gap-1.5">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-[10px] uppercase tracking-wider text-[#e8ca8a]/70 flex items-center gap-1">
-              Derived Vitals Preview
-              <button
-                type="button"
-                onClick={() => setActiveTooltip(activeTooltip === 'VITALS' ? null : 'VITALS')}
-                className="text-[#e8ca8a]/50 hover:text-[#f5dfa0]"
-              >
-                <HelpCircle size={10} />
-              </button>
-            </span>
-            <span className="font-mono text-[10px] text-[#e8ca8a]/50">Shadow Referee Validated</span>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="flex items-center gap-2 p-2 rounded-lg bg-rose-950/30 border border-rose-500/30">
-              <Heart size={14} className="text-rose-400 shrink-0" />
-              <div className="min-w-0">
-                <span className="block font-mono text-[9px] uppercase tracking-wider text-rose-300/80">HP Max</span>
-                <span className="font-mono font-bold text-sm text-rose-200">{vitals.hpMax}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 p-2 rounded-lg bg-sky-950/30 border border-sky-500/30">
-              <Wand2 size={14} className="text-sky-400 shrink-0" />
-              <div className="min-w-0">
-                <span className="block font-mono text-[9px] uppercase tracking-wider text-sky-300/80">MP Max</span>
-                <span className="font-mono font-bold text-sm text-sky-200">{vitals.mpMax}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-950/30 border border-emerald-500/30">
-              <Wind size={14} className="text-emerald-400 shrink-0" />
-              <div className="min-w-0">
-                <span className="block font-mono text-[9px] uppercase tracking-wider text-emerald-300/80">ST Max</span>
-                <span className="font-mono font-bold text-sm text-emerald-200">{vitals.stMax}</span>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   )
@@ -1063,14 +1013,9 @@ export default function NewGame({
                     <span className="text-[9px] font-mono px-1.5 py-0.2 rounded border bg-[#e8ca8a]/10 text-[#f5dfa0] border-[#e8ca8a]/25 font-normal uppercase">
                       {s.skillType || 'Active'}
                     </span>
-                    {(s.mpCost ?? 0) > 0 && (
-                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded border bg-sky-500/15 text-sky-300 border-sky-500/30">
-                        {s.mpCost} MP
-                      </span>
-                    )}
-                    {(s.stCost ?? 0) > 0 && (
-                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded border bg-emerald-500/15 text-emerald-300 border-emerald-500/30">
-                        {s.stCost} ST
+                    {s.effort && (
+                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded border bg-sky-500/15 text-sky-300 border-sky-500/30 capitalize">
+                        {s.effort}
                       </span>
                     )}
                   </div>
@@ -1346,37 +1291,25 @@ export default function NewGame({
                     onChange={(e) => setSkillDraftTier(e.target.value)}
                     className={SELECT_CLASS}
                   >
-                    <option value="Novice">Novice</option>
-                    <option value="Adept">Adept</option>
-                    <option value="Innate">Innate</option>
-                    <option value="Master">Master</option>
+                    {COMPETENCY_TIERS.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
                   </select>
                 </GlassField>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <GlassField label="MP Cost" hint="0 for martial skills">
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={skillDraftMp}
-                    onChange={(e) => setSkillDraftMp(Number(e.target.value))}
-                    className={FIELD_CLASS}
-                  />
-                </GlassField>
-
-                <GlassField label="ST Cost" hint="0 for pure spells">
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={skillDraftSt}
-                    onChange={(e) => setSkillDraftSt(Number(e.target.value))}
-                    className={FIELD_CLASS}
-                  />
-                </GlassField>
-              </div>
+              <GlassField label="Effort" hint="How taxing a cast visibly is — leave blank for an effortless skill">
+                <select
+                  value={skillDraftEffort}
+                  onChange={(e) => setSkillDraftEffort(e.target.value as EffortTier | '')}
+                  className={SELECT_CLASS}
+                >
+                  <option value="">— none —</option>
+                  <option value="minor">Minor</option>
+                  <option value="focused">Focused</option>
+                  <option value="taxing">Taxing</option>
+                </select>
+              </GlassField>
 
               <GlassField label="Description & Effect" hint="Mechanical or narrative outcome">
                 <textarea

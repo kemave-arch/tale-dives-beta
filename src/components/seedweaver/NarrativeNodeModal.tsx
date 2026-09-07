@@ -9,7 +9,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react'
-import type { CombatMode, ProtagonistData, WorldData } from '../../types.ts'
+import type { ProtagonistData, WorldData } from '../../types.ts'
 import type { SeedNarrativePreset } from './types.ts'
 import { BUILTIN_NARRATIVE_PRESETS } from './defaultPacks.ts'
 
@@ -20,7 +20,6 @@ interface NarrativeNodeModalProps {
     title: string
     opening: string
     narrationStyle: string
-    combatMode: CombatMode
   }
   protagonist: ProtagonistData
   world: WorldData
@@ -29,7 +28,6 @@ interface NarrativeNodeModalProps {
     title: string
     opening: string
     narrationStyle: string
-    combatMode: CombatMode
   }) => void
   onLaunchDirect: () => void
   onClose: () => void
@@ -86,7 +84,6 @@ export default function NarrativeNodeModal({
       title: formattedTitle || data.title,
       opening: preset.openingHook,
       narrationStyle: preset.narrationStyle,
-      combatMode: preset.combatMode,
     })
     setPresetModalOpen(false)
     setSaveToast(`Loaded "${preset.name}" Setup!`)
@@ -102,7 +99,6 @@ export default function NarrativeNodeModal({
       description: presetDescDraft.trim() || 'Custom opening dive and tone configuration.',
       openingHook: data.opening,
       narrationStyle: data.narrationStyle,
-      combatMode: data.combatMode,
       isCustom: true,
       savedAt: Date.now(),
     }
@@ -221,9 +217,6 @@ export default function NarrativeNodeModal({
                             Custom
                           </span>
                         )}
-                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                          {preset.combatMode}
-                        </span>
                       </div>
                       <p className="text-[11px] font-narrative text-[#d8b4fe]/80 line-clamp-2 mt-0.5">{preset.openingHook}</p>
                     </div>
@@ -337,40 +330,6 @@ export default function NarrativeNodeModal({
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-display font-semibold text-purple-200/90 mb-1">Combat Mode</label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setData({ ...data, combatMode: 'NARRATIVE' })}
-                className={`p-3 rounded-xl text-left border transition-all ${
-                  data.combatMode === 'NARRATIVE'
-                    ? 'bg-purple-500/20 border-purple-400 text-purple-200 shadow-md shadow-purple-500/20'
-                    : 'bg-[#1a112c] border-purple-500/15 text-[#d8c49e] hover:border-purple-500/30'
-                }`}
-              >
-                <div className="font-display font-bold text-xs">Narrative Combat</div>
-                <div className="text-[10px] font-narrative opacity-75 mt-0.5">
-                  Prose-driven duels and tactical maneuvers guided by LLM pacing.
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setData({ ...data, combatMode: 'TACTICAL' })}
-                className={`p-3 rounded-xl text-left border transition-all ${
-                  data.combatMode === 'TACTICAL'
-                    ? 'bg-purple-500/20 border-purple-400 text-purple-200 shadow-md shadow-purple-500/20'
-                    : 'bg-[#1a112c] border-purple-500/15 text-[#d8c49e] hover:border-purple-500/30'
-                }`}
-              >
-                <div className="font-display font-bold text-xs">Tactical Turn-Based</div>
-                <div className="text-[10px] font-narrative opacity-75 mt-0.5">
-                  Client-computed stat damage, HP/ST mitigation, and adversary blocks.
-                </div>
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* Footer */}

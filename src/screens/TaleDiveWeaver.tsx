@@ -12,7 +12,7 @@ import {
   Play,
   RotateCcw,
 } from 'lucide-react'
-import type { CombatMode, ProtagonistData, WorldData } from '../types.ts'
+import type { ProtagonistData, WorldData } from '../types.ts'
 import { FOURTH_WING_WORLD, VIOLET_SORRENGAIL } from '../data/starterTemplates.ts'
 import { DEFAULT_NARRATION_STYLE } from '../api/turnContract.ts'
 import type { NodeType, SeedNpcData, TaleDiveWeaverProps } from '../components/seedweaver/types.ts'
@@ -65,7 +65,6 @@ export default function TaleDiveWeaver({
     title: `${VIOLET_SORRENGAIL.name}'s Journey`,
     opening: VIOLET_SORRENGAIL.opening || '',
     narrationStyle: FOURTH_WING_WORLD.narrationStyle || DEFAULT_NARRATION_STYLE,
-    combatMode: 'NARRATIVE' as CombatMode,
   })
 
   // Finalization status for each node
@@ -105,7 +104,6 @@ export default function TaleDiveWeaver({
         ...protagonist,
         opening: narrative.opening,
       },
-      narrative.combatMode,
       {
         ...world,
         narrationStyle: narrative.narrationStyle,
@@ -583,7 +581,6 @@ export default function TaleDiveWeaver({
               <ul className="text-[9px] text-[#d8b4fe]/80 text-left mt-0.5 space-y-0.2 font-narrative">
                 <li className="truncate">• Style: {narrative.narrationStyle ? 'Configured' : 'Default'}</li>
                 <li className="truncate">• Hook: {narrative.opening ? 'Defined' : 'Default'}</li>
-                <li className="truncate">• Mode: {narrative.combatMode}</li>
               </ul>
             </div>
           </div>

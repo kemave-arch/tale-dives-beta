@@ -1,4 +1,4 @@
-import type { CombatMode, ProtagonistData, WorldData } from '../../types.ts'
+import type { ProtagonistData, WorldData } from '../../types.ts'
 
 export interface SeedNpcData {
   id: string
@@ -33,7 +33,6 @@ export interface SeedNarrativePreset {
   description: string
   openingHook: string
   narrationStyle: string
-  combatMode: CombatMode
   isCustom?: boolean
   savedAt?: number
 }
@@ -51,7 +50,6 @@ export interface TaleDiveWeaverProps {
   onDeleteWorldPreset?: (id: string) => void
   onBeginTale: (
     protagonist: ProtagonistData,
-    combatMode: CombatMode,
     worldOverride: Partial<WorldData>,
     customTitle: string,
     customNpcs?: SeedNpcData[]

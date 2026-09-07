@@ -6,13 +6,14 @@ import type { Campaign, Dict, Minion, SummonBranch } from '../types.ts'
 // access to the branch their active class (preset or Class Evolution
 // result, §5.1b) actually grants.
 //
-// Balance numbers below (MP costs/upkeep, minion hpMax) are invented
-// defaults — the blueprint specifies the mechanism (spend MP, spend Bone
-// Dust, ongoing upkeep) but not exact figures, so these are picked to feel
-// meaningful without dominating an early MP pool, the same way this
-// codebase already invents e.g. DEFEAT_HP_RESTORE_FRACTION in App.tsx.
-const RAISE_SKELETON_MP_COST = 10
-const SUMMON_FAMILIAR_MP_COST = 15
+// Balance numbers below (minion hpMax) are invented defaults — the
+// blueprint specifies the mechanism (spend Bone Dust, ongoing upkeep) but
+// not exact figures, the same way this codebase already invents e.g.
+// DEFEAT_HP_RESTORE_FRACTION in App.tsx. mpUpkeep is a narrow, deliberately
+// unmodified holdover — out of scope for the Narrative-First Overhaul (see
+// the Minion type's own comment in types.ts); it no longer drains an actual
+// numeric player pool since Player.mp doesn't exist anymore, but the field
+// stays as flavor context shown on the minion's own dossier.
 const SUMMON_FAMILIAR_MP_UPKEEP = 2
 const ARISE_MINION_HP = 30
 const SKELETON_MINION_HP = 20
@@ -37,7 +38,7 @@ export interface SummonOutcome {
   ok: boolean
   note: string
   minion?: Minion
-  patch?: { corpses?: string[]; inventory?: Dict<number>; playerMp?: number }
+  patch?: { corpses?: string[]; inventory?: Dict<number> }
 }
 
 // Blueprint §5.3 describes Shadow Extraction as gated on "specific slain
@@ -76,9 +77,6 @@ export function attemptSummon(command: SummonCommand, campaign: Campaign, newMin
   if (command === 'raise_skeleton') {
     const boneDust = campaign.inventory['bone_dust'] ?? 0
     if (boneDust < 1) return { ok: false, note: 'No Bone Dust in your inventory.' }
-    if (campaign.player.mp < RAISE_SKELETON_MP_COST) {
-      return { ok: false, note: `Not enough MP — Reanimation costs ${RAISE_SKELETON_MP_COST} MP (${campaign.player.mp} available).` }
-    }
     const nextInventory = { ...campaign.inventory }
     const remaining = boneDust - 1
     if (remaining > 0) nextInventory['bone_dust'] = remaining
@@ -88,14 +86,13 @@ export function attemptSummon(command: SummonCommand, campaign: Campaign, newMin
       ok: true,
       note: `${minion.name} claws free of the earth, bones knitting into formation.`,
       minion,
-      patch: { inventory: nextInventory, playerMp: campaign.player.mp - RAISE_SKELETON_MP_COST },
+      patch: { inventory: nextInventory },
     }
   }
 
-  // command === 'summon'
-  if (campaign.player.mp < SUMMON_FAMILIAR_MP_COST) {
-    return { ok: false, note: `Not enough MP — a Planar Gate costs ${SUMMON_FAMILIAR_MP_COST} MP (${campaign.player.mp} available).` }
-  }
+  // command === 'summon' — no MP gate anymore (the Narrative-First Overhaul
+  // dropped the numeric MP pool this used to check against; class gating
+  // above is the only real gate left).
   const minion: Minion = {
     id: newMinionId,
     name: 'Planar Familiar',
@@ -106,29 +103,17 @@ export function attemptSummon(command: SummonCommand, campaign: Campaign, newMin
   }
   return {
     ok: true,
-    note: `A gate tears open — ${minion.name} steps through, bound to your contract (${SUMMON_FAMILIAR_MP_UPKEEP} MP upkeep/turn).`,
+    note: `A gate tears open — ${minion.name} steps through, bound to your contract.`,
     minion,
-    patch: { playerMp: campaign.player.mp - SUMMON_FAMILIAR_MP_COST },
   }
 }
 
-// Runs every turn (App.tsx's sendAction) — a `familiar`-branch minion drains
-// its upkeep from the player's MP each turn, and dissipates the instant that
-// upkeep can no longer be paid, rather than letting MP go negative or
-// accumulating silent debt. Non-familiar minions (no mpUpkeep) are untouched.
-export function applyMinionUpkeep(minions: Dict<Minion>, currentMp: number): { minions: Dict<Minion>; mp: number; dissipated: string[] } {
-  if (Object.keys(minions).length === 0) return { minions, mp: currentMp, dissipated: [] }
-
-  let mp = currentMp
-  const dissipated: string[] = []
-  const next: Dict<Minion> = {}
-  for (const [id, m] of Object.entries(minions)) {
-    if (!m.mpUpkeep || mp >= m.mpUpkeep) {
-      if (m.mpUpkeep) mp -= m.mpUpkeep
-      next[id] = m
-    } else {
-      dissipated.push(m.name)
-    }
-  }
-  return { minions: next, mp, dissipated }
+// Used to drain a `familiar`-branch minion's upkeep from the player's MP
+// pool each turn, dissipating it the instant upkeep couldn't be paid.
+// Out of scope for the Narrative-First Overhaul (see the Minion type's own
+// comment in types.ts) — kept as a stable no-op pass-through purely because
+// Player no longer has a numeric MP pool to drain from, not because the
+// mechanic was redesigned. No minion currently dissipates for lack of MP.
+export function applyMinionUpkeep(minions: Dict<Minion>): { minions: Dict<Minion>; dissipated: string[] } {
+  return { minions, dissipated: [] }
 }

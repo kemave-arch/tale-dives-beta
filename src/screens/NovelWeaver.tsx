@@ -18,7 +18,7 @@ import type { ProtagonistData, WorldData } from '../types.ts'
 
 const BLANK_PROTAGONIST: ProtagonistData = { name: '', classId: 'warrior', opening: '' }
 const BLANK_WORLD: Partial<WorldData> = {}
-const BLANK_NARRATIVE: NarrativeSeed = { title: '', opening: '', narrationStyle: '', combatMode: 'NARRATIVE' }
+const BLANK_NARRATIVE: NarrativeSeed = { title: '', opening: '', narrationStyle: '' }
 
 const CHAPTERS: { id: ChapterId; numeral: string; title: string; blurb: string; accent: string }[] = [
   { id: 'protagonist', numeral: 'I', title: 'Protagonist', blurb: 'Who they are', accent: '#e8ca8a' },
@@ -58,7 +58,6 @@ export default function NovelWeaver({
   function beginTale() {
     onBeginTale(
       { ...protagonist, opening: narrative.opening },
-      narrative.combatMode,
       world,
       narrative.title.trim(),
       cast

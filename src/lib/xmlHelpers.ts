@@ -1,5 +1,3 @@
-import type { StatBonus } from '../types.ts'
-
 // Shared primitives for parsing the app's hand-rolled XML wire formats —
 // originally private to xmlTurnParser.ts, extracted so a second grammar
 // (worldSeedParser.ts, for the one-time world-seeding call) can reuse the
@@ -46,20 +44,42 @@ export function reqStr(v: string | null, field: string): string {
   return s
 }
 
-// "+2 AGI, +5 MP" -> { AGI: 2, mp: 5 }. Shared freeform stat-bonus format
-// used both by a turn's <item> bonus attribute (xmlTurnParser.ts) and a
-// seeded key item's <item> bonus attribute (worldSeedParser.ts).
-export function parseStatBonus(text: string): StatBonus {
-  const bonus: StatBonus = {}
-  const attrKeys: (keyof StatBonus)[] = ['STR', 'INT', 'AGI', 'hp', 'mp', 'st']
-  for (const part of text.split(',')) {
-    const match = part.trim().match(/^([+-]?\d+)\s*(\w+)$/)
-    if (!match) continue
-    const [, amountStr, key] = match
-    const found = attrKeys.find((k) => k.toLowerCase() === key.toLowerCase())
-    if (found) bonus[found] = Number(amountStr)
+// The core anti-drift guard for every fixed-vocabulary attribute in the new
+// grammar (breakthrough/skill tiers, threat tiers, ...): requires the raw
+// attribute value to be present AND an exact case-insensitive match for one
+// of `validSet`'s canonical words — anything else (a number, an invented
+// synonym, a typo) throws XmlParseError rather than being coerced or
+// silently dropped, mirroring reqStr/reqNum's own "missing/invalid required
+// attribute" posture.
+export function reqTierWord<T extends readonly string[]>(v: string | null, field: string, validSet: T): T[number] {
+  const s = str(v)
+  if (s === undefined) throw new XmlParseError(`Missing required attribute: ${field}`)
+  const match = validSet.find((word) => word.toLowerCase() === s.trim().toLowerCase())
+  if (match === undefined) {
+    throw new XmlParseError(`Invalid ${field}: "${s}" is not one of ${validSet.join(', ')}`)
   }
-  return bonus
+  return match
+}
+
+// Same as reqTierWord, but optional — returns undefined when the attribute
+// is simply absent (a legitimate "not set this turn" case for e.g. an NPC's
+// `resolve`), still throwing on a present-but-off-vocabulary value.
+export function optTierWord<T extends readonly string[]>(v: string | null, field: string, validSet: T): T[number] | undefined {
+  if (v === null || v === '') return undefined
+  return reqTierWord(v, field, validSet)
+}
+
+// The new `<npc aff="+|-" trust="+|-">` / `<cond>` sign attributes: a bare
+// '+' or '-' character only, never a magnitude, never a signed integer
+// string. Absent/empty means "no change" (undefined); anything else is a
+// parse error — this is the strictest version of this channel after several
+// rounds of review, specifically to foreclose any drift back toward "small
+// integer" thinking.
+export function signToDelta(raw: string | null, field: string): -1 | 1 | undefined {
+  if (raw === null || raw === '') return undefined
+  if (raw === '+') return 1
+  if (raw === '-') return -1
+  throw new XmlParseError(`Invalid ${field}: expected a bare "+" or "-", got "${raw}"`)
 }
 
 // Extracts `<blockTag>...</blockTag>` from a raw response and parses its

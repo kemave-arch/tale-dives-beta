@@ -1,49 +1,18 @@
 import type { Player, TurnResponse } from '../types.ts'
 
-// Client-side Shadow Referee — Blueprint §3.2. Gemini proposes, this validates.
-
-// §5.1d/§8 item 7: soft-cap share of a max pool a single narrated turn can move.
-// Placeholder tunable — revisit once real playtesting shows the right feel.
-const NARRATIVE_MAGNITUDE_CAP = 0.5
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value))
-}
-
-function boundedDelta(delta: number | undefined, max: number): number {
-  if (!delta) return 0
-  const cap = Math.round(max * NARRATIVE_MAGNITUDE_CAP)
-  return clamp(delta, -cap, cap)
-}
-
-export interface TacticalOverride {
-  hpDelta?: number
-  stDelta?: number
-}
-
-export interface ApplyTurnResult {
-  player: Player
-  defeated: boolean
-}
-
-// `tacticalOverride` — §3.2 Combat Math Ownership: in Tactical Mode the
-// client precomputes hp/st before the prompt ever goes out, so whatever
-// Gemini emits in `deltas` for those fields is ignored outright rather than
-// bounds-checked, exactly matching "overwritten if they disagree."
-export function applyTurn(player: Player, turn: TurnResponse, tacticalOverride?: TacticalOverride): ApplyTurnResult {
-  const deltas = turn.deltas ?? {}
-  const next: Player = { ...player }
-
-  const hpDelta = tacticalOverride?.hpDelta ?? boundedDelta(deltas.hp, player.hpMax)
-  const stDelta = tacticalOverride?.stDelta ?? boundedDelta(deltas.st, player.stMax)
-
-  next.hp = clamp(player.hp + hpDelta, 0, player.hpMax)
-  next.mp = clamp(player.mp + boundedDelta(deltas.mp, player.mpMax), 0, player.mpMax)
-  next.st = clamp(player.st + stDelta, 0, player.stMax)
-  next.copper = Math.max(0, player.copper + (deltas.c ?? 0))
-
-  if (turn.loc_id) next.locId = turn.loc_id
-  if (turn.loc_disp) next.locDisp = turn.loc_disp
-
-  return { player: next, defeated: next.hp <= 0 }
+// Client-side Shadow Referee — Blueprint §3.2. Gemini proposes, this
+// validates. Narrative-First Overhaul: TACTICAL mode and the numeric hp/mp/
+// st pools it used to reconcile are both gone — combat is fully narrative-
+// adjudicated now, and vitals are Condition Tags (lib/conditions.ts),
+// applied directly in App.tsx alongside every other Codex-shaped update
+// rather than through this module. All that's left here is the one
+// remaining numeric channel (currency) — kept as its own small module
+// rather than folded into App.tsx directly so the "client, not the model,
+// owns the actually-applied numbers" boundary this module has always
+// represented stays a single, named place. loc_id/loc_disp resolution moved
+// to App.tsx's own turn loop, since the optional-loc_disp fallback (falling
+// back to the Locations registry's own name) needs the campaign's
+// `locations` dict, which this module deliberately has no access to.
+export function applyTurn(player: Player, turn: TurnResponse): Player {
+  return { ...player, copper: Math.max(0, player.copper + (turn.copper_delta ?? 0)) }
 }

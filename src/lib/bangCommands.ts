@@ -1,6 +1,7 @@
 import { slugify, titleCaseId } from './slug.ts'
 import { effectiveStanding, repTierLabel } from './factions.ts'
 import { checkAffordability } from './skills.ts'
+import { trustWord } from './npcs.ts'
 import type {
   BangCommandEntry, BestiaryEntry, Campaign, EquipSlot, FactionEntry, ItemEntry, LocationEntry, LoreEntry, NpcEntry, Player, QuestEntry, SkillEntry,
 } from '../types.ts'
@@ -69,8 +70,11 @@ function capped<T>(items: T[]): { shown: T[]; note?: string } {
   return { shown: items.slice(-RECALL_ROW_CAP), note: `+${items.length - RECALL_ROW_CAP} more not shown` }
 }
 
+// n.stage already reads as the affection-derived word (Stranger..Beloved,
+// lib/npcs.ts's stageFor) — shown as-is rather than duplicated as a second
+// "Affection: X" field.
 function npcRow(id: string, n: NpcEntry): BangCommandEntry['rows'][number] {
-  return { name: n.name, id, category: 'npc', fields: [n.stage, `Trust ${n.trust}`, `Affection ${n.affection}`] }
+  return { name: n.name, id, category: 'npc', fields: [n.stage, `Trust: ${trustWord(n.trust)}`] }
 }
 function locationRow(id: string, l: LocationEntry, factions: Record<string, FactionEntry>): BangCommandEntry['rows'][number] {
   return { name: l.name, id, category: 'loc', fields: [l.region, `Danger: ${l.dangerLevel}`, effectiveStanding(l, factions)] }
@@ -87,37 +91,34 @@ function factionRow(id: string, f: FactionEntry, factions: Record<string, Factio
 function questRow(id: string, q: QuestEntry): BangCommandEntry['rows'][number] {
   return { name: q.name, id, category: 'quest', fields: [q.status ?? 'active', ...(q.note ? [q.note] : [])] }
 }
+// §6.4D — reads the threat tier word only now (no numeric hp/dmg block
+// left); a full UI-quality pass on how it's presented is a later phase, this
+// just keeps the dossier honest about what BestiaryEntry actually carries.
 function bestiaryRow(id: string, b: BestiaryEntry): BangCommandEntry['rows'][number] {
-  const fields = [b.threatTier]
-  if (b.hpMax !== undefined) fields.push(`HP ${b.hpMax}`)
-  if (b.dmgBase !== undefined) fields.push(`DMG ${b.dmgBase}`)
+  const fields: string[] = [b.threatTier]
+  if (b.conditions?.length) fields.push(b.conditions.map((c) => c.label).join(', '))
   return { name: b.name, id, category: 'beast', fields }
 }
 // §6.4D — the 0-token skill roster. Shows the §3.2 affordability read inline
 // so the player can see at a glance what they can actually pay for right now.
 function skillRow(id: string, s: SkillEntry, player: Player): BangCommandEntry['rows'][number] {
   const fields: string[] = []
-  if (s.mpCost) fields.push(`${s.mpCost} MP`)
-  if (s.stCost) fields.push(`${s.stCost} ST`)
+  if (s.effort) fields.push(s.effort)
   const { affordable, missing } = checkAffordability(s, player)
-  if (!affordable) fields.push(`short ${missing}`)
+  if (!affordable) fields.push(`short — ${missing}`)
   if (s.description) fields.push(s.description)
   return { name: s.name, id, category: 'skill', fields }
 }
 function loreRow(id: string, l: LoreEntry): BangCommandEntry['rows'][number] {
   return { name: l.name, id, category: 'lore', fields: [l.category] }
 }
-function statBonusText(bonus: ItemEntry['statBonus']): string | null {
-  if (!bonus) return null
-  const parts = Object.entries(bonus)
-    .filter(([, v]) => v)
-    .map(([k, v]) => `${v! > 0 ? '+' : ''}${v} ${k}`)
-  return parts.length ? parts.join(' ') : null
+function traitsText(traits: ItemEntry['traits']): string | null {
+  return traits?.length ? traits.join(', ') : null
 }
 function itemRow(id: string, qty: number, item: ItemEntry | undefined, equippedSlot: EquipSlot | undefined): BangCommandEntry['rows'][number] {
   const fields = [`×${qty}`, item?.type ?? 'unknown']
-  const bonus = statBonusText(item?.statBonus)
-  if (bonus) fields.push(bonus)
+  const traits = traitsText(item?.traits)
+  if (traits) fields.push(traits)
   if (equippedSlot) fields.push(`equipped (${equippedSlot})`)
   return { name: item?.name ?? id.replace(/_/g, ' '), id, fields }
 }

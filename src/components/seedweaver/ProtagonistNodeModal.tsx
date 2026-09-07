@@ -16,9 +16,9 @@ import {
   Wand2,
   X,
 } from 'lucide-react'
-import type { Attributes, ProtagonistData, SkillEntry } from '../../types.ts'
+import type { Attributes, EffortTier, ProtagonistData, SkillEntry } from '../../types.ts'
 import { PRESET_CLASSES, getClassById } from '../../data/classes.ts'
-import { startingAttributes, derivedPools } from '../../lib/derivedStats.ts'
+import { COMPETENCY_TIERS, tierToWord, wordToTier } from '../../lib/tiers.ts'
 
 interface ProtagonistNodeModalProps {
   protagonist: ProtagonistData
@@ -61,8 +61,15 @@ export default function ProtagonistNodeModal({
   const [editingSkillIdx, setEditingSkillIdx] = useState<number | null>(null)
 
   const currentClass = getClassById(data.classId)
-  const currentAttrs: Attributes = data.customAttributes || startingAttributes(currentClass.weights)
-  const pools = derivedPools(currentAttrs)
+  // Same base+weighted-points formula handleSelectPresetClass below already
+  // uses for a fresh class pick — this is just its read-only fallback for
+  // "no customAttributes chosen yet." (Narrative-First Overhaul: no more
+  // derivedStats.ts pool math to layer on top of the result.)
+  const currentAttrs: Attributes = data.customAttributes || {
+    STR: BASE_ATTR_VALUE + Math.round(TOTAL_ASSIGNABLE_POINTS * currentClass.weights.STR),
+    INT: BASE_ATTR_VALUE + Math.round(TOTAL_ASSIGNABLE_POINTS * currentClass.weights.INT),
+    AGI: BASE_ATTR_VALUE + Math.round(TOTAL_ASSIGNABLE_POINTS * currentClass.weights.AGI),
+  }
 
   // Point math
   const spentPoints =
@@ -134,9 +141,8 @@ export default function ProtagonistNodeModal({
     const newSkill: SkillEntry = {
       name: 'New Ability',
       skillType: 'Active',
-      tier: 'Novice',
-      stCost: 5,
-      mpCost: 0,
+      tier: wordToTier('Novice', COMPETENCY_TIERS),
+      effort: 'minor',
       description: 'A martial strike or magical technique.',
       flavorText: '',
     }
@@ -428,22 +434,6 @@ export default function ProtagonistNodeModal({
                 </div>
               )}
 
-              {/* Derived Pools HUD */}
-              <div className="grid grid-cols-3 gap-2 p-3 rounded-xl bg-[#1b132c] border border-amber-500/20">
-                <div className="text-center">
-                  <span className="text-[10px] font-mono text-red-400 uppercase">HP POOL</span>
-                  <div className="font-display font-bold text-base text-red-300">{pools.hpMax}</div>
-                </div>
-                <div className="text-center">
-                  <span className="text-[10px] font-mono text-sky-400 uppercase">MP POOL</span>
-                  <div className="font-display font-bold text-base text-sky-300">{pools.mpMax}</div>
-                </div>
-                <div className="text-center">
-                  <span className="text-[10px] font-mono text-emerald-400 uppercase">STAMINA</span>
-                  <div className="font-display font-bold text-base text-emerald-300">{pools.stMax}</div>
-                </div>
-              </div>
-
               {/* Attributes Allocator */}
               <div className="space-y-2 p-3 rounded-xl bg-[#181126] border border-amber-500/20">
                 <div className="flex items-center justify-between mb-1">
@@ -530,12 +520,10 @@ export default function ProtagonistNodeModal({
                               {skill.skillType || 'Active'}
                             </span>
                             <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">
-                              {skill.tier || 'Novice'}
+                              {skill.tier !== undefined ? tierToWord(skill.tier, COMPETENCY_TIERS) : 'Novice'}
                             </span>
-                            {((skill.stCost || 0) > 0 || (skill.mpCost || 0) > 0) && (
-                              <span className="text-[9px] font-mono text-emerald-300 shrink-0">
-                                {skill.stCost ? `${skill.stCost} ST` : ''} {skill.mpCost ? `${skill.mpCost} MP` : ''}
-                              </span>
+                            {skill.effort && (
+                              <span className="text-[9px] font-mono text-emerald-300 shrink-0 capitalize">{skill.effort}</span>
                             )}
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
@@ -595,38 +583,29 @@ export default function ProtagonistNodeModal({
                               <div>
                                 <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">Tier</label>
                                 <select
-                                  value={skill.tier || 'Novice'}
-                                  onChange={(e) => handleUpdateSkill(idx, { tier: e.target.value })}
+                                  value={skill.tier !== undefined ? tierToWord(skill.tier, COMPETENCY_TIERS) : 'Novice'}
+                                  onChange={(e) => handleUpdateSkill(idx, { tier: wordToTier(e.target.value, COMPETENCY_TIERS) })}
                                   className="w-full px-2 py-1.5 rounded-xl bg-[#221735] border border-amber-500/30 text-amber-100 outline-none"
                                 >
-                                  <option value="Novice">Novice</option>
-                                  <option value="Adept">Adept</option>
-                                  <option value="Expert">Expert</option>
-                                  <option value="Master">Master</option>
-                                  <option value="Innate">Innate</option>
+                                  {COMPETENCY_TIERS.map((t) => (
+                                    <option key={t} value={t}>{t}</option>
+                                  ))}
                                 </select>
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">ST Cost</label>
-                                <input
-                                  type="number"
-                                  value={skill.stCost ?? 0}
-                                  onChange={(e) => handleUpdateSkill(idx, { stCost: Number(e.target.value) })}
-                                  className="w-full px-3 py-1.5 rounded-xl bg-[#221735] border border-amber-500/30 text-amber-100 outline-none"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">MP Cost</label>
-                                <input
-                                  type="number"
-                                  value={skill.mpCost ?? 0}
-                                  onChange={(e) => handleUpdateSkill(idx, { mpCost: Number(e.target.value) })}
-                                  className="w-full px-3 py-1.5 rounded-xl bg-[#221735] border border-amber-500/30 text-amber-100 outline-none"
-                                />
-                              </div>
+                            <div>
+                              <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">Effort</label>
+                              <select
+                                value={skill.effort ?? ''}
+                                onChange={(e) => handleUpdateSkill(idx, { effort: (e.target.value || undefined) as EffortTier | undefined })}
+                                className="w-full px-2 py-1.5 rounded-xl bg-[#221735] border border-amber-500/30 text-amber-100 outline-none"
+                              >
+                                <option value="">— none —</option>
+                                <option value="minor">Minor</option>
+                                <option value="focused">Focused</option>
+                                <option value="taxing">Taxing</option>
+                              </select>
                             </div>
 
                             <div>

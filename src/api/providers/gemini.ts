@@ -46,6 +46,18 @@ function extractXmlNarrative(raw: string): string | null {
   return null
 }
 
+// Narrative-First Overhaul, Phase 2 — history sanitization: a turn's own
+// <sync> block (mechanical deltas, ids the model needed to see once) is pure
+// bookkeeping the model already acted on the moment it was produced. Left
+// in place, `history` would resend every past turn's full <sync> block
+// forever, growing the sliding window with content that does nothing but
+// cost tokens on every subsequent call. Stripped the same way `<nar>` is
+// itself extracted — a plain regex over the closed tag pair — so only the
+// prose actually gets replayed back to the model on the next turn.
+function stripSyncForHistory(raw: string): string {
+  return raw.replace(/<sync>[\s\S]*?<\/sync>/, '').trim()
+}
+
 interface RequestParams {
   apiKey: string
   model: string
@@ -126,7 +138,7 @@ export async function runTurn({ apiKey, model, temperature, maxOutputTokens, his
 
       try {
         // Stage 2 (XML Parser)
-        return { ok: true, turn: parseXmlTurnResponse(cleaned), finishReason, raw: text }
+        return { ok: true, turn: parseXmlTurnResponse(cleaned), finishReason, raw: text, historyText: stripSyncForHistory(text) }
       } catch {
         // Stage 3 (Fallback Reader): surface the narrative prose rather than losing
         // the turn — extracted <nar> text if possible, only the raw blob as a last
@@ -134,7 +146,7 @@ export async function runTurn({ apiKey, model, temperature, maxOutputTokens, his
         // throws here even when <nar> itself parsed fine, so this catches both
         // "no <nar> at all" and "nar fine, sync broken" the same way the old
         // JSON path's catch-all did.
-        return { ok: false, fallbackText: extractXmlNarrative(text) ?? cleaned ?? text, finishReason, raw: text }
+        return { ok: false, fallbackText: extractXmlNarrative(text) ?? cleaned ?? text, finishReason, raw: text, historyText: stripSyncForHistory(text) }
       }
     } catch (err) {
       lastError = err

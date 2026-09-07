@@ -22,9 +22,8 @@ const SlashCommandManager = lazy(() => import('./screens/SlashCommandManager.tsx
 const TaleDiveWeaver = lazy(() => import('./screens/TaleDiveWeaver.tsx'))
 const NovelWeaver = lazy(() => import('./screens/NovelWeaver.tsx'))
 import { getClassById, findClassById } from './data/classes.ts'
-import { startingAttributes, derivedPools } from './lib/derivedStats.ts'
 import { buildContextSlice } from './lib/jitContext.ts'
-import { applyTurn, type TacticalOverride } from './lib/shadowReferee.ts'
+import { applyTurn } from './lib/shadowReferee.ts'
 import { ensureLocation } from './lib/locations.ts'
 import { applyNpcUpdates } from './lib/npcs.ts'
 import { applyKeywordLinks } from './lib/codex.ts'
@@ -37,7 +36,9 @@ import { seedCampaign } from './lib/seeding.ts'
 import { queueCraftingJob, resolveCraftingJobs } from './lib/crafting.ts'
 import { applyMinionUpkeep, attemptSummon, type SummonCommand } from './lib/summoning.ts'
 import { applyFactionRepDeltas, attitudeToRepTier } from './lib/factions.ts'
-import { computePlayerAttack, isDisengaging, describeCombatResult, ensureAdversary } from './lib/combat.ts'
+import { addCondition, removeCondition, expireConditions } from './lib/conditions.ts'
+import { ensureEntry } from './lib/autoRegister.ts'
+import { tierToWord, COMPETENCY_TIERS } from './lib/tiers.ts'
 import { applyLevelUps, isChapterBoundary, CHAPTER_TURN_INTERVAL, turnRefFor } from './lib/leveling.ts'
 import { parseKeywordLinks } from './lib/keywordLinks.ts'
 import { slugify } from './lib/slug.ts'
@@ -63,7 +64,7 @@ import NowPlayingBanner from './components/NowPlayingBanner.tsx'
 import * as store from './lib/store.ts'
 import { CURRENT_SCHEMA_VERSION, EQUIPPABLE_TYPES } from './types.ts'
 import type {
-  BestiaryEntry, Campaign, CombatMode, CombatState, Dict, EquipSlot, FactionEntry, GameTime, HistoryTurn, ItemEntry, KeywordLink, LocationEntry, LogEntry, LoreEntry,
+  BestiaryEntry, Campaign, CombatState, ConditionTag, Dict, EquipSlot, FactionEntry, GameTime, HistoryTurn, ItemEntry, KeywordLink, LocationEntry, LogEntry, LoreEntry,
   NpcEntry, Player, ProtagonistData, QuestEntry, SkillEntry, SlashCommand, TurnState, WorldData,
 } from './types.ts'
 
@@ -86,11 +87,17 @@ type Screen = 'title' | 'mainmenu' | 'storymode' | 'worldsetup' | 'newgame' | 't
 type CreationMode = 'tale' | 'library'
 
 // §5.7 Player Defeat State — soft-fail recovery, client-owned.
-const DEFEAT_HP_RESTORE_FRACTION = 0.4
 const DEFEAT_CURRENCY_PENALTY_FRACTION = 0.15
 
 function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err)
+}
+
+// Folds the seedweaver form's own 0-100 affection/trust sliders (SeedNpcData
+// — a Phase 6 UI concern, unchanged by this overhaul) onto NpcEntry's new
+// 1-5 CompetencyTier scale. Default (unset) lands at the midpoint tier.
+function npcSliderToTier(value: number | undefined): number {
+  return Math.max(1, Math.min(5, Math.round(1 + ((value ?? 50) / 100) * 4)))
 }
 
 export default function App() {
@@ -495,16 +502,19 @@ export default function App() {
 
   async function beginCampaign(
     protagonistData: ProtagonistData,
-    combatMode: CombatMode = 'NARRATIVE',
     worldOverride?: Partial<WorldData>,
     customTitle?: string,
     customNpcs?: SeedNpcData[]
   ) {
     const cls = getClassById(protagonistData.classId)
-    const attrs = protagonistData.customAttributes ?? startingAttributes(cls.weights)
-    const { hpMax, mpMax, stMax } = derivedPools(attrs)
+    // Narrative-First Overhaul — no more derived HP/MP/ST pools computed from
+    // a class weight vector; attrs are CompetencyTiers now, and a protagonist
+    // with no custom point-buy just starts at a flat, unweighted middle rank
+    // on every attribute (class flavor is expressed narratively, not via a
+    // starting-stat skew anymore).
+    const attrs = protagonistData.customAttributes ?? { STR: 3, INT: 3, AGI: 3 }
 
-    const player = {
+    const player: Player = {
       name: protagonistData.name,
       gender: protagonistData.gender,
       age: protagonistData.age,
@@ -517,12 +527,7 @@ export default function App() {
       className: cls.name,
       level: 1,
       attrs,
-      hp: hpMax,
-      hpMax,
-      mp: mpMax,
-      mpMax,
-      st: stMax,
-      stMax,
+      conditions: [],
       copper: 10_000, // flat 1 Gold starting wealth (§5.2 Four-Tier Currency Engine, 1G = 10,000 base copper)
       locId: 'loc_start',
       locDisp: 'An Unwritten Place',
@@ -587,9 +592,8 @@ export default function App() {
         initialSkills[id] = {
           name: s.name.trim(),
           skillType: s.skillType || 'Active',
-          tier: s.tier || 'Novice',
-          mpCost: s.mpCost ?? 0,
-          stCost: s.stCost ?? 0,
+          tier: s.tier ?? 2, // Novice
+          effort: s.effort,
           description: s.description?.trim() || undefined,
           classId: cls.id,
           discovery: { state: 'known' },
@@ -607,8 +611,12 @@ export default function App() {
           name: npc.name.trim(),
           gender: npc.gender || undefined,
           role: npc.role || undefined,
-          affection: npc.affection ?? 50,
-          trust: npc.trust ?? 50,
+          // SeedNpcData.affection/trust are still the seedweaver form's own
+          // 0-100 slider values (a Phase 6 UI concern, unchanged here) —
+          // folded onto the new 1-5 CompetencyTier scale rather than passed
+          // through raw.
+          affection: npcSliderToTier(npc.affection),
+          trust: npcSliderToTier(npc.trust),
           heldWeapon: npc.heldWeapon || undefined,
           wornArmor: npc.wornArmor || undefined,
           personality: npc.personality || undefined,
@@ -684,7 +692,6 @@ export default function App() {
       protagonistId: protagonistEntry.id!,
       world, // §Phase A — kept for reference until the Codex Realm Overview exists
       player,
-      combatMode, // §5.1d — defaults to NARRATIVE (see the Tale Dive Brief screen's toggle)
       proseDepth: PROSE_DEPTHS.IMMERSIVE, // default changed 2026-09-04 per explicit request for the most immersive prose by default; still overridable per-campaign in Settings
       narrationStyle: world.narrationStyle || DEFAULT_NARRATION_STYLE,
       locations: { ...initialLocations, ...seeded.locations }, // §5.10 — player-authored + World Seeding fallback + later auto-registration
@@ -739,35 +746,6 @@ export default function App() {
     setBusy(true)
     setError(null)
 
-    // §2 Phase D.2/§5.1d — Tactical Mode precomputes the exchange before the
-    // prompt goes out, but only once combat is already active (its opening
-    // beat is still Gemini's narrative call, §5.13) and the action isn't a
-    // disengage attempt.
-    const inCombat = current.combatMode === 'TACTICAL' && current.combat?.active && !isDisengaging(actionText)
-    let combatResultLine: string | null = null
-    let tacticalOverride: TacticalOverride | undefined
-    let combatOutcome: { enemyHpAfter: number; enemyDefeated: boolean } | null = null
-
-    if (inCombat) {
-      const combat = current.combat // invariant: active=true always carries enemyHp/enemyDmgBase (set together in the branch below)
-      const attack = computePlayerAttack(current.player)
-      const enemyHpAfter = Math.max(0, combat.enemyHp! - attack.damage)
-      const enemyDefeated = enemyHpAfter <= 0
-      const playerDamageTaken = enemyDefeated ? 0 : combat.enemyDmgBase!
-
-      combatResultLine = describeCombatResult({
-        enemyName: combat.enemyName,
-        damage: attack.damage,
-        enemyHp: enemyHpAfter,
-        enemyHpMax: combat.enemyHpMax,
-        defeated: enemyDefeated,
-        playerDamageTaken,
-        exhausted: attack.exhausted,
-      })
-      tacticalOverride = { hpDelta: -playerDamageTaken, stDelta: -attack.stCost }
-      combatOutcome = { enemyHpAfter, enemyDefeated }
-    }
-
     // §5.8 — a read-only peek at whether any crafting job would resolve at
     // the player's *current* location, purely to decide whether this turn's
     // prompt gets the narration hook. This doesn't mutate anything; the
@@ -780,7 +758,7 @@ export default function App() {
       : null
 
     const baseHistory = overrideHistory ?? history
-    const contextSlice = buildContextSlice(current, combatResultLine, craftReadyLine)
+    const contextSlice = buildContextSlice(current, craftReadyLine)
     // §6.6 — a !recall or targeted bang dossier queued since the last turn
     // rides along here once, then clears; this is the "make the LLM
     // remember" mechanism, distinct from the always-on capped Known
@@ -824,12 +802,12 @@ export default function App() {
             ],
           },
         )
-        setHistory([...newHistory, { role: 'model', parts: [{ text: result.raw }] }])
+        setHistory([...newHistory, { role: 'model', parts: [{ text: result.historyText }] }])
         return
       }
 
       const turn = result.turn!
-      const { player: nextPlayer, defeated: playerDefeated } = applyTurn(current.player, turn, tacticalOverride)
+      let nextPlayer: Player = applyTurn(current.player, turn)
       nextPlayer.time = turn.time ?? current.player.time // Shadow Referee doesn't own time
 
       // Computed early (needs only current.turnCount) so every Codex entry
@@ -837,6 +815,14 @@ export default function App() {
       // under — see LogEntry.turnRef's comment for the full rationale.
       const turnNumber = (current.turnCount ?? 0) + 1 // ?? tolerates saves from before turnCount existed
       const turnRef = turnRefFor(turnNumber)
+
+      // loc_disp is optional now (like loc_desc already was) — omitted on an
+      // ordinary same-location turn. Falls back to the Locations registry's
+      // own stored name for this loc_id, or the player's current display
+      // name as a last resort, rather than requiring the model restate it
+      // every turn.
+      const locDisp = turn.loc_disp ?? current.locations[turn.loc_id]?.name ?? current.player.locDisp
+      nextPlayer = { ...nextPlayer, locId: turn.loc_id, locDisp }
 
       // The current turn's own loc_id/loc_disp registers FIRST, unlike every
       // other category — its name always comes straight from the model's
@@ -847,7 +833,7 @@ export default function App() {
       // for "Ironheart - Outer Gates") has something to fuzzy-match against
       // (lib/codex.ts's isKnownByName) instead of forking a duplicate stub
       // before the "real" entry even exists yet.
-      const { dict: locationsWithCurrent } = ensureLocation(current.locations, turn.loc_id, turn.loc_disp, turn.loc_desc, nextPlayer.time, turnRef)
+      const { dict: locationsWithCurrent } = ensureLocation(current.locations, turn.loc_id, locDisp, turn.loc_desc, nextPlayer.time, turnRef)
 
       // Keyword links run first for every other category so a {{Term|npc}}
       // tag's real name wins over the plainer fallback npc_id-derived stub name.
@@ -883,57 +869,78 @@ export default function App() {
 
       // §5.8 — the authoritative crafting resolution, against this turn's
       // actual resulting time/location (nextPlayer.time/.locId, already set
-      // by applyTurn above) rather than the pre-call peek's start-of-turn
-      // snapshot. Its output lands in inventory as the base applyInventoryChanges
-      // below layers this turn's own inv_add/inv_rem on top of.
+      // above) rather than the pre-call peek's start-of-turn snapshot. Its
+      // output lands in inventory as the base applyInventoryChanges below
+      // layers this turn's own inv_add/inv_rem on top of.
       const craftResolution = resolveCraftingJobs(current.crafting ?? [], current.inventory, nextPlayer.time)
       const invResult = applyInventoryChanges(craftResolution.inventory, current.items, turn.inv_add, turn.inv_rem, turnRef)
 
-      // §3.2 Turn State Consistency — forced to COMBAT whenever a Tactical
-      // result was precomputed; otherwise Gemini's own call, same as always.
+      // Narrative-First Overhaul — combat is fully narrative-adjudicated now
+      // (TACTICAL mode is gone); the only client-owned combat bookkeeping
+      // left is standing up/tearing down CombatState and applying this
+      // turn's own Condition Tag updates (below) to whichever side they
+      // target.
       let turnState: TurnState = turn.turn_state
       let nextCombat: CombatState = current.combat ?? { active: false }
       let nextBestiary = linked.bestiary
 
-      if (inCombat && combatOutcome) {
-        turnState = 'COMBAT'
-        nextCombat = combatOutcome.enemyDefeated
-          ? { active: false }
-          : { ...current.combat, enemyHp: combatOutcome.enemyHpAfter }
-      } else if (turnState === 'COMBAT' && !current.combat?.active) {
-        // Combat is starting narratively this turn — stand up a stat block
-        // (§5.13) for whichever adversary got tagged, if any.
+      if (turnState === 'COMBAT' && !current.combat?.active) {
+        // Combat is starting narratively this turn — register a Bestiary
+        // stub (§5.13) for whichever adversary got tagged, if any, unless
+        // {{Term|beast}}'s own keyword-link pass above already made one.
         const beastLink = parseKeywordLinks(turn.nar).find((l) => l.category === 'beast')
         if (beastLink) {
           const enemyId = slugify(beastLink.term)
-          const { dict: withAdversary, entry } = ensureAdversary(
-            nextBestiary,
-            enemyId,
-            beastLink.term,
-            'standard',
-            current.player.level,
-            turnRef,
-          )
+          const { dict: withAdversary } = ensureEntry(nextBestiary, enemyId, () => ({ name: beastLink.term, threatTier: 'notable' as const }), turnRef)
           nextBestiary = withAdversary
-          nextCombat = {
-            active: true,
-            enemyId,
-            enemyName: beastLink.term,
-            enemyHp: entry.hpMax,
-            enemyHpMax: entry.hpMax,
-            enemyDmgBase: entry.dmgBase,
-          }
+          nextCombat = { active: true, enemyId, enemyName: beastLink.term, enemyConditions: [] }
         }
       } else if (turnState !== 'COMBAT' && current.combat?.active) {
         // Gemini narratively ended the fight (fled, negotiated, etc.).
         nextCombat = { active: false }
       }
 
-      if (playerDefeated) nextCombat = { active: false }
-
       // §6.6 Slash Command pause override — an explicit player-invoked OOC
       // beat, so it wins over whatever turn state got computed above.
       if (forcePauseState) turnState = 'PAUSE'
+
+      // Condition Tags — replaces the old numeric hp/mp/st deltas entirely.
+      // Player-targeted updates land on nextPlayer.conditions; enemy-
+      // targeted ones (id="enemy" in the XML) land on the active combat
+      // opponent's own conditions instead.
+      let playerConditions: ConditionTag[] = nextPlayer.conditions
+      let enemyConditions: ConditionTag[] = nextCombat.enemyConditions ?? []
+      for (const upd of turn.cond_updates ?? []) {
+        const bucket = upd.target === 'enemy' ? 'enemy' : 'player'
+        if (upd.action === 'add') {
+          const next = addCondition(bucket === 'enemy' ? enemyConditions : playerConditions, upd.label, nextPlayer.time, {
+            kind: upd.kind,
+            durationHours: upd.durationHours,
+          })
+          if (bucket === 'enemy') enemyConditions = next
+          else playerConditions = next
+        } else {
+          const next = removeCondition(bucket === 'enemy' ? enemyConditions : playerConditions, upd.label)
+          if (bucket === 'enemy') enemyConditions = next
+          else playerConditions = next
+        }
+      }
+      // Expire time-based conditions once per turn, same place resolveCraftingJobs already runs.
+      playerConditions = expireConditions(playerConditions, nextPlayer.time)
+      enemyConditions = expireConditions(enemyConditions, nextPlayer.time)
+      if (nextCombat.active) nextCombat = { ...nextCombat, enemyConditions }
+
+      // §5.7 Player Defeat State — signaled by a sentinel "Defeated"
+      // Condition Tag (see turnContract.ts's COMBAT rule) rather than a
+      // numeric hp<=0 check, since there's no hp pool anymore. Consumed the
+      // instant it's read so it never lingers as a literal persistent tag
+      // once the recovery beat fires.
+      const playerDefeated = playerConditions.some((c) => c.id === 'defeated')
+      if (playerDefeated) {
+        playerConditions = playerConditions.filter((c) => c.id !== 'defeated')
+        nextCombat = { active: false }
+      }
+      nextPlayer = { ...nextPlayer, conditions: playerConditions }
 
       // §5.1a Milestone Leveling — +1 per completed quest this turn, +1 at
       // every Chapter Milestone boundary (§8 item 5's Secret-quest question
@@ -941,7 +948,7 @@ export default function App() {
       // turnNumber itself was already computed above (turnRef needs it too).
       const questLevels = turn.quest_update?.status === 'completed' ? 1 : 0
       const chapterLevels = isChapterBoundary(turnNumber) ? 1 : 0
-      const { player: leveledPlayer, leveled } = applyLevelUps(
+      const { player: leveledPlayer, leveled, breakthrough: milestoneBreakthrough } = applyLevelUps(
         nextPlayer,
         getClassById(current.player.classId).weights,
         questLevels + chapterLevels,
@@ -973,68 +980,27 @@ export default function App() {
         nextFlags,
       )
 
-      // §5.3 — a `familiar`-branch minion drains its MP upkeep every turn,
-      // after every other MP-affecting change this turn already applied, and
-      // dissipates the instant its upkeep can no longer be paid.
-      const upkeep = applyMinionUpkeep(current.minions ?? {}, evolvedPlayer.mp)
-      const upkeepPlayer = upkeep.mp !== evolvedPlayer.mp ? { ...evolvedPlayer, mp: upkeep.mp } : evolvedPlayer
+      // §5.3 — a `familiar`-branch minion's upkeep is a stable no-op now
+      // (see lib/summoning.ts's own comment — Player no longer has a
+      // numeric MP pool for it to drain).
+      const upkeep = applyMinionUpkeep(current.minions ?? {})
 
       // §5.1c Direct Stat Modification (Event/narrative source) — a genuine
-      // permanent boost, never ordinary damage/healing (that's `deltas`).
-      // Same "current grows by the same delta as max, no free top-off" rule
-      // already used by applyLevelUps. Note: this covers only the turn-schema
-      // `stat_grant` path — the Equipment source (item `stat_bonus`, §5.1c)
-      // has no equip system to hang off yet and isn't implemented.
-      let grantedPlayer = upkeepPlayer
-      // Guard against a schema-valid but incomplete grant (no `amount` —
-      // the field isn't marked required) doing `x + undefined = NaN`, which
-      // nothing downstream catches: Math.min/max(NaN, ...) is always NaN, so
-      // it silently poisons hp/hpMax forever once saved. A missing/invalid
-      // amount is treated as no grant at all, not a corrupt one.
-      const grantAmount = Number.isFinite(turn.stat_grant?.amount) ? turn.stat_grant!.amount : 0
-      if (turn.stat_grant && grantAmount > 0) {
-        const grant = turn.stat_grant
-        if (grant.attr) {
-          const nextAttrs = { ...grantedPlayer.attrs, [grant.attr]: grantedPlayer.attrs[grant.attr] + grantAmount }
-          const pools = derivedPools(nextAttrs)
-          grantedPlayer = {
-            ...grantedPlayer,
-            attrs: nextAttrs,
-            hpMax: pools.hpMax,
-            hp: Math.min(pools.hpMax, grantedPlayer.hp + (pools.hpMax - grantedPlayer.hpMax)),
-            mpMax: pools.mpMax,
-            mp: Math.min(pools.mpMax, grantedPlayer.mp + (pools.mpMax - grantedPlayer.mpMax)),
-            stMax: pools.stMax,
-            st: Math.min(pools.stMax, grantedPlayer.st + (pools.stMax - grantedPlayer.stMax)),
-          }
-        } else if (grant.pool) {
-          const maxKey = `${grant.pool}Max` as 'hpMax' | 'mpMax' | 'stMax'
-          grantedPlayer = { ...grantedPlayer, [maxKey]: grantedPlayer[maxKey] + grantAmount, [grant.pool]: grantedPlayer[grant.pool] + grantAmount }
-        }
+      // permanent attribute breakthrough, never ordinary damage/healing
+      // (that's a Condition Tag now). The model already names the resulting
+      // canonical tier word; the client just resolves it to its internal
+      // rank, no arithmetic of its own.
+      let grantedPlayer = evolvedPlayer
+      let breakthroughLog: { attr: 'STR' | 'INT' | 'AGI'; tier: string } | undefined
+      if (turn.breakthrough) {
+        const { attr, tier } = turn.breakthrough
+        grantedPlayer = { ...grantedPlayer, attrs: { ...grantedPlayer.attrs, [attr]: tier } }
+        breakthroughLog = { attr, tier: tierToWord(tier, COMPETENCY_TIERS) }
+      } else if (leveled && milestoneBreakthrough) {
+        breakthroughLog = { attr: milestoneBreakthrough.attr, tier: tierToWord(milestoneBreakthrough.tier, COMPETENCY_TIERS) }
       }
 
-      // Defensive final clamp — belt-and-suspenders on top of applyTurn's own
-      // clamping (§3.2 requires hp/mp/st always stay within [0, max]): every
-      // individual mutation above already clamps correctly in isolation, but
-      // this guarantees the invariant holds regardless of which path ran,
-      // rather than trusting each one to compose correctly forever.
-      // Math.min/max(NaN, x) is always NaN, so a genuinely NaN max or current
-      // value (from any future bug, not just the stat_grant one already
-      // guarded above) falls back to the attribute-derived base pool — full,
-      // not zero — rather than silently passing NaN through as if clamped.
-      const basePools = derivedPools(grantedPlayer.attrs)
-      const safeHpMax = Number.isFinite(grantedPlayer.hpMax) ? grantedPlayer.hpMax : basePools.hpMax
-      const safeMpMax = Number.isFinite(grantedPlayer.mpMax) ? grantedPlayer.mpMax : basePools.mpMax
-      const safeStMax = Number.isFinite(grantedPlayer.stMax) ? grantedPlayer.stMax : basePools.stMax
-      const finalPlayer: Player = {
-        ...grantedPlayer,
-        hpMax: safeHpMax,
-        mpMax: safeMpMax,
-        stMax: safeStMax,
-        hp: Number.isFinite(grantedPlayer.hp) ? Math.max(0, Math.min(safeHpMax, grantedPlayer.hp)) : safeHpMax,
-        mp: Number.isFinite(grantedPlayer.mp) ? Math.max(0, Math.min(safeMpMax, grantedPlayer.mp)) : safeMpMax,
-        st: Number.isFinite(grantedPlayer.st) ? Math.max(0, Math.min(safeStMax, grantedPlayer.st)) : safeStMax,
-      }
+      const finalPlayer: Player = grantedPlayer
 
       const nextCampaign: Campaign = {
         ...current,
@@ -1071,6 +1037,7 @@ export default function App() {
             rawPayload: result.raw,
             finishReason: result.finishReason,
             ...(leveled ? { levelUp: leveledPlayer.level } : {}),
+            ...(breakthroughLog ? { breakthrough: breakthroughLog } : {}),
             ...(reveals.revealed.length ? { discoveries: reveals.revealed } : {}),
             ...(classEvolution ? { classEvolution } : {}),
             ...(craftResolution.completed.length
@@ -1082,12 +1049,12 @@ export default function App() {
       }
 
       setGame(nextCampaign)
-      const historyWithResponse: HistoryTurn[] = [...newHistory, { role: 'model', parts: [{ text: result.raw }] }]
+      const historyWithResponse: HistoryTurn[] = [...newHistory, { role: 'model', parts: [{ text: result.historyText }] }]
       setHistory(historyWithResponse)
 
       // §5.7 Player Defeat State — chains into its own resolution turn once
       // the fatal blow itself is committed, rather than leaving the player
-      // stuck at 0 HP with nothing to do.
+      // stuck mid-fall with nothing to do.
       if (playerDefeated) resolveDefeat(nextCampaign, historyWithResponse)
 
       // §2 Phase E Chapter Milestone — same boundary trigger as the
@@ -1112,17 +1079,20 @@ export default function App() {
   }
 
   // §5.7 — a fixed defeat context, no further damage math left to the model;
-  // the client owns the recovery HP/currency outright, Gemini only narrates it.
+  // the client owns the recovery/currency outright, Gemini only narrates it.
+  // Narrative-First Overhaul: there's no hp pool to restore a fraction of
+  // anymore — recovery clears every Condition Tag the fall left behind
+  // (a fresh start at the nearest safe location), and only the currency
+  // penalty stays a real number.
   async function resolveDefeat(campaign: Campaign, baseHistory: HistoryTurn[]) {
     setBusy(true)
     const defeatAction =
-      '[SYSTEM: The protagonist has just fallen (HP reached 0). Narrate a brief DESPAIR-tier resolution: they wake, injured but alive, at the nearest safe location. This is a soft-fail recovery beat, not a continuation of the fight — do not narrate death.]'
+      '[SYSTEM: The protagonist has just fallen. Narrate a brief DESPAIR-tier resolution: they wake, injured but alive, at the nearest safe location. This is a soft-fail recovery beat, not a continuation of the fight — do not narrate death.]'
 
     const contextSlice = buildContextSlice(campaign)
     const userTurnText = `${contextSlice}\n\nPlayer Action: ${defeatAction}`
     const newHistory: HistoryTurn[] = [...baseHistory, { role: 'user', parts: [{ text: userTurnText }] }]
 
-    const restoredHp = Math.round(campaign.player.hpMax * DEFEAT_HP_RESTORE_FRACTION)
     const penalizedCopper = Math.max(0, Math.round(campaign.player.copper * (1 - DEFEAT_CURRENCY_PENALTY_FRACTION)))
 
     try {
@@ -1135,11 +1105,13 @@ export default function App() {
       })
 
       const nar = result.ok ? result.turn!.nar : (result.fallbackText ?? 'Consciousness returns slowly, aching but alive.')
-      const nextPlayer = {
+      const resolvedLocId = result.ok ? result.turn!.loc_id : undefined
+      const resolvedLocDisp = result.ok ? (result.turn!.loc_disp ?? campaign.locations[result.turn!.loc_id]?.name ?? campaign.player.locDisp) : campaign.player.locDisp
+      const nextPlayer: Player = {
         ...campaign.player,
-        hp: restoredHp,
+        conditions: [], // a fresh start — the fall's own Condition Tags don't carry into the recovery beat
         copper: penalizedCopper,
-        ...(result.ok && result.turn!.loc_id ? { locId: result.turn!.loc_id, locDisp: result.turn!.loc_disp } : {}),
+        ...(resolvedLocId ? { locId: resolvedLocId, locDisp: resolvedLocDisp } : {}),
         ...(result.ok ? { time: result.turn!.time } : {}),
       }
 
@@ -1152,7 +1124,7 @@ export default function App() {
           log: [...g.log, { nar, turnState: 'DESPAIR', time: nextPlayer.time, locDisp: nextPlayer.locDisp }],
         },
       )
-      setHistory([...newHistory, { role: 'model', parts: [{ text: result.raw }] }])
+      setHistory([...newHistory, { role: 'model', parts: [{ text: result.historyText }] }])
     } catch (err) {
       setError(`The thread of fate falters... (${errorMessage(err)})`)
     } finally {
@@ -1259,7 +1231,7 @@ export default function App() {
   function unequipFromCodex(slot: EquipSlot) {
     setGame((g) => {
       if (!g) return g
-      const result = unequipSlot(g.player, g.items ?? {}, slot)
+      const result = unequipSlot(g.player, slot)
       return result.error ? g : { ...g, player: result.player }
     })
   }
@@ -1317,7 +1289,6 @@ export default function App() {
         lastPlayed: Date.now(),
         corpses: outcome.patch?.corpses ?? g.corpses,
         inventory: outcome.patch?.inventory ?? g.inventory,
-        player: outcome.patch?.playerMp !== undefined ? { ...g.player, mp: outcome.patch.playerMp } : g.player,
         minions: nextMinions,
         log: [
           ...g.log,
@@ -1379,7 +1350,7 @@ export default function App() {
         }
       }
       const currentId = g.player.equipped?.[slot]
-      const result = unequipSlot(g.player, items, slot)
+      const result = unequipSlot(g.player, slot)
       return {
         ...g,
         player: result.player,
@@ -1656,8 +1627,8 @@ export default function App() {
         onSaveWorldPreset={(wData: WorldData) => upsertWorld(wData, wData.id)}
         onDeleteProtagonistPreset={deleteProtagonist}
         onDeleteWorldPreset={deleteWorld}
-        onBeginTale={(protagonistData: ProtagonistData, combatMode: CombatMode, worldOverride: Partial<WorldData>, customTitle: string, customNpcs?: SeedNpcData[]) => {
-          beginCampaign(protagonistData, combatMode, worldOverride, customTitle, customNpcs)
+        onBeginTale={(protagonistData: ProtagonistData, worldOverride: Partial<WorldData>, customTitle: string, customNpcs?: SeedNpcData[]) => {
+          beginCampaign(protagonistData, worldOverride, customTitle, customNpcs)
         }}
       />
     )
@@ -1672,8 +1643,8 @@ export default function App() {
         onSaveWorldPreset={(wData: WorldData) => upsertWorld(wData, wData.id)}
         onDeleteProtagonistPreset={deleteProtagonist}
         onDeleteWorldPreset={deleteWorld}
-        onBeginTale={(protagonistData, combatMode, worldOverride, customTitle, cast) => {
-          beginCampaign(protagonistData, combatMode, worldOverride, customTitle, cast.map((c) => ({ ...c, role: c.role ?? '' })))
+        onBeginTale={(protagonistData, worldOverride, customTitle, cast) => {
+          beginCampaign(protagonistData, worldOverride, customTitle, cast.map((c) => ({ ...c, role: c.role ?? '' })))
         }}
       />
     )
@@ -1737,9 +1708,9 @@ export default function App() {
         existingTitles={Object.values(campaigns).map((c) => c.title)}
         editLongText={editLongText}
         onBack={() => goBack('newgame')}
-        onBegin={({ opening, narrationStyle, temperature, combatMode, title }) => {
+        onBegin={({ opening, narrationStyle, temperature, title }) => {
           setApiSettings((a) => ({ ...a, temperature }))
-          beginCampaign({ ...pendingProtagonist, opening }, combatMode, { narrationStyle }, title)
+          beginCampaign({ ...pendingProtagonist, opening }, { narrationStyle }, title)
         }}
       />
     )
@@ -1929,11 +1900,11 @@ export default function App() {
           musicMuted={musicMuted}
           onToggleMusicMute={toggleMusicMute}
           onBack={closeSettings}
-          onSave={({ apiSettings: nextApi, uiPrefs: nextUi, proseDepthKey, combatMode }: SettingsSavePayload) => {
+          onSave={({ apiSettings: nextApi, uiPrefs: nextUi, proseDepthKey }: SettingsSavePayload) => {
             setApiSettings(nextApi)
             setUiPrefs(nextUi)
             if (game) {
-              setGame((g) => g && { ...g, proseDepth: PROSE_DEPTHS[proseDepthKey], combatMode })
+              setGame((g) => g && { ...g, proseDepth: PROSE_DEPTHS[proseDepthKey] })
             }
             closeSettings()
           }}

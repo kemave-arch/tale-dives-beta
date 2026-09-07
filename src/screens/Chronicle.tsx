@@ -4,7 +4,7 @@ import {
   Home, Settings as SettingsIcon, Send, Star, BookOpen, Library, Sparkle, X, ExternalLink,
   ChevronUp, ChevronDown, ChevronsDown, History, Pause, Users, Backpack, Map as MapIcon, ShieldCheck, Target, Skull, HelpCircle,
   Unlock, Lock, Repeat, Hammer, Ghost, ScrollText, Swords, Sparkles, LayoutGrid,
-  AlertTriangle, Copy, Check, RotateCcw, Bug, Pencil, MoreHorizontal, Trash2, Heart, Zap, Activity, Coins,
+  AlertTriangle, Copy, Check, RotateCcw, Bug, Pencil, MoreHorizontal, Trash2, Heart, Coins,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { renderNarrative, type TapTermHandler } from '../lib/richText.tsx'
@@ -16,15 +16,12 @@ import { isHidden } from '../lib/discovery.ts'
 import type { CategoryId } from './Codex.tsx'
 import type {
   ApiSettings, BestiaryEntry, Campaign, CombatState, CraftingJob, FactionEntry, GameTime, KeywordLink, LocationEntry, LogEntry, LoreEntry, NpcEntry, Player,
-  ProseDepthConfig, QuestEntry, SkillEntry, SlashCommand, ItemEntry, StatBonus,
+  ProseDepthConfig, QuestEntry, SkillEntry, SlashCommand, ItemEntry,
 } from '../types.ts'
+import { trustWord } from '../lib/npcs.ts'
 
-function statBonusText(bonus: StatBonus | undefined): string | null {
-  if (!bonus) return null
-  const parts = Object.entries(bonus)
-    .filter(([, v]) => v)
-    .map(([k, v]) => `${v! > 0 ? '+' : ''}${v} ${k.toUpperCase()}`)
-  return parts.length ? parts.join(', ') : null
+function traitsText(traits: ItemEntry['traits']): string | null {
+  return traits?.length ? traits.join(', ') : null
 }
 
 interface ChronicleProps {
@@ -70,33 +67,44 @@ interface ChronicleProps {
 const WINDOW_SIZE = 20 // §9.2 — cap how many turns stay mounted; older ones load in on demand
 const INPUT_MAX_HEIGHT = 160
 
-function PoolBar({
+// Narrative-First Overhaul — replaces the old numeric HP/MP/ST PoolBar
+// entirely. There's no pool to fill a bar with anymore; a coarse condition-
+// derived status word (Fine -> Hurt -> Bloodied -> Critical, per the design
+// brief's HUD default) stands in for "how bad is it right now" at a glance,
+// with the actual active Condition Tags listed alongside/on hover for detail.
+// A full visual-polish pass (pips, a proper banner) is later UI work — this
+// keeps the HUD honest about the new data shape without redesigning it.
+function vitalsStatus(count: number): string {
+  if (count === 0) return 'Fine'
+  if (count === 1) return 'Hurt'
+  if (count === 2) return 'Bloodied'
+  return 'Critical'
+}
+
+function ConditionBadge({
   icon: Icon,
   label,
-  value,
-  max,
+  conditions,
   colorVar,
 }: {
   icon: LucideIcon
   label: string
-  value: number
-  max: number
+  conditions: { label: string }[] | undefined
   colorVar: string
 }) {
-  const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0
+  const list = conditions ?? []
+  const tags = list.map((c) => c.label).join(', ')
   return (
-    <div className="flex items-center gap-1.5 flex-1 min-w-0" title={`${label}: ${value}/${max}`}>
+    <div className="flex items-center gap-1.5 flex-1 min-w-0" title={tags ? `${label}: ${tags}` : `${label}: no active conditions`}>
       <div className="flex items-center gap-1 shrink-0 max-w-[150px] sm:max-w-none">
         <Icon size={12} style={{ color: colorVar }} className="shrink-0" />
         <span className="font-mono text-[10px] font-bold uppercase tracking-wider truncate" style={{ color: colorVar }}>
           {label}
         </span>
       </div>
-      <div className="hidden sm:block flex-1 h-1.5 rounded-full bg-white/15 overflow-hidden min-w-[20px]">
-        <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pct}%`, background: colorVar }} />
-      </div>
-      <span className="shrink-0 font-mono text-[10px] font-semibold tabular-nums" style={{ color: colorVar }}>
-        {value}/{max}
+      <span className="shrink-0 font-mono text-[10px] font-semibold truncate" style={{ color: colorVar }}>
+        {vitalsStatus(list.length)}
+        {tags ? ` — ${tags}` : ''}
       </span>
     </div>
   )
@@ -178,9 +186,7 @@ function DesktopLeftSidebar({
           <CurrencyBadge copper={player.copper} />
         </div>
         <div className="space-y-2.5">
-          <PoolBar icon={Heart} label="Health" value={player.hp} max={player.hpMax} colorVar="#fb3552" />
-          <PoolBar icon={Zap} label="Mana" value={player.mp} max={player.mpMax} colorVar="#22d3ee" />
-          <PoolBar icon={Activity} label="Stamina" value={player.st} max={player.stMax} colorVar="#34d399" />
+          <ConditionBadge icon={Heart} label="Vitals" conditions={player.conditions} colorVar="#fb3552" />
         </div>
         {(player.locDisp || locationName) && (
           <div className="pt-2 border-t border-[#c89d51]/20 flex items-center gap-2 text-xs text-[#c8b8a2] font-serif">
@@ -251,7 +257,7 @@ function DesktopLeftSidebar({
           <p className="font-serif text-sm font-bold text-white truncate">
             {combat.enemyName?.toUpperCase() ?? 'HOSTILE'}
           </p>
-          <PoolBar icon={Heart} label="Enemy HP" value={combat.enemyHp ?? 0} max={combat.enemyHpMax ?? 1} colorVar="#f43f5e" />
+          <ConditionBadge icon={Heart} label="Enemy" conditions={combat.enemyConditions} colorVar="#f43f5e" />
         </div>
       )}
     </aside>
@@ -1354,9 +1360,7 @@ export default function Chronicle({
             >
               <div className="overflow-hidden">
                 <div className="px-1 pb-1.5 flex items-center gap-3 text-white/80 flex-wrap sm:flex-nowrap">
-                  <PoolBar icon={Heart} label="HP" value={player.hp} max={player.hpMax} colorVar="#fb3552" />
-                  <PoolBar icon={Zap} label="MP" value={player.mp} max={player.mpMax} colorVar="#22d3ee" />
-                  <PoolBar icon={Activity} label="ST" value={player.st} max={player.stMax} colorVar="#34d399" />
+                  <ConditionBadge icon={Heart} label="Vitals" conditions={player.conditions} colorVar="#fb3552" />
                   <CurrencyBadge copper={player.copper} />
                 </div>
               </div>
@@ -1365,7 +1369,7 @@ export default function Chronicle({
 
           {combat?.active && (
             <div className="lg:hidden border-t border-rose/30 px-4 py-1 text-white/80 bg-rose-950/40">
-              <PoolBar icon={Swords} label={combat.enemyName?.toUpperCase() ?? 'HOSTILE'} value={combat.enemyHp ?? 0} max={combat.enemyHpMax ?? 1} colorVar="#e11d48" />
+              <ConditionBadge icon={Swords} label={combat.enemyName?.toUpperCase() ?? 'HOSTILE'} conditions={combat.enemyConditions} colorVar="#e11d48" />
             </div>
           )}
 
@@ -1753,10 +1757,10 @@ export default function Chronicle({
                             <span className="font-sans font-bold text-xs text-[#f5ebd7]">{item.rarity}</span>
                           </div>
                         )}
-                        {item.statBonus && statBonusText(item.statBonus) && (
+                        {traitsText(item.traits) && (
                           <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
-                            <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Bonus</span>
-                            <span className="font-sans font-bold text-xs text-[#f5ebd7]">{statBonusText(item.statBonus)}</span>
+                            <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Traits</span>
+                            <span className="font-sans font-bold text-xs text-[#f5ebd7]">{traitsText(item.traits)}</span>
                           </div>
                         )}
                         {item.value !== undefined && (
@@ -1777,11 +1781,7 @@ export default function Chronicle({
                       </div>
                       <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
                         <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Trust</span>
-                        <span className="font-sans font-bold text-xs text-[#f5ebd7]">{popupEntry.trust}</span>
-                      </div>
-                      <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
-                        <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Affection</span>
-                        <span className="font-sans font-bold text-xs text-[#f5ebd7]">{popupEntry.affection}</span>
+                        <span className="font-sans font-bold text-xs text-[#f5ebd7]">{trustWord(popupEntry.trust)}</span>
                       </div>
                     </>
                   )}
@@ -1808,12 +1808,9 @@ export default function Chronicle({
 
                   {popup.category === 'skill' && (
                     <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
-                      <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Cost</span>
-                      <span className="font-sans font-bold text-xs text-[#f5ebd7]">
-                        {'mpCost' in popupEntry && popupEntry.mpCost ? `${popupEntry.mpCost} MP` : ''}
-                        {'mpCost' in popupEntry && popupEntry.mpCost && 'stCost' in popupEntry && popupEntry.stCost ? ' · ' : ''}
-                        {'stCost' in popupEntry && popupEntry.stCost ? `${popupEntry.stCost} ST` : ''}
-                        {!('mpCost' in popupEntry && popupEntry.mpCost) && !('stCost' in popupEntry && popupEntry.stCost) ? 'Ability' : ''}
+                      <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Effort</span>
+                      <span className="font-sans font-bold text-xs text-[#f5ebd7] capitalize">
+                        {'effort' in popupEntry && popupEntry.effort ? popupEntry.effort : 'Ability'}
                       </span>
                     </div>
                   )}
@@ -1824,18 +1821,12 @@ export default function Chronicle({
                         <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Threat</span>
                         <span className="font-sans font-bold text-xs text-[#f5ebd7]">{popupEntry.threatTier}</span>
                       </div>
-                      {popupEntry.hpMax !== undefined && (
+                      {popupEntry.conditions?.length ? (
                         <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
-                          <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">HP</span>
-                          <span className="font-sans font-bold text-xs text-[#f5ebd7]">{popupEntry.hpMax}</span>
+                          <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Conditions</span>
+                          <span className="font-sans font-bold text-xs text-[#f5ebd7]">{popupEntry.conditions.map((c) => c.label).join(', ')}</span>
                         </div>
-                      )}
-                      {popupEntry.dmgBase !== undefined && (
-                        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
-                          <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">DMG</span>
-                          <span className="font-sans font-bold text-xs text-[#f5ebd7]">{popupEntry.dmgBase}</span>
-                        </div>
-                      )}
+                      ) : null}
                     </>
                   )}
 

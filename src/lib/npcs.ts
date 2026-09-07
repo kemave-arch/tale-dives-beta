@@ -1,30 +1,35 @@
 import { ensureEntry } from './autoRegister.ts'
 import { slugify, titleCaseId } from './slug.ts'
-import type { Dict, GameTime, NpcEntry, NpcMemoryUpdate } from '../types.ts'
+import type { CompetencyTier, Dict, GameTime, NpcEntry, NpcMemoryUpdate } from '../types.ts'
 
 // §5.5 Romance & Key Contact Memory Engine + §5.14 auto-registration.
 // npc_mem_up only ever carries an id, never a display name — a title-cased
 // version of it is the fallback display name when no {{Term|npc}} keyword
 // link (§4.2/§5.14, lib/codex.js) has already registered a nicer one.
+//
+// Narrative-First Overhaul — affection and trust are two INDEPENDENT
+// CompetencyTier ladders (1-5 each), never collapsed onto one shared
+// relationship axis: a mercenary can respect the protagonist's competence
+// (high trust) while disliking them personally (low affection). `stage`
+// stays driven by affection alone, exactly as before.
+
+const MIN_TIER: CompetencyTier = 1
+const MAX_TIER: CompetencyTier = 5
 
 export function emptyNpc(name: string): Omit<NpcEntry, 'autoLogged'> {
-  return { name, affection: 0, trust: 0, stage: 'Stranger', deeds: [], memSummary: '', lastSeenLocId: null }
+  return { name, affection: MIN_TIER, trust: MIN_TIER, stage: 'Stranger', deeds: [], memSummary: '', lastSeenLocId: null }
 }
 
-const STAGES = [
-  { max: 20, label: 'Stranger' },
-  { max: 40, label: 'Acquaintance' },
-  { max: 60, label: 'Friend' },
-  { max: 80, label: 'Confidant' },
-  { max: Infinity, label: 'Beloved' },
-]
+// Affection's existing Stranger->Beloved framing (index+1 = CompetencyTier).
+const AFFECTION_STAGES = ['Stranger', 'Acquaintance', 'Friend', 'Confidant', 'Beloved']
 
-function stageFor(affection: number): string {
-  return STAGES.find((s) => affection <= s.max)!.label
+function stageFor(affection: CompetencyTier): string {
+  const idx = Math.max(MIN_TIER, Math.min(MAX_TIER, Math.round(affection))) - 1
+  return AFFECTION_STAGES[idx]
 }
 
-function clamp(v: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, v))
+function clampTier(v: CompetencyTier): CompetencyTier {
+  return Math.max(MIN_TIER, Math.min(MAX_TIER, Math.round(v)))
 }
 
 // Applies one turn's npc_mem_up entries. `locId` tags who was present where,
@@ -51,8 +56,11 @@ export function applyNpcUpdates(
     dict = withEntry
 
     const prev = dict[id]
-    const affection = clamp(prev.affection + (u.aff_delta ?? 0), 0, 100)
-    const trust = clamp(prev.trust + (u.trust_delta ?? 0), 0, 100)
+    // aff_delta/trust_delta are bare +1/-1 single-step nudges against each
+    // ladder independently — never a raw magnitude, and each axis moves (or
+    // doesn't) on its own.
+    const affection = u.aff_delta ? clampTier(prev.affection + u.aff_delta) : prev.affection
+    const trust = u.trust_delta ? clampTier(prev.trust + u.trust_delta) : prev.trust
 
     dict = {
       ...dict,
@@ -60,6 +68,7 @@ export function applyNpcUpdates(
         ...prev,
         affection,
         trust,
+        resolve: u.resolve ?? prev.resolve,
         stage: stageFor(affection),
         deeds: u.deed ? [...prev.deeds, u.deed] : prev.deeds,
         memSummary: u.mem_summary || prev.memSummary,
@@ -106,7 +115,18 @@ export function describePresentNpc(id: string, entry: NpcEntry): string {
   // (only the display name), and will invent its own abbreviation (e.g.
   // "l_sorrengail" for "General Lilith Sorrengail") that forks a duplicate
   // stub entry instead of updating the real one.
-  return `NPC: ${entry.name} (id: ${id})${identity ? ` | ${identity}` : ''} | Stage: ${entry.stage} | Trust: ${entry.trust}${gear ? ` | ${gear}` : ''}${firstSeen} | Mem: "${entry.memSummary}"`
+  return `NPC: ${entry.name} (id: ${id})${identity ? ` | ${identity}` : ''} | Stage: ${entry.stage} | Trust: ${trustWord(entry.trust)}${gear ? ` | ${gear}` : ''}${firstSeen} | Mem: "${entry.memSummary}"`
+}
+
+// Trust's own parallel word ladder — kept separate from affection's Stranger
+// ->Beloved framing since the two axes are meant to read as genuinely
+// different qualities (how much they respect/rely on the protagonist, not
+// how fond they are of them).
+const TRUST_WORDS = ['Distrustful', 'Wary', 'Reliable', 'Trusted', 'Devoted']
+
+export function trustWord(trust: CompetencyTier): string {
+  const idx = Math.max(MIN_TIER, Math.min(MAX_TIER, Math.round(trust))) - 1
+  return TRUST_WORDS[idx]
 }
 
 export function presentNpcs(npcs: Dict<NpcEntry> | undefined, locId: string): [string, NpcEntry][] {

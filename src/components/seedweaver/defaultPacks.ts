@@ -206,7 +206,6 @@ export const BUILTIN_NARRATIVE_PRESETS: SeedNarrativePreset[] = [
       'Standing at the threshold of the rain-slicked Parapet, hundreds of feet above the jagged rocks of the valley below. High winds whip across the narrow stone walkway, and one false step means instant death.',
     narrationStyle:
       'Visceral close-third POV, breathless pacing during peril, sensory focus on the roaring wind, cold rain, and adrenaline spikes.',
-    combatMode: 'NARRATIVE',
   },
   {
     id: 'narrative_frontier_ambush',
@@ -217,7 +216,6 @@ export const BUILTIN_NARRATIVE_PRESETS: SeedNarrativePreset[] = [
       'A sudden rain of burning arrows shatters the twilight quiet of the misty pine forest. The vanguard caravan ahead is in flames, and shadowy figures emerge from the tree line with drawn steel.',
     narrationStyle:
       'Gritty tactical pacing, visceral physical impact, urgent commands shouted through smoke, mud, and steel clash.',
-    combatMode: 'TACTICAL',
   },
   {
     id: 'narrative_court_betrayal',
@@ -228,7 +226,6 @@ export const BUILTIN_NARRATIVE_PRESETS: SeedNarrativePreset[] = [
       'The grand council doors slam shut and the herald announces an indictment for high treason. Palace guards in gilded plate step forward with drawn halberds as whispers erupt across the balcony.',
     narrationStyle:
       'Sharp, tense dialogue, subtle psychological tension, keen observation of noble body language, poison in smiles.',
-    combatMode: 'NARRATIVE',
   },
   {
     id: 'narrative_dungeon_gateway',
@@ -239,7 +236,6 @@ export const BUILTIN_NARRATIVE_PRESETS: SeedNarrativePreset[] = [
       'Torchlight flickers against a colossal stone monolith buried beneath the mountains. As your blood touches the ancient keystone, azure runes ignite across the surface and the ground begins to tremble.',
     narrationStyle:
       'Atmospheric dread, evocative descriptions of ancient architecture, echoes in the dark, mounting mystical wonder.',
-    combatMode: 'TACTICAL',
   },
   {
     id: 'narrative_solo_awakening',
@@ -250,6 +246,5 @@ export const BUILTIN_NARRATIVE_PRESETS: SeedNarrativePreset[] = [
       'Left for dead amidst the burning ruins of the lower quarter, a cold azure pulse suddenly surges through your veins, stitching shattered bones together as a glowing cosmic interface flickers to life.',
     narrationStyle:
       'High-impact cinematic progression, crisp focus on internal mana flow and sensory awakening, unyielding resolve.',
-    combatMode: 'NARRATIVE',
   },
 ]

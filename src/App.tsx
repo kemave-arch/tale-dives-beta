@@ -208,6 +208,7 @@ export default function App() {
   // Dive Brief steps.
   const [pendingWorld, setPendingWorld] = useState<WorldData | null>(null)
   const [pendingProtagonist, setPendingProtagonist] = useState<ProtagonistData | null>(null)
+  const [loadingGender, setLoadingGender] = useState<string | undefined>()
   // The Prologue turn's action text, built in beginCampaign alongside World
   // Seeding but not fired until the player confirms the Seeding Review screen.
   const [pendingFirstAction, setPendingFirstAction] = useState<string | null>(null)
@@ -503,6 +504,7 @@ export default function App() {
     setGame(campaigns[id])
     setActiveCampaignId(id)
     setHistory([])
+    setLoadingGender(campaigns[id]?.player?.gender)
     navigateTo('diveloading')
     onPlayTrack('TempestDive_ost03.opus')
   }
@@ -519,6 +521,8 @@ export default function App() {
     customTitle?: string,
     customNpcs?: SeedNpcData[]
   ) {
+    setLoadingGender(protagonistData.gender)
+    setPendingProtagonist(protagonistData)
     const cls = getClassById(protagonistData.classId)
     // Narrative-First Overhaul — no more derived HP/MP/ST pools computed from
     // a class weight vector; attrs are CompetencyTiers now, and a protagonist
@@ -1677,7 +1681,7 @@ export default function App() {
       />
     )
   } else if (screen === 'diveloading') {
-    content = <DiveLoadingScreen />
+    content = <DiveLoadingScreen gender={loadingGender ?? pendingProtagonist?.gender ?? game?.player?.gender} />
   } else if (screen === 'storymode') {
     content = (
       <StoryMode onBack={() => goBack('mainmenu')} onSelectOriginal={() => navigateTo('talediveweaver')} />

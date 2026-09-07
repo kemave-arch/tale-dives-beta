@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Bookmark,
   CheckCircle2,
-  Edit3,
+  ChevronDown,
   Flag,
   Globe,
   MapPin,
@@ -119,15 +119,19 @@ export default function WorldNodeModal({
     setTimeout(() => setSaveToast(null), 2000)
   }
 
-  const filteredPresets = worldTemplates.filter((t) => {
-    if (!presetSearch.trim()) return true
-    const q = presetSearch.toLowerCase()
-    return (
-      t.name.toLowerCase().includes(q) ||
-      (t.genreTone || '').toLowerCase().includes(q) ||
-      (t.conflict || '').toLowerCase().includes(q)
-    )
-  })
+  const filteredPresets = useMemo(
+    () =>
+      worldTemplates.filter((t) => {
+        if (!presetSearch.trim()) return true
+        const q = presetSearch.toLowerCase()
+        return (
+          t.name.toLowerCase().includes(q) ||
+          (t.genreTone || '').toLowerCase().includes(q) ||
+          (t.conflict || '').toLowerCase().includes(q)
+        )
+      }),
+    [worldTemplates, presetSearch]
+  )
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80">
@@ -178,6 +182,64 @@ export default function WorldNodeModal({
           </div>
         )}
 
+        {/* Presets panel — inline slide-down instead of a second full-screen
+            dialog stacked over this one. */}
+        {presetModalOpen && (
+          <div className="border-b border-sky-500/20 bg-[#0b1b2d] flex flex-col max-h-64">
+            <div className="p-3 border-b border-sky-500/15 flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-sky-400/60" />
+                <input
+                  type="text"
+                  value={presetSearch}
+                  onChange={(e) => setPresetSearch(e.target.value)}
+                  placeholder="Search presets..."
+                  className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-[#122238] border border-sky-500/30 text-xs text-[#bae6fd] outline-none"
+                />
+              </div>
+              <button onClick={() => setPresetModalOpen(false)} className="text-sky-300/80 hover:text-white shrink-0">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
+              {filteredPresets.length === 0 ? (
+                <div className="text-center py-6 text-xs text-sky-200/60">No matching presets found.</div>
+              ) : (
+                filteredPresets.map((t) => (
+                  <div
+                    key={t.id || t.name}
+                    className="p-3 rounded-xl bg-[#0e1d30] border border-sky-500/25 hover:border-sky-400/60 transition-all flex items-center justify-between gap-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="font-display font-bold text-xs text-sky-200 flex items-center gap-2">
+                        <span>{t.name}</span>
+                        {t.genreTone && (
+                          <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                            {t.genreTone}
+                          </span>
+                        )}
+                      </div>
+                      {t.conflict && (
+                        <p className="text-[11px] font-narrative text-[#93c5fd]/70 line-clamp-1 mt-0.5">{t.conflict}</p>
+                      )}
+                      <div className="flex items-center gap-2 text-[9px] font-mono text-[#93c5fd]/60 mt-1">
+                        <span>📍 {t.locationsList?.length || 0} Sites</span>
+                        <span>🚩 {t.factionsList?.length || 0} Factions</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleLoadPreset(t)}
+                      className="px-3 py-1.5 rounded-lg bg-sky-400 hover:bg-sky-300 text-black font-display font-bold text-xs shrink-0 uppercase tracking-wider"
+                    >
+                      Load
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Subtabs */}
         <div className="flex border-b border-sky-500/20 bg-[#0c1a2d] px-3 pt-2 gap-2">
           {[
@@ -209,9 +271,7 @@ export default function WorldNodeModal({
           {subTab === 'overview' && (
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-display font-semibold text-sky-200/90 mb-1">
-                  World / Realm Name *
-                </label>
+                <label className="block text-xs font-display font-semibold text-sky-200/90 mb-1">Name *</label>
                 <input
                   type="text"
                   value={data.name}
@@ -235,9 +295,7 @@ export default function WorldNodeModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-display font-semibold text-sky-200/90 mb-1">
-                    Era / Tech Level
-                  </label>
+                  <label className="block text-xs font-display font-semibold text-sky-200/90 mb-1">Era</label>
                   <input
                     type="text"
                     value={data.eraTechLevel || ''}
@@ -249,9 +307,7 @@ export default function WorldNodeModal({
               </div>
 
               <div>
-                <label className="block text-xs font-display font-semibold text-sky-200/90 mb-1">
-                  Magic & Power System
-                </label>
+                <label className="block text-xs font-display font-semibold text-sky-200/90 mb-1">Power System</label>
                 <textarea
                   rows={2}
                   value={data.powerSystem || ''}
@@ -262,9 +318,7 @@ export default function WorldNodeModal({
               </div>
 
               <div>
-                <label className="block text-xs font-display font-semibold text-sky-200/90 mb-1">
-                  Overarching Conflict / Stakes
-                </label>
+                <label className="block text-xs font-display font-semibold text-sky-200/90 mb-1">Conflict</label>
                 <textarea
                   rows={3}
                   value={data.conflict || ''}
@@ -279,7 +333,7 @@ export default function WorldNodeModal({
           {subTab === 'locations' && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-display font-semibold text-sky-200/90">Key Realm Sites</span>
+                <span className="text-xs font-display font-semibold text-sky-200/90">Sites</span>
                 <button
                   onClick={handleAddLocation}
                   className="flex items-center gap-1 text-[11px] font-display font-semibold text-sky-300 hover:text-sky-200 px-2 py-1 rounded bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/30"
@@ -289,51 +343,138 @@ export default function WorldNodeModal({
               </div>
 
               <div className="space-y-2">
-                {(data.locationsList || []).map((loc, idx) => (
-                  <div key={idx} className="p-3 rounded-xl bg-[#122238] border border-sky-500/20 space-y-1.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <span className="font-display font-bold text-xs text-sky-200 truncate">{loc.name || 'Unnamed Site'}</span>
-                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 shrink-0">
-                          {loc.locationType || 'Fortress'}
-                        </span>
-                        <span
-                          className={`text-[9px] font-mono px-1.5 py-0.5 rounded border shrink-0 ${
-                            loc.dangerLevel === 'Lethal' || loc.dangerLevel === 'High'
-                              ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
-                              : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                          }`}
-                        >
-                          {loc.dangerLevel || 'Safe'}
-                        </span>
-                        {loc.region && (
-                          <span className="text-[9px] font-mono text-[#93c5fd]/70 truncate hidden sm:inline">
-                            📍 {loc.region}
+                {(data.locationsList || []).map((loc, idx) => {
+                  const expanded = editingLocIdx === idx
+                  return (
+                    <div key={idx} className="rounded-xl bg-[#122238] border border-sky-500/20 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setEditingLocIdx(expanded ? null : idx)}
+                        className="w-full p-3 flex items-center justify-between gap-2 text-left"
+                      >
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <span className="font-display font-bold text-xs text-sky-200 truncate">{loc.name || 'Unnamed Site'}</span>
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 shrink-0">
+                            {loc.locationType || 'Fortress'}
                           </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => setEditingLocIdx(idx)}
-                          className="flex items-center gap-1 text-[11px] font-display font-semibold text-sky-300 hover:text-sky-200 px-2 py-0.5 rounded bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/30"
-                        >
-                          <Edit3 size={11} /> Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveLocation(idx)}
-                          className="text-red-400 hover:text-red-300 p-1"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
+                          <span
+                            className={`text-[9px] font-mono px-1.5 py-0.5 rounded border shrink-0 ${
+                              loc.dangerLevel === 'Lethal' || loc.dangerLevel === 'High'
+                                ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                                : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                            }`}
+                          >
+                            {loc.dangerLevel || 'Safe'}
+                          </span>
+                          {loc.region && (
+                            <span className="text-[9px] font-mono text-[#93c5fd]/70 truncate hidden sm:inline">
+                              📍 {loc.region}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleRemoveLocation(idx)
+                            }}
+                            className="text-red-400 hover:text-red-300 p-1"
+                          >
+                            <Trash2 size={13} />
+                          </span>
+                          <ChevronDown
+                            size={15}
+                            className={`text-sky-300/80 transition-transform ${expanded ? 'rotate-180' : ''}`}
+                          />
+                        </div>
+                      </button>
+
+                      {!expanded && loc.description && (
+                        <p className="px-3 pb-2 text-xs font-narrative text-[#93c5fd]/80 line-clamp-1">{loc.description}</p>
+                      )}
+
+                      {expanded && (
+                        <div className="p-3 pt-0 space-y-2.5 text-xs border-t border-sky-500/20">
+                          <div>
+                            <label className="block text-[10px] font-mono text-sky-300/80 uppercase mb-1">Name *</label>
+                            <input
+                              type="text"
+                              value={loc.name}
+                              onChange={(e) => handleUpdateLocation(idx, { name: e.target.value })}
+                              placeholder="e.g. The Parapet, Basgiath Academic Quad"
+                              className="w-full px-3 py-1.5 rounded-xl bg-[#162a42] border border-sky-500/30 text-sky-100 outline-none"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[10px] font-mono text-sky-300/80 uppercase mb-1">Region</label>
+                              <input
+                                type="text"
+                                value={loc.region || ''}
+                                onChange={(e) => handleUpdateLocation(idx, { region: e.target.value })}
+                                placeholder="e.g. Basgiath, Eastern Frontier"
+                                className="w-full px-2 py-1.5 rounded-xl bg-[#162a42] border border-sky-500/30 text-sky-100 outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-mono text-sky-300/80 uppercase mb-1">Danger</label>
+                              <select
+                                value={loc.dangerLevel || 'Low'}
+                                onChange={(e) => handleUpdateLocation(idx, { dangerLevel: e.target.value })}
+                                className="w-full px-2 py-1.5 rounded-xl bg-[#162a42] border border-sky-500/30 text-sky-100 outline-none"
+                              >
+                                <option value="Safe">Safe</option>
+                                <option value="Low">Low</option>
+                                <option value="High">High</option>
+                                <option value="Lethal">Lethal</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[10px] font-mono text-sky-300/80 uppercase mb-1">Type</label>
+                              <select
+                                value={loc.locationType || 'Fortress'}
+                                onChange={(e) => handleUpdateLocation(idx, { locationType: e.target.value })}
+                                className="w-full px-2 py-1.5 rounded-xl bg-[#162a42] border border-sky-500/30 text-sky-100 outline-none"
+                              >
+                                <option value="Fortress">Fortress</option>
+                                <option value="Academy">Academy / College</option>
+                                <option value="Settlement">City / Settlement</option>
+                                <option value="Dungeon">Dungeon / Cavern</option>
+                                <option value="Wilderness">Wilderness / Frontier</option>
+                                <option value="Landmark">Landmark / Shrine</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-mono text-sky-300/80 uppercase mb-1">Faction</label>
+                              <input
+                                type="text"
+                                value={loc.factionOwner || ''}
+                                onChange={(e) => handleUpdateLocation(idx, { factionOwner: e.target.value })}
+                                placeholder="e.g. Navarre Riders"
+                                className="w-full px-2 py-1.5 rounded-xl bg-[#162a42] border border-sky-500/30 text-sky-100 outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-mono text-sky-300/80 uppercase mb-1">Description</label>
+                            <textarea
+                              rows={2}
+                              value={loc.description || ''}
+                              onChange={(e) => handleUpdateLocation(idx, { description: e.target.value })}
+                              placeholder="Visual atmosphere, environmental hazards, tactical landmarks..."
+                              className="w-full px-3 py-1.5 rounded-xl bg-[#162a42] border border-sky-500/30 text-xs font-narrative text-sky-100 outline-none resize-none"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    {loc.description && (
-                      <p className="text-xs font-narrative text-[#93c5fd]/80 line-clamp-1">{loc.description}</p>
-                    )}
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}
@@ -341,7 +482,7 @@ export default function WorldNodeModal({
           {subTab === 'factions' && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-display font-semibold text-sky-200/90">Key Realm Factions</span>
+                <span className="text-xs font-display font-semibold text-sky-200/90">Factions</span>
                 <button
                   onClick={handleAddFaction}
                   className="flex items-center gap-1 text-[11px] font-display font-semibold text-sky-300 hover:text-sky-200 px-2 py-1 rounded bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/30"
@@ -351,304 +492,114 @@ export default function WorldNodeModal({
               </div>
 
               <div className="space-y-2">
-                {(data.factionsList || []).map((fac, idx) => (
-                  <div key={fac.id || idx} className="p-3 rounded-xl bg-[#122238] border border-sky-500/20 space-y-1.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <span className="font-display font-bold text-xs text-sky-200 truncate">{fac.name || 'Unnamed Faction'}</span>
-                        <span
-                          className={`text-[9px] font-mono px-1.5 py-0.5 rounded border shrink-0 ${
-                            fac.attitude === 'hostile' || fac.attitude === 'rival'
-                              ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
-                              : fac.attitude === 'allied' || fac.attitude === 'friendly'
-                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                              : 'bg-sky-500/20 text-sky-300 border-sky-500/30'
-                          }`}
-                        >
-                          {fac.attitude || 'neutral'}
-                        </span>
-                        {fac.territory && (
-                          <span className="text-[9px] font-mono text-[#93c5fd]/70 truncate hidden sm:inline">
-                            📍 {fac.territory}
+                {(data.factionsList || []).map((fac, idx) => {
+                  const expanded = editingFacIdx === idx
+                  return (
+                    <div key={fac.id || idx} className="rounded-xl bg-[#122238] border border-sky-500/20 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setEditingFacIdx(expanded ? null : idx)}
+                        className="w-full p-3 flex items-center justify-between gap-2 text-left"
+                      >
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <span className="font-display font-bold text-xs text-sky-200 truncate">{fac.name || 'Unnamed Faction'}</span>
+                          <span
+                            className={`text-[9px] font-mono px-1.5 py-0.5 rounded border shrink-0 ${
+                              fac.attitude === 'hostile' || fac.attitude === 'rival'
+                                ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                                : fac.attitude === 'allied' || fac.attitude === 'friendly'
+                                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                                : 'bg-sky-500/20 text-sky-300 border-sky-500/30'
+                            }`}
+                          >
+                            {fac.attitude || 'neutral'}
                           </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => setEditingFacIdx(idx)}
-                          className="flex items-center gap-1 text-[11px] font-display font-semibold text-sky-300 hover:text-sky-200 px-2 py-0.5 rounded bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/30"
-                        >
-                          <Edit3 size={11} /> Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveFaction(idx)}
-                          className="text-red-400 hover:text-red-300 p-1"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
+                          {fac.territory && (
+                            <span className="text-[9px] font-mono text-[#93c5fd]/70 truncate hidden sm:inline">
+                              📍 {fac.territory}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleRemoveFaction(idx)
+                            }}
+                            className="text-red-400 hover:text-red-300 p-1"
+                          >
+                            <Trash2 size={13} />
+                          </span>
+                          <ChevronDown
+                            size={15}
+                            className={`text-sky-300/80 transition-transform ${expanded ? 'rotate-180' : ''}`}
+                          />
+                        </div>
+                      </button>
+
+                      {!expanded && fac.description && (
+                        <p className="px-3 pb-2 text-xs font-narrative text-[#93c5fd]/80 line-clamp-1">{fac.description}</p>
+                      )}
+
+                      {expanded && (
+                        <div className="p-3 pt-0 space-y-2.5 text-xs border-t border-sky-500/20">
+                          <div>
+                            <label className="block text-[10px] font-mono text-sky-300/80 uppercase mb-1">Name *</label>
+                            <input
+                              type="text"
+                              value={fac.name}
+                              onChange={(e) => handleUpdateFaction(idx, { name: e.target.value })}
+                              placeholder="e.g. Riders Quadrant, High Senate"
+                              className="w-full px-3 py-1.5 rounded-xl bg-[#162a42] border border-sky-500/30 text-sky-100 outline-none"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[10px] font-mono text-sky-300/80 uppercase mb-1">Attitude</label>
+                              <select
+                                value={fac.attitude || 'neutral'}
+                                onChange={(e) => handleUpdateFaction(idx, { attitude: e.target.value as any })}
+                                className="w-full px-2 py-1.5 rounded-xl bg-[#162a42] border border-sky-500/30 text-sky-100 outline-none"
+                              >
+                                <option value="allied">Allied</option>
+                                <option value="friendly">Friendly</option>
+                                <option value="neutral">Neutral</option>
+                                <option value="rival">Rival</option>
+                                <option value="hostile">Hostile</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-mono text-sky-300/80 uppercase mb-1">Territory</label>
+                              <input
+                                type="text"
+                                value={fac.territory || ''}
+                                onChange={(e) => handleUpdateFaction(idx, { territory: e.target.value })}
+                                placeholder="e.g. Western Spire, Citadel"
+                                className="w-full px-2 py-1.5 rounded-xl bg-[#162a42] border border-sky-500/30 text-sky-100 outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-mono text-sky-300/80 uppercase mb-1">Description</label>
+                            <textarea
+                              rows={2}
+                              value={fac.description || ''}
+                              onChange={(e) => handleUpdateFaction(idx, { description: e.target.value })}
+                              placeholder="Goals, philosophy, political power, or military strength..."
+                              className="w-full px-3 py-1.5 rounded-xl bg-[#162a42] border border-sky-500/30 text-xs font-narrative text-sky-100 outline-none resize-none"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    {fac.description && (
-                      <p className="text-xs font-narrative text-[#93c5fd]/80 line-clamp-1">{fac.description}</p>
-                    )}
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}
         </div>
-
-        {/* Sub-Editor Modal for Location */}
-        {editingLocIdx !== null && data.locationsList?.[editingLocIdx] && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/80">
-            <div className="w-full max-w-md p-4 rounded-2xl bg-[#0e1d30] border border-sky-500/40 text-[#f5dfa0] space-y-3 shadow-2xl">
-              <div className="flex items-center justify-between border-b border-sky-500/20 pb-2">
-                <h3 className="font-display font-bold text-xs uppercase text-sky-200 flex items-center gap-1.5">
-                  <Edit3 size={13} /> Location Codex Editor
-                </h3>
-                <button onClick={() => setEditingLocIdx(null)} className="text-sky-300/80 hover:text-white">
-                  <X size={16} />
-                </button>
-              </div>
-
-              <div className="space-y-2.5 text-xs">
-                <div>
-                  <label className="block text-[10px] font-mono text-sky-300/80 uppercase mb-1">Site Name *</label>
-                  <input
-                    type="text"
-                    value={data.locationsList[editingLocIdx].name}
-                    onChange={(e) => handleUpdateLocation(editingLocIdx, { name: e.target.value })}
-                    placeholder="e.g. The Parapet, Basgiath Academic Quad"
-                    className="w-full px-3 py-1.5 rounded-xl bg-[#162a42] border border-sky-500/30 text-sky-100 outline-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[10px] font-mono text-sky-300/80 uppercase mb-1">Province / Region</label>
-                    <input
-                      type="text"
-                      value={data.locationsList[editingLocIdx].region || ''}
-                      onChange={(e) => handleUpdateLocation(editingLocIdx, { region: e.target.value })}
-                      placeholder="e.g. Basgiath, Eastern Frontier"
-                      className="w-full px-2 py-1.5 rounded-xl bg-[#162a42] border border-sky-500/30 text-sky-100 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-mono text-sky-300/80 uppercase mb-1">Danger Rating</label>
-                    <select
-                      value={data.locationsList[editingLocIdx].dangerLevel || 'Low'}
-                      onChange={(e) => handleUpdateLocation(editingLocIdx, { dangerLevel: e.target.value })}
-                      className="w-full px-2 py-1.5 rounded-xl bg-[#162a42] border border-sky-500/30 text-sky-100 outline-none"
-                    >
-                      <option value="Safe">Safe</option>
-                      <option value="Low">Low</option>
-                      <option value="High">High</option>
-                      <option value="Lethal">Lethal</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[10px] font-mono text-sky-300/80 uppercase mb-1">Site Archetype</label>
-                    <select
-                      value={data.locationsList[editingLocIdx].locationType || 'Fortress'}
-                      onChange={(e) => handleUpdateLocation(editingLocIdx, { locationType: e.target.value })}
-                      className="w-full px-2 py-1.5 rounded-xl bg-[#162a42] border border-sky-500/30 text-sky-100 outline-none"
-                    >
-                      <option value="Fortress">Fortress</option>
-                      <option value="Academy">Academy / College</option>
-                      <option value="Settlement">City / Settlement</option>
-                      <option value="Dungeon">Dungeon / Cavern</option>
-                      <option value="Wilderness">Wilderness / Frontier</option>
-                      <option value="Landmark">Landmark / Shrine</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-mono text-sky-300/80 uppercase mb-1">Controlling Faction</label>
-                    <input
-                      type="text"
-                      value={data.locationsList[editingLocIdx].factionOwner || ''}
-                      onChange={(e) => handleUpdateLocation(editingLocIdx, { factionOwner: e.target.value })}
-                      placeholder="e.g. Navarre Riders"
-                      className="w-full px-2 py-1.5 rounded-xl bg-[#162a42] border border-sky-500/30 text-sky-100 outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-mono text-sky-300/80 uppercase mb-1">Atmosphere & Lore</label>
-                  <textarea
-                    rows={2}
-                    value={data.locationsList[editingLocIdx].description || ''}
-                    onChange={(e) => handleUpdateLocation(editingLocIdx, { description: e.target.value })}
-                    placeholder="Visual atmosphere, environmental hazards, tactical landmarks..."
-                    className="w-full px-3 py-1.5 rounded-xl bg-[#162a42] border border-sky-500/30 text-xs font-narrative text-sky-100 outline-none resize-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-2 border-t border-sky-500/20">
-                <button
-                  type="button"
-                  onClick={() => setEditingLocIdx(null)}
-                  className="px-4 py-1.5 rounded-xl bg-sky-400 hover:bg-sky-300 text-black font-display font-bold text-xs uppercase"
-                >
-                  Save Site
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Sub-Editor Modal for Faction */}
-        {editingFacIdx !== null && data.factionsList?.[editingFacIdx] && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/80">
-            <div className="w-full max-w-md p-4 rounded-2xl bg-[#0e1d30] border border-sky-500/40 text-[#f5dfa0] space-y-3 shadow-2xl">
-              <div className="flex items-center justify-between border-b border-sky-500/20 pb-2">
-                <h3 className="font-display font-bold text-xs uppercase text-sky-200 flex items-center gap-1.5">
-                  <Edit3 size={13} /> Faction Codex Editor
-                </h3>
-                <button onClick={() => setEditingFacIdx(null)} className="text-sky-300/80 hover:text-white">
-                  <X size={16} />
-                </button>
-              </div>
-
-              <div className="space-y-2.5 text-xs">
-                <div>
-                  <label className="block text-[10px] font-mono text-sky-300/80 uppercase mb-1">Faction Name *</label>
-                  <input
-                    type="text"
-                    value={data.factionsList[editingFacIdx].name}
-                    onChange={(e) => handleUpdateFaction(editingFacIdx, { name: e.target.value })}
-                    placeholder="e.g. Riders Quadrant, High Senate"
-                    className="w-full px-3 py-1.5 rounded-xl bg-[#162a42] border border-sky-500/30 text-sky-100 outline-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[10px] font-mono text-sky-300/80 uppercase mb-1">Initial Attitude</label>
-                    <select
-                      value={data.factionsList[editingFacIdx].attitude || 'neutral'}
-                      onChange={(e) => handleUpdateFaction(editingFacIdx, { attitude: e.target.value as any })}
-                      className="w-full px-2 py-1.5 rounded-xl bg-[#162a42] border border-sky-500/30 text-sky-100 outline-none"
-                    >
-                      <option value="allied">Allied</option>
-                      <option value="friendly">Friendly</option>
-                      <option value="neutral">Neutral</option>
-                      <option value="rival">Rival</option>
-                      <option value="hostile">Hostile</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-mono text-sky-300/80 uppercase mb-1">Territory / Base</label>
-                    <input
-                      type="text"
-                      value={data.factionsList[editingFacIdx].territory || ''}
-                      onChange={(e) => handleUpdateFaction(editingFacIdx, { territory: e.target.value })}
-                      placeholder="e.g. Western Spire, Citadel"
-                      className="w-full px-2 py-1.5 rounded-xl bg-[#162a42] border border-sky-500/30 text-sky-100 outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-mono text-sky-300/80 uppercase mb-1">Doctrine & Description</label>
-                  <textarea
-                    rows={2}
-                    value={data.factionsList[editingFacIdx].description || ''}
-                    onChange={(e) => handleUpdateFaction(editingFacIdx, { description: e.target.value })}
-                    placeholder="Goals, philosophy, political power, or military strength..."
-                    className="w-full px-3 py-1.5 rounded-xl bg-[#162a42] border border-sky-500/30 text-xs font-narrative text-sky-100 outline-none resize-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-2 border-t border-sky-500/20">
-                <button
-                  type="button"
-                  onClick={() => setEditingFacIdx(null)}
-                  className="px-4 py-1.5 rounded-xl bg-sky-400 hover:bg-sky-300 text-black font-display font-bold text-xs uppercase"
-                >
-                  Save Faction
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Presets Browser Sub-Modal */}
-        {presetModalOpen && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/85">
-            <div className="w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl bg-[#091524] border border-sky-500/50 text-[#f5dfa0] shadow-2xl overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 bg-[#0f2034] border-b border-sky-500/20">
-                <div className="flex items-center gap-2">
-                  <Bookmark size={16} className="text-sky-300" />
-                  <h3 className="font-display font-bold text-sm text-[#bae6fd] uppercase">World Presets</h3>
-                </div>
-                <button onClick={() => setPresetModalOpen(false)} className="text-sky-300/80 hover:text-white">
-                  <X size={16} />
-                </button>
-              </div>
-
-              <div className="p-3 border-b border-sky-500/15 bg-[#0b1b2d]">
-                <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-sky-400/60" />
-                  <input
-                    type="text"
-                    value={presetSearch}
-                    onChange={(e) => setPresetSearch(e.target.value)}
-                    placeholder="Search world presets by name or genre..."
-                    className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-[#122238] border border-sky-500/30 text-xs text-[#bae6fd] outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
-                {filteredPresets.length === 0 ? (
-                  <div className="text-center py-6 text-xs text-sky-200/60">No matching world presets found.</div>
-                ) : (
-                  filteredPresets.map((t) => (
-                    <div
-                      key={t.id || t.name}
-                      className="p-3 rounded-xl bg-[#0e1d30] border border-sky-500/25 hover:border-sky-400/60 transition-all flex items-center justify-between gap-3"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="font-display font-bold text-xs text-sky-200 flex items-center gap-2">
-                          <span>{t.name}</span>
-                          {t.genreTone && (
-                            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">
-                              {t.genreTone}
-                            </span>
-                          )}
-                        </div>
-                        {t.conflict && (
-                          <p className="text-[11px] font-narrative text-[#93c5fd]/70 line-clamp-1 mt-0.5">
-                            {t.conflict}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-2 text-[9px] font-mono text-[#93c5fd]/60 mt-1">
-                          <span>📍 {t.locationsList?.length || 0} Sites</span>
-                          <span>🚩 {t.factionsList?.length || 0} Factions</span>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleLoadPreset(t)}
-                        className="px-3 py-1.5 rounded-lg bg-sky-400 hover:bg-sky-300 text-black font-display font-bold text-xs shrink-0 uppercase tracking-wider"
-                      >
-                        Load
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Footer */}
         <div className="flex items-center justify-between px-4 py-3 bg-[#0f2034] border-t border-sky-500/20">

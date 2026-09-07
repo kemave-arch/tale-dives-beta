@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Bookmark,
   Check,
   CheckCircle2,
-  Edit3,
+  ChevronDown,
   Flame,
   Plus,
   RotateCcw,
@@ -189,15 +189,19 @@ export default function ProtagonistNodeModal({
     setTimeout(() => setSaveToast(null), 2000)
   }
 
-  const filteredPresets = protagonistTemplates.filter((t) => {
-    if (!presetSearch.trim()) return true
-    const q = presetSearch.toLowerCase()
-    return (
-      t.name.toLowerCase().includes(q) ||
-      (t.className || '').toLowerCase().includes(q) ||
-      (t.background || '').toLowerCase().includes(q)
-    )
-  })
+  const filteredPresets = useMemo(
+    () =>
+      protagonistTemplates.filter((t) => {
+        if (!presetSearch.trim()) return true
+        const q = presetSearch.toLowerCase()
+        return (
+          t.name.toLowerCase().includes(q) ||
+          (t.className || '').toLowerCase().includes(q) ||
+          (t.background || '').toLowerCase().includes(q)
+        )
+      }),
+    [protagonistTemplates, presetSearch]
+  )
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80">
@@ -248,6 +252,59 @@ export default function ProtagonistNodeModal({
           </div>
         )}
 
+        {/* Presets panel — slides into the normal document flow rather than
+            floating as a second full-screen dialog over this one; one
+            overlay layer instead of two. */}
+        {presetModalOpen && (
+          <div className="border-b border-amber-500/20 bg-[#140c22] flex flex-col max-h-64">
+            <div className="p-3 border-b border-amber-500/15 flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-400/60" />
+                <input
+                  type="text"
+                  value={presetSearch}
+                  onChange={(e) => setPresetSearch(e.target.value)}
+                  placeholder="Search presets..."
+                  className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-[#1b102e] border border-amber-500/30 text-xs text-[#fae5b5] outline-none"
+                />
+              </div>
+              <button onClick={() => setPresetModalOpen(false)} className="text-amber-300/80 hover:text-white shrink-0">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
+              {filteredPresets.length === 0 ? (
+                <div className="text-center py-6 text-xs text-amber-200/60">No matching presets found.</div>
+              ) : (
+                filteredPresets.map((t) => (
+                  <div
+                    key={t.id || t.name}
+                    className="p-3 rounded-xl bg-[#1e1333] border border-amber-500/25 hover:border-amber-400/60 transition-all flex items-center justify-between gap-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="font-display font-bold text-xs text-amber-200 flex items-center gap-2">
+                        <span>{t.name}</span>
+                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                          {t.className || (t.classId ? getClassById(t.classId).name : 'Hero')}
+                        </span>
+                      </div>
+                      {t.background && (
+                        <p className="text-[11px] font-narrative text-[#d8c49e]/70 line-clamp-1 mt-0.5">{t.background}</p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleLoadPreset(t)}
+                      className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-display font-bold text-xs shrink-0 uppercase tracking-wider"
+                    >
+                      Load
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Subtabs (Reorganized with Archetype & Skills, Identity, Personality) */}
         <div className="flex border-b border-amber-500/20 bg-[#140e22] px-3 pt-2 gap-2">
           {[
@@ -284,7 +341,7 @@ export default function ProtagonistNodeModal({
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="text-xs font-display font-semibold text-amber-200/90 flex items-center gap-1.5">
                     <Sparkles size={13} className="text-amber-300" />
-                    <span>Class & Archetype Presets</span>
+                    <span>Class</span>
                   </label>
                   <span className="text-[10px] font-mono text-amber-300/70">
                     Active: <strong>{data.className || currentClass.name}</strong>
@@ -351,15 +408,12 @@ export default function ProtagonistNodeModal({
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-display font-bold text-amber-200 flex items-center gap-1.5">
                       <Wand2 size={13} className="text-amber-300" />
-                      <span>Custom Class Configuration</span>
+                      <span>Custom Class</span>
                     </span>
-                    <span className="text-[10px] font-mono text-amber-300/70">Custom Discipline</span>
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">
-                      Custom Class Title *
-                    </label>
+                    <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">Class Name *</label>
                     <input
                       type="text"
                       value={customClassNameDraft}
@@ -390,12 +444,10 @@ export default function ProtagonistNodeModal({
               {/* Attributes Allocator */}
               <div className="space-y-2 p-3 rounded-xl bg-[#181126] border border-amber-500/20">
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-display font-semibold text-amber-200/90">
-                    Starting Attributes Point Buy
-                  </label>
+                  <label className="text-xs font-display font-semibold text-amber-200/90">Attributes</label>
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-mono text-amber-300">
-                      Points Remaining: <strong className="text-amber-100">{unassignedPoints}</strong> / {TOTAL_ASSIGNABLE_POINTS}
+                      Points: <strong className="text-amber-100">{unassignedPoints}</strong> / {TOTAL_ASSIGNABLE_POINTS}
                     </span>
                     <button
                       type="button"
@@ -446,7 +498,7 @@ export default function ProtagonistNodeModal({
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-display font-semibold text-amber-200/90 flex items-center gap-1.5">
                     <Flame size={13} className="text-amber-300" />
-                    <span>Starting Abilities & Spells</span>
+                    <span>Abilities</span>
                   </label>
                   <button
                     type="button"
@@ -458,47 +510,148 @@ export default function ProtagonistNodeModal({
                 </div>
 
                 <div className="space-y-2">
-                  {(data.startingSkills || []).map((skill, idx) => (
-                    <div key={idx} className="p-2.5 rounded-xl bg-[#181126] border border-amber-500/20 space-y-1.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <span className="font-display font-bold text-xs text-amber-200 truncate">
-                            {skill.name || 'Unnamed Ability'}
-                          </span>
-                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">
-                            {skill.skillType || 'Active'}
-                          </span>
-                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">
-                            {skill.tier || 'Novice'}
-                          </span>
-                          {((skill.stCost || 0) > 0 || (skill.mpCost || 0) > 0) && (
-                            <span className="text-[9px] font-mono text-emerald-300 shrink-0">
-                              {skill.stCost ? `${skill.stCost} ST` : ''} {skill.mpCost ? `${skill.mpCost} MP` : ''}
+                  {(data.startingSkills || []).map((skill, idx) => {
+                    const expanded = editingSkillIdx === idx
+                    return (
+                      <div key={idx} className="rounded-xl bg-[#181126] border border-amber-500/20 overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => setEditingSkillIdx(expanded ? null : idx)}
+                          className="w-full p-2.5 flex items-center justify-between gap-2 text-left"
+                        >
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <span className="font-display font-bold text-xs text-amber-200 truncate">
+                              {skill.name || 'Unnamed Ability'}
                             </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => setEditingSkillIdx(idx)}
-                            className="flex items-center gap-1 text-[11px] font-display font-semibold text-amber-300 hover:text-amber-200 px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/30"
-                          >
-                            <Edit3 size={11} /> Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveSkill(idx)}
-                            className="text-red-400 hover:text-red-300 p-1"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
+                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">
+                              {skill.skillType || 'Active'}
+                            </span>
+                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">
+                              {skill.tier || 'Novice'}
+                            </span>
+                            {((skill.stCost || 0) > 0 || (skill.mpCost || 0) > 0) && (
+                              <span className="text-[9px] font-mono text-emerald-300 shrink-0">
+                                {skill.stCost ? `${skill.stCost} ST` : ''} {skill.mpCost ? `${skill.mpCost} MP` : ''}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <span
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleRemoveSkill(idx)
+                              }}
+                              className="text-red-400 hover:text-red-300 p-1"
+                            >
+                              <Trash2 size={13} />
+                            </span>
+                            <ChevronDown
+                              size={15}
+                              className={`text-amber-300/80 transition-transform ${expanded ? 'rotate-180' : ''}`}
+                            />
+                          </div>
+                        </button>
+
+                        {!expanded && skill.description && (
+                          <p className="px-2.5 pb-2 text-xs font-narrative text-[#d8c49e]/80 line-clamp-1">
+                            {skill.description}
+                          </p>
+                        )}
+
+                        {/* Inline editor — was a stacked full-screen sub-modal;
+                            expanding in place avoids a second overlay layer
+                            on top of this already-open form. */}
+                        {expanded && (
+                          <div className="p-2.5 pt-0 space-y-2.5 text-xs border-t border-amber-500/20">
+                            <div>
+                              <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">Name *</label>
+                              <input
+                                type="text"
+                                value={skill.name}
+                                onChange={(e) => handleUpdateSkill(idx, { name: e.target.value })}
+                                placeholder="e.g. Lightning Strike, Shadow Step"
+                                className="w-full px-3 py-1.5 rounded-xl bg-[#221735] border border-amber-500/30 text-amber-100 outline-none"
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">Type</label>
+                                <select
+                                  value={skill.skillType || 'Active'}
+                                  onChange={(e) => handleUpdateSkill(idx, { skillType: e.target.value })}
+                                  className="w-full px-2 py-1.5 rounded-xl bg-[#221735] border border-amber-500/30 text-amber-100 outline-none"
+                                >
+                                  <option value="Active">Active</option>
+                                  <option value="Spell">Spell</option>
+                                  <option value="Martial">Martial</option>
+                                  <option value="Passive">Passive</option>
+                                  <option value="Utility">Utility</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">Tier</label>
+                                <select
+                                  value={skill.tier || 'Novice'}
+                                  onChange={(e) => handleUpdateSkill(idx, { tier: e.target.value })}
+                                  className="w-full px-2 py-1.5 rounded-xl bg-[#221735] border border-amber-500/30 text-amber-100 outline-none"
+                                >
+                                  <option value="Novice">Novice</option>
+                                  <option value="Adept">Adept</option>
+                                  <option value="Expert">Expert</option>
+                                  <option value="Master">Master</option>
+                                  <option value="Innate">Innate</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">ST Cost</label>
+                                <input
+                                  type="number"
+                                  value={skill.stCost ?? 0}
+                                  onChange={(e) => handleUpdateSkill(idx, { stCost: Number(e.target.value) })}
+                                  className="w-full px-3 py-1.5 rounded-xl bg-[#221735] border border-amber-500/30 text-amber-100 outline-none"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">MP Cost</label>
+                                <input
+                                  type="number"
+                                  value={skill.mpCost ?? 0}
+                                  onChange={(e) => handleUpdateSkill(idx, { mpCost: Number(e.target.value) })}
+                                  className="w-full px-3 py-1.5 rounded-xl bg-[#221735] border border-amber-500/30 text-amber-100 outline-none"
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">Description</label>
+                              <textarea
+                                rows={2}
+                                value={skill.description || ''}
+                                onChange={(e) => handleUpdateSkill(idx, { description: e.target.value })}
+                                placeholder="Mechanical combat effect, range, impact..."
+                                className="w-full px-3 py-1.5 rounded-xl bg-[#221735] border border-amber-500/30 text-xs font-narrative text-amber-100 outline-none resize-none"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">Flavor Quote</label>
+                              <input
+                                type="text"
+                                value={skill.flavorText || ''}
+                                onChange={(e) => handleUpdateSkill(idx, { flavorText: e.target.value })}
+                                placeholder="e.g. 'A single arc of lightning clears the horizon.'"
+                                className="w-full px-3 py-1.5 rounded-xl bg-[#221735] border border-amber-500/30 text-xs italic font-narrative text-amber-200/80 outline-none"
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      {skill.description && (
-                        <p className="text-xs font-narrative text-[#d8c49e]/80 line-clamp-1">{skill.description}</p>
-                      )}
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             </div>
@@ -508,9 +661,7 @@ export default function ProtagonistNodeModal({
           {subTab === 'identity' && (
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">
-                  Protagonist Name *
-                </label>
+                <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">Name *</label>
                 <input
                   type="text"
                   value={data.name}
@@ -522,9 +673,7 @@ export default function ProtagonistNodeModal({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">
-                    Gender / Pronouns
-                  </label>
+                  <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">Gender</label>
                   <input
                     type="text"
                     value={data.gender || ''}
@@ -545,9 +694,7 @@ export default function ProtagonistNodeModal({
               </div>
 
               <div>
-                <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">
-                  Origin & Background
-                </label>
+                <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">Background</label>
                 <textarea
                   rows={3}
                   value={data.background || ''}
@@ -558,9 +705,7 @@ export default function ProtagonistNodeModal({
               </div>
 
               <div>
-                <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">
-                  Key Heirloom or Starting Item (Optional)
-                </label>
+                <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">Key Item</label>
                 <input
                   type="text"
                   value={data.keyItem || ''}
@@ -576,9 +721,7 @@ export default function ProtagonistNodeModal({
           {subTab === 'personality' && (
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">
-                  Personality & Demeanor
-                </label>
+                <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">Personality</label>
                 <textarea
                   rows={2}
                   value={data.personality || ''}
@@ -589,9 +732,7 @@ export default function ProtagonistNodeModal({
               </div>
 
               <div>
-                <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">
-                  Core Motivation / Want
-                </label>
+                <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">Motivation</label>
                 <textarea
                   rows={2}
                   value={data.motivation || ''}
@@ -602,9 +743,7 @@ export default function ProtagonistNodeModal({
               </div>
 
               <div>
-                <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">
-                  Physical Trait or Flaw
-                </label>
+                <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">Trait</label>
                 <input
                   type="text"
                   value={data.physicalTrait || ''}
@@ -615,9 +754,7 @@ export default function ProtagonistNodeModal({
               </div>
 
               <div>
-                <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">
-                  Hidden Secret (Narrative Hook)
-                </label>
+                <label className="block text-xs font-display font-semibold text-amber-200/90 mb-1">Secret</label>
                 <textarea
                   rows={2}
                   value={data.secret || ''}
@@ -629,182 +766,6 @@ export default function ProtagonistNodeModal({
             </div>
           )}
         </div>
-
-        {/* Sub-Editor Modal for Skill */}
-        {editingSkillIdx !== null && data.startingSkills?.[editingSkillIdx] && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/80">
-            <div className="w-full max-w-md p-4 rounded-2xl bg-[#1a1228] border border-amber-500/40 text-[#f5dfa0] space-y-3 shadow-2xl">
-              <div className="flex items-center justify-between border-b border-amber-500/20 pb-2">
-                <h3 className="font-display font-bold text-xs uppercase text-amber-200 flex items-center gap-1.5">
-                  <Edit3 size={13} /> Ability Forge Editor
-                </h3>
-                <button onClick={() => setEditingSkillIdx(null)} className="text-amber-300/80 hover:text-white">
-                  <X size={16} />
-                </button>
-              </div>
-
-              <div className="space-y-2.5 text-xs">
-                <div>
-                  <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">Ability Name *</label>
-                  <input
-                    type="text"
-                    value={data.startingSkills[editingSkillIdx].name}
-                    onChange={(e) => handleUpdateSkill(editingSkillIdx, { name: e.target.value })}
-                    placeholder="e.g. Lightning Strike, Shadow Step"
-                    className="w-full px-3 py-1.5 rounded-xl bg-[#221735] border border-amber-500/30 text-amber-100 outline-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">Skill Type</label>
-                    <select
-                      value={data.startingSkills[editingSkillIdx].skillType || 'Active'}
-                      onChange={(e) => handleUpdateSkill(editingSkillIdx, { skillType: e.target.value })}
-                      className="w-full px-2 py-1.5 rounded-xl bg-[#221735] border border-amber-500/30 text-amber-100 outline-none"
-                    >
-                      <option value="Active">Active</option>
-                      <option value="Spell">Spell</option>
-                      <option value="Martial">Martial</option>
-                      <option value="Passive">Passive</option>
-                      <option value="Utility">Utility</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">Progression Tier</label>
-                    <select
-                      value={data.startingSkills[editingSkillIdx].tier || 'Novice'}
-                      onChange={(e) => handleUpdateSkill(editingSkillIdx, { tier: e.target.value })}
-                      className="w-full px-2 py-1.5 rounded-xl bg-[#221735] border border-amber-500/30 text-amber-100 outline-none"
-                    >
-                      <option value="Novice">Novice</option>
-                      <option value="Adept">Adept</option>
-                      <option value="Expert">Expert</option>
-                      <option value="Master">Master</option>
-                      <option value="Innate">Innate</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">Stamina Cost (ST)</label>
-                    <input
-                      type="number"
-                      value={data.startingSkills[editingSkillIdx].stCost ?? 0}
-                      onChange={(e) => handleUpdateSkill(editingSkillIdx, { stCost: Number(e.target.value) })}
-                      className="w-full px-3 py-1.5 rounded-xl bg-[#221735] border border-amber-500/30 text-amber-100 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">Mana Cost (MP)</label>
-                    <input
-                      type="number"
-                      value={data.startingSkills[editingSkillIdx].mpCost ?? 0}
-                      onChange={(e) => handleUpdateSkill(editingSkillIdx, { mpCost: Number(e.target.value) })}
-                      className="w-full px-3 py-1.5 rounded-xl bg-[#221735] border border-amber-500/30 text-amber-100 outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">Mechanical Description</label>
-                  <textarea
-                    rows={2}
-                    value={data.startingSkills[editingSkillIdx].description || ''}
-                    onChange={(e) => handleUpdateSkill(editingSkillIdx, { description: e.target.value })}
-                    placeholder="Mechanical combat effect, range, impact..."
-                    className="w-full px-3 py-1.5 rounded-xl bg-[#221735] border border-amber-500/30 text-xs font-narrative text-amber-100 outline-none resize-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-mono text-amber-300/80 uppercase mb-1">Evocative Flavor Quote</label>
-                  <input
-                    type="text"
-                    value={data.startingSkills[editingSkillIdx].flavorText || ''}
-                    onChange={(e) => handleUpdateSkill(editingSkillIdx, { flavorText: e.target.value })}
-                    placeholder="e.g. 'A single arc of lightning clears the horizon.'"
-                    className="w-full px-3 py-1.5 rounded-xl bg-[#221735] border border-amber-500/30 text-xs italic font-narrative text-amber-200/80 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-2 border-t border-amber-500/20">
-                <button
-                  type="button"
-                  onClick={() => setEditingSkillIdx(null)}
-                  className="px-4 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-display font-bold text-xs uppercase"
-                >
-                  Save Ability
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Presets Browser Sub-Modal */}
-        {presetModalOpen && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/85">
-            <div className="w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl bg-[#170f26] border border-amber-500/50 text-[#f5dfa0] shadow-2xl overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 bg-[#1e1333] border-b border-amber-500/20">
-                <div className="flex items-center gap-2">
-                  <Bookmark size={16} className="text-amber-300" />
-                  <h3 className="font-display font-bold text-sm text-[#fae5b5] uppercase">Protagonist Presets</h3>
-                </div>
-                <button onClick={() => setPresetModalOpen(false)} className="text-amber-300/80 hover:text-white">
-                  <X size={16} />
-                </button>
-              </div>
-
-              <div className="p-3 border-b border-amber-500/15 bg-[#140c22]">
-                <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-400/60" />
-                  <input
-                    type="text"
-                    value={presetSearch}
-                    onChange={(e) => setPresetSearch(e.target.value)}
-                    placeholder="Search hero presets by name or archetype..."
-                    className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-[#1b102e] border border-amber-500/30 text-xs text-[#fae5b5] outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
-                {filteredPresets.length === 0 ? (
-                  <div className="text-center py-6 text-xs text-amber-200/60">No matching presets found.</div>
-                ) : (
-                  filteredPresets.map((t) => (
-                    <div
-                      key={t.id || t.name}
-                      className="p-3 rounded-xl bg-[#1e1333] border border-amber-500/25 hover:border-amber-400/60 transition-all flex items-center justify-between gap-3"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="font-display font-bold text-xs text-amber-200 flex items-center gap-2">
-                          <span>{t.name}</span>
-                          <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                            {t.className || (t.classId ? getClassById(t.classId).name : 'Hero')}
-                          </span>
-                        </div>
-                        {t.background && (
-                          <p className="text-[11px] font-narrative text-[#d8c49e]/70 line-clamp-1 mt-0.5">
-                            {t.background}
-                          </p>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => handleLoadPreset(t)}
-                        className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-display font-bold text-xs shrink-0 uppercase tracking-wider"
-                      >
-                        Load
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Footer */}
         <div className="flex items-center justify-between px-4 py-3 bg-[#181126] border-t border-amber-500/20">

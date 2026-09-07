@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   BookOpen,
   Bookmark,
@@ -121,16 +121,20 @@ export default function NarrativeNodeModal({
     saveCustomPresetsToStorage(updated)
   }
 
-  const allPresets = [...customPresets, ...BUILTIN_NARRATIVE_PRESETS]
-  const filteredPresets = allPresets.filter((p) => {
-    if (!presetSearch.trim()) return true
-    const q = presetSearch.toLowerCase()
-    return (
-      p.name.toLowerCase().includes(q) ||
-      p.description.toLowerCase().includes(q) ||
-      p.openingHook.toLowerCase().includes(q)
-    )
-  })
+  const allPresets = useMemo(() => [...customPresets, ...BUILTIN_NARRATIVE_PRESETS], [customPresets])
+  const filteredPresets = useMemo(
+    () =>
+      allPresets.filter((p) => {
+        if (!presetSearch.trim()) return true
+        const q = presetSearch.toLowerCase()
+        return (
+          p.name.toLowerCase().includes(q) ||
+          p.description.toLowerCase().includes(q) ||
+          p.openingHook.toLowerCase().includes(q)
+        )
+      }),
+    [allPresets, presetSearch]
+  )
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80">
@@ -181,13 +185,123 @@ export default function NarrativeNodeModal({
             </div>
           )}
 
+        {/* Presets panel — inline slide-down instead of a second full-screen
+            dialog stacked over this one. */}
+        {presetModalOpen && (
+          <div className="border-b border-purple-500/20 bg-[#180e2a] flex flex-col max-h-64">
+            <div className="p-3 border-b border-purple-500/15 flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-400/60" />
+                <input
+                  type="text"
+                  value={presetSearch}
+                  onChange={(e) => setPresetSearch(e.target.value)}
+                  placeholder="Search presets..."
+                  className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-[#1f1337] border border-purple-500/30 text-xs text-[#e9d5ff] outline-none"
+                />
+              </div>
+              <button onClick={() => setPresetModalOpen(false)} className="text-purple-300/80 hover:text-white shrink-0">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
+              {filteredPresets.length === 0 ? (
+                <div className="text-center py-6 text-xs text-purple-200/60">No matching presets found.</div>
+              ) : (
+                filteredPresets.map((preset) => (
+                  <div
+                    key={preset.id}
+                    className="p-3 rounded-xl bg-[#1e1433] border border-purple-500/25 hover:border-purple-400/60 transition-all flex items-center justify-between gap-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="font-display font-bold text-xs text-purple-200 flex items-center gap-2">
+                        <span>{preset.name}</span>
+                        {preset.isCustom && (
+                          <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            Custom
+                          </span>
+                        )}
+                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                          {preset.combatMode}
+                        </span>
+                      </div>
+                      <p className="text-[11px] font-narrative text-[#d8b4fe]/80 line-clamp-2 mt-0.5">{preset.openingHook}</p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {preset.isCustom && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteCustomPreset(preset.id, e)}
+                          className="p-1.5 text-red-400 hover:text-red-300"
+                          title="Delete custom preset"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleLoadPreset(preset)}
+                        className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 text-white font-display font-bold text-xs uppercase tracking-wider"
+                      >
+                        Load
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Save Preset panel — inline slide-down instead of a stacked dialog. */}
+        {savePresetModalOpen && (
+          <div className="border-b border-purple-500/20 bg-[#180e2a] p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="font-display font-bold text-xs uppercase text-purple-200 flex items-center gap-1.5">
+                <Save size={13} /> Save Preset
+              </h3>
+              <button onClick={() => setSavePresetModalOpen(false)} className="text-purple-300/80 hover:text-white">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="space-y-2 text-xs">
+              <div>
+                <label className="block text-[10px] font-mono text-purple-300/80 uppercase mb-1">Title *</label>
+                <input
+                  type="text"
+                  value={presetNameDraft}
+                  onChange={(e) => setPresetNameDraft(e.target.value)}
+                  placeholder="e.g. Academy Crucible Hook"
+                  className="w-full px-3 py-1.5 rounded-xl bg-[#1e1433] border border-purple-500/30 text-purple-100 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-mono text-purple-300/80 uppercase mb-1">Description</label>
+                <input
+                  type="text"
+                  value={presetDescDraft}
+                  onChange={(e) => setPresetDescDraft(e.target.value)}
+                  placeholder="e.g. High tension opening trial with visceral sensory cues."
+                  className="w-full px-3 py-1.5 rounded-xl bg-[#1e1433] border border-purple-500/30 text-purple-100 outline-none"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end pt-1">
+              <button
+                type="button"
+                onClick={handleSaveCurrentPreset}
+                className="px-4 py-1.5 rounded-xl bg-purple-500 hover:bg-purple-400 text-white font-display font-bold text-xs uppercase"
+              >
+                Save Preset
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Content Area */}
         <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-display font-semibold text-purple-200/90">
-                Tale Title *
-              </label>
+              <label className="text-xs font-display font-semibold text-purple-200/90">Title *</label>
               {existingTitles.includes(data.title.trim()) && (
                 <span className="text-[10px] text-amber-300 font-mono">Title already exists in your vault</span>
               )}
@@ -202,9 +316,7 @@ export default function NarrativeNodeModal({
           </div>
 
           <div>
-            <label className="block text-xs font-display font-semibold text-purple-200/90 mb-1">
-              Where do you dive in? (Opening Scene Hook)
-            </label>
+            <label className="block text-xs font-display font-semibold text-purple-200/90 mb-1">Opening Scene</label>
             <textarea
               rows={3}
               value={data.opening}
@@ -215,9 +327,7 @@ export default function NarrativeNodeModal({
           </div>
 
           <div>
-            <label className="block text-xs font-display font-semibold text-purple-200/90 mb-1">
-              Narrator Tone & Voice Directives
-            </label>
+            <label className="block text-xs font-display font-semibold text-purple-200/90 mb-1">Narration Style</label>
             <textarea
               rows={2}
               value={data.narrationStyle}
@@ -228,9 +338,7 @@ export default function NarrativeNodeModal({
           </div>
 
           <div>
-            <label className="block text-xs font-display font-semibold text-purple-200/90 mb-1">
-              Combat Resolution Engine
-            </label>
+            <label className="block text-xs font-display font-semibold text-purple-200/90 mb-1">Combat Mode</label>
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
@@ -264,133 +372,6 @@ export default function NarrativeNodeModal({
             </div>
           </div>
         </div>
-
-        {/* Presets Browser Sub-Modal */}
-        {presetModalOpen && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/85">
-            <div className="w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl bg-[#150d24] border border-purple-500/50 text-[#f5dfa0] shadow-2xl overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 bg-[#1d1232] border-b border-purple-500/20">
-                <div className="flex items-center gap-2">
-                  <Bookmark size={16} className="text-purple-300" />
-                  <h3 className="font-display font-bold text-sm text-[#e9d5ff] uppercase">Narrative Presets</h3>
-                </div>
-                <button onClick={() => setPresetModalOpen(false)} className="text-purple-300/80 hover:text-white">
-                  <X size={16} />
-                </button>
-              </div>
-
-              <div className="p-3 border-b border-purple-500/15 bg-[#180e2a]">
-                <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-400/60" />
-                  <input
-                    type="text"
-                    value={presetSearch}
-                    onChange={(e) => setPresetSearch(e.target.value)}
-                    placeholder="Search narrative presets by name or opening..."
-                    className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-[#1f1337] border border-purple-500/30 text-xs text-[#e9d5ff] outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
-                {filteredPresets.length === 0 ? (
-                  <div className="text-center py-6 text-xs text-purple-200/60">No matching presets found.</div>
-                ) : (
-                  filteredPresets.map((preset) => (
-                    <div
-                      key={preset.id}
-                      className="p-3 rounded-xl bg-[#1e1433] border border-purple-500/25 hover:border-purple-400/60 transition-all flex items-center justify-between gap-3"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="font-display font-bold text-xs text-purple-200 flex items-center gap-2">
-                          <span>{preset.name}</span>
-                          {preset.isCustom && (
-                            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                              Custom
-                            </span>
-                          )}
-                          <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                            {preset.combatMode}
-                          </span>
-                        </div>
-                        <p className="text-[11px] font-narrative text-[#d8b4fe]/80 line-clamp-2 mt-0.5">
-                          {preset.openingHook}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        {preset.isCustom && (
-                          <button
-                            type="button"
-                            onClick={(e) => handleDeleteCustomPreset(preset.id, e)}
-                            className="p-1.5 text-red-400 hover:text-red-300"
-                            title="Delete custom preset"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleLoadPreset(preset)}
-                          className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 text-white font-display font-bold text-xs uppercase tracking-wider"
-                        >
-                          Load
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Save Preset Modal */}
-        {savePresetModalOpen && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/85">
-            <div className="w-full max-w-sm p-4 rounded-2xl bg-[#150d24] border border-purple-500/50 text-[#f5dfa0] shadow-2xl space-y-3">
-              <div className="flex items-center justify-between border-b border-purple-500/20 pb-2">
-                <h3 className="font-display font-bold text-xs uppercase text-purple-200 flex items-center gap-1.5">
-                  <Save size={13} /> Save Narrative Preset
-                </h3>
-                <button onClick={() => setSavePresetModalOpen(false)} className="text-purple-300/80 hover:text-white">
-                  <X size={16} />
-                </button>
-              </div>
-
-              <div className="space-y-2 text-xs">
-                <div>
-                  <label className="block text-[10px] font-mono text-purple-300/80 uppercase mb-1">Preset Title *</label>
-                  <input
-                    type="text"
-                    value={presetNameDraft}
-                    onChange={(e) => setPresetNameDraft(e.target.value)}
-                    placeholder="e.g. Academy Crucible Hook"
-                    className="w-full px-3 py-1.5 rounded-xl bg-[#1e1433] border border-purple-500/30 text-purple-100 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-mono text-purple-300/80 uppercase mb-1">Description</label>
-                  <input
-                    type="text"
-                    value={presetDescDraft}
-                    onChange={(e) => setPresetDescDraft(e.target.value)}
-                    placeholder="e.g. High tension opening trial with visceral sensory cues."
-                    className="w-full px-3 py-1.5 rounded-xl bg-[#1e1433] border border-purple-500/30 text-purple-100 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-2 border-t border-purple-500/20">
-                <button
-                  type="button"
-                  onClick={handleSaveCurrentPreset}
-                  className="px-4 py-1.5 rounded-xl bg-purple-500 hover:bg-purple-400 text-white font-display font-bold text-xs uppercase"
-                >
-                  Save Preset
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Footer */}
         <div className="flex items-center justify-between px-4 py-3 bg-[#1d1232] border-t border-purple-500/20">

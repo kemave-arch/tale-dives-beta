@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Bookmark,
   CheckCircle2,
-  Edit3,
+  ChevronDown,
   Plus,
   Save,
   Search,
@@ -126,16 +126,20 @@ export default function NpcNodeModal({
     saveCustomPacksToStorage(updated)
   }
 
-  const allPacks = [...customPacks, ...BUILTIN_CAST_PACKS]
-  const filteredPacks = allPacks.filter((p) => {
-    if (!packSearch.trim()) return true
-    const q = packSearch.toLowerCase()
-    return (
-      p.name.toLowerCase().includes(q) ||
-      p.description.toLowerCase().includes(q) ||
-      (p.worldTheme || '').toLowerCase().includes(q)
-    )
-  })
+  const allPacks = useMemo(() => [...customPacks, ...BUILTIN_CAST_PACKS], [customPacks])
+  const filteredPacks = useMemo(
+    () =>
+      allPacks.filter((p) => {
+        if (!packSearch.trim()) return true
+        const q = packSearch.toLowerCase()
+        return (
+          p.name.toLowerCase().includes(q) ||
+          p.description.toLowerCase().includes(q) ||
+          (p.worldTheme || '').toLowerCase().includes(q)
+        )
+      }),
+    [allPacks, packSearch]
+  )
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80">
@@ -187,6 +191,124 @@ export default function NpcNodeModal({
           </div>
         )}
 
+        {/* Pack Presets panel — inline slide-down instead of a second
+            full-screen dialog stacked over this one. */}
+        {packModalOpen && (
+          <div className="border-b border-emerald-500/20 bg-[#0b2017] flex flex-col max-h-64">
+            <div className="p-3 border-b border-emerald-500/15 flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400/60" />
+                <input
+                  type="text"
+                  value={packSearch}
+                  onChange={(e) => setPackSearch(e.target.value)}
+                  placeholder="Search cast packs..."
+                  className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-[#113325] border border-emerald-500/30 text-xs text-[#a7f3d0] outline-none"
+                />
+              </div>
+              <button onClick={() => setPackModalOpen(false)} className="text-emerald-300/80 hover:text-white shrink-0">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
+              {filteredPacks.length === 0 ? (
+                <div className="text-center py-6 text-xs text-emerald-200/60">No matching cast packs found.</div>
+              ) : (
+                filteredPacks.map((pack) => (
+                  <div
+                    key={pack.id}
+                    className="p-3 rounded-xl bg-[#0e2a1f] border border-emerald-500/25 hover:border-emerald-400/60 transition-all flex items-center justify-between gap-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="font-display font-bold text-xs text-emerald-200 flex items-center gap-2">
+                        <span>{pack.name}</span>
+                        {pack.isCustom && (
+                          <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            Custom
+                          </span>
+                        )}
+                        {pack.worldTheme && (
+                          <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            {pack.worldTheme}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] font-narrative text-[#6ee7b7]/70 line-clamp-1 mt-0.5">{pack.description}</p>
+                      <div className="flex items-center gap-2 text-[9px] font-mono text-emerald-300/60 mt-1">
+                        <span>👥 {pack.npcs.length} Characters:</span>
+                        <span className="truncate">{pack.npcs.map((n) => n.name).join(', ')}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {pack.isCustom && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteCustomPack(pack.id, e)}
+                          className="p-1.5 text-red-400 hover:text-red-300"
+                          title="Delete custom pack"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleLoadPack(pack)}
+                        className="px-3 py-1.5 rounded-lg bg-emerald-400 hover:bg-emerald-300 text-black font-display font-bold text-xs uppercase tracking-wider"
+                      >
+                        Load
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Save Pack panel — inline slide-down instead of a stacked dialog. */}
+        {savePackModalOpen && (
+          <div className="border-b border-emerald-500/20 bg-[#0b2017] p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="font-display font-bold text-xs uppercase text-emerald-200 flex items-center gap-1.5">
+                <Save size={13} /> Save Pack
+              </h3>
+              <button onClick={() => setSavePackModalOpen(false)} className="text-emerald-300/80 hover:text-white">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="space-y-2 text-xs">
+              <div>
+                <label className="block text-[10px] font-mono text-emerald-300/80 uppercase mb-1">Title *</label>
+                <input
+                  type="text"
+                  value={packNameDraft}
+                  onChange={(e) => setPackNameDraft(e.target.value)}
+                  placeholder={`e.g. ${worldName || 'High Fantasy'} Vanguard`}
+                  className="w-full px-3 py-1.5 rounded-xl bg-[#113325] border border-emerald-500/30 text-emerald-100 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-mono text-emerald-300/80 uppercase mb-1">Summary</label>
+                <input
+                  type="text"
+                  value={packDescDraft}
+                  onChange={(e) => setPackDescDraft(e.target.value)}
+                  placeholder="e.g. A balanced squad of 3 frontliners and companions."
+                  className="w-full px-3 py-1.5 rounded-xl bg-[#113325] border border-emerald-500/30 text-emerald-100 outline-none"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end pt-1">
+              <button
+                type="button"
+                onClick={handleSaveCurrentPack}
+                className="px-4 py-1.5 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-black font-display font-bold text-xs uppercase"
+              >
+                Save Pack
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Action bar */}
         <div className="px-4 py-2 bg-[#0b2017] border-b border-emerald-500/15 flex items-center justify-between">
           <span className="text-xs font-display text-[#6ee7b7]/80">{list.length} Starting Cast Members</span>
@@ -211,353 +333,206 @@ export default function NpcNodeModal({
               </button>
             </div>
           ) : (
-            list.map((npc, idx) => (
-              <div
-                key={npc.id || idx}
-                className="p-3 rounded-xl bg-[#0e2a1f] border border-emerald-500/25 space-y-2 transition-all hover:border-emerald-400/50"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <span className="font-display font-bold text-xs text-emerald-200 truncate">
-                      {npc.name || 'Unnamed NPC'}
-                    </span>
-                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
-                      {npc.role || 'Ally'}
-                    </span>
-                    <span
-                      className={`text-[9px] font-mono px-1.5 py-0.5 rounded border shrink-0 ${
-                        npc.attitude === 'hostile' || npc.attitude === 'rival'
-                          ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
-                          : npc.attitude === 'allied' || npc.attitude === 'friendly'
-                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                          : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                      }`}
-                    >
-                      {npc.attitude}
-                    </span>
-                  </div>
+            list.map((npc, idx) => {
+              const expanded = editingNpcIdx === idx
+              return (
+                <div
+                  key={npc.id || idx}
+                  className="rounded-xl bg-[#0e2a1f] border border-emerald-500/25 transition-all hover:border-emerald-400/50 overflow-hidden"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setEditingNpcIdx(expanded ? null : idx)}
+                    className="w-full p-3 flex items-center justify-between gap-2 text-left"
+                  >
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className="font-display font-bold text-xs text-emerald-200 truncate">
+                        {npc.name || 'Unnamed NPC'}
+                      </span>
+                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
+                        {npc.role || 'Ally'}
+                      </span>
+                      <span
+                        className={`text-[9px] font-mono px-1.5 py-0.5 rounded border shrink-0 ${
+                          npc.attitude === 'hostile' || npc.attitude === 'rival'
+                            ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                            : npc.attitude === 'allied' || npc.attitude === 'friendly'
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                            : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                        }`}
+                      >
+                        {npc.attitude}
+                      </span>
+                    </div>
 
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setEditingNpcIdx(idx)}
-                      className="flex items-center gap-1 text-[11px] font-display font-semibold text-emerald-300 hover:text-emerald-200 px-2 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/30"
-                    >
-                      <Edit3 size={11} /> Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveNpc(idx)}
-                      className="text-red-400 hover:text-red-300 p-1"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleRemoveNpc(idx)
+                        }}
+                        className="text-red-400 hover:text-red-300 p-1"
+                      >
+                        <Trash2 size={13} />
+                      </span>
+                      <ChevronDown
+                        size={15}
+                        className={`text-emerald-300/80 transition-transform ${expanded ? 'rotate-180' : ''}`}
+                      />
+                    </div>
+                  </button>
 
-                {/* Bonds and summary */}
-                <div className="flex items-center justify-between text-[10px] font-mono text-emerald-300/80 pt-1 border-t border-emerald-500/15">
-                  <span>
-                    Affection: <strong className="text-emerald-200">{npc.affection ?? 50}</strong>
-                  </span>
-                  <span>
-                    Trust: <strong className="text-emerald-200">{npc.trust ?? 50}</strong>
-                  </span>
-                  {npc.heldWeapon && (
-                    <span className="truncate max-w-[140px] text-[#d8c49e]/80">🗡️ {npc.heldWeapon}</span>
+                  {!expanded && (
+                    <div className="px-3 pb-2.5 flex items-center justify-between text-[10px] font-mono text-emerald-300/80 pt-1 border-t border-emerald-500/15">
+                      <span>
+                        Affection: <strong className="text-emerald-200">{npc.affection ?? 50}</strong>
+                      </span>
+                      <span>
+                        Trust: <strong className="text-emerald-200">{npc.trust ?? 50}</strong>
+                      </span>
+                      {npc.heldWeapon && (
+                        <span className="truncate max-w-[140px] text-[#d8c49e]/80">🗡️ {npc.heldWeapon}</span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Inline dossier editor — was a stacked full-screen
+                      sub-modal; expanding in place avoids a second overlay
+                      layer on top of this already-open form. */}
+                  {expanded && (
+                    <div className="p-3 pt-0 space-y-2.5 text-xs border-t border-emerald-500/20">
+                      <div>
+                        <label className="block text-[10px] font-mono text-emerald-300/80 uppercase mb-1">Name *</label>
+                        <input
+                          type="text"
+                          value={npc.name}
+                          onChange={(e) => handleUpdateNpc(idx, { name: e.target.value })}
+                          placeholder="e.g. Xaden Riorson, Liam Mairi"
+                          className="w-full px-3 py-1.5 rounded-xl bg-[#133527] border border-emerald-500/30 text-emerald-100 outline-none"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[10px] font-mono text-emerald-300/80 uppercase mb-1">Role</label>
+                          <input
+                            type="text"
+                            value={npc.role || ''}
+                            onChange={(e) => handleUpdateNpc(idx, { role: e.target.value })}
+                            placeholder="e.g. Wingleader, Cadet, Mentor"
+                            className="w-full px-2 py-1.5 rounded-xl bg-[#133527] border border-emerald-500/30 text-emerald-100 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-mono text-emerald-300/80 uppercase mb-1">Attitude</label>
+                          <select
+                            value={npc.attitude}
+                            onChange={(e) => handleUpdateNpc(idx, { attitude: e.target.value as any })}
+                            className="w-full px-2 py-1.5 rounded-xl bg-[#133527] border border-emerald-500/30 text-emerald-100 outline-none"
+                          >
+                            <option value="allied">Allied</option>
+                            <option value="friendly">Friendly</option>
+                            <option value="neutral">Neutral</option>
+                            <option value="rival">Rival</option>
+                            <option value="hostile">Hostile</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Bonds Sliders */}
+                      <div className="grid grid-cols-2 gap-3 p-2.5 rounded-xl bg-[#091b13] border border-emerald-500/20">
+                        <div>
+                          <div className="flex justify-between text-[10px] font-mono text-emerald-300/80 uppercase mb-1">
+                            <span>Affection</span>
+                            <span className="font-bold text-emerald-200">{npc.affection}</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            value={npc.affection}
+                            onChange={(e) => handleUpdateNpc(idx, { affection: Number(e.target.value) })}
+                            className="w-full accent-emerald-400 h-1.5 bg-emerald-950 rounded cursor-pointer"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex justify-between text-[10px] font-mono text-emerald-300/80 uppercase mb-1">
+                            <span>Trust</span>
+                            <span className="font-bold text-emerald-200">{npc.trust}</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            value={npc.trust}
+                            onChange={(e) => handleUpdateNpc(idx, { trust: Number(e.target.value) })}
+                            className="w-full accent-emerald-400 h-1.5 bg-emerald-950 rounded cursor-pointer"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[10px] font-mono text-emerald-300/80 uppercase mb-1">Weapon</label>
+                          <input
+                            type="text"
+                            value={npc.heldWeapon || ''}
+                            onChange={(e) => handleUpdateNpc(idx, { heldWeapon: e.target.value })}
+                            placeholder="e.g. Broadsword, Daggers"
+                            className="w-full px-2 py-1.5 rounded-xl bg-[#133527] border border-emerald-500/30 text-emerald-100 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-mono text-emerald-300/80 uppercase mb-1">Armor</label>
+                          <input
+                            type="text"
+                            value={npc.wornArmor || ''}
+                            onChange={(e) => handleUpdateNpc(idx, { wornArmor: e.target.value })}
+                            placeholder="e.g. Dragon leathers"
+                            className="w-full px-2 py-1.5 rounded-xl bg-[#133527] border border-emerald-500/30 text-emerald-100 outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-mono text-emerald-300/80 uppercase mb-1">Personality</label>
+                        <input
+                          type="text"
+                          value={npc.personality || ''}
+                          onChange={(e) => handleUpdateNpc(idx, { personality: e.target.value })}
+                          placeholder="e.g. Calculating, fiercely protective, cynical..."
+                          className="w-full px-3 py-1.5 rounded-xl bg-[#133527] border border-emerald-500/30 text-emerald-100 outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-mono text-emerald-300/80 uppercase mb-1">Secret</label>
+                        <input
+                          type="text"
+                          value={npc.secret || ''}
+                          onChange={(e) => handleUpdateNpc(idx, { secret: e.target.value })}
+                          placeholder="e.g. Marked leader of the apostate rebellion..."
+                          className="w-full px-3 py-1.5 rounded-xl bg-[#133527] border border-emerald-500/30 text-emerald-100 outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-mono text-emerald-300/80 uppercase mb-1">Description</label>
+                        <textarea
+                          rows={2}
+                          value={npc.description || ''}
+                          onChange={(e) => handleUpdateNpc(idx, { description: e.target.value })}
+                          placeholder="Role in starting chapter, connection to protagonist..."
+                          className="w-full px-3 py-1.5 rounded-xl bg-[#133527] border border-emerald-500/30 text-xs font-narrative text-emerald-100 outline-none resize-none"
+                        />
+                      </div>
+                    </div>
                   )}
                 </div>
-              </div>
-            ))
+              )
+            })
           )}
         </div>
-
-        {/* Sub-Editor Modal for NPC */}
-        {editingNpcIdx !== null && list[editingNpcIdx] && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/80">
-            <div className="w-full max-w-md max-h-[90vh] flex flex-col rounded-2xl bg-[#0c2219] border border-emerald-500/40 text-[#f5dfa0] shadow-2xl overflow-hidden">
-              <div className="flex items-center justify-between border-b border-emerald-500/20 px-4 py-2.5 bg-[#0e291e]">
-                <h3 className="font-display font-bold text-xs uppercase text-emerald-200 flex items-center gap-1.5">
-                  <Edit3 size={13} /> NPC Dossier Editor
-                </h3>
-                <button onClick={() => setEditingNpcIdx(null)} className="text-emerald-300/80 hover:text-white">
-                  <X size={16} />
-                </button>
-              </div>
-
-              <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3 text-xs">
-                <div>
-                  <label className="block text-[10px] font-mono text-emerald-300/80 uppercase mb-1">Character Name *</label>
-                  <input
-                    type="text"
-                    value={list[editingNpcIdx].name}
-                    onChange={(e) => handleUpdateNpc(editingNpcIdx, { name: e.target.value })}
-                    placeholder="e.g. Xaden Riorson, Liam Mairi"
-                    className="w-full px-3 py-1.5 rounded-xl bg-[#133527] border border-emerald-500/30 text-emerald-100 outline-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[10px] font-mono text-emerald-300/80 uppercase mb-1">Role / Station</label>
-                    <input
-                      type="text"
-                      value={list[editingNpcIdx].role || ''}
-                      onChange={(e) => handleUpdateNpc(editingNpcIdx, { role: e.target.value })}
-                      placeholder="e.g. Wingleader, Cadet, Mentor"
-                      className="w-full px-2 py-1.5 rounded-xl bg-[#133527] border border-emerald-500/30 text-emerald-100 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-mono text-emerald-300/80 uppercase mb-1">Attitude</label>
-                    <select
-                      value={list[editingNpcIdx].attitude}
-                      onChange={(e) => handleUpdateNpc(editingNpcIdx, { attitude: e.target.value as any })}
-                      className="w-full px-2 py-1.5 rounded-xl bg-[#133527] border border-emerald-500/30 text-emerald-100 outline-none"
-                    >
-                      <option value="allied">Allied</option>
-                      <option value="friendly">Friendly</option>
-                      <option value="neutral">Neutral</option>
-                      <option value="rival">Rival</option>
-                      <option value="hostile">Hostile</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Bonds Sliders */}
-                <div className="grid grid-cols-2 gap-3 p-2.5 rounded-xl bg-[#091b13] border border-emerald-500/20">
-                  <div>
-                    <div className="flex justify-between text-[10px] font-mono text-emerald-300/80 uppercase mb-1">
-                      <span>Affection</span>
-                      <span className="font-bold text-emerald-200">{list[editingNpcIdx].affection}</span>
-                    </div>
-                    <input
-                      type="range"
-                      min={0}
-                      max={100}
-                      value={list[editingNpcIdx].affection}
-                      onChange={(e) => handleUpdateNpc(editingNpcIdx, { affection: Number(e.target.value) })}
-                      className="w-full accent-emerald-400 h-1.5 bg-emerald-950 rounded cursor-pointer"
-                    />
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-[10px] font-mono text-emerald-300/80 uppercase mb-1">
-                      <span>Trust</span>
-                      <span className="font-bold text-emerald-200">{list[editingNpcIdx].trust}</span>
-                    </div>
-                    <input
-                      type="range"
-                      min={0}
-                      max={100}
-                      value={list[editingNpcIdx].trust}
-                      onChange={(e) => handleUpdateNpc(editingNpcIdx, { trust: Number(e.target.value) })}
-                      className="w-full accent-emerald-400 h-1.5 bg-emerald-950 rounded cursor-pointer"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[10px] font-mono text-emerald-300/80 uppercase mb-1">Held Weapon</label>
-                    <input
-                      type="text"
-                      value={list[editingNpcIdx].heldWeapon || ''}
-                      onChange={(e) => handleUpdateNpc(editingNpcIdx, { heldWeapon: e.target.value })}
-                      placeholder="e.g. Broadsword, Daggers"
-                      className="w-full px-2 py-1.5 rounded-xl bg-[#133527] border border-emerald-500/30 text-emerald-100 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-mono text-emerald-300/80 uppercase mb-1">Worn Armor</label>
-                    <input
-                      type="text"
-                      value={list[editingNpcIdx].wornArmor || ''}
-                      onChange={(e) => handleUpdateNpc(editingNpcIdx, { wornArmor: e.target.value })}
-                      placeholder="e.g. Dragon leathers"
-                      className="w-full px-2 py-1.5 rounded-xl bg-[#133527] border border-emerald-500/30 text-emerald-100 outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-mono text-emerald-300/80 uppercase mb-1">Demeanor & Traits</label>
-                  <input
-                    type="text"
-                    value={list[editingNpcIdx].personality || ''}
-                    onChange={(e) => handleUpdateNpc(editingNpcIdx, { personality: e.target.value })}
-                    placeholder="e.g. Calculating, fiercely protective, cynical..."
-                    className="w-full px-3 py-1.5 rounded-xl bg-[#133527] border border-emerald-500/30 text-emerald-100 outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-mono text-emerald-300/80 uppercase mb-1">Secret / Narrative Hook</label>
-                  <input
-                    type="text"
-                    value={list[editingNpcIdx].secret || ''}
-                    onChange={(e) => handleUpdateNpc(editingNpcIdx, { secret: e.target.value })}
-                    placeholder="e.g. Marked leader of the apostate rebellion..."
-                    className="w-full px-3 py-1.5 rounded-xl bg-[#133527] border border-emerald-500/30 text-emerald-100 outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-mono text-emerald-300/80 uppercase mb-1">Background / Description</label>
-                  <textarea
-                    rows={2}
-                    value={list[editingNpcIdx].description || ''}
-                    onChange={(e) => handleUpdateNpc(editingNpcIdx, { description: e.target.value })}
-                    placeholder="Role in starting chapter, connection to protagonist..."
-                    className="w-full px-3 py-1.5 rounded-xl bg-[#133527] border border-emerald-500/30 text-xs font-narrative text-emerald-100 outline-none resize-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end p-3 border-t border-emerald-500/20 bg-[#0e291e]">
-                <button
-                  type="button"
-                  onClick={() => setEditingNpcIdx(null)}
-                  className="px-4 py-1.5 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-black font-display font-bold text-xs uppercase"
-                >
-                  Save Character
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Presets Browser Sub-Modal */}
-        {packModalOpen && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/85">
-            <div className="w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl bg-[#091a13] border border-emerald-500/50 text-[#f5dfa0] shadow-2xl overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 bg-[#0d261c] border-b border-emerald-500/20">
-                <div className="flex items-center gap-2">
-                  <Bookmark size={16} className="text-emerald-300" />
-                  <h3 className="font-display font-bold text-sm text-[#a7f3d0] uppercase">Cast Pack Presets</h3>
-                </div>
-                <button onClick={() => setPackModalOpen(false)} className="text-emerald-300/80 hover:text-white">
-                  <X size={16} />
-                </button>
-              </div>
-
-              <div className="p-3 border-b border-emerald-500/15 bg-[#0b2017]">
-                <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400/60" />
-                  <input
-                    type="text"
-                    value={packSearch}
-                    onChange={(e) => setPackSearch(e.target.value)}
-                    placeholder="Search cast packs by name or theme..."
-                    className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-[#113325] border border-emerald-500/30 text-xs text-[#a7f3d0] outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
-                {filteredPacks.length === 0 ? (
-                  <div className="text-center py-6 text-xs text-emerald-200/60">No matching cast packs found.</div>
-                ) : (
-                  filteredPacks.map((pack) => (
-                    <div
-                      key={pack.id}
-                      className="p-3 rounded-xl bg-[#0e2a1f] border border-emerald-500/25 hover:border-emerald-400/60 transition-all flex items-center justify-between gap-3"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="font-display font-bold text-xs text-emerald-200 flex items-center gap-2">
-                          <span>{pack.name}</span>
-                          {pack.isCustom && (
-                            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                              Custom
-                            </span>
-                          )}
-                          {pack.worldTheme && (
-                            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                              {pack.worldTheme}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11px] font-narrative text-[#6ee7b7]/70 line-clamp-1 mt-0.5">
-                          {pack.description}
-                        </p>
-                        <div className="flex items-center gap-2 text-[9px] font-mono text-emerald-300/60 mt-1">
-                          <span>👥 {pack.npcs.length} Characters:</span>
-                          <span className="truncate">{pack.npcs.map((n) => n.name).join(', ')}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        {pack.isCustom && (
-                          <button
-                            type="button"
-                            onClick={(e) => handleDeleteCustomPack(pack.id, e)}
-                            className="p-1.5 text-red-400 hover:text-red-300"
-                            title="Delete custom pack"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleLoadPack(pack)}
-                          className="px-3 py-1.5 rounded-lg bg-emerald-400 hover:bg-emerald-300 text-black font-display font-bold text-xs uppercase tracking-wider"
-                        >
-                          Load
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Save Pack Modal */}
-        {savePackModalOpen && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/85">
-            <div className="w-full max-w-sm p-4 rounded-2xl bg-[#091a13] border border-emerald-500/50 text-[#f5dfa0] shadow-2xl space-y-3">
-              <div className="flex items-center justify-between border-b border-emerald-500/20 pb-2">
-                <h3 className="font-display font-bold text-xs uppercase text-emerald-200 flex items-center gap-1.5">
-                  <Save size={13} /> Save Cast Preset Pack
-                </h3>
-                <button onClick={() => setSavePackModalOpen(false)} className="text-emerald-300/80 hover:text-white">
-                  <X size={16} />
-                </button>
-              </div>
-
-              <div className="space-y-2 text-xs">
-                <div>
-                  <label className="block text-[10px] font-mono text-emerald-300/80 uppercase mb-1">Pack Title *</label>
-                  <input
-                    type="text"
-                    value={packNameDraft}
-                    onChange={(e) => setPackNameDraft(e.target.value)}
-                    placeholder={`e.g. ${worldName || 'High Fantasy'} Vanguard`}
-                    className="w-full px-3 py-1.5 rounded-xl bg-[#113325] border border-emerald-500/30 text-emerald-100 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-mono text-emerald-300/80 uppercase mb-1">Pack Summary</label>
-                  <input
-                    type="text"
-                    value={packDescDraft}
-                    onChange={(e) => setPackDescDraft(e.target.value)}
-                    placeholder="e.g. A balanced squad of 3 frontliners and companions."
-                    className="w-full px-3 py-1.5 rounded-xl bg-[#113325] border border-emerald-500/30 text-emerald-100 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-2 border-t border-emerald-500/20">
-                <button
-                  type="button"
-                  onClick={handleSaveCurrentPack}
-                  className="px-4 py-1.5 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-black font-display font-bold text-xs uppercase"
-                >
-                  Save Preset Pack
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Footer */}
         <div className="flex items-center justify-between px-4 py-3 bg-[#0d261c] border-t border-emerald-500/20">

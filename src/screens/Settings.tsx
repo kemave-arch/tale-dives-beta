@@ -100,7 +100,7 @@ export default function Settings({
   const [temperature, setTemperature] = useState(apiSettings.temperature)
   const [chromeOpacity, setChromeOpacity] = useState(uiPrefs.chromeOpacity)
   const [debugMode, setDebugMode] = useState<boolean>(uiPrefs.debugMode ?? false)
-  const [graphicsMode, setGraphicsMode] = useState<'glass' | 'performance'>(uiPrefs.graphicsMode ?? 'glass')
+  const [graphicsMode, setGraphicsMode] = useState<'glass' | 'performance'>(uiPrefs.graphicsMode ?? 'performance')
   const [introGazeDelay, setIntroGazeDelay] = useState<boolean>(uiPrefs.introGazeDelay ?? true)
   const [proseDepthKey, setProseDepthKey] = useState<keyof typeof PROSE_DEPTHS>(
     (game?.proseDepth?.label as keyof typeof PROSE_DEPTHS) ?? 'BALANCED',

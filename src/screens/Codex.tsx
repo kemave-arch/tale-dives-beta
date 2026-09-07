@@ -3,7 +3,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   Globe, BookOpen, Users, ShieldCheck, Map, ScrollText, Target, Skull, Backpack,
   Pencil, Save, X, Trash2, Plus, Lock, User, Hammer, Clock, Sparkles, CheckCircle2, XCircle, ArrowRight, Ghost,
-  Swords, Star, EyeOff, Search, MapPin, Heart, Coins, Gift, Zap, Compass, AlertTriangle, Shield, Flame,
+  Swords, Star, EyeOff, Search, MapPin, Heart, Coins, Gift, Zap, Compass, AlertTriangle, Shield, Flame, LayoutGrid,
 } from 'lucide-react'
 import { DASHED_ROW_CLASS, GLASS_SURFACE_LIST, GlassHeader, GlassIconButton, GlassScreen, SELECT_CLASS } from '../lib/glassChrome.tsx'
 import { slugify, titleCaseId } from '../lib/slug.ts'
@@ -36,7 +36,7 @@ function statBonusText(bonus: StatBonus | undefined): string | null {
 export type CategoryId =
   | 'realm' | 'character' | 'crafting' | 'chapters' | 'npcs' | 'factions' | 'locations' | 'lore' | 'quests' | 'bestiary' | 'items' | 'skills' | 'corpses'
 
-interface CodexProps {
+export interface CodexProps {
   world: WorldData
   player: Player
   log: LogEntry[]
@@ -68,6 +68,7 @@ interface CodexProps {
   initialCategory?: CategoryId | null
   initialEntryId?: string | null
   onBack: () => void
+  onOpenCodexViewer?: () => void
 }
 
 // §9 Codex CRUD — a new, not-yet-saved entry lives under this sentinel id
@@ -840,6 +841,7 @@ export default function Codex({
   initialCategory,
   initialEntryId,
   onBack,
+  onOpenCodexViewer,
 }: CodexProps) {
   const [category, setCategory] = useState<CategoryId | null>(initialCategory ?? null)
   const [entryId, setEntryId] = useState<string | null>(initialEntryId ?? null)
@@ -1493,7 +1495,16 @@ export default function Codex({
     // would fight it.
     <LongTextEditorContext.Provider value={editLongText}>
     <GlassScreen ground="dark" className="px-4 pb-16">
-      <GlassHeader title={title} onBack={back} className="!px-0 mb-5" />
+      <GlassHeader
+        title={title}
+        onBack={back}
+        className="!px-0 mb-5"
+        right={
+          onOpenCodexViewer && (
+            <GlassIconButton icon={LayoutGrid} label="Flat Codex Viewer" compact onClick={onOpenCodexViewer} />
+          )
+        }
+      />
 
       {searchFilterBar}
 

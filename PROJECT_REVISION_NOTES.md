@@ -1,5 +1,74 @@
 # Tale Dives — Project Revision Notes
 
+**Last updated:** 2026-09-07 — Built a full-parity alternate flat/opaque
+in-session experience (`StoryViewer.tsx` + `CodexViewer.tsx`), reachable via
+toggle buttons alongside the existing Chronicle/Codex, prompted by a
+mobile-dark-fantasy-UI review that argued for dropping glassmorphism in a
+text-heavy narrative reader. Also flipped the app's default Graphics Mode
+from Glass to Performance and fixed a bug that made `.glass-panel` read as
+near-invisible glass with the blur stripped out from under it.
+- **`src/lib/flatChrome.tsx`** (new) — a small shared kit of solid ink-purple
+  primitives (`InkPanel`, `InkButton`, `InkField`, `InkTagPill`,
+  `InkAccordion`) with no `backdrop-filter` anywhere, a deliberately distinct
+  palette from `glassChrome.tsx`'s gold/parchment so the two skins read as
+  two different rooms rather than the same one with a filter removed.
+- **`src/screens/StoryViewer.tsx`** (new) — full-parity alternate Chronicle:
+  same turn log, HUD (HP/MP/ST/currency/combat bar), Codex-shortcut drawer,
+  input/bang/slash handling, edit/retry/delete controls and debug payload
+  tools as the classic screen. Reuses Chronicle's own exported sub-components
+  (`TurnBlock`, `ApiErrorPanel`, `DebugPayloadButton`, `SessionPayloadPanel`,
+  `PoolBar`, `CurrencyBadge`) verbatim for the turn log/HUD — those pieces
+  already render correctly with no color-token conflicts outside the
+  parchment surface, so reusing them beat re-deriving ~1900 lines of JSX by
+  hand. `Chronicle.tsx` itself is otherwise untouched (only additive
+  `export` keywords on those sub-components) and still defaults to being the
+  first screen shown.
+- **`src/screens/CodexViewer.tsx`** (new) — full-parity alternate Codex,
+  built as a genuinely independent component (not reusing Codex.tsx's own
+  glass-styled shared components — those are the chrome being replaced),
+  sharing only the `types.ts` entry interfaces and the same `onUpdateX`
+  handler props App.tsx already threads into `Codex.tsx`. Covers all 8 CRUD
+  categories (NPCs/Factions/Locations/Lore/Quests/Bestiary/Skills/Items —
+  add/edit/delete, every custom field, Discovery/Fog-of-Lore authoring) plus
+  Corpses (read-only), Character (view + class evolution), Crafting (recipe
+  queue + start), and Realm (editable identity fields).
+- **`src/screens/Chronicle.tsx`** / **`src/screens/Codex.tsx`**: added a
+  header toggle button on each (`BookOpen`/`LayoutGrid` icon) pointing at the
+  new alternate screen, and a matching one on the alternate screens pointing
+  back — a direct two-way navigation model rather than a persisted skin
+  preference, since `goBack()`'s existing browser-history fallback already
+  returns to whichever of the two screens the player came from.
+- **`src/App.tsx`**: added `'codexviewer'` to the `Screen` union + lazy
+  import + render branch (mirroring the existing `'codex'` branch's props
+  exactly); fixed the `'storyviewer'` branch, which had been wired with a
+  stale 5-prop stub from an earlier, wrongly-scoped passive-reader draft, to
+  pass the complete `StoryViewerProps` set; re-pointed StoryViewer's own
+  Codex navigation (drawer tiles, term-popup "Open Full Codex Entry") at
+  `'codexviewer'` instead of `'codex'` so the flat experience stays flat
+  end-to-end unless the player explicitly crosses over.
+- **`src/lib/store.ts`** / **`src/screens/Settings.tsx`**: `graphicsMode`
+  default flipped from `'glass'` to `'performance'`.
+- **`src/index.css`**: `.glass-panel` under `html.gfx-performance` now gets
+  `background: var(--td-surface)` — previously only the blur was stripped,
+  leaving its own ~4.5%-alpha gold fill reading as near-transparent glass
+  with nothing underneath doing the legibility work blur used to. Also added
+  a global `touch-action: manipulation` on buttons/links/`[role='button']`
+  to remove the native double-tap-to-zoom delay on mobile taps.
+- Deliberately not adopted from the reviewed document: its specific numeric
+  claims and a full skeuomorphic/paper-texture rebrand — the real, checked
+  engineering substance (avoid `backdrop-filter`, prefer solid opaque
+  layers for a text-heavy reading plane) is what shipped; much of it was
+  already the app's practice going into this pass.
+- Verified: `tsc --noEmit` and `vite build` both clean; live Playwright
+  passes at a 390×844 mobile viewport against a mocked XML turn response —
+  StoryViewer (turn log, HUD, drawer, term popup, edit controls, toggle back
+  to Chronicle) and CodexViewer (category grid, NPC edit/save, Item
+  equip/unequip, new-entry Discovery/hidden authoring, Crafting/Character/
+  Realm/Chapters/Corpses categories, toggle back to Codex) all confirmed
+  working with no console errors.
+
+Previous note:
+
 **Last updated:** 2026-09-07 — Refactored World SeedWeaver into clean, self-contained, modular sub-component modals (`ProtagonistNodeModal`, `WorldNodeModal`, `NpcNodeModal`, `NarrativeNodeModal`) in `/src/components/seedweaver/`. Key enhancements implemented:
 - **Protagonist Node**: Featured "Custom Class" option with custom stat allocation & growth rates, displayed AGI% on all archetype presets, reorganized Class/Archetype selection into the "Archetype & Skills" tab, and added Save/Load Protagonist Presets functionality.
 - **World Node**: Added Save/Load World Presets with search/filtering, inline CRUD editors for Locations, Factions, and Magic & Rules.

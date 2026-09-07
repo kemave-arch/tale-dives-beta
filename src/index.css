@@ -171,6 +171,19 @@ button {
   font-family: var(--font-sans);
 }
 
+/* Disables the mobile browser's native double-tap-to-zoom delay on
+   interactive elements — without this, a fast double-tap on a choice
+   button or nav tab can register as a zoom gesture instead of two taps,
+   and the ~300ms delay before a tap resolves reads as input lag. Doesn't
+   touch pinch-zoom or user-scalable, so it's not an accessibility
+   regression — only removes the ambiguity on elements that are always
+   meant to be tapped, never zoomed into. */
+button,
+a,
+[role='button'] {
+  touch-action: manipulation;
+}
+
 /* Standard glass surface — Blueprint §6.1a, now border-only to match the
    GLASS_SURFACE class in lib/glassChrome.tsx that Title/MainMenu use: a
    near-transparent fill that lets the ground through, a thin gold hairline,
@@ -438,6 +451,16 @@ html.gfx-performance .backdrop-blur-3xl,
 html.gfx-performance .glass-panel {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+}
+
+/* .glass-panel's own fill (rgba gold at 4.5% alpha, set above) is tuned
+   assuming blur does the real legibility work underneath it — strip the
+   blur alone (the rule above) and it reads as near-transparent glass over
+   whatever busy art sits behind it, the exact halation/contrast problem a
+   flat mode is supposed to fix. Give it the app's own existing near-opaque
+   surface token instead, so text has an actual solid plane to sit on. */
+html.gfx-performance .glass-panel {
+  background: var(--td-surface);
 }
 
 /* World Seed Weaver mobile perf — the constellation screen runs several

@@ -21,6 +21,8 @@ const Codex = lazy(() => import('./screens/Codex.tsx'))
 const SlashCommandManager = lazy(() => import('./screens/SlashCommandManager.tsx'))
 const WorldSeedWeaver = lazy(() => import('./screens/WorldSeedWeaver.tsx'))
 const NovelWeaver = lazy(() => import('./screens/NovelWeaver.tsx'))
+const StoryViewer = lazy(() => import('./screens/StoryViewer.tsx'))
+const CodexViewer = lazy(() => import('./screens/CodexViewer.tsx'))
 import { getClassById, findClassById } from './data/classes.ts'
 import { startingAttributes, derivedPools } from './lib/derivedStats.ts'
 import { buildContextSlice } from './lib/jitContext.ts'
@@ -82,7 +84,7 @@ const KEYWORD_CATEGORY_TO_CODEX: Record<KeywordLink['category'], CategoryId> = {
 // screen is current (same as SlashCommandManager), not a screen that replaces
 // it — that's what lets its glass read against the live Chronicle parchment or
 // the Title artwork behind it rather than a flat ground.
-type Screen = 'title' | 'mainmenu' | 'storymode' | 'worldsetup' | 'newgame' | 'talebrief' | 'chronicle' | 'codex' | 'diveloading' | 'seedingreview' | 'worldseed' | 'novelweaver'
+type Screen = 'title' | 'mainmenu' | 'storymode' | 'worldsetup' | 'newgame' | 'talebrief' | 'chronicle' | 'codex' | 'diveloading' | 'seedingreview' | 'worldseed' | 'novelweaver' | 'storyviewer' | 'codexviewer'
 type CreationMode = 'tale' | 'library'
 
 // §5.7 Player Defeat State — soft-fail recovery, client-owned.
@@ -1827,6 +1829,47 @@ export default function App() {
           setCodexTarget(null)
           goBack('chronicle')
         }}
+        onOpenCodexViewer={() => navigateTo('codexviewer')}
+      />
+    )
+  } else if (screen === 'codexviewer' && game) {
+    content = (
+      <CodexViewer
+        world={game.world}
+        player={game.player}
+        log={game.log}
+        npcs={game.npcs}
+        factions={game.factions}
+        locations={game.locations}
+        lore={game.lore}
+        quests={game.quests}
+        bestiary={game.bestiary}
+        flags={game.flags}
+        inventory={game.inventory}
+        items={game.items ?? {}}
+        crafting={game.crafting ?? []}
+        corpses={game.corpses ?? []}
+        onUpdateNpc={(id: string, patch: Partial<NpcEntry> | null) => patchCodexDict('npcs', id, patch as Record<string, unknown> | null)}
+        onUpdateFaction={(id: string, patch: Partial<FactionEntry> | null) => patchCodexDict('factions', id, patch as Record<string, unknown> | null)}
+        onUpdateLocation={(id: string, patch: Partial<LocationEntry> | null) => patchCodexDict('locations', id, patch as Record<string, unknown> | null)}
+        onUpdateLore={(id: string, patch: Partial<LoreEntry> | null) => patchCodexDict('lore', id, patch as Record<string, unknown> | null)}
+        onUpdateQuest={(id: string, patch: Partial<QuestEntry> | null) => patchCodexDict('quests', id, patch as Record<string, unknown> | null)}
+        onUpdateBestiary={(id: string, patch: Partial<BestiaryEntry> | null) => patchCodexDict('bestiary', id, patch as Record<string, unknown> | null)}
+        skills={game.skills ?? {}}
+        onUpdateSkill={(id: string, patch: Partial<SkillEntry> | null) => patchCodexDict('skills', id, patch as Record<string, unknown> | null)}
+        onUpdateItem={updateItem}
+        onEquipItem={equipFromCodex}
+        onUnequipSlot={unequipFromCodex}
+        onUpdateWorld={updateWorld}
+        onEvolveClass={evolveClass}
+        onStartCraft={startCraftingJob}
+        initialCategory={codexTarget?.category}
+        initialEntryId={codexTarget?.id}
+        onBack={() => {
+          setCodexTarget(null)
+          goBack('chronicle')
+        }}
+        onOpenCodex={() => navigateTo('codex')}
       />
     )
   } else if (screen === 'chronicle' && game) {
@@ -1878,6 +1921,58 @@ export default function App() {
           navigateTo('codex')
         }}
         debugMode={uiPrefs.debugMode}
+        onOpenStoryViewer={() => navigateTo('storyviewer')}
+      />
+    )
+  } else if (screen === 'storyviewer' && game) {
+    content = (
+      <StoryViewer
+        title={game.title}
+        player={game.player}
+        combat={game.combat}
+        log={game.log}
+        seedDebug={game.seedDebug}
+        busy={busy}
+        error={error}
+        npcs={game.npcs}
+        locations={game.locations}
+        factions={game.factions}
+        lore={game.lore}
+        quests={game.quests}
+        bestiary={game.bestiary}
+        skills={game.skills ?? {}}
+        items={game.items ?? {}}
+        crafting={game.crafting}
+        apiSettings={apiSettings}
+        proseDepth={game.proseDepth}
+        lastActionText={lastActionText}
+        onRetry={handleRetry}
+        onDismissError={handleDismissError}
+        onEditLastTurn={handleEditLastTurn}
+        onRemoveLastTurn={handleRemoveLastTurn}
+        editLongText={editLongText}
+        onOpenRetryEditor={openRetry}
+        confirmAction={confirm}
+        onSend={sendAction}
+        onBangCommand={handleBangCommand}
+        slashCommands={[...Object.values(game.slashCommands ?? {}), ...Object.values(globalSlashCommands)]}
+        onOpenSlashManager={() => openSlashManager()}
+        onOpenSettings={() => openSettings()}
+        onOpenMenu={() => navigateTo('mainmenu')}
+        onOpenCodex={() => {
+          setCodexTarget(null)
+          navigateTo('codexviewer')
+        }}
+        onOpenCodexEntry={(category, id) => {
+          setCodexTarget({ category: KEYWORD_CATEGORY_TO_CODEX[category], id })
+          navigateTo('codexviewer')
+        }}
+        onOpenCodexCategory={(category) => {
+          setCodexTarget({ category })
+          navigateTo('codexviewer')
+        }}
+        debugMode={uiPrefs.debugMode}
+        onOpenChronicle={() => navigateTo('chronicle')}
       />
     )
   } else {

@@ -369,9 +369,19 @@ export interface WorldLocation {
   factionOwner?: string
 }
 
+// Client-side-only display reskin for the Threat/Power ladder — the LLM
+// never sees these labels and never emits one; it only ever emits the fixed
+// canonical THREAT_TIERS words (lib/tiers.ts). `labels` is an 8-entry array,
+// index-aligned to THREAT_TIERS (trivial..mythic), substituted in purely for
+// display wherever a threatTier word would otherwise be shown verbatim.
+export interface TierSkin {
+  threatLabels?: string[]
+}
+
 export interface WorldData {
   id?: string | null
   name: string
+  tierSkin?: TierSkin
   mode: string
   genreTone: string
   conflict: string

@@ -1606,7 +1606,6 @@ export default function App() {
           })
         }}
         onOpenSettings={() => openSettings()}
-        onOpenTaleDiveWeaver={() => navigateTo('talediveweaver')}
         onOpenNovelWeaver={() => navigateTo('novelweaver')}
         onBackToTitle={() => goBack('title')}
         musicMuted={musicMuted}
@@ -1658,7 +1657,7 @@ export default function App() {
     content = <DiveLoadingScreen />
   } else if (screen === 'storymode') {
     content = (
-      <StoryMode onBack={() => goBack('mainmenu')} onSelectOriginal={() => navigateTo('worldsetup')} />
+      <StoryMode onBack={() => goBack('mainmenu')} onSelectOriginal={() => navigateTo('talediveweaver')} />
     )
   } else if (screen === 'worldsetup') {
     content = (

@@ -20,8 +20,11 @@ export function emptyNpc(name: string): Omit<NpcEntry, 'autoLogged'> {
   return { name, affection: MIN_TIER, trust: MIN_TIER, stage: 'Stranger', deeds: [], memSummary: '', lastSeenLocId: null }
 }
 
-// Affection's existing Stranger->Beloved framing (index+1 = CompetencyTier).
-const AFFECTION_STAGES = ['Stranger', 'Acquaintance', 'Friend', 'Confidant', 'Beloved']
+// Affection's existing Stranger->Beloved framing (index+1 = CompetencyTier) —
+// exported so the one-time world-seeding grammar (worldSeedContract.ts) can
+// ask the model for a starting relationship using these exact words too,
+// rather than a separate signed numeric offset.
+export const AFFECTION_STAGES = ['Stranger', 'Acquaintance', 'Friend', 'Confidant', 'Beloved']
 
 function stageFor(affection: CompetencyTier): string {
   const idx = Math.max(MIN_TIER, Math.min(MAX_TIER, Math.round(affection))) - 1
@@ -122,7 +125,7 @@ export function describePresentNpc(id: string, entry: NpcEntry): string {
 // ->Beloved framing since the two axes are meant to read as genuinely
 // different qualities (how much they respect/rely on the protagonist, not
 // how fond they are of them).
-const TRUST_WORDS = ['Distrustful', 'Wary', 'Reliable', 'Trusted', 'Devoted']
+export const TRUST_WORDS = ['Distrustful', 'Wary', 'Reliable', 'Trusted', 'Devoted']
 
 export function trustWord(trust: CompetencyTier): string {
   const idx = Math.max(MIN_TIER, Math.min(MAX_TIER, Math.round(trust))) - 1

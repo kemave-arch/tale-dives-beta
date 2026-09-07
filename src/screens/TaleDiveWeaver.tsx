@@ -672,6 +672,7 @@ export default function TaleDiveWeaver({
               setFinalizedNodes((prev) => ({ ...prev, narrative: true }))
               setActiveModal(null)
             }}
+            onUpdateWorld={(patch) => setWorld((w) => ({ ...w, ...patch }))}
             onLaunchDirect={() => {
               setActiveModal(null)
               handleIgniteDive()

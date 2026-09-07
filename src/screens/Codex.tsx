@@ -21,7 +21,7 @@ import type {
   BestiaryEntry, CraftingJob, Discovery, EquipSlot, FactionEntry, ItemEntry, ItemType, LocationEntry, LogEntry, LoreEntry, NpcEntry, Player,
   QuestEntry, RevealTrigger, SkillEntry, ThreatTierToken, WorldData,
 } from '../types.ts'
-import { COMPETENCY_TIERS, THREAT_TIERS, tierToWord, wordToTier } from '../lib/tiers.ts'
+import { COMPETENCY_TIERS, THREAT_TIERS, tierToWord, wordToTier, displayThreatLabel } from '../lib/tiers.ts'
 import { trustWord } from '../lib/npcs.ts'
 
 const ITEM_TYPES: ItemType[] = ['weapon', 'armor', 'accessory', 'tool', 'key', 'consumable', 'material']
@@ -2304,7 +2304,7 @@ export default function Codex({
             const metaChips: MetaChip[] = hidden
               ? []
               : [
-                  b.threatTier ? { icon: Skull, label: b.threatTier } : null,
+                  b.threatTier ? { icon: Skull, label: displayThreatLabel(b.threatTier, world.tierSkin?.threatLabels) } : null,
                   b.conditions?.length ? { icon: Heart, label: b.conditions.map((c) => c.label).join(', ') } : null,
                   b.weaknesses ? { icon: Zap, label: `Weak: ${b.weaknesses}` } : null,
                 ].filter(Boolean) as MetaChip[]
@@ -2313,7 +2313,7 @@ export default function Codex({
                 key={id}
                 accent={CATEGORY_ACCENTS.bestiary}
                 title={hidden ? '???' : b.name}
-                kicker={hidden ? undefined : b.threatTier || b.habitat}
+                kicker={hidden ? undefined : (b.threatTier ? displayThreatLabel(b.threatTier, world.tierSkin?.threatLabels) : b.habitat)}
                 subtitle={hidden ? (b.discovery?.teaser || 'Not yet discovered.') : (b.description || b.weaknesses || 'A creature roaming the dark.')}
                 badge={hidden ? <LockBadge /> : <AutoBadge shown={b.autoLogged} />}
                 metaChips={metaChips}
@@ -2370,11 +2370,11 @@ export default function Codex({
               <EntryHeroHeader
                 accent={CATEGORY_ACCENTS.bestiary}
                 title={bestiary[entryId].name}
-                subtitle={bestiary[entryId].threatTier}
+                subtitle={displayThreatLabel(bestiary[entryId].threatTier, world.tierSkin?.threatLabels)}
                 badges={<AutoBadge shown={bestiary[entryId].autoLogged} />}
               />
               <SectionCard accent={CATEGORY_ACCENTS.bestiary} icon={Skull} title="Combat Profile">
-                <FieldRow label="Threat" value={bestiary[entryId].threatTier} icon={Skull} />
+                <FieldRow label="Threat" value={displayThreatLabel(bestiary[entryId].threatTier, world.tierSkin?.threatLabels)} icon={Skull} />
                 {bestiary[entryId].conditions?.length ? (
                   <FieldRow label="Conditions" value={bestiary[entryId].conditions!.map((c) => c.label).join(', ')} icon={Heart} />
                 ) : null}

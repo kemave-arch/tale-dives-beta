@@ -19,6 +19,29 @@ export type CompetencyTierWord = (typeof COMPETENCY_TIERS)[number]
 export const THREAT_TIERS = ['trivial', 'minor', 'notable', 'dangerous', 'severe', 'extreme', 'legendary', 'mythic'] as const
 export type ThreatTierWord = (typeof THREAT_TIERS)[number]
 
+// A player-facing reskin of THREAT_TIERS is purely a client-side display
+// substitution (WorldData.tierSkin, set in the TaleDiveWeaver's Narrative
+// node) — the LLM only ever emits the canonical words above, never a reskin
+// label, so a custom label scheme can never reach the model or cause a
+// parse-drift bug. A couple of built-in flavor packs plus "Plain" (the
+// canonical words themselves, capitalized) cover the common cases; a fully
+// custom 8-entry array is also valid input to displayThreatLabel below.
+export const THREAT_LABEL_PRESETS: Record<string, string[]> = {
+  plain: ['Trivial', 'Minor', 'Notable', 'Dangerous', 'Severe', 'Extreme', 'Legendary', 'Mythic'],
+  rank: ['E', 'D', 'C', 'B', 'A', 'S', 'S+', 'S++'],
+}
+
+// Maps a canonical THREAT_TIERS word to its display label under a given
+// skin (index-aligned, same position as THREAT_TIERS) — falls back to the
+// canonical word itself (capitalized) when no skin is set or the word is
+// 'unknown' (a bare {{Name|beast}} mention with no real threat rank yet has
+// nothing to reskin).
+export function displayThreatLabel(canonical: string, labels?: string[]): string {
+  const idx = THREAT_TIERS.findIndex((w) => w === canonical)
+  if (idx === -1) return canonical
+  return labels?.[idx] ?? THREAT_LABEL_PRESETS.plain[idx]
+}
+
 // Player.attrs/SkillEntry.tier/NpcEntry.affection etc. store the plain 1-based
 // rank (index+1) into whichever scale applies, not the word itself — the word
 // is purely an LLM/UI-facing representation, converted at the boundary. The

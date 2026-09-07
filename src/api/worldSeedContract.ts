@@ -53,19 +53,19 @@ OUTPUT FORMAT (read carefully — respond with exactly this, nothing else, no ma
 
 <seed>
   <lore id="LORE_ID" name="NAME" category="CATEGORY" content="CONTENT" era="ERA" hidden="1" tease="TEASER_TEXT" />
-  <npc id="NPC_ID" name="NAME" role="ROLE" personality="TRAIT_SUMMARY" appearance="PHYSICAL_DESC" aff="±N" trust="±N" />
+  <npc id="NPC_ID" name="NAME" role="ROLE" personality="TRAIT_SUMMARY" appearance="PHYSICAL_DESC" aff="Stranger|Acquaintance|Friend|Confidant|Beloved" trust="Distrustful|Wary|Reliable|Trusted|Devoted" />
   <quest id="QUEST_ID" name="NAME" type="ambition" desc="PREMISE" />
   <location id="LOC_ID" name="NAME" region="REGION" type="LOCATION_TYPE" danger="DANGER_LEVEL" desc="DESC" />
   <faction id="FACTION_ID" name="NAME" attitude="allied|friendly|neutral|hostile|rival" territory="TERRITORY" desc="DESC" />
-  <item id="ITEM_ID" name="NAME" type="weapon|armor|accessory|tool|key|consumable|material" desc="DESC" bonus="+N STR, +N hp, ..." />
+  <item id="ITEM_ID" name="NAME" type="weapon|armor|accessory|tool|key|consumable|material" desc="DESC" traits="TRAIT_1, TRAIT_2" />
 </seed>
 
 Rules:
 - <lore>: 2-5 entries, always. ~80-150 tokens of real content each. hidden/tease are optional — omit both for a normal, immediately-visible entry; include both only for the rare deliberately-hidden entry (hidden="1"), never one without the other.
-- <npc>: 1-4 entries, always — named people already tied to the protagonist's opening situation (family, rivals, mentors, colleagues the Tale Dive Brief implies are nearby). ~60-100 tokens of bio (personality + appearance) each. aff/trust default to 0 if the relationship is neutral/unestablished — only set them non-zero when the brief clearly implies an existing bond or friction.
+- <npc>: 1-4 entries, always — named people already tied to the protagonist's opening situation (family, rivals, mentors, colleagues the Tale Dive Brief implies are nearby). ~60-100 tokens of bio (personality + appearance) each. aff/trust are each one of their exact canonical words above, never a number — omit both entirely for a neutral/unestablished relationship (defaults to Stranger/Distrustful); only set them when the brief clearly implies an existing bond or friction.
 - <quest>: at most 1, omitted entirely if no personal Ambition is evident (see system instructions). ~80-120 tokens for desc.
 - <location>/<faction>: ONLY emit these if the prompt below explicitly asks for them (it will say so when the player left that list empty) — otherwise omit both tags entirely, even if you can think of good ones. When asked for, 1-3 entries each, matching the same field detail a player would have typed by hand.
-- <item>: at most 1, emitted ONLY when the prompt gives you a key item name to flesh out — then required. desc ~40-80 tokens; bonus is optional and freeform (e.g. "+2 AGI, +5 hp"), omit it for a purely narrative/flavor item with no mechanical effect.
+- <item>: at most 1, emitted ONLY when the prompt gives you a key item name to flesh out — then required. desc ~40-80 tokens; traits is optional and freeform (e.g. "reach, heavy") — pure narrative flavor, never a number or a mechanical bonus — omit it for an item with nothing especially notable about it.
 - Every id is a short snake_case slug derived from the entry's own name (e.g. "Elana Voss" -> "elana_voss") — never invent a numbered or generic id.
 - Escape literal & as &amp; inside attribute values.
 `.trim()

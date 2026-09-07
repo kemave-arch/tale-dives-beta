@@ -6,16 +6,21 @@ import { parseWorldSeedResponse } from './worldSeedParser.ts'
 import { validateDiscovery } from './discovery.ts'
 import { attitudeToRepTier } from './factions.ts'
 import { slugify } from './slug.ts'
+import { AFFECTION_STAGES, TRUST_WORDS } from './npcs.ts'
 import type { CompetencyTier } from '../types.ts'
 
-// The world-seed grammar's own <npc aff="±N" trust="±N"> is still the old
-// signed-offset-from-neutral shape (untouched in this pass — a full seed-
-// grammar rewrite to the fixed-tier vocabulary is Phase 6 scope, not this
-// one). This just folds that old ~-100..100 offset onto the new 1-5
-// CompetencyTier scale (default/unset -> 1, "Stranger"-equivalent) rather
-// than letting a raw seed number leak straight into a tier-typed field.
-function seedRelationTier(offset: number | undefined): CompetencyTier {
-  return Math.max(1, Math.min(5, Math.round(1 + (offset ?? 0) / 25)))
+// <npc aff/trust> is a canonical tier word (npcs.ts's own AFFECTION_STAGES/
+// TRUST_WORDS), same as everywhere else in the app — resolved to the floor
+// tier ("Stranger"/"Distrustful") when the model omits it, or gets it wrong,
+// for a neutral/unestablished relationship. Deliberately lenient rather than
+// lib/tiers.ts's throwing wordToTier: this whole pass runs outside the
+// parseWorldSeedResponse try/catch above, per this file's own "never throws,
+// never blocks campaign creation" design — a single off-vocabulary word here
+// should degrade to the floor tier, not crash the entire seeding pass.
+function seedRelationTier(word: string | undefined, scale: readonly string[]): CompetencyTier {
+  if (!word) return 1
+  const idx = scale.findIndex((w) => w.toLowerCase() === word.trim().toLowerCase())
+  return idx === -1 ? 1 : idx + 1
 }
 
 // The one-time World Seeding pass — fires once at campaign creation,
@@ -136,8 +141,8 @@ export async function seedCampaign(input: SeedCampaignInput): Promise<SeedCampai
       role: n.role?.trim() || undefined,
       personality: n.personality?.trim() || undefined,
       appearance: n.appearance?.trim() || undefined,
-      affection: seedRelationTier(n.aff),
-      trust: seedRelationTier(n.trust),
+      affection: seedRelationTier(n.aff, AFFECTION_STAGES),
+      trust: seedRelationTier(n.trust, TRUST_WORDS),
       stage: 'Stranger',
       deeds: [],
       memSummary: '',
@@ -194,9 +199,7 @@ export async function seedCampaign(input: SeedCampaignInput): Promise<SeedCampai
         name: seed.item.name,
         type: seed.item.type,
         description: seed.item.desc?.trim() || undefined,
-        // Freeform flavor tags now (traits), not a numeric stat bonus — a
-        // "+2 AGI, +5 hp"-style seed string just reads as trait tokens.
-        traits: seed.item.bonus?.trim() ? seed.item.bonus.split(',').map((s) => s.trim()).filter(Boolean) : undefined,
+        traits: seed.item.traits?.trim() ? seed.item.traits.split(',').map((s) => s.trim()).filter(Boolean) : undefined,
       }
       inventory[id] = 1
     }

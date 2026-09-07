@@ -1,5 +1,5 @@
 import type { ItemType } from '../types.ts'
-import { XmlParseError, str, num, parseXmlBlock } from './xmlHelpers.ts'
+import { XmlParseError, str, parseXmlBlock } from './xmlHelpers.ts'
 
 // Parses the <seed> grammar (api/worldSeedContract.ts) returned by the
 // one-time world-seeding call. Unlike parseXmlTurnResponse, a single
@@ -25,8 +25,12 @@ export interface SeededNpc {
   role?: string
   personality?: string
   appearance?: string
-  aff?: number
-  trust?: number
+  // Starting relationship, expressed as the same canonical tier word the
+  // rest of the app already displays (npcs.ts's AFFECTION_STAGES/
+  // TRUST_WORDS) — never a numeric offset. Absent means "unset/neutral,"
+  // resolved to the floor tier by lib/seeding.ts.
+  aff?: string
+  trust?: string
 }
 
 export interface SeededQuest {
@@ -57,7 +61,7 @@ export interface SeededItem {
   name: string
   type: ItemType
   desc?: string
-  bonus?: string
+  traits?: string // freeform narrative flavor tags, comma-separated — same shape as a turn's <item traits="...">, never a numeric stat bonus
 }
 
 export interface WorldSeedResult {
@@ -101,8 +105,8 @@ export function parseWorldSeedResponse(raw: string): WorldSeedResult {
       role: str(el.getAttribute('role')),
       personality: str(el.getAttribute('personality')),
       appearance: str(el.getAttribute('appearance')),
-      aff: num(el.getAttribute('aff')),
-      trust: num(el.getAttribute('trust')),
+      aff: str(el.getAttribute('aff')),
+      trust: str(el.getAttribute('trust')),
     })
   }
 
@@ -147,7 +151,7 @@ export function parseWorldSeedResponse(raw: string): WorldSeedResult {
   const itemType = itemEl ? str(itemEl.getAttribute('type')) : undefined
   const item: SeededItem | undefined =
     itemEl && itemId && itemName && itemType
-      ? { id: itemId, name: itemName, type: itemType as ItemType, desc: str(itemEl.getAttribute('desc')), bonus: str(itemEl.getAttribute('bonus')) }
+      ? { id: itemId, name: itemName, type: itemType as ItemType, desc: str(itemEl.getAttribute('desc')), traits: str(itemEl.getAttribute('traits')) }
       : undefined
 
   return { lore, npcs, quest, locations, factions, item }

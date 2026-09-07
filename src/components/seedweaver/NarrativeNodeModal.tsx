@@ -9,9 +9,10 @@ import {
   Trash2,
   X,
 } from 'lucide-react'
-import type { ProtagonistData, WorldData } from '../../types.ts'
+import type { ProtagonistData, TierSkin, WorldData } from '../../types.ts'
 import type { SeedNarrativePreset } from './types.ts'
 import { BUILTIN_NARRATIVE_PRESETS } from './defaultPacks.ts'
+import { THREAT_LABEL_PRESETS } from '../../lib/tiers.ts'
 
 const STORAGE_KEY_NARRATIVE_PRESETS = 'td_seed_narrative_presets_v1'
 
@@ -29,8 +30,18 @@ interface NarrativeNodeModalProps {
     opening: string
     narrationStyle: string
   }) => void
+  onUpdateWorld: (patch: Partial<WorldData>) => void
   onLaunchDirect: () => void
   onClose: () => void
+}
+
+// Which built-in preset (if any) the world's current threatLabels array
+// matches — 'custom' when it doesn't match a known preset (player-typed) or
+// nothing is set yet (falls back to 'plain', the default display anyway).
+function detectThreatSkinKey(labels: string[] | undefined): string {
+  if (!labels) return 'plain'
+  const match = Object.entries(THREAT_LABEL_PRESETS).find(([, preset]) => preset.every((l, i) => l === labels[i]))
+  return match?.[0] ?? 'custom'
 }
 
 export default function NarrativeNodeModal({
@@ -39,10 +50,27 @@ export default function NarrativeNodeModal({
   world,
   existingTitles = [],
   onSave,
+  onUpdateWorld,
   onLaunchDirect,
   onClose,
 }: NarrativeNodeModalProps) {
   const [data, setData] = useState({ ...initial })
+
+  // §Narrative-First Overhaul — Threat/Power ladder display reskin. Purely
+  // cosmetic and client-side only (lib/tiers.ts's displayThreatLabel): the
+  // LLM always emits the fixed canonical THREAT_TIERS word regardless of
+  // what's picked here, so a custom label scheme can never reach the model.
+  const [threatSkinKey, setThreatSkinKey] = useState(() => detectThreatSkinKey(world.tierSkin?.threatLabels))
+  const [customThreatLabels, setCustomThreatLabels] = useState<string[]>(
+    () => world.tierSkin?.threatLabels ?? THREAT_LABEL_PRESETS.plain,
+  )
+
+  function applyThreatSkin(key: string, labels: string[]) {
+    setThreatSkinKey(key)
+    setCustomThreatLabels(labels)
+    const skin: TierSkin = { ...world.tierSkin, threatLabels: key === 'plain' ? undefined : labels }
+    onUpdateWorld({ tierSkin: skin })
+  }
 
   // Presets State
   const [presetModalOpen, setPresetModalOpen] = useState(false)
@@ -328,6 +356,52 @@ export default function NarrativeNodeModal({
               placeholder="e.g. Visceral close POV, short breath-tight sentences during peril, rich banter..."
               className="w-full px-3 py-2 rounded-xl bg-[#1e1433] border border-purple-500/30 text-xs font-narrative text-[#fbf4e2] focus:border-purple-400 outline-none resize-none"
             />
+          </div>
+
+          <div>
+            <label className="block text-xs font-display font-semibold text-purple-200/90 mb-1">Threat Ladder Display</label>
+            <p className="text-[10px] font-narrative text-[#d8b4fe]/60 mb-1.5">
+              Purely cosmetic — the narrator always reasons in the same fixed internal ranks either way.
+            </p>
+            <div className="flex items-center gap-1.5 mb-2">
+              {(['plain', 'rank', 'custom'] as const).map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => applyThreatSkin(key, key === 'custom' ? customThreatLabels : THREAT_LABEL_PRESETS[key])}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-mono uppercase tracking-wide border transition-colors ${
+                    threatSkinKey === key
+                      ? 'bg-purple-500/30 border-purple-400 text-purple-100'
+                      : 'bg-[#1e1433] border-purple-500/25 text-purple-300/70 hover:border-purple-400/50'
+                  }`}
+                >
+                  {key === 'plain' ? 'Plain' : key === 'rank' ? 'E–S++' : 'Custom'}
+                </button>
+              ))}
+            </div>
+            {threatSkinKey === 'custom' ? (
+              <div className="grid grid-cols-4 gap-1.5">
+                {customThreatLabels.map((label, i) => (
+                  <input
+                    key={i}
+                    type="text"
+                    value={label}
+                    onChange={(e) => {
+                      const next = [...customThreatLabels]
+                      next[i] = e.target.value
+                      applyThreatSkin('custom', next)
+                    }}
+                    className="w-full px-2 py-1 rounded-lg bg-[#1e1433] border border-purple-500/30 text-[11px] text-[#fbf4e2] outline-none focus:border-purple-400"
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-1 text-[10px] font-mono text-purple-300/70">
+                {(threatSkinKey === 'plain' ? THREAT_LABEL_PRESETS.plain : THREAT_LABEL_PRESETS.rank).map((l) => (
+                  <span key={l} className="px-1.5 py-0.5 rounded bg-[#1e1433] border border-purple-500/25">{l}</span>
+                ))}
+              </div>
+            )}
           </div>
 
         </div>

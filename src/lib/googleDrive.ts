@@ -176,33 +176,44 @@ export async function uploadBackupToDrive(
   let existingId: string | null = null
   let filename = 'tale-dives-backup-1.json'
 
-  try {
-    const files = await listDriveBackups(true)
-    if (files.length >= 3) {
-      // files are sorted by modifiedTime desc, so the last is the oldest
-      const oldest = files[files.length - 1]
-      existingId = oldest.id
-      filename = oldest.name
-    } else {
-      const used = new Set(files.map(f => f.name))
-      for (let i = 1; i <= 3; i++) {
-        const name = `tale-dives-backup-${i}.json`
-        const legacyName = i === 1 ? 'tale-dives-backup.json' : name
-        // prefer overwriting legacy name if it exists but we need a slot
-        const legacyMatch = files.find(f => f.name === 'tale-dives-backup.json')
-        if (legacyMatch && i === 1) {
-            existingId = legacyMatch.id
-            filename = legacyMatch.name
-            break
-        }
-        if (!used.has(name) && !used.has(legacyName)) {
-          filename = name
+  // Deliberately NOT wrapped in a try/catch that falls back to the slot-1
+  // default on failure — that used to be the behavior here, and it's a real
+  // bug: if listDriveBackups() fails (a transient network hiccup, an
+  // expired token), existingId stays null, so the upload below does a POST,
+  // which always CREATES a new file even when one of that exact name
+  // already exists. Silently defaulting to "tale-dives-backup-1.json" on
+  // every listing failure means a bad network moment doesn't just skip a
+  // slot, it plants a second file with an identical name — over repeated
+  // failures you can end up with several files all called
+  // "tale-dives-backup-1.json," which breaks the "up to 3 distinct
+  // versions" rotation this function exists to maintain (the >= 3 branch
+  // below picks "the oldest" without deduping by name first) and is the
+  // most likely explanation for a player only ever seeing one backup
+  // version show up in Settings. Letting the listing failure propagate
+  // (the caller already surfaces it via setError) is safer than guessing.
+  const files = await listDriveBackups(true)
+  if (files.length >= 3) {
+    // files are sorted by modifiedTime desc, so the last is the oldest
+    const oldest = files[files.length - 1]
+    existingId = oldest.id
+    filename = oldest.name
+  } else {
+    const used = new Set(files.map(f => f.name))
+    for (let i = 1; i <= 3; i++) {
+      const name = `tale-dives-backup-${i}.json`
+      const legacyName = i === 1 ? 'tale-dives-backup.json' : name
+      // prefer overwriting legacy name if it exists but we need a slot
+      const legacyMatch = files.find(f => f.name === 'tale-dives-backup.json')
+      if (legacyMatch && i === 1) {
+          existingId = legacyMatch.id
+          filename = legacyMatch.name
           break
-        }
+      }
+      if (!used.has(name) && !used.has(legacyName)) {
+        filename = name
+        break
       }
     }
-  } catch (err) {
-    console.warn('[GoogleDrive] Could not check existing files, creating new:', err)
   }
 
   const boundary = '-------TaleDivesDriveBoundary' + Date.now().toString(36)

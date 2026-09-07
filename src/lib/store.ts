@@ -90,10 +90,35 @@ export function loadUiPrefs(): UiPrefs {
 }
 export const saveUiPrefs = (p: UiPrefs): void => save(KEYS.uiPrefs, p)
 
+// `isMaster: true` is what MainMenu.tsx/PresetDetailModal.tsx/App.tsx's
+// delete guards trust to mean "this is the one protected, undeletable
+// template" — but it's plain JSON data, not a computed property, so it can
+// end up on an entry OTHER than the real master in a few ways: an old
+// backup/import predating a schema change, or (the confirmed live bug) a
+// screen spreading `...FOURTH_WING_WORLD`/`...VIOLET_SORRENGAIL` onto a
+// fresh draft id (TaleDiveWeaver.tsx's default/reset state) without
+// stripping the flag first, then that draft getting saved as a preset. Once
+// that happens the stray copy is a duplicate that can never be deleted,
+// because every delete guard trusts the flag over the id. This strips
+// `isMaster` from anything NOT sitting under the one true canonical id —
+// applied on every load (self-heals existing corrupted data) and again in
+// App.tsx wherever new world/protagonist data enters the library (upsert,
+// cloud restore, JSON import), so no path can ever plant a second one.
+function sanitizeMasterFlag<T extends { isMaster?: boolean }>(dict: Dict<T>, canonicalId: string): Dict<T> {
+  const result: Dict<T> = {}
+  for (const [id, entry] of Object.entries(dict)) {
+    result[id] = id === canonicalId || !entry.isMaster ? entry : { ...entry, isMaster: false }
+  }
+  return result
+}
+export const sanitizeWorldMasterFlag = (worlds: Dict<WorldData>): Dict<WorldData> => sanitizeMasterFlag(worlds, FOURTH_WING_WORLD.id!)
+export const sanitizeProtagonistMasterFlag = (protagonists: Dict<ProtagonistData>): Dict<ProtagonistData> =>
+  sanitizeMasterFlag(protagonists, VIOLET_SORRENGAIL.id!)
+
 // Master presets (Navarre & Violet Sorrengail) are permanent and cannot be deleted.
 // Loaded libraries ensure these master templates always exist and retain master status.
 export function loadWorlds(): Dict<WorldData> {
-  const loaded = load<Dict<WorldData>>(KEYS.worlds, {})
+  const loaded = sanitizeWorldMasterFlag(load<Dict<WorldData>>(KEYS.worlds, {}))
   const merged: Dict<WorldData> = {
     ...loaded,
     [FOURTH_WING_WORLD.id!]: {
@@ -131,7 +156,7 @@ export const saveWorlds = (w: Dict<WorldData>): void => {
 }
 
 export function loadProtagonists(): Dict<ProtagonistData> {
-  const loaded = load<Dict<ProtagonistData>>(KEYS.protagonists, {})
+  const loaded = sanitizeProtagonistMasterFlag(load<Dict<ProtagonistData>>(KEYS.protagonists, {}))
   const merged: Dict<ProtagonistData> = {
     ...loaded,
     [VIOLET_SORRENGAIL.id!]: {

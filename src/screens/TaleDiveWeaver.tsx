@@ -52,13 +52,22 @@ export default function TaleDiveWeaver({
   onBeginTale,
 }: TaleDiveWeaverProps) {
   // --- Active Seed Data State ---
+  // isMaster: false is deliberate, not redundant with App.tsx's own upsert
+  // guard — VIOLET_SORRENGAIL/FOURTH_WING_WORLD carry isMaster: true
+  // themselves (they ARE the master template), so spreading them onto a
+  // fresh seed_*-prefixed draft id without overriding it here would leave
+  // this draft mislabeled as "master" for as long as it's only living in
+  // local component state (e.g. any live preview before the player ever
+  // saves it as a preset).
   const [protagonist, setProtagonist] = useState<ProtagonistData>(() => ({
     ...VIOLET_SORRENGAIL,
     id: 'seed_protag_' + Date.now(),
+    isMaster: false,
   }))
   const [world, setWorld] = useState<WorldData>(() => ({
     ...FOURTH_WING_WORLD,
     id: 'seed_world_' + Date.now(),
+    isMaster: false,
   }))
   const [npcs, setNpcs] = useState<SeedNpcData[]>(DEFAULT_STARTER_NPCS)
   const [narrative, setNarrative] = useState({
@@ -180,8 +189,8 @@ export default function TaleDiveWeaver({
         {/* Quick Reset action */}
         <button
           onClick={() => {
-            setProtagonist({ ...VIOLET_SORRENGAIL, id: 'seed_protag_' + Date.now() })
-            setWorld({ ...FOURTH_WING_WORLD, id: 'seed_world_' + Date.now() })
+            setProtagonist({ ...VIOLET_SORRENGAIL, id: 'seed_protag_' + Date.now(), isMaster: false })
+            setWorld({ ...FOURTH_WING_WORLD, id: 'seed_world_' + Date.now(), isMaster: false })
             setNpcs(DEFAULT_STARTER_NPCS)
             setFinalizedNodes({ protagonist: true, world: true, npcs: true, narrative: false })
           }}

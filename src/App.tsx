@@ -22,6 +22,7 @@ const SlashCommandManager = lazy(() => import('./screens/SlashCommandManager.tsx
 const TaleDiveWeaver = lazy(() => import('./screens/TaleDiveWeaver.tsx'))
 const NovelWeaver = lazy(() => import('./screens/NovelWeaver.tsx'))
 import { getClassById, findClassById } from './data/classes.ts'
+import { FOURTH_WING_WORLD, VIOLET_SORRENGAIL } from './data/starterTemplates.ts'
 import { buildContextSlice } from './lib/jitContext.ts'
 import { applyTurn } from './lib/shadowReferee.ts'
 import { ensureLocation } from './lib/locations.ts'
@@ -267,8 +268,13 @@ export default function App() {
 
   const restoreBackupPayload = useCallback((data: any) => {
     if (data.worlds || data.protagonists || data.campaigns) {
-      if (data.worlds) setWorlds((w) => ({ ...w, ...data.worlds }))
-      if (data.protagonists) setProtagonists((p) => ({ ...p, ...data.protagonists }))
+      // A backup/import can carry a stray isMaster:true on something other
+      // than the canonical world/protagonist (an older build's export, or a
+      // duplicate this same bug already planted before it was fixed) —
+      // sanitize on the way in so a restore can never (re)plant a second
+      // permanently-undeletable "master" entry.
+      if (data.worlds) setWorlds((w) => ({ ...w, ...store.sanitizeWorldMasterFlag(data.worlds) }))
+      if (data.protagonists) setProtagonists((p) => ({ ...p, ...store.sanitizeProtagonistMasterFlag(data.protagonists) }))
       if (data.campaigns) setCampaigns((c) => ({ ...c, ...data.campaigns }))
       if (data.globalSlashCommands) setGlobalSlashCommands((g) => ({ ...g, ...data.globalSlashCommands }))
       if (data.uiPrefs) setUiPrefs((u) => ({ ...u, ...data.uiPrefs }))
@@ -469,6 +475,11 @@ export default function App() {
       id,
       savedAt: worldData.savedAt ?? Date.now(),
       isDefault: worlds[id]?.isDefault ?? false,
+      // Only the one true canonical master world is ever allowed to carry
+      // this flag — closes off the bug where a screen spreading
+      // ...FOURTH_WING_WORLD onto a fresh draft id (it carries isMaster:
+      // true itself) plants a second, permanently undeletable "master".
+      isMaster: id === FOURTH_WING_WORLD.id,
     }
     setWorlds((w) => ({ ...w, [id]: entry }))
     return entry
@@ -482,6 +493,7 @@ export default function App() {
       className,
       savedAt: pData.savedAt ?? Date.now(),
       isDefault: protagonists[id]?.isDefault ?? false,
+      isMaster: id === VIOLET_SORRENGAIL.id, // same reasoning as upsertWorld above
     }
     setProtagonists((p) => ({ ...p, [id]: entry }))
     return entry

@@ -3,10 +3,10 @@ import type { LucideIcon } from 'lucide-react'
 import {
   Globe, BookOpen, Users, ShieldCheck, Map, ScrollText, Target, Skull, Backpack,
   Pencil, Save, X, Trash2, Plus, Lock, User, Hammer, Clock, Sparkles, CheckCircle2, XCircle, ArrowRight, Ghost,
-  Swords, Star, EyeOff, Search, MapPin, Heart, Coins, Gift, Zap, Compass, AlertTriangle, Shield, Flame,
+  Swords, Star, EyeOff, Search, MapPin, Heart, Coins, Gift, Zap, Compass, AlertTriangle, Shield, Flame, Milestone, ListChecks,
 } from 'lucide-react'
 import { DASHED_ROW_CLASS, GLASS_SURFACE_LIST, GlassHeader, GlassIconButton, GlassScreen, SELECT_CLASS } from '../lib/glassChrome.tsx'
-import { slugify, titleCaseId } from '../lib/slug.ts'
+import { slugify } from '../lib/slug.ts'
 import { isHidden, validateDiscovery } from '../lib/discovery.ts'
 import { checkAffordability } from '../lib/skills.ts'
 import { PRESET_CLASSES } from '../data/classes.ts'
@@ -19,7 +19,7 @@ import { useLongTextEditor } from '../lib/useLongTextEditor.tsx'
 import { EQUIPPABLE_TYPES, LOCATION_DANGER_LEVELS, LOCATION_TYPES } from '../types.ts'
 import type {
   BestiaryEntry, CraftingJob, Discovery, EquipSlot, FactionEntry, ItemEntry, ItemType, LocationEntry, LogEntry, LoreEntry, NpcEntry, Player,
-  QuestEntry, RevealTrigger, SkillEntry, ThreatTierToken, WorldData,
+  ProjectEntry, ProjectStage, QuestEntry, RevealTrigger, SkillEntry, ThreatTierToken, WorldData,
 } from '../types.ts'
 import { COMPETENCY_TIERS, THREAT_TIERS, tierToWord, wordToTier, displayThreatLabel } from '../lib/tiers.ts'
 import { trustWord } from '../lib/npcs.ts'
@@ -31,7 +31,7 @@ function traitsText(traits: ItemEntry['traits']): string | null {
 }
 
 export type CategoryId =
-  | 'realm' | 'character' | 'crafting' | 'chapters' | 'npcs' | 'factions' | 'locations' | 'lore' | 'quests' | 'bestiary' | 'items' | 'skills' | 'corpses'
+  | 'campaign' | 'crafting' | 'chapters' | 'npcs' | 'factions' | 'locations' | 'lore' | 'quests' | 'bestiary' | 'items' | 'skills' | 'projects'
 
 interface CodexProps {
   world: WorldData
@@ -48,13 +48,14 @@ interface CodexProps {
   inventory: Record<string, number>
   items: Record<string, ItemEntry>
   crafting: CraftingJob[]
-  corpses: string[]
+  projects: Record<string, ProjectEntry>
   onUpdateNpc: (id: string, patch: Partial<NpcEntry> | null) => void
   onUpdateFaction: (id: string, patch: Partial<FactionEntry> | null) => void
   onUpdateLocation: (id: string, patch: Partial<LocationEntry> | null) => void
   onUpdateLore: (id: string, patch: Partial<LoreEntry> | null) => void
   onUpdateQuest: (id: string, patch: Partial<QuestEntry> | null) => void
   onUpdateBestiary: (id: string, patch: Partial<BestiaryEntry> | null) => void
+  onUpdateProject: (id: string, patch: Partial<ProjectEntry> | null) => void
   onUpdateSkill: (id: string, entry: Partial<SkillEntry> | null) => void
   onUpdateItem: (id: string, qty: number | null, entry?: Partial<ItemEntry>) => void
   onEquipItem: (id: string) => void
@@ -182,15 +183,6 @@ function StatBar({ label, value, max = 100, displayValue }: { label: string; val
         <div className="h-full bg-[#e8ca8a]" style={{ width: `${pct}%` }} />
       </div>
       <span className="font-mono text-right text-ink">{displayValue ?? value}</span>
-    </div>
-  )
-}
-
-function DetailField({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div>
-      <p className="text-[11px] font-display text-ink-muted uppercase tracking-wide">{label}</p>
-      <div className="font-narrative text-sm text-ink">{value}</div>
     </div>
   )
 }
@@ -352,7 +344,7 @@ function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
 // source, so a `` `border-[${accent.hex}]/35` `` built at runtime would
 // silently never get its CSS generated. This mirrors how MainMenu's own
 // cyan/purple cards are written (also full literal strings, not templated).
-type CoreCategoryId = 'npcs' | 'factions' | 'locations' | 'lore' | 'quests' | 'bestiary' | 'skills' | 'items'
+type CoreCategoryId = 'npcs' | 'factions' | 'locations' | 'lore' | 'quests' | 'bestiary' | 'skills' | 'items' | 'projects'
 
 interface CategoryAccent {
   icon: LucideIcon
@@ -449,9 +441,20 @@ const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
     tag: 'rounded-full border border-[#f0ca65]/35 bg-[#f0ca65]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#fae5b5]',
     activeTab: 'bg-[#f0ca65]/20 text-[#fae5b5] border-[#f0ca65]/60 shadow-[0_0_12px_rgba(240,202,101,0.25)]',
   },
+  projects: {
+    icon: Milestone,
+    card: `${GLASS_SURFACE_LIST} bg-[#131622]/90 border-[#23283b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#2dd4bf]/80 hover:bg-[#191c2c] hover:shadow-[0_4px_16px_rgba(45,212,191,0.2)] cursor-pointer group`,
+    iconBadge: 'w-8 h-8 rounded-xl bg-[#1b1f2e] border border-[#2b3145] flex items-center justify-center text-[#2dd4bf] shrink-0 group-hover:scale-105 group-hover:border-[#2dd4bf]/60 group-hover:bg-[#132e2b] transition-all',
+    kicker: 'font-mono text-[9px] text-[#a0a5b8] uppercase tracking-wider group-hover:text-[#5eead4]/90',
+    badge: 'rounded-lg bg-[#1a1d2b] border border-[#2d3348] text-[#a0a5b8] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#2dd4bf]/60 group-hover:text-[#5eead4] group-hover:bg-[#2dd4bf]/20 transition-all',
+    sectionIcon: 'text-[#2dd4bf]',
+    tag: 'rounded-full border border-[#2dd4bf]/35 bg-[#2dd4bf]/10 px-1.5 py-0.25 text-[9px] font-mono text-[#5eead4]',
+    solid: 'bg-[#2dd4bf]',
+    activeTab: 'bg-[#2dd4bf]/20 text-[#5eead4] border-[#2dd4bf]/60 shadow-[0_0_12px_rgba(45,212,191,0.25)]',
+  },
 }
 
-// For the non-CRUD categories (Character/Realm/Crafting/Chapters) at the
+// For the non-CRUD categories (Campaign/Crafting/Chapters) at the
 // top-level category grid — a shared gold-accent identity matching the sleek dark deck.
 const NEUTRAL_ACCENT: CategoryAccent = {
   icon: Globe,
@@ -583,6 +586,22 @@ const QUEST_TYPE_META: Record<string, { label: string; icon: LucideIcon; classNa
 function QuestTypeBadge({ type }: { type?: string }) {
   const meta = type ? QUEST_TYPE_META[type] : undefined
   if (!meta) return null
+  const Icon = meta.icon
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase tracking-wide shrink-0 ${meta.className}`}>
+      <Icon size={11} /> {meta.label}
+    </span>
+  )
+}
+
+// §7 Projects — same colored-ribbon status convention as Quests above.
+const PROJECT_STATUS_META: Record<string, { label: string; icon: LucideIcon; className: string }> = {
+  completed: { label: 'Completed', icon: CheckCircle2, className: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40' },
+  stalled: { label: 'Stalled', icon: AlertTriangle, className: 'bg-amber-500/15 text-amber-300 border-amber-500/40' },
+  active: { label: 'Active', icon: Hammer, className: 'bg-[#2dd4bf]/15 text-[#5eead4] border-[#2dd4bf]/40' },
+}
+function ProjectStatusBadge({ status }: { status?: string }) {
+  const meta = PROJECT_STATUS_META[status ?? ''] ?? PROJECT_STATUS_META.active
   const Icon = meta.icon
   return (
     <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase tracking-wide shrink-0 ${meta.className}`}>
@@ -846,13 +865,14 @@ export default function Codex({
   inventory,
   items,
   crafting,
-  corpses,
+  projects,
   onUpdateNpc,
   onUpdateFaction,
   onUpdateLocation,
   onUpdateLore,
   onUpdateQuest,
   onUpdateBestiary,
+  onUpdateProject,
   onUpdateItem,
   onEquipItem,
   onUnequipSlot,
@@ -1049,6 +1069,23 @@ export default function Codex({
     })
   }, [bestiary, searchQuery, activeSubtab])
 
+  const filteredProjects = useMemo(() => {
+    return Object.entries(projects).filter(([, p]) => {
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase()
+        const matchesName = p.name.toLowerCase().includes(q)
+        const matchesNote = p.note?.toLowerCase().includes(q)
+        const matchesPrereq = p.prerequisites?.join(' ').toLowerCase().includes(q)
+        const matchesTurn = p.loggedAt?.toLowerCase().includes(q)
+        if (!matchesName && !matchesNote && !matchesPrereq && !matchesTurn) return false
+      }
+      if (activeSubtab === 'active' && (p.status === 'completed' || p.status === 'stalled')) return false
+      if (activeSubtab === 'stalled' && p.status !== 'stalled') return false
+      if (activeSubtab === 'completed' && p.status !== 'completed') return false
+      return true
+    })
+  }, [projects, searchQuery, activeSubtab])
+
   const filteredSkills = useMemo(() => {
     return Object.entries(skills).filter(([, s]) => {
       if (searchQuery) {
@@ -1174,6 +1211,19 @@ export default function Codex({
       ]
     }
 
+    if (category === 'projects') {
+      const allCount = Object.keys(projects).length
+      const activeCount = Object.values(projects).filter((p) => p.status !== 'completed' && p.status !== 'stalled').length
+      const stalledCount = Object.values(projects).filter((p) => p.status === 'stalled').length
+      const doneCount = Object.values(projects).filter((p) => p.status === 'completed').length
+      return [
+        { id: 'all', label: 'All', count: allCount, icon: Milestone },
+        { id: 'active', label: 'Active', count: activeCount, icon: Hammer },
+        { id: 'stalled', label: 'Stalled', count: stalledCount, icon: AlertTriangle },
+        { id: 'completed', label: 'Completed', count: doneCount, icon: CheckCircle2 },
+      ]
+    }
+
     if (category === 'skills') {
       const allCount = Object.keys(skills).length
       const classCount = Object.values(skills).filter((s) => s.classId && s.classId === player.classId).length
@@ -1207,14 +1257,14 @@ export default function Codex({
     }
 
     return []
-  }, [category, npcs, factions, locations, lore, loreCategories, quests, bestiary, skills, inventory, items, player])
+  }, [category, npcs, factions, locations, lore, loreCategories, quests, bestiary, skills, inventory, items, player, projects])
 
   const currentAccent = (category ? (CATEGORY_ACCENTS as Record<string, CategoryAccent>)[category] : undefined) ?? NEUTRAL_ACCENT
 
   const searchFilterBar = useMemo(() => {
     if (!category || entryId || editing) return null
 
-    if (category === 'character' || category === 'realm' || category === 'crafting' || category === 'chapters' || category === 'corpses') {
+    if (category === 'campaign' || category === 'crafting' || category === 'chapters') {
       return null
     }
 
@@ -1258,31 +1308,22 @@ export default function Codex({
 
   const chapters = log.filter((e) => e.chapterSummary)
 
-  // Grouped by tag with a count — the same adversary type is commonly slain
-  // more than once, and corpse_add's bare tag carries no identity of its own
-  // to key a Dict by. A plain object, not a Map — this file imports `Map`
-  // as the Locations category icon (lucide-react), shadowing the built-in.
-  const corpseCountsRecord: Record<string, number> = {}
-  for (const tag of corpses) corpseCountsRecord[tag] = (corpseCountsRecord[tag] ?? 0) + 1
-  const corpseCounts = Object.entries(corpseCountsRecord)
-
   // Ordered by how often a player actually opens each category during play —
   // quests/NPCs/items/locations/bestiary are live-reference lookups made mid-turn,
-  // faction/lore are occasional check-ins, chapters/realm are read once and rarely revisited.
+  // faction/lore/projects are occasional check-ins, chapters/campaign are read once and rarely revisited.
   const categories: { id: CategoryId; label: string; description: string; icon: LucideIcon; count: number }[] = [
     { id: 'quests', label: 'Quests', description: 'Active, completed & tracked objectives', icon: Target, count: Object.keys(quests).length },
     { id: 'npcs', label: 'NPCs', description: 'Companions, allies & trust ratings', icon: Users, count: Object.keys(npcs).length },
     { id: 'skills', label: 'Skills', description: 'Spells & abilities you have learned', icon: Sparkles, count: Object.keys(skills).length },
     { id: 'items', label: 'Items', description: 'Equipment, relics & carried goods', icon: Backpack, count: Object.keys(inventory).length },
     { id: 'locations', label: 'Locations', description: 'Regions, danger levels & standing', icon: Map, count: Object.keys(locations).length },
-    { id: 'bestiary', label: 'Bestiary', description: 'Adversaries encountered in the field', icon: Skull, count: Object.keys(bestiary).length },
-    { id: 'corpses', label: 'Corpses', description: 'Harvestable essence — necromancy & Shadow Monarch', icon: Ghost, count: corpses.length },
+    { id: 'bestiary', label: 'Bestiary', description: 'Adversaries encountered in the field — including the recently slain', icon: Skull, count: Object.keys(bestiary).length },
+    { id: 'projects', label: 'Projects', description: 'Builds, repairs & long-running endeavors', icon: Milestone, count: Object.keys(projects).length },
     { id: 'factions', label: 'Faction', description: 'Political groups, guilds & reputation', icon: ShieldCheck, count: Object.keys(factions).length },
     { id: 'lore', label: 'Lore', description: 'Legends, myths & discovered secrets', icon: ScrollText, count: Object.keys(lore).length },
     { id: 'chapters', label: 'Chapters', description: 'Chronological recap of the tale so far', icon: BookOpen, count: chapters.length },
-    { id: 'character', label: 'Character', description: 'Attributes, class & derived pools', icon: User, count: 1 },
+    { id: 'campaign', label: 'Campaign', description: 'Character attributes & realm cosmology', icon: Globe, count: 1 },
     { id: 'crafting', label: 'Crafting', description: 'Craft items from held materials', icon: Hammer, count: crafting.length },
-    { id: 'realm', label: 'Realm', description: 'Cosmology, setting, tone & core conflict', icon: Globe, count: 1 },
   ]
 
   function back() {
@@ -1440,6 +1481,48 @@ export default function Codex({
     setEditing(false)
   }
 
+  // §7 Projects CRUD — stages are edited as a comma-separated label list
+  // (same convention NPCs' Deeds field already uses for a string array);
+  // an existing stage's `done` state survives a re-save as long as its label
+  // is unchanged, matched by exact text. Toggling `done` day-to-day happens
+  // directly from the detail view instead (toggleProjectStage below), not
+  // through this form — no need to re-enter edit mode just to check a box.
+  function saveProject() {
+    const id = entryId === NEW_ID ? genId(draft.name, projects) : entryId!
+    const existingStages = (entryId && entryId !== NEW_ID ? projects[entryId]?.stages : undefined) ?? []
+    const stages: ProjectStage[] = (typeof draft.stagesText === 'string' ? draft.stagesText.split(',') : [])
+      .map((s: string) => s.trim())
+      .filter(Boolean)
+      .map((label: string) => ({ label, done: existingStages.find((s) => s.label === label)?.done ?? false }))
+    const prerequisites: string[] | undefined =
+      typeof draft.prerequisites === 'string' && draft.prerequisites.trim()
+        ? draft.prerequisites.split(',').map((s: string) => s.trim()).filter(Boolean)
+        : undefined
+    const etaDay = draft.etaDay !== undefined && draft.etaDay !== '' ? Number(draft.etaDay) : undefined
+    const eta = etaDay !== undefined && Number.isFinite(etaDay) ? { d: etaDay, h: (draft.etaTime ?? '').trim() || '12:00 PM' } : undefined
+    onUpdateProject(id, {
+      name: draft.name,
+      status: draft.status || undefined,
+      stages,
+      prerequisites,
+      eta,
+      note: draft.note?.trim() || undefined,
+      discovery: validateDiscovery(draft.discovery, { locations, npcs, quests }),
+    })
+    setEntryId(id)
+    setEditing(false)
+  }
+
+  // A direct, out-of-edit-mode action — clicking a stage in the detail view
+  // flips its own done flag, the same "steer state directly" philosophy
+  // already used for Equip/Unequip and Discovery reveals.
+  function toggleProjectStage(id: string, stageIndex: number) {
+    const project = projects[id]
+    if (!project) return
+    const stages = project.stages.map((s, i) => (i === stageIndex ? { ...s, done: !s.done } : s))
+    onUpdateProject(id, { stages })
+  }
+
   function saveWorld() {
     onUpdateWorld({
       name: draft.name,
@@ -1453,7 +1536,7 @@ export default function Codex({
     setEditing(false)
   }
 
-  async function deleteEntry(kind: Exclude<CategoryId, 'chapters' | 'realm' | 'items'>) {
+  async function deleteEntry(kind: Exclude<CategoryId, 'chapters' | 'campaign' | 'items'>) {
     if (!entryId || !(await confirm('Delete this entry? This cannot be undone.'))) return
     if (kind === 'npcs') onUpdateNpc(entryId, null)
     else if (kind === 'factions') onUpdateFaction(entryId, null)
@@ -1462,6 +1545,7 @@ export default function Codex({
     else if (kind === 'quests') onUpdateQuest(entryId, null)
     else if (kind === 'bestiary') onUpdateBestiary(entryId, null)
     else if (kind === 'skills') onUpdateSkill(entryId, null)
+    else if (kind === 'projects') onUpdateProject(entryId, null)
     setEntryId(null)
   }
 
@@ -1506,6 +1590,7 @@ export default function Codex({
     entryId && category === 'bestiary' ? (bestiary[entryId] && isHidden(bestiary[entryId]) ? '???' : bestiary[entryId]?.name) :
     entryId && category === 'skills' ? (skills[entryId] && isHidden(skills[entryId]) ? '???' : skills[entryId]?.name) :
     entryId && category === 'items' ? (items[entryId]?.name ?? entryId.replace(/_/g, ' ')) :
+    entryId && category === 'projects' ? (projects[entryId] && isHidden(projects[entryId]) ? '???' : projects[entryId]?.name) :
     categories.find((c) => c.id === category)?.label ?? 'Codex'
 
   return (
@@ -1554,71 +1639,135 @@ export default function Codex({
         </div>
       )}
 
-      {/* Character — single record, no grid. The only editable field is Class:
-          §5.1b Class Evolution's manual/CRUD trigger path, same "steer state
-          directly" philosophy as auto-logged entries and Discovery reveals. */}
-      {category === 'character' && (
+      {/* Campaign — merges the old separate Character and Realm categories
+          into one screen (2026-09-07): both are single-record, no grid, and
+          neither is CRUD-deletable, same as before. Since editing/draft is
+          one shared piece of state for the whole component, the two sub-
+          records discriminate on `entryId` ('__character__' vs '__world__')
+          while editing — exactly the sentinel ids each already used when
+          they were separate categories — so only the section actually being
+          edited swaps into its form; the other stays out of view rather than
+          needing a second independent editing flag. */}
+      {category === 'campaign' && (
         <>
-          <div className="flex justify-end mb-3">
-            <CrudToolbar
-              editing={editing}
-              canDelete={false}
-              onEdit={() => startEdit('__character__', { classId: player.classId })}
-              onSave={async () => {
-                if (draft.classId && draft.classId !== player.classId) {
-                  const target = PRESET_CLASSES.find((c) => c.id === draft.classId)
-                  if (target && (await confirm(`Evolve into ${target.name}? Attribute points already earned keep their history — only points earned from here forward follow the new class.`))) {
-                    onEvolveClass(draft.classId)
-                  }
-                }
-                setEditing(false)
-                setDraft({})
-              }}
-              onCancel={cancelEdit}
-              onDelete={() => {}}
-            />
-          </div>
-          {editing ? (
-            <DetailPanel>
-              <label className="block">
-                <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Class</span>
-                <select
-                  value={draft.classId ?? player.classId}
-                  onChange={(e) => setDraft((d) => ({ ...d, classId: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-[#e8ca8a]/25 bg-[#e8ca8a]/[0.04] backdrop-blur-sm px-3 py-2 font-mono text-sm text-ink"
-                >
-                  {PRESET_CLASSES.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </label>
-              <p className="font-narrative text-xs italic text-ink-muted">
-                §5.1b Class Evolution — the class slot is replaced outright, no blending. Attribute
-                points already earned are never recalculated; only points earned from here forward
-                follow the new class's growth.
-              </p>
-            </DetailPanel>
+          {editing && entryId === '__character__' ? (
+            <>
+              <div className="flex justify-end mb-3">
+                <CrudToolbar
+                  editing
+                  canDelete={false}
+                  onEdit={() => {}}
+                  onSave={async () => {
+                    if (draft.classId && draft.classId !== player.classId) {
+                      const target = PRESET_CLASSES.find((c) => c.id === draft.classId)
+                      if (target && (await confirm(`Evolve into ${target.name}? Attribute points already earned keep their history — only points earned from here forward follow the new class.`))) {
+                        onEvolveClass(draft.classId)
+                      }
+                    }
+                    setEditing(false)
+                    setDraft({})
+                  }}
+                  onCancel={cancelEdit}
+                  onDelete={() => {}}
+                />
+              </div>
+              <DetailPanel>
+                <label className="block">
+                  <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Class</span>
+                  <select
+                    value={draft.classId ?? player.classId}
+                    onChange={(e) => setDraft((d) => ({ ...d, classId: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-[#e8ca8a]/25 bg-[#e8ca8a]/[0.04] backdrop-blur-sm px-3 py-2 font-mono text-sm text-ink"
+                  >
+                    {PRESET_CLASSES.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </label>
+                <p className="font-narrative text-xs italic text-ink-muted">
+                  §5.1b Class Evolution — the class slot is replaced outright, no blending. Attribute
+                  points already earned are never recalculated; only points earned from here forward
+                  follow the new class's growth.
+                </p>
+              </DetailPanel>
+            </>
+          ) : editing && entryId === '__world__' ? (
+            <>
+              <div className="flex justify-end mb-3">
+                <CrudToolbar editing canDelete={false} onEdit={() => {}} onSave={saveWorld} onCancel={cancelEdit} onDelete={() => {}} />
+              </div>
+              <DetailPanel>
+                <TextField label="World Name" value={draft.name ?? ''} onChange={(v) => setDraft((d) => ({ ...d, name: v }))} />
+                <TextField label="Genre & Tone" value={draft.genreTone ?? ''} onChange={(v) => setDraft((d) => ({ ...d, genreTone: v }))} textarea />
+                <TextField label="Core Regional Conflict" value={draft.conflict ?? ''} onChange={(v) => setDraft((d) => ({ ...d, conflict: v }))} textarea />
+                <TextField label="Power System" value={draft.powerSystem ?? ''} onChange={(v) => setDraft((d) => ({ ...d, powerSystem: v }))} textarea />
+                <TextField label="Era / Tech Level" value={draft.eraTechLevel ?? ''} onChange={(v) => setDraft((d) => ({ ...d, eraTechLevel: v }))} />
+                <TextField label="Key Factions" value={draft.keyFactions ?? ''} onChange={(v) => setDraft((d) => ({ ...d, keyFactions: v }))} />
+                <TextField label="World Background" value={draft.background ?? ''} onChange={(v) => setDraft((d) => ({ ...d, background: v }))} textarea />
+              </DetailPanel>
+            </>
           ) : (
-            <DetailPanel>
-              <DetailField label="Class" value={player.className} />
-              <DetailField label="Level" value={String(player.level)} />
-              <DetailField
-                label="Attributes"
-                value={`STR ${tierToWord(player.attrs.STR, COMPETENCY_TIERS)} · INT ${tierToWord(player.attrs.INT, COMPETENCY_TIERS)} · AGI ${tierToWord(player.attrs.AGI, COMPETENCY_TIERS)}`}
-              />
-              <DetailField
-                label="Conditions"
-                value={player.conditions?.length ? player.conditions.map((c) => c.label).join(', ') : 'None'}
-              />
-              {/* Set at creation only (WorldSetup/NewGame) — not editable here,
-                  same as Background always was, so the reader can see their
-                  own established identity at a glance without a second form. */}
-              {player.background && <DetailField label="Background" value={<span className="text-xs text-ink-muted">{player.background}</span>} />}
-              {player.personality && <DetailField label="Personality" value={player.personality} />}
-              {player.motivation && <DetailField label="Motivation" value={player.motivation} />}
-              {player.physicalTrait && <DetailField label="Physical Trait" value={player.physicalTrait} />}
-              {player.secret && <DetailField label="Secret" value={player.secret} />}
-            </DetailPanel>
+            <div className="flex flex-col gap-3">
+              <SectionCard
+                accent={NEUTRAL_ACCENT}
+                icon={User}
+                title="Character"
+                badge={<GlassIconButton icon={Pencil} label="Edit Character" compact onClick={() => startEdit('__character__', { classId: player.classId })} />}
+              >
+                <FieldRow label="Class" value={player.className} />
+                <FieldRow label="Level" value={String(player.level)} />
+                <FieldRow
+                  label="Attributes"
+                  value={`STR ${tierToWord(player.attrs.STR, COMPETENCY_TIERS)} · INT ${tierToWord(player.attrs.INT, COMPETENCY_TIERS)} · AGI ${tierToWord(player.attrs.AGI, COMPETENCY_TIERS)}`}
+                />
+                <FieldRow label="Conditions" value={player.conditions?.length ? player.conditions.map((c) => c.label).join(', ') : 'None'} />
+                {/* Set at creation only (WorldSetup/NewGame) — not editable here,
+                    same as Background always was, so the reader can see their
+                    own established identity at a glance without a second form. */}
+                {player.background && <FieldRow label="Background" value={player.background} />}
+                {player.personality && <FieldRow label="Personality" value={player.personality} />}
+                {player.motivation && <FieldRow label="Motivation" value={player.motivation} />}
+                {player.physicalTrait && <FieldRow label="Physical Trait" value={player.physicalTrait} />}
+                {player.secret && <FieldRow label="Secret" value={player.secret} />}
+              </SectionCard>
+              <SectionCard
+                accent={NEUTRAL_ACCENT}
+                icon={Globe}
+                title="Realm"
+                badge={<GlassIconButton icon={Pencil} label="Edit Realm" compact onClick={() => startEdit('__world__', {
+                  name: world.name,
+                  genreTone: world.genreTone,
+                  conflict: world.conflict,
+                  background: world.background,
+                  powerSystem: world.powerSystem,
+                  eraTechLevel: world.eraTechLevel,
+                  keyFactions: world.keyFactions,
+                })} />}
+              >
+                <FieldRow label="World" value={world.name} />
+                {world.genreTone && <FieldRow label="Genre & Tone" value={world.genreTone} />}
+                {world.conflict && <FieldRow label="Core Regional Conflict" value={world.conflict} />}
+                {world.powerSystem && <FieldRow label="Power System" value={world.powerSystem} />}
+                {world.eraTechLevel && <FieldRow label="Era / Tech Level" value={world.eraTechLevel} />}
+                {world.keyFactions && <FieldRow label="Key Factions" value={world.keyFactions} />}
+                {world.background && <FieldRow label="World Background" value={world.background} />}
+                <FieldRow label="Narration Style" value={world.narrationStyle} />
+                {flags.length > 0 && (
+                  <FieldRow
+                    label="World Flags"
+                    value={
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {flags.map((f) => (
+                          <span key={f} className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-[#e8ca8a]/15 text-[#e8ca8a]">
+                            {f}
+                          </span>
+                        ))}
+                      </div>
+                    }
+                  />
+                )}
+              </SectionCard>
+            </div>
           )}
         </>
       )}
@@ -1680,99 +1829,6 @@ export default function Codex({
             </div>
           </div>
         </div>
-      )}
-
-      {/* Corpses — read-only, array-backed like Crafting: corpse_add tags have
-          no CRUD identity of their own (a player doesn't author/edit a slain
-          enemy), just a bare identifier tag consumed LIFO by `!arise`. Grouped
-          by tag with a count, cross-referencing the Bestiary for a real name/
-          threat tier where the tag matches one already registered there. */}
-      {category === 'corpses' && (
-        <div className="flex flex-col gap-3">
-          <p className="font-narrative text-xs text-ink-muted">
-            Harvestable essence from the slain — extracted via <span className="font-mono">!arise</span> (Shadow Monarch), most recently fallen first.
-          </p>
-          {corpseCounts.length === 0 ? (
-            <p className="font-narrative italic text-sm text-ink-muted">No harvestable corpses yet — defeat an enemy first.</p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {corpseCounts.map(([tag, qty]) => {
-                const beast = bestiary[slugify(tag)]
-                return (
-                  <div key={tag} className="rounded-xl p-3 flex flex-col gap-1 border border-[#e8ca8a]/25 bg-transparent backdrop-blur-sm">
-                    <div className="flex items-center justify-between gap-2">
-                      <h3 className="font-display font-bold text-sm text-[#e8ca8a]">{beast?.name ?? titleCaseId(tag)}</h3>
-                      <span className="font-mono text-xs text-ink-muted">×{qty}</span>
-                    </div>
-                    {beast?.threatTier && <p className="font-narrative text-[11px] text-ink-muted">{beast.threatTier}</p>}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Realm — single record, no grid; identity fields editable, narration style stays owned by Settings */}
-      {category === 'realm' && (
-        <>
-          <div className="flex justify-end mb-3">
-            <CrudToolbar
-              editing={editing}
-              canDelete={false}
-              onEdit={() =>
-                startEdit('__world__', {
-                  name: world.name,
-                  genreTone: world.genreTone,
-                  conflict: world.conflict,
-                  background: world.background,
-                  powerSystem: world.powerSystem,
-                  eraTechLevel: world.eraTechLevel,
-                  keyFactions: world.keyFactions,
-                })
-              }
-              onSave={saveWorld}
-              onCancel={cancelEdit}
-              onDelete={() => {}}
-            />
-          </div>
-          {editing ? (
-            <DetailPanel>
-              <TextField label="World Name" value={draft.name ?? ''} onChange={(v) => setDraft((d) => ({ ...d, name: v }))} />
-              <TextField label="Genre & Tone" value={draft.genreTone ?? ''} onChange={(v) => setDraft((d) => ({ ...d, genreTone: v }))} textarea />
-              <TextField label="Core Regional Conflict" value={draft.conflict ?? ''} onChange={(v) => setDraft((d) => ({ ...d, conflict: v }))} textarea />
-              <TextField label="Power System" value={draft.powerSystem ?? ''} onChange={(v) => setDraft((d) => ({ ...d, powerSystem: v }))} textarea />
-              <TextField label="Era / Tech Level" value={draft.eraTechLevel ?? ''} onChange={(v) => setDraft((d) => ({ ...d, eraTechLevel: v }))} />
-              <TextField label="Key Factions" value={draft.keyFactions ?? ''} onChange={(v) => setDraft((d) => ({ ...d, keyFactions: v }))} />
-              <TextField label="World Background" value={draft.background ?? ''} onChange={(v) => setDraft((d) => ({ ...d, background: v }))} textarea />
-            </DetailPanel>
-          ) : (
-            <DetailPanel>
-              <DetailField label="World" value={world.name} />
-              {world.genreTone && <DetailField label="Genre & Tone" value={world.genreTone} />}
-              {world.conflict && <DetailField label="Core Regional Conflict" value={world.conflict} />}
-              {world.powerSystem && <DetailField label="Power System" value={world.powerSystem} />}
-              {world.eraTechLevel && <DetailField label="Era / Tech Level" value={world.eraTechLevel} />}
-              {world.keyFactions && <DetailField label="Key Factions" value={world.keyFactions} />}
-              {world.background && <DetailField label="World Background" value={world.background} />}
-              <DetailField label="Narration Style" value={<span className="text-xs text-ink-muted">{world.narrationStyle}</span>} />
-              {flags.length > 0 && (
-                <DetailField
-                  label="World Flags"
-                  value={
-                    <div className="flex flex-wrap gap-1.5 mt-1">
-                      {flags.map((f) => (
-                        <span key={f} className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-[#e8ca8a]/15 text-[#e8ca8a]">
-                          {f}
-                        </span>
-                      ))}
-                    </div>
-                  }
-                />
-              )}
-            </DetailPanel>
-          )}
-        </>
       )}
 
       {/* Chapters — generated recap, read-only, no CRUD */}
@@ -2307,6 +2363,7 @@ export default function Codex({
                   b.threatTier ? { icon: Skull, label: displayThreatLabel(b.threatTier, world.tierSkin?.threatLabels) } : null,
                   b.conditions?.length ? { icon: Heart, label: b.conditions.map((c) => c.label).join(', ') } : null,
                   b.weaknesses ? { icon: Zap, label: `Weak: ${b.weaknesses}` } : null,
+                  b.corpseCount ? { icon: Ghost, label: `${b.corpseCount} harvestable` } : null,
                 ].filter(Boolean) as MetaChip[]
             return (
               <DeckEntryCard
@@ -2380,6 +2437,17 @@ export default function Codex({
                 ) : null}
                 {bestiary[entryId].weaknesses && <FieldRow label="Weaknesses" value={bestiary[entryId].weaknesses} icon={Zap} />}
               </SectionCard>
+              {/* §5.3/§7 "recently slain" — folded in from the old standalone
+                  Corpses category; corpseCount/lastSlainTime now live directly
+                  on this species' own Bestiary record, harvestable via !arise. */}
+              {(bestiary[entryId].corpseCount ?? 0) > 0 && (
+                <SectionCard accent={CATEGORY_ACCENTS.bestiary} icon={Ghost} title="Recently Slain">
+                  <FieldRow label="Harvestable Essence" value={`×${bestiary[entryId].corpseCount}`} icon={Ghost} />
+                  {bestiary[entryId].lastSlainTime && (
+                    <FieldRow label="Last Slain" value={`Day ${bestiary[entryId].lastSlainTime!.d} ${bestiary[entryId].lastSlainTime!.h}`} icon={Clock} />
+                  )}
+                </SectionCard>
+              )}
               {(bestiary[entryId].habitat || bestiary[entryId].description || bestiary[entryId].lootTable) && (
                 <SectionCard accent={CATEGORY_ACCENTS.bestiary} icon={ScrollText} title="Ecology & Spoils">
                   {bestiary[entryId].habitat && <FieldRow label="Habitat" value={bestiary[entryId].habitat} icon={MapPin} />}
@@ -2388,6 +2456,149 @@ export default function Codex({
                 </SectionCard>
               )}
               <TagPills tags={bestiary[entryId].tags} accent={CATEGORY_ACCENTS.bestiary} />
+            </div>
+          )}
+        </>
+      )}
+
+      {/* §7 Projects — a broader multi-stage endeavor tracker (construction,
+          repair, any long-running undertaking), generalizing Crafting per the
+          user's own request. CRUD pattern mirrors Quests most closely (name,
+          status enum, note, description-like fields), adapted for
+          stages/prerequisites/eta. */}
+      {category === 'projects' && !entryId && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <AddButton label="Add Project" onClick={() => startCreate({ name: '', status: 'active', stagesText: '', prerequisites: '', note: '' })} />
+          {filteredProjects.map(([id, p]) => {
+            const hidden = isHidden(p)
+            const doneStages = p.stages.filter((s) => s.done).length
+            const metaChips: MetaChip[] = hidden
+              ? []
+              : [
+                  p.stages.length > 0 ? { icon: ListChecks, label: `${doneStages}/${p.stages.length} stages` } : null,
+                  p.eta ? { icon: Clock, label: `Ready: Day ${p.eta.d} ${p.eta.h}` } : null,
+                ].filter(Boolean) as MetaChip[]
+            return (
+              <DeckEntryCard
+                key={id}
+                accent={CATEGORY_ACCENTS.projects}
+                title={hidden ? '???' : p.name}
+                statusBadge={hidden ? undefined : <ProjectStatusBadge status={p.status} />}
+                subtitle={hidden ? (p.discovery?.teaser || 'Not yet discovered.') : (p.note || p.prerequisites?.join(', ') || 'No recorded status.')}
+                badge={hidden ? <LockBadge /> : <AutoBadge shown={p.autoLogged} />}
+                metaChips={metaChips}
+                onClick={() => setEntryId(id)}
+              />
+            )
+          })}
+          {Object.keys(projects).length === 0 ? (
+            <p className="font-narrative italic text-sm text-ink-muted col-span-full">No projects underway yet.</p>
+          ) : filteredProjects.length === 0 ? (
+            <p className="font-narrative italic text-sm text-ink-muted col-span-full">No projects match current filters.</p>
+          ) : null}
+        </div>
+      )}
+      {category === 'projects' && entryId && (editing || projects[entryId]) && (
+        <>
+          <div className="flex justify-end mb-3">
+            <CrudToolbar
+              editing={editing}
+              canDelete={entryId !== NEW_ID}
+              onEdit={() =>
+                startEdit(entryId, {
+                  ...projects[entryId],
+                  status: projects[entryId].status ?? '',
+                  stagesText: (projects[entryId].stages ?? []).map((s) => s.label).join(', '),
+                  prerequisites: (projects[entryId].prerequisites ?? []).join(', '),
+                  etaDay: projects[entryId].eta?.d !== undefined ? String(projects[entryId].eta.d) : '',
+                  etaTime: projects[entryId].eta?.h ?? '',
+                })
+              }
+              onSave={saveProject}
+              onCancel={cancelEdit}
+              onDelete={() => deleteEntry('projects')}
+            />
+          </div>
+          {editing ? (
+            <DetailPanel>
+              <TextField label="Name" value={draft.name ?? ''} onChange={(v) => setDraft((d) => ({ ...d, name: v }))} />
+              <label className="block">
+                <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Status</span>
+                <select
+                  value={draft.status ?? 'active'}
+                  onChange={(e) => setDraft((d) => ({ ...d, status: e.target.value }))}
+                  className={`mt-1 ${SELECT_CLASS}`}
+                >
+                  <option value="active">Active</option>
+                  <option value="completed">Completed</option>
+                  <option value="stalled">Stalled</option>
+                </select>
+              </label>
+              <TextField
+                label="Stages (comma-separated)"
+                value={draft.stagesText ?? ''}
+                onChange={(v) => setDraft((d) => ({ ...d, stagesText: v }))}
+                placeholder="Foundation laid, Walls raised, Roof sealed…"
+              />
+              <TextField
+                label="Prerequisites (comma-separated)"
+                value={draft.prerequisites ?? ''}
+                onChange={(v) => setDraft((d) => ({ ...d, prerequisites: v }))}
+                placeholder="200 Timber, a master mason…"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <NumberField label="ETA — Day" value={draft.etaDay ? Number(draft.etaDay) : 0} onChange={(v) => setDraft((d) => ({ ...d, etaDay: String(v) }))} />
+                <TextField label="ETA — Time" value={draft.etaTime ?? ''} onChange={(v) => setDraft((d) => ({ ...d, etaTime: v }))} placeholder="08:00 AM" />
+              </div>
+              <TextField label="Note" value={draft.note ?? ''} onChange={(v) => setDraft((d) => ({ ...d, note: v }))} textarea placeholder="A short current-state blurb…" />
+              <DiscoveryEditor discovery={draft.discovery} onChange={(disc) => setDraft((d) => ({ ...d, discovery: disc }))} />
+            </DetailPanel>
+          ) : isHidden(projects[entryId]) ? (
+            <MaskedDetail teaser={projects[entryId].discovery?.teaser} />
+          ) : (
+            <div className="flex flex-col gap-3">
+              <EntryHeroHeader
+                accent={CATEGORY_ACCENTS.projects}
+                title={projects[entryId].name}
+                badges={
+                  <>
+                    <ProjectStatusBadge status={projects[entryId].status} />
+                    <AutoBadge shown={projects[entryId].autoLogged} />
+                  </>
+                }
+              />
+              {(projects[entryId].note || projects[entryId].prerequisites?.length || projects[entryId].eta) && (
+                <SectionCard accent={CATEGORY_ACCENTS.projects} icon={Milestone} title="Status">
+                  {projects[entryId].note && <FieldRow label="Current State" value={projects[entryId].note!} />}
+                  {projects[entryId].prerequisites?.length ? (
+                    <FieldRow label="Prerequisites" value={projects[entryId].prerequisites!.join(', ')} />
+                  ) : null}
+                  {projects[entryId].eta && (
+                    <FieldRow label="ETA" value={`Ready: Day ${projects[entryId].eta!.d} ${projects[entryId].eta!.h}`} icon={Clock} />
+                  )}
+                </SectionCard>
+              )}
+              {projects[entryId].stages.length > 0 && (
+                <SectionCard accent={CATEGORY_ACCENTS.projects} icon={ListChecks} title="Stages">
+                  <div className="flex flex-col gap-1.5">
+                    {projects[entryId].stages.map((stage, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => toggleProjectStage(entryId, i)}
+                        className="flex items-center gap-2 text-left rounded-lg px-2 py-1.5 hover:bg-white/5 transition-colors cursor-pointer"
+                      >
+                        {stage.done ? (
+                          <CheckCircle2 size={15} className="text-[#2dd4bf] shrink-0" />
+                        ) : (
+                          <span className="w-[15px] h-[15px] rounded-full border border-[#4a5170] shrink-0" />
+                        )}
+                        <span className={`font-narrative text-xs ${stage.done ? 'text-ink-muted line-through' : 'text-ink'}`}>{stage.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </SectionCard>
+              )}
             </div>
           )}
         </>

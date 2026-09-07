@@ -1,4 +1,4 @@
-import { slugify, titleCaseId } from './slug.ts'
+import { slugify } from './slug.ts'
 import { effectiveStanding, repTierLabel } from './factions.ts'
 import { checkAffordability } from './skills.ts'
 import { trustWord } from './npcs.ts'
@@ -229,23 +229,17 @@ export function resolveBangCommand(raw: string, campaign: Campaign): BangResult 
       }))
       return tableResult('Minions', rows, 'No minions summoned yet.')
     }
-    // §5.3 — corpse_add tags accumulated on the Campaign, harvestable by
-    // `!arise` (Shadow Monarch). Grouped by tag with a count since the same
-    // adversary type is commonly slain more than once; cross-references the
-    // Bestiary for a real name/threat tier where the tag matches one, since
-    // corpse_add itself carries only a bare identifier tag, nothing richer.
+    // §5.3/§7 — corpseCount now lives directly on each BestiaryEntry (folded
+    // in from the old flat Campaign.corpses tag stack), so this just filters
+    // the Bestiary for species with a harvestable count above zero.
     case 'corpses': {
-      const corpses = campaign.corpses ?? []
-      const counts = new Map<string, number>()
-      for (const tag of corpses) counts.set(tag, (counts.get(tag) ?? 0) + 1)
-      const rows = Array.from(counts.entries()).map(([tag, qty]) => {
-        const beast = campaign.bestiary?.[slugify(tag)]
-        return {
-          name: beast?.name ?? titleCaseId(tag),
-          id: tag,
-          fields: [`×${qty}`, ...(beast?.threatTier ? [beast.threatTier] : [])],
-        }
-      })
+      const rows = Object.entries(campaign.bestiary ?? {})
+        .filter(([, b]) => (b.corpseCount ?? 0) > 0)
+        .map(([id, b]) => ({
+          name: b.name,
+          id,
+          fields: [`×${b.corpseCount}`, ...(b.threatTier ? [b.threatTier] : [])],
+        }))
       return tableResult('Corpses', rows, 'No harvestable corpses yet — defeat an enemy first.')
     }
     case 'recall': {

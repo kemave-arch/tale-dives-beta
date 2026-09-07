@@ -299,6 +299,10 @@ export interface QuestEntry {
 // THREAT_TIERS, or 'unknown' for a bare name-only mention that hasn't been
 // established yet). `conditions` mirrors Player's — a beast/hazard can carry
 // the same narrative status tags (Bleeding, Stunned, ...) the protagonist can.
+// `corpseCount`/`lastSlainTime` fold in what used to be the flat, LIFO
+// `Campaign.corpses` tag stack (§5.3) — per-species aggregation directly on
+// the Bestiary entry instead of a separate untyped array, so a harvestable
+// corpse is always attached to a real, named adversary record.
 export interface BestiaryEntry {
   name: string
   threatTier: ThreatTierToken
@@ -307,7 +311,36 @@ export interface BestiaryEntry {
   habitat?: string // freeform
   weaknesses?: string // freeform
   lootTable?: string // freeform, e.g. "Bone Dust, Cursed Fang"
+  corpseCount?: number // §5.3 — how many harvestable corpses of this species currently exist, consumed one at a time by `!arise`
+  lastSlainTime?: GameTime // when the most recent one was added — same firstSeenTime/lastSeenTime anchor pattern as NpcEntry/LocationEntry
   tags?: string[]
+  autoLogged?: boolean
+  loggedAt?: string // see LocationEntry.loggedAt
+  discovery?: Discovery
+}
+
+// §7 Projects — a broader multi-stage tracker generalizing the narrower
+// recipe-based Crafting system (`lib/crafting.ts`/`data/recipes.ts`, both
+// untouched by this): a city under construction, a satellite module mid-
+// repair, any long-running narrative endeavor whose state the player wants
+// to check ("this isn't ready yet, so I can't do X") rather than just being
+// told about it once. Unlike a CraftingJob, a Project never auto-completes
+// on a timer — completion is always an explicit LLM-narrated `stat`
+// update (see ProjectUpdate), since a project isn't a fire-and-forget recipe
+// queue; `eta` (when set) is a read-only readiness gate, checked via
+// lib/projects.ts's isProjectReady.
+export interface ProjectStage {
+  label: string
+  done: boolean
+}
+
+export interface ProjectEntry {
+  name: string
+  stages: ProjectStage[]
+  prerequisites?: string[] // freeform description strings, e.g. "200 Timber, a master mason"
+  eta?: GameTime // when the next incomplete stage (or the whole project) is expected done — optional, not every project has a firm timeline
+  status?: 'active' | 'completed' | 'stalled'
+  note?: string // short current-state blurb, mirrors QuestEntry.note
   autoLogged?: boolean
   loggedAt?: string // see LocationEntry.loggedAt
   discovery?: Discovery
@@ -522,7 +555,7 @@ export interface Campaign {
   items?: Dict<ItemEntry> // §5.9 — item id -> name/type/description/traits, the item Codex
   crafting?: CraftingJob[] // §5.8 — queued/in-progress crafting jobs, never sent to Gemini
   minions?: Dict<Minion> // §5.3 — the player's persistent summoned army
-  corpses?: string[] // §5.3 — harvestable slain-enemy tags accumulated from corpse_add, consumed by `!arise`
+  projects?: Dict<ProjectEntry> // §7 — long-running multi-stage endeavors (construction, repair, ...), distinct from Crafting
   slashCommands?: Dict<SlashCommand> // §6.6 — this Tale's own commands, not marked global in the manager
   log: LogEntry[]
   createdAt?: number // when this Tale was first begun — optional since older saves predate the field; falls back to lastPlayed for display
@@ -610,6 +643,18 @@ export interface QuestUpdate {
   description?: string // the quest's premise/objective — only sent the turn it's first introduced or its scope changes; see QuestEntry.description
 }
 
+// §7 — mirrors QuestUpdate's shape exactly (same `stat` key convention).
+// Plural on TurnResponse (project_update?: ProjectUpdate[]) unlike the
+// single-quest-per-turn cap — more than one project could plausibly update
+// in the same turn (a construction beat AND a repair beat), and there's no
+// stated reason to forbid that.
+export interface ProjectUpdate {
+  project_id: string
+  stat: 'advanced' | 'completed' | 'stalled'
+  note?: string
+  stageIndex?: number // which stage in `stages` just got marked done — only meaningful on 'advanced'
+}
+
 // aff_delta/trust_delta are bare +1/-1 single-step nudges against the
 // receiving CompetencyTier ladder — never a raw magnitude, never both
 // omitted-as-zero vs. genuinely zero ambiguity (omit the field entirely for
@@ -674,6 +719,7 @@ export interface TurnResponse {
   act: string[]
   flag_add?: string[]
   quest_update?: QuestUpdate
+  project_update?: ProjectUpdate[]
   npc_mem_up?: NpcMemoryUpdate[]
   class_evolution?: ClassEvolutionUpdate
   fac_rep?: FactionRepChange[]

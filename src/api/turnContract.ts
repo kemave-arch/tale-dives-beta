@@ -54,6 +54,7 @@ MECHANICS & GROUNDING DEFENSE:
 8. Item Acquisition: Whenever the narration has the player receive, find, loot, craft, or buy an item, add it via "inv_add" in that SAME turn — id, name, type, and qty are all required; never narrate an item into the player's possession without it, and never invent an id for an item that isn't actually entering inventory. Only set "description" for something worth remembering later (a named weapon, a key item, a personal keepsake) — skip it for ordinary loot like raw materials or a common potion. Only set "traits" (freeform flavor words like "reach, heavy" — never a numeric bonus) when type is weapon, armor, or accessory, and only for a genuinely notable piece of gear, not routine loot — most weapons and armor the player finds should NOT have any.
 8a. Skills: Use "skill_learn" ONLY on a turn where the protagonist genuinely gains a new named ability — taught by a mentor, unlocked by a trial, awakened under pressure. Never for using a skill they already have, and never for an ordinary physical action. Give it an "effort" (minor/focused/taxing) only if one is narratively justified; the client treats an effortless skill as always available. When the context slice marks a skill strained by the protagonist's current condition, they may still attempt it — narrate the strain, backfire, or exhaustion of reaching past their limits rather than refusing the action.
 8b. Quest Types: Give quest_update a "type" the first time that quest_id appears — Main (world/story-driven, imposed by the game world's own narrative), Side (guild/NPC/tactical support missions alongside the main story), Ambition (a player-driven personal goal — founding an order, a business, an empire), or Secret Ambition (a hidden high-risk/high-reward personal quest). Only originate or advance a Secret Ambition quest_update on a turn whose turn_state is INSIGHT or EXPLORE — never surface one mid-combat or in an ordinary social scene. Give it a "stat" (advanced/completed/failed, always the full word) every time it appears.
+8c. Projects: Use "project_update" only when the player's own action narratively advances, completes, or stalls an already-established or brand-new long-running multi-stage endeavor (a city under construction, a piece of equipment mid-repair, any undertaking with real in-fiction duration) — a broader narrative cousin of Crafting, which stays entirely client-resolved and never needs a project_update of its own. Give it a "stat" (advanced/completed/stalled, always the full word) and, only when a specific stage was just finished, its 0-based "stage" index. Never invent construction/repair mechanics wholesale — report only what the player's own action actually accomplished this turn, and prefer stalling a project (with a short "note" on why) over silently ignoring an obstacle the fiction itself already raised.
 9. Output Format Strictness: Follow the OUTPUT FORMAT section below exactly — do not deviate from its required structure, and do not wrap output in markdown code blocks.`
 
 export const TURN_SCHEMA = {
@@ -182,6 +183,20 @@ export const TURN_SCHEMA = {
           description:
             "The quest's actual premise/objective, 1-2 sentences — only on the turn this quest_id is first introduced, or if its scope has genuinely changed. Omit on ordinary advancement turns; the client keeps whatever was last given.",
         },
+      },
+    },
+    project_update: {
+      type: 'ARRAY',
+      description: 'Optional, 0 or more. One entry per long-running Project (construction, repair, ...) the player\'s own action advanced/completed/stalled this turn — see rule 8c. A broader narrative cousin of Crafting, which stays entirely client-resolved.',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          project_id: { type: 'STRING' },
+          stat: { type: 'STRING', enum: ['advanced', 'completed', 'stalled'], description: 'Always the full word — never abbreviated.' },
+          note: { type: 'STRING' },
+          stageIndex: { type: 'INTEGER', description: '0-based index of a stage just completed — meaningful only when stat is "advanced".' },
+        },
+        required: ['project_id', 'stat'],
       },
     },
     npc_mem_up: {

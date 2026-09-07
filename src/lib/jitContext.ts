@@ -64,7 +64,7 @@ function lastNarratedTurnState(log: LogEntry[] | undefined): string | undefined 
 // Builds the compact per-turn header re-sent alongside the player's action;
 // this (not model memory) is what keeps state consistent turn to turn.
 export function buildContextSlice(state: Campaign, craftReadyLine?: string | null): string {
-  const { player, proseDepth, narrationStyle, locations, npcs, factions, lore, world, flags, quests, log, items, combat, bestiary } = state
+  const { player, proseDepth, narrationStyle, locations, npcs, factions, lore, world, flags, quests, log, items, combat, bestiary, projects } = state
 
   const playerIdentity = [player.gender && `Gender: ${player.gender}`, player.age !== undefined && `Age: ${player.age}`]
     .filter(Boolean)
@@ -243,6 +243,17 @@ export function buildContextSlice(state: Campaign, craftReadyLine?: string | nul
     .map((q) => q.name)
   if (activeObjectives.length > 0) {
     lines.push(`Active Objectives: ${activeObjectives.join(', ')}`)
+  }
+
+  // §7 — a compact reminder of what's still in progress, same "name only,
+  // model reuses its own established id" convention Active Objectives above
+  // already uses for quest_id (Projects has no {{Term|...}} keyword-link
+  // category of its own to fall back on).
+  const activeProjects = Object.values(projects ?? {})
+    .filter((p) => p.status !== 'completed')
+    .map((p) => (p.note ? `${p.name} (${p.note})` : p.name))
+  if (activeProjects.length > 0) {
+    lines.push(`Active Projects: ${activeProjects.join(', ')}`)
   }
 
   if (flags && flags.length > 0) {

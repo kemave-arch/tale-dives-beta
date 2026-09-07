@@ -1,4 +1,5 @@
-import type { Campaign, Dict, Minion, SummonBranch } from '../types.ts'
+import { compareGameTime } from './gameTime.ts'
+import type { BestiaryEntry, Campaign, Dict, Minion, SummonBranch } from '../types.ts'
 
 // §5.3 Three-Branch Summoning & Minion Engine — 0 API tokens, entirely
 // client-resolved, same family as the read-only "!" bang commands but with
@@ -38,15 +39,17 @@ export interface SummonOutcome {
   ok: boolean
   note: string
   minion?: Minion
-  patch?: { corpses?: string[]; inventory?: Dict<number> }
+  patch?: { bestiary?: Dict<BestiaryEntry>; inventory?: Dict<number> }
 }
 
 // Blueprint §5.3 describes Shadow Extraction as gated on "specific slain
 // boss tags" — but there's no boss/elite threat-tier tagging mechanism
 // anywhere in the Bestiary yet (every adversary auto-registers at
-// 'standard' tier), so this simplifies to "any harvestable corpse," the
-// most recently accumulated one. See the Project Revision Notes for the
-// full scope-cut rationale.
+// 'standard' tier), so this simplifies to "any harvestable corpse" — the
+// Bestiary species with the highest corpseCount, most-recently-slain species
+// breaking a tie (Narrative-First Overhaul Phase 7: corpseCount/lastSlainTime
+// now live directly on BestiaryEntry instead of a flat Campaign.corpses
+// tag stack). See the Project Revision Notes for the full scope-cut rationale.
 export function attemptSummon(command: SummonCommand, campaign: Campaign, newMinionId: string): SummonOutcome {
   const expectedBranch: SummonBranch = command === 'arise' ? 'shadow' : command === 'raise_skeleton' ? 'skeleton' : 'familiar'
   if (classBranch(campaign.player.classId) !== expectedBranch) {
@@ -54,23 +57,36 @@ export function attemptSummon(command: SummonCommand, campaign: Campaign, newMin
   }
 
   if (command === 'arise') {
-    const corpses = campaign.corpses ?? []
-    if (corpses.length === 0) {
+    const candidates = Object.entries(campaign.bestiary ?? {}).filter(([, b]) => (b.corpseCount ?? 0) > 0)
+    if (candidates.length === 0) {
       return { ok: false, note: 'No slain essence available to extract — defeat an enemy first.' }
     }
-    const corpseId = corpses[corpses.length - 1]
+    // Highest corpseCount wins; most recent lastSlainTime breaks a tie.
+    const [corpseId, corpse] = candidates.reduce((best, cur) => {
+      const [, bestEntry] = best
+      const [, curEntry] = cur
+      if ((curEntry.corpseCount ?? 0) !== (bestEntry.corpseCount ?? 0)) {
+        return (curEntry.corpseCount ?? 0) > (bestEntry.corpseCount ?? 0) ? cur : best
+      }
+      if (curEntry.lastSlainTime && bestEntry.lastSlainTime && compareGameTime(curEntry.lastSlainTime, bestEntry.lastSlainTime) > 0) return cur
+      return best
+    })
     const minion: Minion = {
       id: newMinionId,
-      name: `Shadow of ${corpseId.replace(/_/g, ' ')}`,
+      name: `Shadow of ${corpse.name}`,
       branch: 'shadow',
       hpMax: ARISE_MINION_HP,
       summonedAt: campaign.player.time,
+    }
+    const nextBestiary: Dict<BestiaryEntry> = {
+      ...campaign.bestiary,
+      [corpseId]: { ...corpse, corpseCount: Math.max(0, (corpse.corpseCount ?? 0) - 1) },
     }
     return {
       ok: true,
       note: `${minion.name} rises from the extracted essence, bound to your will.`,
       minion,
-      patch: { corpses: corpses.slice(0, -1) },
+      patch: { bestiary: nextBestiary },
     }
   }
 

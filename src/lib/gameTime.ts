@@ -43,6 +43,15 @@ export function isTimeReached(current: GameTime, target: GameTime): boolean {
   return totalMinutes(current) >= totalMinutes(target)
 }
 
+// Three-way ordering between two GameTime stamps (negative when `a` is
+// earlier, positive when later, 0 when equal) — the shared primitive for any
+// caller that needs to pick "the most recent of several GameTimes" (e.g.
+// summoning.ts's `!arise` tiebreak) without re-deriving totalMinutes' own
+// date math locally.
+export function compareGameTime(a: GameTime, b: GameTime): number {
+  return totalMinutes(a) - totalMinutes(b)
+}
+
 // Whole hours remaining until `target`, floor-clamped to 0 — a friendly
 // display number for the Codex queue's live countdown, not the completion
 // check itself (isTimeReached above is exact).

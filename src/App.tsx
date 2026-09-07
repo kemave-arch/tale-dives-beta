@@ -28,6 +28,7 @@ import { ensureLocation } from './lib/locations.ts'
 import { applyNpcUpdates } from './lib/npcs.ts'
 import { applyKeywordLinks, applyEnrichUpdates } from './lib/codex.ts'
 import { applyQuestUpdate } from './lib/quests.ts'
+import { applyProjectUpdate } from './lib/projects.ts'
 import { applySkillLearn } from './lib/skills.ts'
 import { applyInventoryChanges, equipItem, unequipSlot } from './lib/inventory.ts'
 import { resolveBangCommand, findEntry } from './lib/bangCommands.ts'
@@ -65,7 +66,7 @@ import * as store from './lib/store.ts'
 import { CURRENT_SCHEMA_VERSION, EQUIPPABLE_TYPES } from './types.ts'
 import type {
   BestiaryEntry, Campaign, CombatState, ConditionTag, Dict, EquipSlot, FactionEntry, GameTime, HistoryTurn, ItemEntry, KeywordLink, LocationEntry, LogEntry, LoreEntry,
-  NpcEntry, Player, ProtagonistData, QuestEntry, SkillEntry, SlashCommand, TurnState, WorldData,
+  NpcEntry, Player, ProjectEntry, ProtagonistData, QuestEntry, SkillEntry, SlashCommand, TurnState, WorldData,
 } from './types.ts'
 
 const KEYWORD_CATEGORY_TO_CODEX: Record<KeywordLink['category'], CategoryId> = {
@@ -854,6 +855,7 @@ export default function App() {
       const nextLocations = linked.locations
       const nextNpcs = applyNpcUpdates(linked.npcs, turn.npc_mem_up, turn.loc_id, nextPlayer.time, turnRef)
       const nextQuests = applyQuestUpdate(linked.quests, turn.quest_update, turnRef)
+      const nextProjects = applyProjectUpdate(current.projects, turn.project_update, turnRef)
       // §6.4D — a skill_learn record fills in (or upgrades) whatever the
       // {{Term|skill}} keyword pass already stubbed out.
       const nextSkills = applySkillLearn(linked.skills, turn.skill_learn, turnRef)
@@ -862,10 +864,6 @@ export default function App() {
       // §5.4 App-Side Rivalry — a rep change to one faction mirrors an
       // inverse change onto its `rivalId` counterpart, entirely client-side.
       const nextFactions = applyFactionRepDeltas(linked.factions, turn.fac_rep ?? [])
-
-      // §5.3 — every corpse this turn's combat produced becomes harvestable
-      // for a future `!arise`, until spent.
-      const nextCorpses = turn.corpse_add?.length ? [...(current.corpses ?? []), ...turn.corpse_add] : (current.corpses ?? [])
 
       // §5.8 — the authoritative crafting resolution, against this turn's
       // actual resulting time/location (nextPlayer.time/.locId, already set
@@ -898,6 +896,19 @@ export default function App() {
       } else if (turnState !== 'COMBAT' && current.combat?.active) {
         // Gemini narratively ended the fight (fled, negotiated, etc.).
         nextCombat = { active: false }
+      }
+
+      // §5.3/§7 — every corpse this turn's combat produced becomes
+      // harvestable for a future `!arise`, folded directly onto the slain
+      // species' own Bestiary entry (corpseCount/lastSlainTime) rather than
+      // a separate flat Campaign.corpses tag stack — stubs a Bestiary entry
+      // via ensureEntry (same pattern as the COMBAT-start adversary stub
+      // just above) for a corpse tag that isn't already a known adversary.
+      for (const id of turn.corpse_add ?? []) {
+        const { dict: withStub } = ensureEntry(nextBestiary, id, () => ({ name: id, threatTier: 'unknown' as const }), turnRef)
+        nextBestiary = withStub
+        const existing = nextBestiary[id]
+        nextBestiary = { ...nextBestiary, [id]: { ...existing, corpseCount: (existing.corpseCount ?? 0) + 1, lastSlainTime: nextPlayer.time } }
       }
 
       // §6.6 Slash Command pause override — an explicit player-invoked OOC
@@ -1012,7 +1023,7 @@ export default function App() {
         ...current,
         player: finalPlayer,
         minions: upkeep.minions,
-        corpses: nextCorpses,
+        projects: nextProjects,
         locations: reveals.locations,
         npcs: reveals.npcs,
         factions: reveals.factions,
@@ -1189,7 +1200,7 @@ export default function App() {
   // whatever's already at that id, so the same call creates a fresh entry
   // when the id doesn't exist yet.
   function patchCodexDict(
-    dictKey: 'npcs' | 'factions' | 'locations' | 'lore' | 'quests' | 'bestiary' | 'skills',
+    dictKey: 'npcs' | 'factions' | 'locations' | 'lore' | 'quests' | 'bestiary' | 'skills' | 'projects',
     id: string,
     patch: Record<string, unknown> | null,
   ) {
@@ -1280,7 +1291,7 @@ export default function App() {
 
   // §5.3 Summoning — arise/raise_skeleton/summon are also "!" bang commands
   // (0 tokens, client-resolved) but, unlike the read-only dossiers in
-  // bangCommands.ts, they mutate real state (MP, inventory, corpses,
+  // bangCommands.ts, they mutate real state (bestiary corpseCount, inventory,
   // minions). Intercepted here, before the read-only path, since App.tsx is
   // where all state mutation already lives (evolveClass, startCraftingJob).
   const SUMMON_COMMANDS = new Set(['arise', 'raise_skeleton', 'summon'])
@@ -1293,7 +1304,7 @@ export default function App() {
       return {
         ...g,
         lastPlayed: Date.now(),
-        corpses: outcome.patch?.corpses ?? g.corpses,
+        bestiary: outcome.patch?.bestiary ?? g.bestiary,
         inventory: outcome.patch?.inventory ?? g.inventory,
         minions: nextMinions,
         log: [
@@ -1743,13 +1754,14 @@ export default function App() {
         inventory={game.inventory}
         items={game.items ?? {}}
         crafting={game.crafting ?? []}
-        corpses={game.corpses ?? []}
+        projects={game.projects ?? {}}
         onUpdateNpc={(id: string, patch: Partial<NpcEntry> | null) => patchCodexDict('npcs', id, patch as Record<string, unknown> | null)}
         onUpdateFaction={(id: string, patch: Partial<FactionEntry> | null) => patchCodexDict('factions', id, patch as Record<string, unknown> | null)}
         onUpdateLocation={(id: string, patch: Partial<LocationEntry> | null) => patchCodexDict('locations', id, patch as Record<string, unknown> | null)}
         onUpdateLore={(id: string, patch: Partial<LoreEntry> | null) => patchCodexDict('lore', id, patch as Record<string, unknown> | null)}
         onUpdateQuest={(id: string, patch: Partial<QuestEntry> | null) => patchCodexDict('quests', id, patch as Record<string, unknown> | null)}
         onUpdateBestiary={(id: string, patch: Partial<BestiaryEntry> | null) => patchCodexDict('bestiary', id, patch as Record<string, unknown> | null)}
+        onUpdateProject={(id: string, patch: Partial<ProjectEntry> | null) => patchCodexDict('projects', id, patch as Record<string, unknown> | null)}
         skills={game.skills ?? {}}
         onUpdateSkill={(id: string, patch: Partial<SkillEntry> | null) => patchCodexDict('skills', id, patch as Record<string, unknown> | null)}
         onUpdateItem={updateItem}
@@ -1782,13 +1794,14 @@ export default function App() {
         inventory={game.inventory}
         items={game.items ?? {}}
         crafting={game.crafting ?? []}
-        corpses={game.corpses ?? []}
+        projects={game.projects ?? {}}
         onUpdateNpc={(id: string, patch: Partial<NpcEntry> | null) => patchCodexDict('npcs', id, patch as Record<string, unknown> | null)}
         onUpdateFaction={(id: string, patch: Partial<FactionEntry> | null) => patchCodexDict('factions', id, patch as Record<string, unknown> | null)}
         onUpdateLocation={(id: string, patch: Partial<LocationEntry> | null) => patchCodexDict('locations', id, patch as Record<string, unknown> | null)}
         onUpdateLore={(id: string, patch: Partial<LoreEntry> | null) => patchCodexDict('lore', id, patch as Record<string, unknown> | null)}
         onUpdateQuest={(id: string, patch: Partial<QuestEntry> | null) => patchCodexDict('quests', id, patch as Record<string, unknown> | null)}
         onUpdateBestiary={(id: string, patch: Partial<BestiaryEntry> | null) => patchCodexDict('bestiary', id, patch as Record<string, unknown> | null)}
+        onUpdateProject={(id: string, patch: Partial<ProjectEntry> | null) => patchCodexDict('projects', id, patch as Record<string, unknown> | null)}
         skills={game.skills ?? {}}
         onUpdateSkill={(id: string, patch: Partial<SkillEntry> | null) => patchCodexDict('skills', id, patch as Record<string, unknown> | null)}
         onUpdateItem={updateItem}

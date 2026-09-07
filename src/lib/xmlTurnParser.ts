@@ -1,7 +1,7 @@
 import { COMPETENCY_TIERS } from './tiers.ts'
 import type {
   BreakthroughUpdate, ClassEvolutionUpdate, ConditionUpdate, EffortTier, EnrichUpdate, FactionRepChange, InventoryAcquisition,
-  InventoryChange, ItemType, NpcMemoryUpdate, QuestUpdate, SkillLearn, TurnResponse, TurnState,
+  InventoryChange, ItemType, NpcMemoryUpdate, ProjectUpdate, QuestUpdate, SkillLearn, TurnResponse, TurnState,
 } from '../types.ts'
 import { XmlParseError, decodeXmlEntities, num, reqNum, str, reqStr, reqTierWord, optTierWord, signToDelta, parseXmlBlock } from './xmlHelpers.ts'
 
@@ -34,6 +34,7 @@ export const XmlTurnParseError = XmlParseError
 export { decodeXmlEntities }
 
 const EFFORT_TIERS = ['minor', 'focused', 'taxing'] as const
+const PROJECT_STATS = ['advanced', 'completed', 'stalled'] as const
 // A breakthrough always moves an attribute forward from wherever it already
 // is — "Untrained" (rank 1, the floor) is never a valid *result*, so it's
 // excluded from the tier word set breakthrough.tier is checked against,
@@ -133,6 +134,17 @@ export function parseXmlTurnResponse(raw: string): TurnResponse {
       }
     : undefined
 
+  // <project> — mirrors <quest> exactly (same "stat" full-word convention),
+  // but plural/repeatable since more than one project could plausibly
+  // update in the same turn. "stage" is the 0-based index of a stage just
+  // completed, meaningful only when stat="advanced".
+  const project_update: ProjectUpdate[] = Array.from(doc.querySelectorAll('project')).map((el) => ({
+    project_id: reqStr(el.getAttribute('id'), 'project.id'),
+    stat: reqTierWord(el.getAttribute('stat'), 'project.stat', PROJECT_STATS),
+    note: str(el.getAttribute('note')),
+    stageIndex: num(el.getAttribute('stage')),
+  }))
+
   const npc_mem_up: NpcMemoryUpdate[] = Array.from(doc.querySelectorAll('npc')).map((el) => {
     const resolveWord = optTierWord(el.getAttribute('resolve'), 'npc.resolve', COMPETENCY_TIERS)
     return {
@@ -199,6 +211,7 @@ export function parseXmlTurnResponse(raw: string): TurnResponse {
     act,
     flag_add: flag_add.length ? flag_add : undefined,
     quest_update,
+    project_update: project_update.length ? project_update : undefined,
     npc_mem_up: npc_mem_up.length ? npc_mem_up : undefined,
     class_evolution,
     fac_rep: fac_rep.length ? fac_rep : undefined,

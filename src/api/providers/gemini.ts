@@ -54,13 +54,8 @@ function extractXmlNarrative(raw: string): string | null {
 // cost tokens on every subsequent call. Stripped the same way `<nar>` is
 // itself extracted — a plain regex over the closed tag pair — so only the
 // prose actually gets replayed back to the model on the next turn.
-//
-// <plan> (the pre-prose scratchpad, xmlTurnContract.ts) gets the same
-// treatment for the same reason: it's scratch reasoning for the turn that
-// already produced it, worthless as replayed context and pure token cost if
-// resent on every later call.
 function stripSyncForHistory(raw: string): string {
-  return raw.replace(/<plan>[\s\S]*?<\/plan>/, '').replace(/<sync>[\s\S]*?<\/sync>/, '').trim()
+  return raw.replace(/<sync>[\s\S]*?<\/sync>/, '').trim()
 }
 
 interface RequestParams {

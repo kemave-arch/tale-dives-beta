@@ -31,38 +31,11 @@ import { SYSTEM_INSTRUCTIONS, TURN_SCHEMA } from './turnContract.ts'
 // XML, not from shaving tag-name characters — those are a handful of tokens
 // each either way, and cryptic names raise the model's own error rate for a
 // return that doesn't show up in a real token count.
-//
-// <plan> (added ahead of <nar>) is a "think before you write" scratchpad —
-// a fast model plans mechanics/tone/atmosphere before committing to prose,
-// rather than composing narration and continuity simultaneously. It's pure
-// output-token cost with no schema payload of its own: the parser never
-// reads it into TurnResponse, gemini.ts strips it out of what gets resent as
-// `history` (same treatment as <sync>), and it's deliberately placed before
-// <nar> rather than after specifically so the model's own planning tokens
-// causally precede and inform the prose tokens that follow — an "after"
-// placement would just be a second summary with no influence on what
-// already got written. The tradeoff accepted here: <nar>'s Stage 3 Fallback
-// Reader (extractXmlNarrative in gemini.ts) still finds <nar> fine no matter
-// what precedes it, but if MAX_TOKENS truncates a response before <nar> ever
-// starts (i.e. mid-<plan>), the fallback has nothing to recover — a real
-// regression from when <nar> was the very first tag emitted. Accepted
-// because <plan> is intentionally short (a handful of lines) against a
-// per-turn budget that's already floored at MIN_TURN_OUTPUT_CEILING
-// (turnContract.ts) regardless of Prose Depth, making that failure mode rare
-// in practice — worth revisiting only if MAX_TOKENS truncations are ever
-// observed to land inside <plan> itself (see the debug payload tools,
-// Chronicle.tsx, which show the full raw response including <plan>).
 
 export const XML_OUTPUT_GRAMMAR = `
 OUTPUT FORMAT (read carefully — this replaces JSON output entirely):
-Respond with exactly three top-level elements, in this order, and nothing else — no markdown fences, no prose outside these tags:
+Respond with exactly two top-level elements, in this order, and nothing else — no markdown fences, no prose outside these tags:
 
-<plan>
-...a brief private scratchpad, never shown to the player: work out the mechanics and craft of this turn BEFORE you write it, so "nar" below actually delivers what you just planned instead of you discovering the scene as you write it. A few short lines, not a draft of the scene itself:
-tone: the emotional register and turn-state craft direction this beat should hit
-senses: 2-3 concrete sensory details (sound, smell, texture, light) you intend to actually use in "nar"
-beat: the one thing that moves — a reveal, an NPC's reaction, a plot movement, a choice point taking shape
-...</plan>
 <nar>
 ...your narrative prose, using the existing markup rules above unchanged (double/single quotes, [Skill], [[Item]], {{Term|category}}, CAPITAL LETTERS for shouts)...
 </nar>
@@ -86,10 +59,6 @@ beat: the one thing that moves — a reveal, an NPC's reaction, a plot movement,
   <fac id="FACTION_ID" delta="±N" />
   <skill id="SKILL_ID" name="NAME" desc="DESC" class="CLASS_ID" effort="minor|focused|taxing" tier="Untrained|Novice|Adept|Expert|Master" />
 </sync>
-
-Rules for <plan>:
-- <plan> always comes first, before <nar>. It is never shown to the player and never read by the game engine — think of it as thinking out loud before committing to prose, not a fourth mechanical channel. Keep it to a handful of short lines (tone/senses/beat as shown above), not a second copy of the scene.
-- Do this planning step on every turn, including a short CONCISE-depth one — a few seconds of "what am I about to write and why" measurably improves the prose that follows, which is the entire point of the tag.
 
 Rules for <sync>:
 - <turn> is the only always-required tag — attributes state/d/h/loc are always present; locdisp/desc/mood/c are omitted when not applicable. locdisp follows the same "only on first visit or genuine change" economy loc_desc already has — the client already knows a visited place's display name from its own registry, so don't restate it on an ordinary same-location turn. "c" is a currency delta in base copper (e.g. c="+500", c="-1200") — omit entirely when nothing was gained or spent this turn.

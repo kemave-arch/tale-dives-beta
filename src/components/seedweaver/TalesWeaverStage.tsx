@@ -482,11 +482,15 @@ export default function TalesWeaverStage({
         )}
       </AnimatePresence>
 
-      {/* Bottom Action Area: "Dive In" Button pinned cleanly to bottom safe area */}
+      {/* Bottom Action Area: "Dive In" Button pinned with generous breathing room on mobile */}
       <div
+        id="seedweaver-dive-in-container"
+        data-component="SeedWeaverDiveInButton"
         className="fixed left-1/2 -translate-x-1/2 z-30 pointer-events-auto flex flex-col items-center gap-2 max-w-[92vw]"
         style={{
-          bottom: 'max(0.75rem, env(safe-area-inset-bottom))',
+          bottom: isDesktop
+            ? 'max(1.25rem, env(safe-area-inset-bottom))'
+            : 'max(4.5rem, calc(env(safe-area-inset-bottom) + 3.75rem))',
         }}
       >
         <GlassCTAButton

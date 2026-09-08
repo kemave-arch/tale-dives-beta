@@ -1,6 +1,19 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-07 — Numerical Input Leading-Zero Fix & Multi-Row Filter Chip Wrapping (`src/screens/Codex.tsx`, `src/screens/NewGame.tsx`, `src/components/novelweaver/CastChapter.tsx`, `src/components/novelweaver/ProtagonistChapter.tsx`, `src/components/seedweaver/ProtagonistNodeModal.tsx`):
+**Last updated:** 2026-09-07 — Full UI Element & Layer Stack Calibrator & Mobile "Dive In" Repositioning (`src/components/seedweaver/WeaverCalibrator.tsx`, `src/components/seedweaver/TalesWeaverStage.tsx`):
+1. **Mobile "DIVE IN" Button Repositioning**:
+   - Elevated the bottom anchor from `max(0.75rem, ...)` to `max(4.5rem, calc(env(safe-area-inset-bottom) + 3.75rem))` on mobile.
+   - Pinned with generous breathing room above device home indicators and gesture navigation zones while maintaining comfortable thumb reach.
+2. **Full UI Element & Layer Inspector Refactor in `WeaverCalibrator.tsx`**:
+   - Added a dual-mode tab switcher between **"Seed Nodes"** (Protagonist, World, NPCs, Narrative positioning) and **"UI Element & Layer"** (general on-screen UI debugging).
+   - **Click-to-Inspect Tool**: Interactive on-screen element picker with visual hover bounds and click interception to inspect any live DOM element.
+   - **Layer Stack & Object Selector**: Captures all overlapping elements at the clicked point (`document.elementsFromPoint`) and parent hierarchy into a dropdown, allowing precise selection between nested child buttons, containers, stage canvases, and scrims.
+   - **Live Metrics Dashboard**: Displays Device Mode (`Mobile` vs `PC`), component identifier (`<GlassCTAButton>`, `<GlassHeader>`, etc.), CSS selector, bounding box (`x`, `y`, `width`, `height`), and viewport-relative offsets (`left %`, `top %`, `bottom px / %`, `right px / %`, `z-index`).
+   - **Live Position Offset Tester (Nudge)**: Real-time `↑ -20px`, `↑ -5px`, `↓ +5px`, `↓ +20px` step controls to preview positioning offsets live on the screen before reporting.
+   - **One-Click AI Copy Actions**: "COPY FULL REPORT FOR AI" generates a structured Markdown report with component name, selector, layer index, exact bounding box, and calibrated offset; plus "Copy Position" and "Copy Selector" quick actions.
+3. **Verified**: Passes `tsc --noEmit` and Vite production build cleanly.
+
+Previous note:
 1. **Numerical Input Leading-Zero Root Cause & Comprehensive Fix**:
    - **Why this happened**: In React controlled `<input type="number">` fields, setting `value={val ?? 0}` with `onChange={(e) => onChange(Number(e.target.value))}` converted empty strings `""` back into `0` immediately when backspacing, locking a `0` into the box and causing typed digits to append into `"05"`.
    - **Fix implemented across all numerical inputs**:

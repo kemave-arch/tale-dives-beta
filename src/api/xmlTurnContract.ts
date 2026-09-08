@@ -31,11 +31,42 @@ import { SYSTEM_INSTRUCTIONS, TURN_SCHEMA } from './turnContract.ts'
 // XML, not from shaving tag-name characters — those are a handful of tokens
 // each either way, and cryptic names raise the model's own error rate for a
 // return that doesn't show up in a real token count.
+//
+// <plan> (ahead of <nar>, 2026-09-08) is a short pre-prose scratchpad aimed
+// at one specific failure mode: a fast/lite model defaulting to the safest,
+// most generic continuation and the most stock NPC reaction available,
+// because it's composing that judgment call and the prose simultaneously
+// under token pressure. A first attempt at this tag (tone/senses/beat) was
+// tried and deliberately reverted the same session — it was decorative
+// bookkeeping, not something that changes what gets written. This version
+// asks for exactly two things a generic continuation wouldn't already
+// contain: the least-expected-but-still-earned direction ("twist"), and
+// what's specifically different about this NPC/creature/moment's reaction
+// versus a stock one ("distinct") — forcing the model to consider and
+// reject the boring option before it starts writing, not just narrate
+// whatever it would have defaulted to anyway.
+//
+// Kept to exactly two short lines on purpose: this is pure per-turn output-
+// token cost (never cached, unlike the static system prompt above), and it's
+// placed before <nar> specifically so it causally informs the prose that
+// follows — but that same placement means a MAX_TOKENS truncation landing
+// mid-<plan> now loses the turn's prose entirely rather than just its
+// trailing <sync> deltas (previously <nar> was the very first tag emitted,
+// specifically so the Stage 3 Fallback Reader in gemini.ts could still
+// recover partial prose). Kept short and pointed specifically to keep that
+// risk small against the per-turn budget's MIN_TURN_OUTPUT_CEILING floor.
+// gemini.ts strips it out of `history` (see stripSyncForHistory) so it's
+// never resent as growing context on later turns — it's genuinely a one-
+// turn expense, not something that compounds.
 
 export const XML_OUTPUT_GRAMMAR = `
 OUTPUT FORMAT (read carefully — this replaces JSON output entirely):
-Respond with exactly two top-level elements, in this order, and nothing else — no markdown fences, no prose outside these tags:
+Respond with exactly three top-level elements, in this order, and nothing else — no markdown fences, no prose outside these tags:
 
+<plan>
+twist: the least-expected direction this beat can still take and honestly earn, given everything established so far — reject the safest, most generic continuation before you write it
+distinct: what makes this specific NPC/creature/moment react differently than a stock version would, grounded in their established personality, stake, Trust/Affection, or history — never a generic reaction
+</plan>
 <nar>
 ...your narrative prose, using the existing markup rules above unchanged (double/single quotes, [Skill], [[Item]], {{Term|category}}, CAPITAL LETTERS for shouts)...
 </nar>
@@ -59,6 +90,11 @@ Respond with exactly two top-level elements, in this order, and nothing else —
   <fac id="FACTION_ID" delta="±N" />
   <skill id="SKILL_ID" name="NAME" desc="DESC" class="CLASS_ID" effort="minor|focused|taxing" tier="Untrained|Novice|Adept|Expert|Master" />
 </sync>
+
+Rules for <plan>:
+- <plan> always comes first, before <nar>. It is never shown to the player and never read by the game engine. Exactly the two lines shown above — "twist" and "distinct" — never more; this is not a place to draft the scene itself or restate mechanical context you already have.
+- Do this on every turn, including a terse CONCISE one. If there is no NPC present this turn, apply "distinct" to whatever the scene's most notable actor is instead (a creature, the environment itself, a faction's response) — never skip the line or leave it generic filler.
+- The point of both lines is to reject your own first instinct: name the safe/generic option only long enough to consciously pick something else. If your honest answer is that the generic option truly is the right call this turn (a quiet, uneventful beat is sometimes correct), say so briefly rather than manufacturing a twist that doesn't fit — forced surprises read worse than none.
 
 Rules for <sync>:
 - <turn> is the only always-required tag — attributes state/d/h/loc are always present; locdisp/desc/mood/c are omitted when not applicable. locdisp follows the same "only on first visit or genuine change" economy loc_desc already has — the client already knows a visited place's display name from its own registry, so don't restate it on an ordinary same-location turn. "c" is a currency delta in base copper (e.g. c="+500", c="-1200") — omit entirely when nothing was gained or spent this turn.

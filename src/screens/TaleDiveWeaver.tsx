@@ -25,8 +25,10 @@ import {
   clearSavedCalibration,
   type WeaverCalibrationPreset,
 } from '../components/seedweaver/calibrationData.ts'
+import { useSetupScreenBg, preloadAllSetupAssets } from '../lib/setupBgResolver.ts'
 
 export default function TaleDiveWeaver({
+  debugMode = false,
   worldTemplates = [],
   protagonistTemplates = [],
   existingTitles = [],
@@ -146,15 +148,20 @@ export default function TaleDiveWeaver({
     )
   }
 
-  const mobileBgUrl = `${import.meta.env.BASE_URL}img/taleweaver/m_setupscreen-01.webp`
-  const pcBgUrl = `${import.meta.env.BASE_URL}img/taleweaver/pc_setupscreen-01.webp`
+  // Preload all setupscreen & loading screen photo assets for fast performance
+  useEffect(() => {
+    preloadAllSetupAssets()
+  }, [])
+
+  // Dynamic gender & device background image selection with probing & caching
+  const { pcUrl, mobileUrl } = useSetupScreenBg(protagonist.gender)
   const bgRect = useObjectCoverRect(isDesktop ? 1366 : 714, isDesktop ? 768 : 1270)
 
   return (
     <div className="relative min-h-dvh max-h-dvh flex flex-col text-[#f5dfa0] overflow-hidden bg-[#07050d] select-none">
-      {/* Background artwork — mathematically aligned to coverRect */}
+      {/* Background artwork — mathematically aligned to coverRect with responsive gender & device matching */}
       <div
-        className="fixed pointer-events-none overflow-hidden select-none z-0"
+        className="fixed pointer-events-none overflow-hidden select-none z-0 transition-opacity duration-500"
         style={{
           left: `${bgRect.left}px`,
           top: `${bgRect.top}px`,
@@ -163,11 +170,12 @@ export default function TaleDiveWeaver({
         }}
       >
         <picture>
-          <source media="(min-width: 768px)" srcSet={pcBgUrl} />
+          <source media="(min-width: 768px)" srcSet={pcUrl} />
           <img
-            src={mobileBgUrl}
+            src={mobileUrl}
             alt="Tales Weaver Background"
             decoding="async"
+            fetchPriority="high"
             className="w-full h-full object-fill pointer-events-none"
           />
         </picture>
@@ -205,19 +213,21 @@ export default function TaleDiveWeaver({
 
         {/* Action Controls: Calibrator & Reset */}
         <div className="relative z-10 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setIsCalibrating(!isCalibrating)}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-display tracking-wider border transition-all cursor-pointer ${
-              isCalibrating
-                ? 'bg-[#f0ca65] text-black font-bold border-white shadow-[0_0_15px_rgba(240,202,101,0.6)]'
-                : 'bg-black/40 hover:bg-black/60 text-[#f0ca65] border-[#f0ca65]/40 hover:border-[#f0ca65]'
-            }`}
-            title="Toggle Node Calibration Tool"
-          >
-            <Sliders size={13} />
-            <span className="hidden sm:inline">Calibrate</span>
-          </button>
+          {debugMode && (
+            <button
+              type="button"
+              onClick={() => setIsCalibrating(!isCalibrating)}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-display tracking-wider border transition-all cursor-pointer ${
+                isCalibrating
+                  ? 'bg-[#f0ca65] text-black font-bold border-white shadow-[0_0_15px_rgba(240,202,101,0.6)]'
+                  : 'bg-black/40 hover:bg-black/60 text-[#f0ca65] border-[#f0ca65]/40 hover:border-[#f0ca65]'
+              }`}
+              title="Toggle Node Calibration Tool"
+            >
+              <Sliders size={13} />
+              <span className="hidden sm:inline">Calibrate</span>
+            </button>
+          )}
 
           <GlassIconButton
             icon={RotateCcw}
@@ -253,13 +263,12 @@ export default function TaleDiveWeaver({
       )}
 
       {/* Calibration Overlay HUD */}
-      {isCalibrating && !activeModal && (
+      {debugMode && isCalibrating && !activeModal && (
         <WeaverCalibrator
           isDesktop={isDesktop}
           calibration={calibration}
           onChange={handleCalibrationChange}
           onReset={handleCalibrationReset}
-          onClose={() => setIsCalibrating(false)}
           selectedNode={selectedCalibNode}
           onSelectNode={setSelectedCalibNode}
         />

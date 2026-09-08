@@ -1,5 +1,58 @@
 # Tale Dives — Project Revision Notes
 
+**Last updated:** 2026-09-08 — Default Setup Screen Artwork to Female Version (`src/lib/setupBgResolver.ts`):
+1. **Default Setup Screen Artwork**:
+   - Updated `parseGenderKey()` in `setupBgResolver.ts` to default to `'female'` whenever no protagonist gender is set (or if `protagonist.gender` is empty/unassigned).
+   - Updated initial baseline URLs in `useSetupScreenBg` (`defaultPc` and `defaultMobile`) to point directly to `pc_setupscreen-female.webp` and `m_setupscreen-female.webp`, ensuring the female background artwork displays immediately prior to async probe completion.
+2. **Verified**: Passed `lint_applet` (`tsc --noEmit`) and `compile_applet` (`vite build`) with 0 errors.
+
+**Last updated:** 2026-09-08 — Fix Calibrator Multiplying / Duplicate Mounting Bug (`src/App.tsx`):
+1. **Prevent Duplicate `WeaverCalibrator` Mounts**:
+   - Fixed the issue where the calibrator tool multiplied on screen when `uiPrefs.debugMode` was enabled.
+   - `TaleDiveWeaver.tsx` manages its own dedicated `<WeaverCalibrator>` with interactive node state props (`calibration`, `onChange`, `onReset`, `selectedNode`, `onSelectNode`). At the same time, `App.tsx` was rendering `<WeaverCalibrator isGlobal />` at the root whenever `debugMode` was active, causing two calibrator HUD instances to be rendered concurrently on the `weaver` screen.
+   - Updated `App.tsx` to check `{uiPrefs.debugMode && screen !== 'talediveweaver' && <WeaverCalibrator isGlobal />}` so only a single calibrator instance is active at any time.
+2. **Verified**: `lint_applet` (`tsc --noEmit`) and `compile_applet` (`vite build`) compiled cleanly with 0 errors.
+
+**Last updated:** 2026-09-08 — Setup Screen WebP Photo Matching by Gender & Device + Asset Loading Optimization (`src/lib/setupBgResolver.ts`, `src/screens/TaleDiveWeaver.tsx`, `src/screens/DiveLoadingScreen.tsx`):
+1. **Dynamic Gender & Device Setup Screen Background Resolution (`setupBgResolver.ts`)**:
+   - Created `useSetupScreenBg(protagonistGender)` to dynamically resolve background artwork based on selected protagonist gender (`female` / `f`, `male` / `m`, or neutral) and viewport device (`pc` vs `m`).
+   - Automatically probes candidate image URLs in order of specificity (e.g. `pc_setupscreen-female.webp` -> `pc_setupscreen-f.webp` -> `pc_setupscreen-01.webp` -> `pc_setupscreen.webp` and corresponding `m_setupscreen-*` mobile portrait versions), smoothly falling back if a specific filename is absent.
+   - Caches resolved image candidates in memory (`resolvedCache`) so gender updates instantly swap photos without reloading stalls or black flashes.
+2. **Asset Preloading & High-Priority Photo Performance**:
+   - Implemented `preloadAllSetupAssets()` to pre-fetch all setupscreen and dive-in loading screen WebP photos into browser cache upon mounting.
+   - Added `fetchPriority="high"` and `decoding="async"` attributes to primary background artwork tags for instant rendering and high performance.
+3. **Verified**: `lint_applet` (`tsc --noEmit`) and `compile_applet` (`vite build`) compiled cleanly with 0 errors.
+
+**Last updated:** 2026-09-08 — Prevent Auto-Pasting Styles on Element Selection & Explicit COPY/PASTE Buttons (`src/components/seedweaver/WeaverCalibrator.tsx`):
+1. **Reset CSS State on Element Selection**:
+   - Fixed issue where selecting a target element automatically inherited and applied previous `customCss` state.
+   - When selecting an on-screen target element (via element picker, layer stack, or preset buttons), `selectElementWithLayers` and `handleSelectLayer` now check if the element was previously modified in `modifiedElements`. If not previously modified, `customCss` resets to clean `DEFAULT_CSS_STATE`, preventing any automatic style pasting or application upon element selection.
+2. **Explicit COPY & PASTE Button Triggers**:
+   - Enhanced the Target chip in the Styles Inspector tab with explicit **COPY** and **PASTE** buttons.
+   - Copying a style (`copyCssStyle`) stores `customCss` into `copiedCss` and shows a "COPIED!" status badge.
+   - Pasting a style (`pasteCssStyle`) applies `copiedCss` onto the currently selected `inspectedElement` only when the user explicitly clicks the **PASTE** button, giving immediate "PASTED!" feedback.
+3. **Verified**: `lint_applet` (`tsc --noEmit`) and `compile_applet` (`vite build`) compiled cleanly with 0 errors.
+
+**Last updated:** 2026-09-07 — Default Calibrator Top-Right Position & Ultra-Smooth Drag Performance (`src/components/seedweaver/WeaverCalibrator.tsx`):
+1. **Default Header Position**:
+   - Initialized the default position of the minimized floating Calibrator icon button near the top-right header area directly adjacent to the Settings icon button (`top: 14px`, `right offset: ~180px` on desktop / `70px` on mobile).
+2. **Ultra-Smooth Drag Action Performance**:
+   - Eliminated mouse/touch drag lag by switching from per-mousemove React state updates to direct DOM style mutation driven by `requestAnimationFrame` (`windowRef.current.style.left` and `top`).
+   - Replaced generic CSS `transition-all` with `transition-opacity` and `transition-transform` to prevent CSS layout transition lag during movement.
+   - Added `will-change: left, top` and non-passive touch event handling (`touch-none`) to prevent mobile background scrolling during drags.
+3. **Verified**: `lint_applet` (`tsc --noEmit`) and `compile_applet` (`vite build`) compiled cleanly with 0 errors.
+
+**Last updated:** 2026-09-07 — Debug Mode Weaver Calibrator Visibility & Music Banners Toggle (`src/App.tsx`, `src/screens/Settings.tsx`, `src/types.ts`, `src/lib/store.ts`):
+1. **Calibrator Tool Tied to Debug Mode Setting**:
+   - The Weaver Calibrator tool's global mounting and on-screen visibility are now strictly tied to `uiPrefs.debugMode` in Settings.
+   - When Debug Mode is OFF (default), the Weaver Calibrator floating button and HUD are completely hidden across all screens, including Tale Dive Weaver.
+   - When Debug Mode is toggled ON in Settings, the Weaver Calibrator floating button and HUD become available across all screens.
+2. **Music Banners Setting Toggle (Default OFF)**:
+   - Added `showMusicBanners?: boolean` to `UiPrefs` with a default setting of `false` (OFF).
+   - Added a new `Music Banners` toggle switch under the Gameplay section of the Settings modal.
+   - The Now Playing track notification banner at the top of the screen only appears when `showMusic Banners` is explicitly toggled ON.
+3. **Verified**: `lint_applet` (`tsc --noEmit`) and `compile_applet` (`vite build`) compiled cleanly with 0 errors.
+
 **Last updated:** 2026-09-07 — Minimize to Draggable Floating Icon Button (`src/components/seedweaver/WeaverCalibrator.tsx`):
 1. **Minimize to Floating Icon Button**:
    - Transformed the `X` button and `ChevronDown` button in `WeaverCalibrator.tsx` header to minimize the full HUD window into a compact floating icon button (`Sliders` emblem with live modification status badge).

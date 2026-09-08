@@ -29,9 +29,9 @@ interface WeaverCalibratorProps {
   calibration?: WeaverCalibrationPreset
   onChange?: (updated: WeaverCalibrationPreset) => void
   onReset?: () => void
-  onClose?: () => void
   selectedNode?: NodeType
   onSelectNode?: (node: NodeType) => void
+  isGlobal?: boolean
 }
 
 interface InspectedElementInfo {
@@ -145,13 +145,13 @@ export default function WeaverCalibrator({
   calibration,
   onChange,
   onReset,
-  onClose,
   selectedNode,
   onSelectNode,
+  isGlobal,
 }: WeaverCalibratorProps) {
   // Navigation Tabs: 'nodes' (Seedweaver node circles), 'layout' (Bounding box & layer stack), 'styles' (CSS / Visuals)
   const [activeTab, setActiveTab] = useState<'nodes' | 'layout' | 'styles'>('layout')
-  const [isMinimized, setIsMinimized] = useState(false)
+  const [isMinimized, setIsMinimized] = useState(isGlobal ?? false)
   const [copiedType, setCopiedType] = useState<string | null>(null)
   const [showJsonPreview, setShowJsonPreview] = useState(false)
 
@@ -162,7 +162,24 @@ export default function WeaverCalibrator({
   // ==========================================
   // DRAGGABLE WINDOW STATE
   // ==========================================
-  const [position, setPosition] = useState<{ x: number; y: number } | null>(null)
+  const getDefaultPosition = useCallback((minimized: boolean) => {
+    const isMobile = typeof window !== 'undefined' ? window.innerWidth < 640 : false
+    if (minimized) {
+      // Top-right header area near Settings icon button
+      const offsetRight = isMobile ? 70 : 185
+      const x = Math.max(10, (typeof window !== 'undefined' ? window.innerWidth : 1000) - offsetRight)
+      const y = 14
+      return { x, y }
+    } else {
+      const hudWidth = isMobile ? Math.min(360, (typeof window !== 'undefined' ? window.innerWidth : 1000) - 20) : 410
+      const x = Math.max(10, (typeof window !== 'undefined' ? window.innerWidth : 1000) - hudWidth - 16)
+      const y = 14
+      return { x, y }
+    }
+  }, [])
+
+  const [position, setPosition] = useState<{ x: number; y: number }>(() => getDefaultPosition(isGlobal ?? false))
+  const posRef = useRef<{ x: number; y: number }>(position)
   const isDraggingRef = useRef(false)
   const dragStartRef = useRef<{ mouseX: number; mouseY: number; startX: number; startY: number }>({
     mouseX: 0,
@@ -171,34 +188,27 @@ export default function WeaverCalibrator({
     startY: 0,
   })
   const windowRef = useRef<HTMLDivElement>(null)
-
-  // Initialize position on mount
-  useEffect(() => {
-    if (position === null) {
-      const initialWidth = isDesktop ? 400 : Math.min(360, window.innerWidth - 20)
-      const x = Math.max(10, window.innerWidth - initialWidth - 16)
-      const y = Math.max(60, window.innerHeight - 560)
-      setPosition({ x, y })
-    }
-  }, [isDesktop, position])
-
-  // Drag handlers (Mouse + Touch)
   const hasMovedRef = useRef(false)
+  const rafIdRef = useRef<number | null>(null)
+
+  // Sync posRef with position state
+  useEffect(() => {
+    posRef.current = position
+  }, [position])
+
+  // Drag handlers (Mouse + Touch) with high performance direct RAF updates
   const handleDragStart = (clientX: number, clientY: number) => {
     isDraggingRef.current = true
     hasMovedRef.current = false
-    const currentX = position?.x ?? (window.innerWidth - 400)
-    const currentY = position?.y ?? 100
     dragStartRef.current = {
       mouseX: clientX,
       mouseY: clientY,
-      startX: currentX,
-      startY: currentY,
+      startX: posRef.current.x,
+      startY: posRef.current.y,
     }
   }
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    // Only drag from header bar, avoid interactive buttons
     if ((e.target as HTMLElement).closest('button, input, select')) return
     handleDragStart(e.clientX, e.clientY)
   }
@@ -215,26 +225,45 @@ export default function WeaverCalibrator({
       if (!isDraggingRef.current) return
       const deltaX = clientX - dragStartRef.current.mouseX
       const deltaY = clientY - dragStartRef.current.mouseY
-      if (Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4) {
+      if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
         hasMovedRef.current = true
       }
-      const newX = Math.max(4, Math.min(window.innerWidth - 80, dragStartRef.current.startX + deltaX))
-      const newY = Math.max(4, Math.min(window.innerHeight - 80, dragStartRef.current.startY + deltaY))
-      setPosition({ x: newX, y: newY })
+      const newX = Math.max(4, Math.min(window.innerWidth - 50, dragStartRef.current.startX + deltaX))
+      const newY = Math.max(4, Math.min(window.innerHeight - 50, dragStartRef.current.startY + deltaY))
+
+      posRef.current = { x: newX, y: newY }
+
+      if (rafIdRef.current === null) {
+        rafIdRef.current = requestAnimationFrame(() => {
+          rafIdRef.current = null
+          if (windowRef.current) {
+            windowRef.current.style.left = `${posRef.current.x}px`
+            windowRef.current.style.top = `${posRef.current.y}px`
+          }
+        })
+      }
     }
 
     const handleMouseMove = (e: MouseEvent) => handlePointerMove(e.clientX, e.clientY)
     const handleTouchMove = (e: TouchEvent) => {
-      if (e.touches[0]) handlePointerMove(e.touches[0].clientX, e.touches[0].clientY)
+      if (isDraggingRef.current) {
+        if (e.cancelable) e.preventDefault()
+        if (e.touches[0]) handlePointerMove(e.touches[0].clientX, e.touches[0].clientY)
+      }
     }
 
     const handlePointerUp = () => {
-      isDraggingRef.current = false
+      if (isDraggingRef.current) {
+        isDraggingRef.current = false
+        if (hasMovedRef.current) {
+          setPosition({ x: posRef.current.x, y: posRef.current.y })
+        }
+      }
     }
 
     window.addEventListener('mousemove', handleMouseMove)
     window.addEventListener('mouseup', handlePointerUp)
-    window.addEventListener('touchmove', handleTouchMove, { passive: true })
+    window.addEventListener('touchmove', handleTouchMove, { passive: false })
     window.addEventListener('touchend', handlePointerUp)
 
     return () => {
@@ -242,6 +271,7 @@ export default function WeaverCalibrator({
       window.removeEventListener('mouseup', handlePointerUp)
       window.removeEventListener('touchmove', handleTouchMove)
       window.removeEventListener('touchend', handlePointerUp)
+      if (rafIdRef.current !== null) cancelAnimationFrame(rafIdRef.current)
     }
   }, [])
 
@@ -444,10 +474,20 @@ export default function WeaverCalibrator({
       setLayerStack(stack)
       setSelectedLayerIndex(0)
       setInspectedElement(target)
-      setOffsetNudge({ x: 0, y: 0 })
+
+      const selector = getElementSelector(target)
+      const existing = modifiedElements[selector]
+      if (existing) {
+        setCustomCss(existing.css)
+        setOffsetNudge(existing.offsetNudge)
+      } else {
+        setCustomCss(DEFAULT_CSS_STATE)
+        setOffsetNudge({ x: 0, y: 0 })
+      }
+
       analyzeElement(target)
     },
-    [analyzeElement]
+    [analyzeElement, modifiedElements]
   )
 
   const handleSelectLayer = (index: number) => {
@@ -455,7 +495,17 @@ export default function WeaverCalibrator({
     const item = layerStack[index]
     if (item && item.element) {
       setInspectedElement(item.element)
-      setOffsetNudge({ x: 0, y: 0 })
+
+      const selector = getElementSelector(item.element)
+      const existing = modifiedElements[selector]
+      if (existing) {
+        setCustomCss(existing.css)
+        setOffsetNudge(existing.offsetNudge)
+      } else {
+        setCustomCss(DEFAULT_CSS_STATE)
+        setOffsetNudge({ x: 0, y: 0 })
+      }
+
       analyzeElement(item.element)
     }
   }
@@ -712,10 +762,12 @@ export default function WeaverCalibrator({
 
   const copyCssStyle = () => {
     setCopiedCss({ ...customCss })
+    setCopiedType('style-copied')
+    setTimeout(() => setCopiedType(null), 2000)
   }
 
   const pasteCssStyle = () => {
-    if (copiedCss) {
+    if (copiedCss && inspectedElement) {
       const next = { ...copiedCss }
       setCustomCss(next)
       applyLiveStyles(next, inspectedElement)
@@ -725,6 +777,8 @@ export default function WeaverCalibrator({
           [inspectedInfo.selector]: { info: inspectedInfo, css: next, offsetNudge },
         }))
       }
+      setCopiedType('style-pasted')
+      setTimeout(() => setCopiedType(null), 2000)
     }
   }
 
@@ -989,20 +1043,26 @@ export default function WeaverCalibrator({
           ref={windowRef}
           style={{
             position: 'fixed',
-            left: position ? `${position.x}px` : undefined,
-            top: position ? `${position.y}px` : undefined,
-            bottom: position ? undefined : '20px',
-            right: position ? undefined : '20px',
+            left: `${position.x}px`,
+            top: `${position.y}px`,
             opacity: toolOpacity,
+            willChange: 'left, top',
           }}
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
           onClick={() => {
             if (!hasMovedRef.current) {
+              const isMobile = window.innerWidth < 640
+              const hudWidth = isMobile ? Math.min(360, window.innerWidth - 20) : 410
+              if (posRef.current.x + hudWidth > window.innerWidth - 10) {
+                const adjustedX = Math.max(10, window.innerWidth - hudWidth - 10)
+                posRef.current.x = adjustedX
+                setPosition({ x: adjustedX, y: posRef.current.y })
+              }
               setIsMinimized(false)
             }
           }}
-          className="taledives-calibrator-hud fixed z-50 p-2.5 bg-[#0c0914] text-[#f0ca65] border-2 border-[#f0ca65] rounded-full shadow-[0_0_25px_rgba(240,202,101,0.6)] backdrop-blur-2xl cursor-grab active:cursor-grabbing hover:scale-110 active:scale-95 transition-all flex items-center justify-center gap-2 group select-none"
+          className="taledives-calibrator-hud fixed z-50 p-2.5 bg-[#0c0914] text-[#f0ca65] border-2 border-[#f0ca65] rounded-full shadow-[0_0_25px_rgba(240,202,101,0.6)] backdrop-blur-2xl cursor-grab active:cursor-grabbing hover:scale-110 active:scale-95 transition-opacity transition-transform flex items-center justify-center gap-2 group select-none touch-none"
           title="Weaver Calibrator HUD (Click to Expand, Drag to Move)"
         >
           <Sliders size={20} className="text-[#f0ca65] group-hover:rotate-45 transition-transform" />
@@ -1021,11 +1081,10 @@ export default function WeaverCalibrator({
           ref={windowRef}
           style={{
             position: 'fixed',
-            left: position ? `${position.x}px` : undefined,
-            top: position ? `${position.y}px` : undefined,
-            bottom: position ? undefined : '16px',
-            right: position ? undefined : '16px',
+            left: `${position.x}px`,
+            top: `${position.y}px`,
             opacity: toolOpacity,
+            willChange: 'left, top',
           }}
           className="taledives-calibrator-hud fixed z-50 max-w-[96vw] w-[360px] sm:w-[410px] bg-[#0c0914] text-stone-200 border border-[#e8ca8a]/40 rounded-2xl shadow-[0_16px_50px_rgba(0,0,0,0.9)] backdrop-blur-2xl font-sans select-none overflow-hidden transition-opacity"
         >
@@ -1104,10 +1163,7 @@ export default function WeaverCalibrator({
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  if (onClose) onClose()
-                  else setIsMinimized(true)
-                }}
+                onClick={() => setIsMinimized(true)}
                 className="p-1 rounded-md text-stone-400 hover:text-red-400 hover:bg-white/10 transition-colors"
                 title="Minimize to Floating Icon"
               >
@@ -1549,27 +1605,33 @@ export default function WeaverCalibrator({
                       <button
                         type="button"
                         onClick={copyCssStyle}
-                        className="text-[10px] text-stone-300 hover:text-white flex items-center gap-1 cursor-pointer transition-colors"
-                        title="Copy Style"
+                        className="px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-[10px] text-stone-200 hover:text-white flex items-center gap-1 cursor-pointer transition-colors border border-white/10 font-sans"
+                        title="Copy current element's CSS style settings"
                       >
-                        <Copy size={10} />
+                        {copiedType === 'style-copied' ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+                        <span>{copiedType === 'style-copied' ? 'COPIED!' : 'COPY'}</span>
                       </button>
                       <button
                         type="button"
                         onClick={pasteCssStyle}
                         disabled={!copiedCss}
-                        className={`text-[10px] flex items-center gap-1 transition-colors ${copiedCss ? 'text-stone-300 hover:text-white cursor-pointer' : 'text-stone-600 cursor-not-allowed'}`}
-                        title="Paste Style"
+                        className={`px-1.5 py-0.5 rounded text-[10px] flex items-center gap-1 transition-colors border font-sans ${
+                          copiedCss
+                            ? 'bg-[#e8ca8a]/20 hover:bg-[#e8ca8a]/30 text-[#f0ca65] border-[#f0ca65]/40 cursor-pointer font-semibold'
+                            : 'bg-white/5 text-stone-600 border-white/5 cursor-not-allowed'
+                        }`}
+                        title={copiedCss ? 'Paste copied CSS style onto this target' : 'Copy a style first to enable paste'}
                       >
-                        <ClipboardPaste size={10} />
+                        {copiedType === 'style-pasted' ? <Check size={11} className="text-emerald-400" /> : <ClipboardPaste size={11} />}
+                        <span>{copiedType === 'style-pasted' ? 'PASTED!' : 'PASTE'}</span>
                       </button>
                       <button
                         type="button"
                         onClick={resetStyles}
-                        className="text-[10px] text-red-300/80 hover:text-red-200 flex items-center gap-1 cursor-pointer ml-1"
+                        className="p-1 text-red-300/80 hover:text-red-200 flex items-center gap-1 cursor-pointer ml-0.5 rounded hover:bg-red-500/10 transition-colors"
                         title="Reset styles to initial state"
                       >
-                        <RotateCcw size={10} />
+                        <RotateCcw size={11} />
                       </button>
                     </div>
                   </div>

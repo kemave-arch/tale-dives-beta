@@ -1652,6 +1652,7 @@ export default function App() {
   } else if (screen === 'talediveweaver') {
     content = (
       <TaleDiveWeaver
+        debugMode={uiPrefs.debugMode}
         worldTemplates={Object.values(worlds)}
         protagonistTemplates={Object.values(protagonists)}
         existingTitles={Object.values(campaigns).map((c) => c.title)}
@@ -1919,7 +1920,7 @@ export default function App() {
       {/* Now Playing Playlist Banner on top of screen */}
       <NowPlayingBanner
         track={currentTrack}
-        visible={bannerVisible}
+        visible={uiPrefs.showMusicBanners ? bannerVisible : false}
         muted={musicMuted}
         onDismiss={dismissBanner}
       />
@@ -2040,10 +2041,10 @@ export default function App() {
        </Suspense>
       )}
 
-      {uiPrefs.debugMode && (
-       <Suspense fallback={null}>
-        <WeaverCalibrator />
-       </Suspense>
+      {uiPrefs.debugMode && screen !== 'talediveweaver' && (
+        <Suspense fallback={null}>
+          <WeaverCalibrator isGlobal />
+        </Suspense>
       )}
 
       {confirmDialog}

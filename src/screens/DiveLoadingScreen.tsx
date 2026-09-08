@@ -1,4 +1,6 @@
+import { useEffect } from 'react'
 import { AmbientSparks } from '../lib/glassChrome.tsx'
+import { preloadImage } from '../lib/setupBgResolver.ts'
 
 interface DiveLoadingScreenProps {
   gender?: string
@@ -12,6 +14,11 @@ export default function DiveLoadingScreen({ gender }: DiveLoadingScreenProps) {
   const pcSrc = `${import.meta.env.BASE_URL}img/loadingscreens/pc_dive-in-${genderKey}.webp`
   const mobileSrc = `${import.meta.env.BASE_URL}img/loadingscreens/m_dive-in-${genderKey}.webp`
 
+  useEffect(() => {
+    preloadImage(pcSrc)
+    preloadImage(mobileSrc)
+  }, [pcSrc, mobileSrc])
+
   return (
     <div
       className="h-dvh relative flex flex-col justify-end items-center text-center px-6 overflow-hidden bg-[#050308] select-none"
@@ -24,6 +31,8 @@ export default function DiveLoadingScreen({ gender }: DiveLoadingScreenProps) {
           <img
             src={mobileSrc}
             alt="Diving in..."
+            fetchPriority="high"
+            decoding="async"
             className="absolute inset-0 w-full h-full object-cover animate-[fade-in_1s_ease-in_forwards]"
           />
         </picture>

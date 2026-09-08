@@ -583,6 +583,7 @@ export interface UiPrefs {
   introGazeDelay?: boolean // When true (default), Dive In pauses for 4s showing "Initializing..." to admire wallpapers
   autoCloudBackup?: boolean // Automatically save backup to Google Drive Slot 1 on chapter completion & milestones
   graphicsMode?: 'glass' | 'performance' // Graphics tab — 'performance' strips backdrop-filter blur app-wide (flat transparency, same colors) for weaker mobile GPUs
+  showMusicBanners?: boolean // Toggle for Now Playing music track notification banner — default OFF
 }
 
 export interface InventoryChange {

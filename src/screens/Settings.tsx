@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Cpu, SlidersHorizontal, HardDrive, Cloud, X, Download, Upload, RotateCcw,
-  FolderOpen, FolderX, Maximize, Minimize, Trash2, Volume2, VolumeX,
+  FolderOpen, FolderX, Maximize, Minimize, Trash2, Volume2, VolumeX, Music,
   CloudUpload, CloudDownload, Loader2, Check, RefreshCw, KeyRound, Bot, Server,
   Dice5, Layers, Monitor, Bug, UserCircle, History, AlertTriangle, LogOut, Gauge,
 } from 'lucide-react'
@@ -99,6 +99,7 @@ export default function Settings({
   const [temperature, setTemperature] = useState(apiSettings.temperature)
   const [chromeOpacity, setChromeOpacity] = useState(uiPrefs.chromeOpacity)
   const [debugMode, setDebugMode] = useState<boolean>(uiPrefs.debugMode ?? false)
+  const [showMusicBanners, setShowMusicBanners] = useState<boolean>(uiPrefs.showMusicBanners ?? false)
   const [graphicsMode, setGraphicsMode] = useState<'glass' | 'performance'>(uiPrefs.graphicsMode ?? 'performance')
   const [introGazeDelay, setIntroGazeDelay] = useState<boolean>(uiPrefs.introGazeDelay ?? true)
   const [proseDepthKey, setProseDepthKey] = useState<keyof typeof PROSE_DEPTHS>(
@@ -300,7 +301,7 @@ export default function Settings({
   function save() {
     onSave({
       apiSettings: { provider, model, apiKey, temperature },
-      uiPrefs: { chromeOpacity, debugMode, introGazeDelay, autoCloudBackup, graphicsMode },
+      uiPrefs: { chromeOpacity, debugMode, showMusicBanners, introGazeDelay, autoCloudBackup, graphicsMode },
       proseDepthKey,
     })
   }
@@ -470,7 +471,22 @@ export default function Settings({
               </div>
 
               <div className="flex items-center justify-between gap-3 rounded-xl border border-gold-accent/25 bg-gold-accent/[0.04] p-3">
-                <FieldLabel icon={Bug} tip='When ON, turns off the 4-second "Initializing..." delay on START for instant navigation — useful while iterating, not meant to stay on for real play.'>
+                <FieldLabel icon={Music} tip="Shows a toast notification banner at the top of the screen whenever background music changes track. Default is OFF.">
+                  Music Banners
+                </FieldLabel>
+                <GlassSegmented
+                  className="shrink-0"
+                  options={[
+                    { id: 'off', label: 'OFF' },
+                    { id: 'on', label: 'ON' },
+                  ]}
+                  value={showMusicBanners ? 'on' : 'off'}
+                  onChange={(v) => setShowMusicBanners(v === 'on')}
+                />
+              </div>
+
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-gold-accent/25 bg-gold-accent/[0.04] p-3">
+                <FieldLabel icon={Bug} tip='When ON, enables the Weaver Calibrator debugging HUD across all screens and bypasses the 4-second "Initializing..." delay on START.'>
                   Debug Mode
                 </FieldLabel>
                 <GlassSegmented

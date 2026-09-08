@@ -1,0 +1,20 @@
+--- src/components/seedweaver/WeaverCalibrator.tsx
++++ src/components/seedweaver/WeaverCalibrator.tsx
+@@ -27,11 +27,11 @@
+ 
+ interface WeaverCalibratorProps {
+-  isDesktop: boolean
+-  calibration: WeaverCalibrationPreset
+-  onChange: (updated: WeaverCalibrationPreset) => void
+-  onReset: () => void
+-  onClose: () => void
+-  selectedNode: NodeType
+-  onSelectNode: (node: NodeType) => void
++  isDesktop?: boolean
++  calibration?: WeaverCalibrationPreset
++  onChange?: (updated: WeaverCalibrationPreset) => void
++  onReset?: () => void
++  onClose?: () => void
++  selectedNode?: NodeType
++  onSelectNode?: (node: NodeType) => void
+ }

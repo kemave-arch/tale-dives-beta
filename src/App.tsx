@@ -21,6 +21,7 @@ const Codex = lazy(() => import('./screens/Codex.tsx'))
 const SlashCommandManager = lazy(() => import('./screens/SlashCommandManager.tsx'))
 const TaleDiveWeaver = lazy(() => import('./screens/TaleDiveWeaver.tsx'))
 const NovelWeaver = lazy(() => import('./screens/NovelWeaver.tsx'))
+const WeaverCalibrator = lazy(() => import('./components/seedweaver/WeaverCalibrator.tsx'))
 import { getClassById, findClassById } from './data/classes.ts'
 import { FOURTH_WING_WORLD, VIOLET_SORRENGAIL } from './data/starterTemplates.ts'
 import { buildContextSlice } from './lib/jitContext.ts'
@@ -2036,6 +2037,12 @@ export default function App() {
           onDelete={deleteSlashCommand}
           onClose={closeSlashManager}
         />
+       </Suspense>
+      )}
+
+      {uiPrefs.debugMode && (
+       <Suspense fallback={null}>
+        <WeaverCalibrator />
        </Suspense>
       )}
 

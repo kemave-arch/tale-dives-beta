@@ -1,17 +1,50 @@
 # Tale Dives — Project Revision Notes
 
-**Last updated:** 2026-09-07 — Full UI Element & Layer Stack Calibrator & Mobile "Dive In" Repositioning (`src/components/seedweaver/WeaverCalibrator.tsx`, `src/components/seedweaver/TalesWeaverStage.tsx`):
-1. **Mobile "DIVE IN" Button Repositioning**:
-   - Elevated the bottom anchor from `max(0.75rem, ...)` to `max(4.5rem, calc(env(safe-area-inset-bottom) + 3.75rem))` on mobile.
-   - Pinned with generous breathing room above device home indicators and gesture navigation zones while maintaining comfortable thumb reach.
-2. **Full UI Element & Layer Inspector Refactor in `WeaverCalibrator.tsx`**:
-   - Added a dual-mode tab switcher between **"Seed Nodes"** (Protagonist, World, NPCs, Narrative positioning) and **"UI Element & Layer"** (general on-screen UI debugging).
-   - **Click-to-Inspect Tool**: Interactive on-screen element picker with visual hover bounds and click interception to inspect any live DOM element.
-   - **Layer Stack & Object Selector**: Captures all overlapping elements at the clicked point (`document.elementsFromPoint`) and parent hierarchy into a dropdown, allowing precise selection between nested child buttons, containers, stage canvases, and scrims.
-   - **Live Metrics Dashboard**: Displays Device Mode (`Mobile` vs `PC`), component identifier (`<GlassCTAButton>`, `<GlassHeader>`, etc.), CSS selector, bounding box (`x`, `y`, `width`, `height`), and viewport-relative offsets (`left %`, `top %`, `bottom px / %`, `right px / %`, `z-index`).
-   - **Live Position Offset Tester (Nudge)**: Real-time `↑ -20px`, `↑ -5px`, `↓ +5px`, `↓ +20px` step controls to preview positioning offsets live on the screen before reporting.
-   - **One-Click AI Copy Actions**: "COPY FULL REPORT FOR AI" generates a structured Markdown report with component name, selector, layer index, exact bounding box, and calibrated offset; plus "Copy Position" and "Copy Selector" quick actions.
-3. **Verified**: Passes `tsc --noEmit` and Vite production build cleanly.
+**Last updated:** 2026-09-07 — Minimize to Draggable Floating Icon Button (`src/components/seedweaver/WeaverCalibrator.tsx`):
+1. **Minimize to Floating Icon Button**:
+   - Transformed the `X` button and `ChevronDown` button in `WeaverCalibrator.tsx` header to minimize the full HUD window into a compact floating icon button (`Sliders` emblem with live modification status badge).
+2. **Draggable & Clickable Floating Icon**:
+   - The minimized icon button is fully draggable anywhere on screen via mouse or touch (`handleMouseDown` / `handleTouchStart`).
+   - Implemented drag vs click movement detection (`hasMovedRef` tracking delta movement > 4px). Tapping/clicking the floating icon expands it back into the full Weaver Calibrator HUD window at its current screen location.
+3. **Style Application**:
+   - Verified live styling engine (`applyLiveStyles`) continues applying all custom fill, border, corner radius, shadow, scale, rotation, and typography changes directly to targeted DOM elements, persisting during minimization.
+4. **Verified**: `lint_applet` (`tsc --noEmit`) and `compile_applet` (`vite build`) compiled cleanly with 0 errors.
+
+**Last updated:** 2026-09-07 — Global WeaverCalibrator, Live Graphic Editor Transforms & Mobile Collapsible HUD (`src/components/seedweaver/WeaverCalibrator.tsx`, `src/App.tsx`):
+1. **Global Debug Calibrator Availability**:
+   - Mounted `WeaverCalibrator` globally in `App.tsx` whenever `uiPrefs.debugMode` is enabled. The tool is now available on all views at all times (Title, Main Menu, Story Mode, Codex, Chronicle, Settings, Tale Weaver, etc.) as a persistent, non-intrusive debugging and styling HUD.
+2. **Graphic Editor Live Transform Handles (Drag, Scale, Rotate)**:
+   - Added an intuitive graphic-editor transform overlay box directly on top of selected/inspected UI elements on screen.
+   - **Position Drag**: Clicking and dragging anywhere inside or on the selection box moves the element live (`offsetNudge`).
+   - **Corner Scale Handles**: 4 corner square handles (`w-3.5 h-3.5`) with corner resize cursors allow dragging to scale elements in real-time (`scale`).
+   - **Rotation Top Handle**: A top center stalk with a circular rotation handle (`↻`) allows dragging around the element's center to rotate it in real-time (`rotation`).
+3. **Mobile Collapsible Settings Sections**:
+   - Added collapsible accordions with toggle state (`openSections`) for "Fill & Background", "Border & Corners", "Shadow, Glow & Transform", and "Typography" in `WeaverCalibrator.tsx`, saving critical mobile screen real estate.
+4. **Verified**: `lint_applet` (`tsc --noEmit`) and `compile_applet` (`vite build`) compiled cleanly with 0 errors.
+
+**Last updated:** 2026-09-07 — WeaverCalibrator Enhancements (Size, Rotation, Typography, Copy/Paste Styles & Multi-Element Logging):
+1. **Added Scaling & Rotation UI Controls**: Expanded the CSS & Styles section in `WeaverCalibrator.tsx` to include an enhanced Scale slider (`0.5x` to `2.0x`) and a new Rotation slider (`0°` to `360°`), directly setting CSS transforms on the live DOM.
+2. **Added comprehensive Typography Controls**: Added a dedicated `4. TYPOGRAPHY` section controlling `fontFamily`, `fontWeight`, `fontSize`, `textColor`, `textAlign`, and `fontStyle` (italic/normal).
+3. **Multi-Element Modification Logging**: Refactored `WeaverCalibrator` state to centrally track all modified elements via a `modifiedElements` dictionary. The "COPY STYLE REPORT FOR AI" function now aggregates every delta change across multiple elements in a single session, making it easier for the AI to process a complete CSS hand-off.
+4. **Copy & Paste Live Styles**: Implemented a "Copy Style" and "Paste Style" functionality in the target element's header chip to easily duplicate custom CSS changes between different UI elements during an active calibration session.
+5. **Removed Quick Target Presets**: Purged the redundant "Quick Target Presets" HTML block from the Layout tab per request, saving vertical real estate.
+
+**Last updated:** 2026-09-07 — Draggable Calibrator, Tool Transparency Slider & Live CSS / Visuals Inspector (`src/components/seedweaver/WeaverCalibrator.tsx`):
+1. **Draggable Floating HUD (Touch & Mouse Support)**:
+   - Built a custom touch- and mouse-drag system into `WeaverCalibrator.tsx` header with boundary clamping (`0` to `window.innerWidth - width`, `0` to `window.innerHeight - height`).
+   - The HUD window can now be freely dragged anywhere across mobile touchscreens and desktop viewports to avoid covering target UI elements.
+2. **HUD Window Transparency Slider**:
+   - Added an eye/transparency control in the HUD top bar with a live opacity slider (25% to 100%) and quick presets (40%, 60%, 80%, 100%).
+   - Calibrator window becomes semi-transparent on demand so the game canvas, art, and UI underneath remain fully visible during calibration.
+3. **Live CSS Styles & Visuals Customizer (3-Tab Navigation)**:
+   - **Tab 1: Seed Nodes**: Node circle coordinates (`left %`, `top %`) and diameters (`size %`).
+   - **Tab 2: Layout & Pos**: Element picker, layer stack selector, bounding box metrics, and live nudge/offset tester.
+   - **Tab 3: CSS & Styles**: Live visual experimentation directly affecting the target element in the DOM:
+     - **Fill & Background**: Fill types (`glass`, `solid`, `none`), color swatches & hex picker, fill opacity slider, and backdrop blur slider (`0px` to `24px`).
+     - **Border & Corners**: Border styles (`solid`, `dashed`, `dotted`, `none`), border color & opacity, border width (`0` to `8px`), and corner radius presets (`0px`, `8px`, `12px`, `16px`, `24px`, `Pill / 9999px`).
+     - **Shadow, Glow & Transform**: Presets (`None`, `Soft Shadow`, `Gold Glow`, `Purple Glow`, `Deep Shade`, `Inset`), size scale slider (`0.5x` to `1.5x`), and element opacity.
+     - **Export & AI Reporting**: Real-time Tailwind equivalent snippet preview (`bg-[#...]/80 backdrop-blur-md border border-[#...]/40 rounded-2xl shadow-[...]`), "Copy Tailwind Snippet Only", and "COPY STYLE REPORT FOR AI".
+4. **Verified**: `lint_applet` (`tsc --noEmit`) and `compile_applet` (`vite build`) compiled cleanly with 0 errors.
 
 Previous note:
 1. **Numerical Input Leading-Zero Root Cause & Comprehensive Fix**:

@@ -764,6 +764,18 @@ const TurnBlock = memo(function TurnBlock({
           ))}
         </div>
       )}
+      {entry.eventsActivated && entry.eventsActivated.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {entry.eventsActivated.map((title, i) => (
+            <span
+              key={i}
+              className="inline-flex items-center gap-1.5 rounded-full bg-gold-accent/15 border border-gold-accent/40 px-3 py-1 font-display text-xs text-gold-primary"
+            >
+              <Sparkles size={12} /> Narrative Event: {title}
+            </span>
+          ))}
+        </div>
+      )}
       {entry.craftReady && entry.craftReady.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {entry.craftReady.map((c, i) => (

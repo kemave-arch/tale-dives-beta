@@ -64,7 +64,7 @@ function lastNarratedTurnState(log: LogEntry[] | undefined): string | undefined 
 // Builds the compact per-turn header re-sent alongside the player's action;
 // this (not model memory) is what keeps state consistent turn to turn.
 export function buildContextSlice(state: Campaign, craftReadyLine?: string | null): string {
-  const { player, proseDepth, narrationStyle, locations, npcs, factions, lore, world, flags, quests, log, items, combat, bestiary, projects, beats } = state
+  const { player, proseDepth, narrationStyle, locations, npcs, factions, lore, world, flags, quests, log, items, combat, bestiary, projects, beats, narrativeEvents, deathInstructions, endGameRules } = state
 
   const playerIdentity = [player.gender && `Gender: ${player.gender}`, player.age !== undefined && `Age: ${player.age}`]
     .filter(Boolean)
@@ -272,8 +272,37 @@ export function buildContextSlice(state: Campaign, craftReadyLine?: string | nul
     lines.push(`Story Arc: ${arc}`)
   }
 
+  // §9 Narrative Events — unlike `beats` above, a dormant event is never
+  // shown at all (it's the story's own surprise, client-checked with zero
+  // LLM involvement); only an already-ACTIVE event's title+guidance appears,
+  // so the model has something to weave in but nothing to leak early.
+  if (narrativeEvents) {
+    const active = Object.values(narrativeEvents).filter((e) => e.status === 'active')
+    if (active.length > 0) {
+      const line = active.map((e) => (e.guidance ? `${e.title}: ${e.guidance}` : e.title)).join(' | ')
+      lines.push(`Active Narrative Events: ${line}`)
+    }
+  }
+
   if (flags && flags.length > 0) {
     lines.push(`World Flags: [${flags.slice(-MAX_FLAGS_SHOWN).join(', ')}]`)
+  }
+
+  // §9 Tale Rules — pure narration-steering prose for this Tale's own death/
+  // ending conventions (mirrors Voyage's death.instructions/endGame blocks).
+  // Always-on rather than gated to a specific turn state: cheap when unset,
+  // and the model needs "Ending Guidance" ready before a beat completes on
+  // the very turn that also finalizes it (see turnContract.ts rule 8f).
+  if (deathInstructions?.trim()) {
+    lines.push(`On Defeat: ${deathInstructions.trim()}`)
+  }
+  if (endGameRules && (endGameRules.win || endGameRules.lose || endGameRules.neutral)) {
+    const outcomes = [
+      endGameRules.win?.trim() && `win: ${endGameRules.win.trim()}`,
+      endGameRules.lose?.trim() && `lose: ${endGameRules.lose.trim()}`,
+      endGameRules.neutral?.trim() && `neutral: ${endGameRules.neutral.trim()}`,
+    ].filter(Boolean)
+    if (outcomes.length > 0) lines.push(`Ending Guidance: ${outcomes.join(' | ')}`)
   }
 
   // §5.8 — only present when a queued crafting job finished at this exact

@@ -33,6 +33,7 @@ import { applyKeywordLinks, applyEnrichUpdates } from './lib/codex.ts'
 import { applyQuestUpdate } from './lib/quests.ts'
 import { applyProjectUpdate } from './lib/projects.ts'
 import { applyBeatUpdate } from './lib/beats.ts'
+import { checkNarrativeEventTriggers, applyEventUpdate } from './lib/narrativeEvents.ts'
 import { applySkillLearn } from './lib/skills.ts'
 import { applyInventoryChanges, equipItem, unequipSlot } from './lib/inventory.ts'
 import { resolveBangCommand, findEntry } from './lib/bangCommands.ts'
@@ -71,8 +72,8 @@ import NowPlayingBanner from './components/NowPlayingBanner.tsx'
 import * as store from './lib/store.ts'
 import { CURRENT_SCHEMA_VERSION, EQUIPPABLE_TYPES } from './types.ts'
 import type {
-  AreaEntry, BestiaryEntry, Campaign, CombatState, ConditionTag, Dict, EquipSlot, FactionEntry, GameTime, HistoryTurn, ItemEntry, KeywordLink, LocationEntry, LogEntry, LoreEntry,
-  NpcEntry, Player, ProjectEntry, ProtagonistData, QuestEntry, RegionEntry, SkillEntry, SlashCommand, TaleBeat, TurnState, WorldData,
+  AreaEntry, BestiaryEntry, Campaign, CombatState, ConditionTag, Dict, EndingOutcome, EquipSlot, FactionEntry, GameTime, HistoryTurn, ItemEntry, KeywordLink, LocationEntry, LogEntry, LoreEntry,
+  NarrativeEvent, NpcEntry, Player, ProjectEntry, ProtagonistData, QuestEntry, RegionEntry, SkillEntry, SlashCommand, TaleBeat, TurnState, WorldData,
 } from './types.ts'
 
 const KEYWORD_CATEGORY_TO_CODEX: Record<KeywordLink['category'], CategoryId> = {
@@ -1223,6 +1224,14 @@ export default function App() {
         nextFlags,
       )
 
+      // §9 Narrative Events — same zero-LLM-cost, once-per-turn pass as
+      // Codex Discovery just above, run right after it so a dormant event's
+      // own trigger sees this turn's final merged flag list too. The
+      // model's own event_update (an active event it just resolved) is
+      // applied on top of whatever this pass just activated.
+      const eventCheck = checkNarrativeEventTriggers(current.narrativeEvents, turn, nextFlags)
+      const nextNarrativeEvents = applyEventUpdate(eventCheck.events, turn.event_update)
+
       // §5.3 — a `familiar`-branch minion's upkeep is a stable no-op now
       // (see lib/summoning.ts's own comment — Player no longer has a
       // numeric MP pool for it to drain).
@@ -1251,6 +1260,7 @@ export default function App() {
         minions: upkeep.minions,
         projects: nextProjects,
         beats: nextBeats,
+        narrativeEvents: nextNarrativeEvents,
         locations: reveals.locations,
         npcs: reveals.npcs,
         factions: reveals.factions,
@@ -1287,6 +1297,7 @@ export default function App() {
             ...(leveled ? { levelUp: leveledPlayer.level } : {}),
             ...(breakthroughLog ? { breakthrough: breakthroughLog } : {}),
             ...(reveals.revealed.length ? { discoveries: reveals.revealed } : {}),
+            ...(eventCheck.activated.length ? { eventsActivated: eventCheck.activated.map((e) => e.title) } : {}),
             ...(classEvolution ? { classEvolution } : {}),
             ...(craftResolution.completed.length
               ? { craftReady: craftResolution.completed.map((c) => ({ recipeName: c.recipe.name, outputId: c.recipe.output.id, outputQty: c.recipe.output.qty })) }
@@ -1301,10 +1312,15 @@ export default function App() {
       const historyWithResponse: HistoryTurn[] = [...newHistory, { role: 'model', parts: [{ text: result.historyText }] }]
       setHistory(historyWithResponse)
 
-      // §5.7 Player Defeat State — chains into its own resolution turn once
-      // the fatal blow itself is committed, rather than leaving the player
-      // stuck mid-fall with nothing to do.
-      if (playerDefeated) resolveDefeat(nextCampaign, historyWithResponse)
+      // §5.7/§9 Player Defeat State — chains into its own resolution turn
+      // once the fatal blow itself is committed, rather than leaving the
+      // player stuck mid-fall with nothing to do. A Tale with permadeath
+      // active gets a genuine lose-ending instead of the default soft-fail
+      // recovery beat.
+      if (playerDefeated) {
+        if (nextCampaign.deathRule === 'permadeath') resolveDeath(nextCampaign, historyWithResponse)
+        else resolveDefeat(nextCampaign, historyWithResponse)
+      }
 
       // §2 Phase E Chapter Milestone — same boundary trigger as the
       // chapter-level-up above; the recap call reads historyWithResponse
@@ -1371,6 +1387,55 @@ export default function App() {
           combat: { active: false },
           lastPlayed: Date.now(),
           log: [...g.log, { nar, turnState: 'DESPAIR', time: nextPlayer.time, locDisp: nextPlayer.locDisp }],
+        },
+      )
+      setHistory([...newHistory, { role: 'model', parts: [{ text: result.historyText }] }])
+    } catch (err) {
+      setError(`The thread of fate falters... (${errorMessage(err)})`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // §9 Death Rules — permadeath's own resolution: a genuine "Defeated"
+  // Condition Tag auto-chains straight into this Tale's real lose-ending via
+  // the same <end>/Campaign.concluded mechanism !conclude and the final-beat
+  // completion already use, rather than resolveDefeat's soft-fail recovery
+  // beat above. Claims the same unconstrained output room !conclude gets
+  // (MAX_OUTPUT_TOKENS_CEILING) since this is the Tale's real final scene,
+  // not an ordinary turn — deathInstructions (this Tale's own "On Defeat"
+  // guidance, if set) already rides along inside buildContextSlice.
+  async function resolveDeath(campaign: Campaign, baseHistory: HistoryTurn[]) {
+    setBusy(true)
+    const deathAction =
+      '[SYSTEM: The protagonist has just fallen, and this Tale has permadeath active. Narrate their death as this Tale\'s real, definitive final scene — several paragraphs, closing off every major open thread. Set outcome="lose" in <end>.]'
+
+    const contextSlice = buildContextSlice(campaign)
+    const userTurnText = `${contextSlice}\n\nPlayer Action: ${deathAction}`
+    const newHistory: HistoryTurn[] = [...baseHistory, { role: 'user', parts: [{ text: userTurnText }] }]
+
+    try {
+      const result = await getProvider(apiSettings.provider).runTurn({
+        apiKey: apiSettings.apiKey,
+        model: apiSettings.model,
+        temperature: apiSettings.temperature,
+        maxOutputTokens: MAX_OUTPUT_TOKENS_CEILING,
+        history: newHistory,
+      })
+
+      const nar = result.ok ? result.turn!.nar : (result.fallbackText ?? 'Darkness closes in, final and absolute.')
+      const outcome: EndingOutcome = (result.ok && result.turn!.end?.outcome) || 'lose'
+      const turnRef = turnRefFor((campaign.turnCount ?? 0) + 1)
+      const resolvedTime = result.ok ? result.turn!.time : campaign.player.time
+      const resolvedLocDisp = result.ok ? (result.turn!.loc_disp ?? campaign.locations[result.turn!.loc_id]?.name ?? campaign.player.locDisp) : campaign.player.locDisp
+
+      setGame((g) =>
+        g && {
+          ...g,
+          combat: { active: false },
+          lastPlayed: Date.now(),
+          concluded: g.concluded ?? { outcome, turnRef },
+          log: [...g.log, { nar, turnRef, turnState: 'DESPAIR', time: resolvedTime, locDisp: resolvedLocDisp, ending: outcome }],
         },
       )
       setHistory([...newHistory, { role: 'model', parts: [{ text: result.historyText }] }])
@@ -1494,6 +1559,19 @@ export default function App() {
   // reorderable-list fields like ProjectEntry.stages).
   function updateBeats(beats: TaleBeat[]) {
     setGame((g) => g && { ...g, beats })
+  }
+
+  // §9 Narrative Events — hand-authored via Codex CRUD, same "replace the
+  // whole dict at once" pattern as every other Codex CRUD field.
+  function updateNarrativeEvents(narrativeEvents: Dict<NarrativeEvent>) {
+    setGame((g) => g && { ...g, narrativeEvents })
+  }
+
+  // §9 Death Rules / End Game Rules — a small, hand-authored blob of this
+  // Tale's own conventions, same "own the whole small blob" pattern as
+  // updateWorld.
+  function updateTaleRules(patch: Partial<Pick<Campaign, 'deathRule' | 'deathInstructions' | 'endGameRules'>>) {
+    setGame((g) => g && { ...g, ...patch })
   }
 
   // §5.8 Crafting — the player-triggered "queue a job" action (Codex's
@@ -2024,6 +2102,12 @@ export default function App() {
         onUnequipSlot={unequipFromCodex}
         beats={game.beats ?? []}
         onUpdateBeats={updateBeats}
+        narrativeEvents={game.narrativeEvents ?? {}}
+        onUpdateNarrativeEvents={updateNarrativeEvents}
+        deathRule={game.deathRule}
+        deathInstructions={game.deathInstructions}
+        endGameRules={game.endGameRules}
+        onUpdateTaleRules={updateTaleRules}
         onUpdateWorld={updateWorld}
         onEvolveClass={evolveClass}
         onStartCraft={startCraftingJob}
@@ -2069,6 +2153,12 @@ export default function App() {
         onUnequipSlot={unequipFromCodex}
         beats={game.beats ?? []}
         onUpdateBeats={updateBeats}
+        narrativeEvents={game.narrativeEvents ?? {}}
+        onUpdateNarrativeEvents={updateNarrativeEvents}
+        deathRule={game.deathRule}
+        deathInstructions={game.deathInstructions}
+        endGameRules={game.endGameRules}
+        onUpdateTaleRules={updateTaleRules}
         onUpdateWorld={updateWorld}
         onEvolveClass={evolveClass}
         onStartCraft={startCraftingJob}

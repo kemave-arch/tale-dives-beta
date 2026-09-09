@@ -19,8 +19,8 @@ import { useConfirm } from '../lib/useConfirm.tsx'
 import { useLongTextEditor } from '../lib/useLongTextEditor.tsx'
 import { EQUIPPABLE_TYPES, LOCATION_DANGER_LEVELS, LOCATION_TYPES } from '../types.ts'
 import type {
-  ApiSettings, BestiaryEntry, CompetencyTier, CraftingJob, Discovery, EquipSlot, FactionEntry, ItemEntry, ItemType, LocationEntry, LogEntry, LoreEntry, NpcEntry, Player,
-  ProjectEntry, ProjectStage, QuestEntry, RegionEntry, RevealTrigger, SkillEntry, TaleBeat, ThreatTierToken, WorldData,
+  ApiSettings, BestiaryEntry, CompetencyTier, CraftingJob, DeathRule, Dict, Discovery, EndingOutcome, EquipSlot, FactionEntry, ItemEntry, ItemType, LocationEntry, LogEntry, LoreEntry,
+  NarrativeEvent, NpcEntry, Player, ProjectEntry, ProjectStage, QuestEntry, RegionEntry, RevealTrigger, SkillEntry, TaleBeat, ThreatTierToken, WorldData,
 } from '../types.ts'
 import { COMPETENCY_TIERS, THREAT_TIERS, tierToWord, wordToTier, displayThreatLabel } from '../lib/tiers.ts'
 import { useEntityImage } from '../lib/useEntityImage.ts'
@@ -81,6 +81,12 @@ interface CodexProps {
   projects: Record<string, ProjectEntry>
   beats: TaleBeat[]
   onUpdateBeats: (beats: TaleBeat[]) => void
+  narrativeEvents: Dict<NarrativeEvent>
+  onUpdateNarrativeEvents: (events: Dict<NarrativeEvent>) => void
+  deathRule?: DeathRule
+  deathInstructions?: string
+  endGameRules?: Partial<Record<EndingOutcome, string>>
+  onUpdateTaleRules: (patch: { deathRule?: DeathRule; deathInstructions?: string; endGameRules?: Partial<Record<EndingOutcome, string>> }) => void
   onUpdateNpc: (id: string, patch: Partial<NpcEntry> | null) => void
   onUpdateFaction: (id: string, patch: Partial<FactionEntry> | null) => void
   onUpdateLocation: (id: string, patch: Partial<LocationEntry> | null) => void
@@ -1105,6 +1111,12 @@ export default function Codex({
   projects,
   beats,
   onUpdateBeats,
+  narrativeEvents,
+  onUpdateNarrativeEvents,
+  deathRule,
+  deathInstructions,
+  endGameRules,
+  onUpdateTaleRules,
   onUpdateNpc,
   onUpdateFaction,
   onUpdateLocation,
@@ -2053,6 +2065,192 @@ export default function Codex({
                 />
               </DetailPanel>
             </>
+          ) : editing && entryId === '__events__' ? (
+            <>
+              <div className="flex justify-end mb-3">
+                <CrudToolbar
+                  editing
+                  canDelete={false}
+                  onEdit={() => {}}
+                  onSave={() => {
+                    const list = (draft.events as NarrativeEvent[] | undefined) ?? []
+                    const nextDict: Dict<NarrativeEvent> = {}
+                    for (const ev of list) nextDict[ev.id] = ev
+                    onUpdateNarrativeEvents(nextDict)
+                    setEditing(false)
+                    setDraft({})
+                  }}
+                  onCancel={cancelEdit}
+                  onDelete={() => {}}
+                />
+              </div>
+              <DetailPanel>
+                <p className="font-narrative text-xs italic text-ink-muted">
+                  §9 Narrative Events — condition-triggered complications, checked client-side each
+                  turn (zero LLM cost). A dormant event's Guidance is never shown to the narrator —
+                  only Title exists ahead of time, and only here in Codex — so it stays a genuine
+                  surprise until its own Trigger actually fires.
+                </p>
+                {((draft.events as NarrativeEvent[] | undefined) ?? []).map((event, i) => (
+                  <div key={event.id} className="rounded-lg border border-[#e8ca8a]/25 p-3 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono text-ink-muted uppercase">Event {i + 1}</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setDraft((d) => ({ ...d, events: (d.events as NarrativeEvent[]).filter((_, idx) => idx !== i) }))
+                        }
+                        className="text-red-400 hover:text-red-300 p-1"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                    <TextField
+                      label="Title"
+                      value={event.title}
+                      onChange={(v) =>
+                        setDraft((d) => ({ ...d, events: (d.events as NarrativeEvent[]).map((e, idx) => (idx === i ? { ...e, title: v } : e)) }))
+                      }
+                    />
+                    <TextField
+                      label="Guidance (shown to narrator only once Active)"
+                      value={event.guidance ?? ''}
+                      textarea
+                      onChange={(v) =>
+                        setDraft((d) => ({ ...d, events: (d.events as NarrativeEvent[]).map((e, idx) => (idx === i ? { ...e, guidance: v } : e)) }))
+                      }
+                    />
+                    <label className="block">
+                      <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Status</span>
+                      <select
+                        value={event.status}
+                        onChange={(e) =>
+                          setDraft((d) => ({
+                            ...d,
+                            events: (d.events as NarrativeEvent[]).map((ev, idx) => (idx === i ? { ...ev, status: e.target.value as NarrativeEvent['status'] } : ev)),
+                          }))
+                        }
+                        className={SELECT_CLASS}
+                      >
+                        <option value="dormant">Dormant</option>
+                        <option value="active">Active</option>
+                        <option value="completed">Completed</option>
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Trigger</span>
+                      <select
+                        value={event.trigger ?? 'manual'}
+                        onChange={(e) =>
+                          setDraft((d) => ({
+                            ...d,
+                            events: (d.events as NarrativeEvent[]).map((ev, idx) => (idx === i ? { ...ev, trigger: e.target.value as RevealTrigger } : ev)),
+                          }))
+                        }
+                        className={SELECT_CLASS}
+                      >
+                        <option value="manual">Manual (CRUD only)</option>
+                        <option value="flag">World Flag</option>
+                        <option value="location_visit">Visit Location (id)</option>
+                        <option value="npc_met">Meet NPC (id)</option>
+                        <option value="quest_complete">Complete Quest (id)</option>
+                      </select>
+                    </label>
+                    {event.trigger && event.trigger !== 'manual' && (
+                      <TextField
+                        label="Condition"
+                        value={event.condition ?? ''}
+                        onChange={(v) =>
+                          setDraft((d) => ({ ...d, events: (d.events as NarrativeEvent[]).map((e, idx) => (idx === i ? { ...e, condition: v } : e)) }))
+                        }
+                        placeholder="flag text, loc_id, npc_id, or quest_id"
+                      />
+                    )}
+                  </div>
+                ))}
+                <AddButton
+                  label="Add Narrative Event"
+                  onClick={() =>
+                    setDraft((d) => ({
+                      ...d,
+                      events: [...((d.events as NarrativeEvent[] | undefined) ?? []), { id: `event_${Date.now()}`, title: '', status: 'dormant' as const }],
+                    }))
+                  }
+                />
+              </DetailPanel>
+            </>
+          ) : editing && entryId === '__talerules__' ? (
+            <>
+              <div className="flex justify-end mb-3">
+                <CrudToolbar
+                  editing
+                  canDelete={false}
+                  onEdit={() => {}}
+                  onSave={() => {
+                    onUpdateTaleRules({
+                      deathRule: draft.deathRule as DeathRule | undefined,
+                      deathInstructions: (draft.deathInstructions as string | undefined)?.trim() || undefined,
+                      endGameRules: {
+                        win: (draft.endGameWin as string | undefined)?.trim() || undefined,
+                        lose: (draft.endGameLose as string | undefined)?.trim() || undefined,
+                        neutral: (draft.endGameNeutral as string | undefined)?.trim() || undefined,
+                      },
+                    })
+                    setEditing(false)
+                    setDraft({})
+                  }}
+                  onCancel={cancelEdit}
+                  onDelete={() => {}}
+                />
+              </div>
+              <DetailPanel>
+                <p className="font-narrative text-xs italic text-ink-muted">
+                  §9 Tale Rules — this Tale's own conventions for death and its three possible
+                  endings. Pure narration guidance for the narrator, never a new triggering
+                  mechanism of its own — the ending itself still only ever comes from !conclude, the
+                  final Story Arc beat completing, or a Narrative Event's own guidance.
+                </p>
+                <label className="block">
+                  <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Death Rule</span>
+                  <select
+                    value={(draft.deathRule as DeathRule | undefined) ?? 'soft_fail'}
+                    onChange={(e) => setDraft((d) => ({ ...d, deathRule: e.target.value as DeathRule }))}
+                    className={SELECT_CLASS}
+                  >
+                    <option value="soft_fail">Soft Fail (recovery beat, no real death)</option>
+                    <option value="permadeath">Permadeath (a real lose-ending)</option>
+                  </select>
+                </label>
+                <TextField
+                  label="On Defeat — narration guidance"
+                  value={(draft.deathInstructions as string | undefined) ?? ''}
+                  textarea
+                  onChange={(v) => setDraft((d) => ({ ...d, deathInstructions: v }))}
+                  placeholder="Narrate the character returning from death in a dramatic fashion…"
+                />
+                <TextField
+                  label="Ending Guidance — Win"
+                  value={(draft.endGameWin as string | undefined) ?? ''}
+                  textarea
+                  onChange={(v) => setDraft((d) => ({ ...d, endGameWin: v }))}
+                  placeholder="Narrate a satisfying victory ending that celebrates what the party accomplished…"
+                />
+                <TextField
+                  label="Ending Guidance — Lose"
+                  value={(draft.endGameLose as string | undefined) ?? ''}
+                  textarea
+                  onChange={(v) => setDraft((d) => ({ ...d, endGameLose: v }))}
+                  placeholder="Narrate a meaningful failure ending that makes the consequences clear…"
+                />
+                <TextField
+                  label="Ending Guidance — Neutral"
+                  value={(draft.endGameNeutral as string | undefined) ?? ''}
+                  textarea
+                  onChange={(v) => setDraft((d) => ({ ...d, endGameNeutral: v }))}
+                  placeholder="Narrate a neutral ending that gracefully closes the adventure…"
+                />
+              </DetailPanel>
+            </>
           ) : (
             <div className="flex flex-col gap-3">
               <SectionCard
@@ -2133,6 +2331,60 @@ export default function Codex({
                     />
                   ))
                 )}
+              </SectionCard>
+              <SectionCard
+                accent={NEUTRAL_ACCENT}
+                icon={Sparkles}
+                title="Narrative Events"
+                badge={
+                  <GlassIconButton
+                    icon={Pencil}
+                    label="Edit Narrative Events"
+                    compact
+                    onClick={() => startEdit('__events__', { events: Object.values(narrativeEvents) })}
+                  />
+                }
+              >
+                {Object.keys(narrativeEvents).length === 0 ? (
+                  <p className="font-narrative italic text-xs text-ink-muted">
+                    No narrative events authored yet.
+                  </p>
+                ) : (
+                  Object.values(narrativeEvents).map((ev) => (
+                    <FieldRow
+                      key={ev.id}
+                      label={ev.title}
+                      value={ev.status === 'active' && ev.guidance ? ev.guidance : ev.status[0].toUpperCase() + ev.status.slice(1)}
+                    />
+                  ))
+                )}
+              </SectionCard>
+              <SectionCard
+                accent={NEUTRAL_ACCENT}
+                icon={Skull}
+                title="Tale Rules"
+                badge={
+                  <GlassIconButton
+                    icon={Pencil}
+                    label="Edit Tale Rules"
+                    compact
+                    onClick={() =>
+                      startEdit('__talerules__', {
+                        deathRule: deathRule ?? 'soft_fail',
+                        deathInstructions: deathInstructions ?? '',
+                        endGameWin: endGameRules?.win ?? '',
+                        endGameLose: endGameRules?.lose ?? '',
+                        endGameNeutral: endGameRules?.neutral ?? '',
+                      })
+                    }
+                  />
+                }
+              >
+                <FieldRow label="Death Rule" value={deathRule === 'permadeath' ? 'Permadeath' : 'Soft Fail'} />
+                {deathInstructions && <FieldRow label="On Defeat" value={deathInstructions} />}
+                {endGameRules?.win && <FieldRow label="Ending — Win" value={endGameRules.win} />}
+                {endGameRules?.lose && <FieldRow label="Ending — Lose" value={endGameRules.lose} />}
+                {endGameRules?.neutral && <FieldRow label="Ending — Neutral" value={endGameRules.neutral} />}
               </SectionCard>
             </div>
           )}

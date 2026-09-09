@@ -544,6 +544,7 @@ export interface LogEntry {
   locDisp?: string // per-turn location display, same caveat as `time`
   bang?: BangCommandEntry // §6.6 — a rendered bang-command result, not real narration
   discoveries?: { category: KeywordLink['category']; id: string; name: string }[] // §5.12 — Codex entries this turn's deltas just revealed
+  eventsActivated?: string[] // §9 — Narrative Event titles this turn's deltas just activated
   classEvolution?: { className: string; reason?: string } // §5.1b — the player's single class slot was just replaced
   craftReady?: { recipeName: string; outputId: string; outputQty: number }[] // §5.8 — crafting jobs that finished this turn
   minionsDissipated?: string[] // §5.3 — familiar-branch minions whose upkeep couldn't be paid this turn
@@ -638,6 +639,35 @@ export interface Campaign {
   // or later — same title-only-until-earned discipline as everything else
   // concealment-gated in this app.
   beats?: TaleBeat[]
+  // §9 Narrative Events — condition-triggered story complications/scenes,
+  // hand-authored via Codex CRUD, distinct from `beats` above: a beat is a
+  // strictly linear main-arc spine the model advances one at a time, while a
+  // Narrative Event is reactive — any number can be dormant at once, each
+  // firing independently whenever real gameplay state (a flag, a location
+  // visit, an NPC met, a quest completed) matches its own trigger, entirely
+  // client-checked at zero LLM cost (see lib/narrativeEvents.ts, the same
+  // pass discovery.ts's checkCodexReveals already runs every turn). Gives
+  // the author "some control on storyline" — reactive complications that can
+  // land at any point — the way `beats` gives control over the main spine.
+  narrativeEvents?: Dict<NarrativeEvent>
+  // §9 Death Rules — governs what happens when the player is defeated.
+  // undefined/'soft_fail' (default) preserves today's only behavior exactly:
+  // App.tsx's resolveDefeat() auto-chains a DESPAIR-tier recovery beat (a
+  // currency penalty, Condition Tags cleared, the protagonist wakes at the
+  // nearest safe location — no real death). 'permadeath' instead auto-chains
+  // a genuine lose-ending via the existing <end>/Campaign.concluded
+  // mechanism. `deathInstructions` is pure narration-steering prose (mirrors
+  // Voyage's own `death.instructions`) applied to whichever of the two beats
+  // above actually fires, regardless of which rule is active.
+  deathRule?: DeathRule
+  deathInstructions?: string
+  // §9 End Game Rules — per-outcome narration-style instructions for the
+  // Tale's own three possible endings, so a Tale's configured tone for each
+  // outcome type is honored whenever the model narrates a real <end>
+  // (via !conclude, the final beat completing, or a Narrative Event's own
+  // guidance calling for one). Pure prose guidance, never a new triggering
+  // mechanism of its own — mirrors Voyage's `endGame.win/lose/end` blocks.
+  endGameRules?: Partial<Record<EndingOutcome, string>>
 }
 
 export type TaleBeatStatus = 'pending' | 'active' | 'completed' | 'skipped'
@@ -647,6 +677,39 @@ export interface TaleBeat {
   title: string
   summary?: string
   status: TaleBeatStatus
+}
+
+export type DeathRule = 'soft_fail' | 'permadeath'
+
+export type NarrativeEventStatus = 'dormant' | 'active' | 'completed'
+
+// §9 Narrative Events — see Campaign.narrativeEvents. `trigger`/`condition`
+// reuse Discovery's own RevealTrigger vocabulary verbatim (same "flag /
+// location_visit / npc_met / quest_complete / manual" activation concept,
+// checked the same way) rather than inventing a second condition language.
+// `guidance` is the event's own pure narration-steering text once active —
+// mirrors Voyage's freeform `story`/`instruction` effect type, never a
+// mechanical state mutation; any actual state change still goes through the
+// ordinary turn channels (flag_add, npc_mem_up, quest_update, ...), exactly
+// like an ordinary beat. Title-only-until-active spoiler discipline mirrors
+// TaleBeat: the title always shows in context (so the model knows an event
+// exists), `guidance` only once `status` is 'active'.
+export interface NarrativeEvent {
+  id: string
+  title: string
+  guidance?: string
+  status: NarrativeEventStatus
+  trigger?: RevealTrigger
+  condition?: string
+}
+
+// §9 — mirrors BeatUpdate's shape/discipline exactly: an event is never
+// LLM-originated (dormant->active is the client's own trigger check, never
+// the model's call), so this channel only ever lets the model mark an
+// already-active event 'completed' once its guidance has played out.
+export interface EventUpdate {
+  event_id: string
+  status: 'completed'
 }
 
 export interface ApiSettings {
@@ -820,6 +883,7 @@ export interface TurnResponse {
   flag_add?: string[]
   quest_update?: QuestUpdate
   beat_update?: BeatUpdate
+  event_update?: EventUpdate
   project_update?: ProjectUpdate[]
   npc_mem_up?: NpcMemoryUpdate[]
   class_evolution?: ClassEvolutionUpdate

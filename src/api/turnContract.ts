@@ -60,6 +60,7 @@ MECHANICS & GROUNDING DEFENSE:
 8a. Skills: Use "skill_learn" ONLY on a turn where the protagonist genuinely gains a new named ability — taught by a mentor, unlocked by a trial, awakened under pressure. Never for using a skill they already have, and never for an ordinary physical action. Give it an "effort" (minor/focused/taxing) only if one is narratively justified; the client treats an effortless skill as always available. When the context slice marks a skill strained by the protagonist's current condition, they may still attempt it — narrate the strain, backfire, or exhaustion of reaching past their limits rather than refusing the action.
 8b. Quest Types: Give quest_update a "type" the first time that quest_id appears — Main (world/story-driven, imposed by the game world's own narrative), Side (guild/NPC/tactical support missions alongside the main story), Ambition (a player-driven personal goal — founding an order, a business, an empire), or Secret Ambition (a hidden high-risk/high-reward personal quest). Only originate or advance a Secret Ambition quest_update on a turn whose turn_state is INSIGHT or EXPLORE — never surface one mid-combat or in an ordinary social scene. Give it a "stat" (advanced/completed/failed, always the full word) every time it appears.
 8c. Projects: Use "project_update" only when the player's own action narratively advances, completes, or stalls an already-established or brand-new long-running multi-stage endeavor (a city under construction, a piece of equipment mid-repair, any undertaking with real in-fiction duration) — a broader narrative cousin of Crafting, which stays entirely client-resolved and never needs a project_update of its own. Give it a "stat" (advanced/completed/stalled, always the full word) and, only when a specific stage was just finished, its 0-based "stage" index. Never invent construction/repair mechanics wholesale — report only what the player's own action actually accomplished this turn, and prefer stalling a project (with a short "note" on why) over silently ignoring an obstacle the fiction itself already raised.
+8d. Story Beats: When [ACTIVE CONTEXT SLICE] shows a "Story Arc" line, this Tale has a pre-authored outline of major beats — use "beat_update" to move the current one to "active" once the story genuinely turns toward it, and to "completed" once its premise is actually resolved on the page (never just because a turn passed). At most one beat_update per turn, and only when the arc genuinely advances — omit it on an ordinary turn. If the beat you're completing is the LAST one in the Story Arc, also set "end" (see rule 2e) this same turn — that beat's completion IS this Tale's real, pre-authored ending, not merely a milestone.
 9. Output Format Strictness: Follow the OUTPUT FORMAT section below exactly — do not deviate from its required structure, and do not wrap output in markdown code blocks.`
 
 export const TURN_SCHEMA = {
@@ -189,6 +190,15 @@ export const TURN_SCHEMA = {
             "The quest's actual premise/objective, 1-2 sentences — only on the turn this quest_id is first introduced, or if its scope has genuinely changed. Omit on ordinary advancement turns; the client keeps whatever was last given.",
         },
       },
+    },
+    beat_update: {
+      type: 'OBJECT',
+      description: 'Optional, at most once per turn. Progress on the pre-authored Story Arc (Campaign.beats) shown in context — see rule 8d.',
+      properties: {
+        beat_id: { type: 'STRING' },
+        status: { type: 'STRING', enum: ['active', 'completed', 'skipped'], description: 'Always the full word — never abbreviated.' },
+      },
+      required: ['beat_id', 'status'],
     },
     project_update: {
       type: 'ARRAY',

@@ -1,6 +1,6 @@
 import { COMPETENCY_TIERS } from './tiers.ts'
 import type {
-  BreakthroughUpdate, ClassEvolutionUpdate, ConditionUpdate, EffortTier, EndingOutcome, EnrichUpdate, FactionRepChange, InventoryAcquisition,
+  BeatUpdate, BreakthroughUpdate, ClassEvolutionUpdate, ConditionUpdate, EffortTier, EndingOutcome, EnrichUpdate, FactionRepChange, InventoryAcquisition,
   InventoryChange, ItemType, NpcMemoryUpdate, ProjectUpdate, QuestUpdate, SkillLearn, TurnResponse, TurnState,
 } from '../types.ts'
 import { XmlParseError, decodeXmlEntities, num, reqNum, str, reqStr, reqTierWord, optTierWord, signToDelta, parseXmlBlock } from './xmlHelpers.ts'
@@ -37,6 +37,7 @@ const EFFORT_TIERS = ['minor', 'focused', 'taxing'] as const
 const PROJECT_STATS = ['advanced', 'completed', 'stalled'] as const
 const ENDING_OUTCOMES = ['win', 'lose', 'neutral'] as const
 const PARTY_STATUSES = ['companion', 'departed'] as const
+const BEAT_STATUSES = ['active', 'completed', 'skipped'] as const
 // A breakthrough always moves an attribute forward from wherever it already
 // is — "Untrained" (rank 1, the floor) is never a valid *result*, so it's
 // excluded from the tier word set breakthrough.tier is checked against,
@@ -136,6 +137,13 @@ export function parseXmlTurnResponse(raw: string): TurnResponse {
       }
     : undefined
 
+  // <beat> — at most one per turn (a beat transition is a significant
+  // marker, not routine); mirrors <quest>'s "stat" full-word convention.
+  const beatEl = doc.querySelector('beat')
+  const beat_update: BeatUpdate | undefined = beatEl
+    ? { beat_id: reqStr(beatEl.getAttribute('id'), 'beat.id'), status: reqTierWord(beatEl.getAttribute('stat'), 'beat.stat', BEAT_STATUSES) }
+    : undefined
+
   // <project> — mirrors <quest> exactly (same "stat" full-word convention),
   // but plural/repeatable since more than one project could plausibly
   // update in the same turn. "stage" is the 0-based index of a stage just
@@ -225,6 +233,7 @@ export function parseXmlTurnResponse(raw: string): TurnResponse {
     act,
     flag_add: flag_add.length ? flag_add : undefined,
     quest_update,
+    beat_update,
     project_update: project_update.length ? project_update : undefined,
     npc_mem_up: npc_mem_up.length ? npc_mem_up : undefined,
     class_evolution,

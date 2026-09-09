@@ -4,7 +4,7 @@ import {
   Globe, BookOpen, Users, ShieldCheck, Map, ScrollText, Target, Skull, Backpack,
   Pencil, Save, X, Trash2, Plus, Lock, User, Hammer, Clock, Sparkles, CheckCircle2, XCircle, ArrowRight, Ghost,
   Swords, Star, EyeOff, Search, MapPin, Heart, Coins, Gift, Zap, Compass, AlertTriangle, Shield, Flame, Milestone, ListChecks,
-  ChevronRight,
+  ChevronRight, Flag,
 } from 'lucide-react'
 import { DASHED_ROW_CLASS, GLASS_SURFACE_LIST, GlassHeader, GlassIconButton, GlassScreen, SELECT_CLASS } from '../lib/glassChrome.tsx'
 import { slugify } from '../lib/slug.ts'
@@ -20,7 +20,7 @@ import { useLongTextEditor } from '../lib/useLongTextEditor.tsx'
 import { EQUIPPABLE_TYPES, LOCATION_DANGER_LEVELS, LOCATION_TYPES } from '../types.ts'
 import type {
   BestiaryEntry, CompetencyTier, CraftingJob, Discovery, EquipSlot, FactionEntry, ItemEntry, ItemType, LocationEntry, LogEntry, LoreEntry, NpcEntry, Player,
-  ProjectEntry, ProjectStage, QuestEntry, RegionEntry, RevealTrigger, SkillEntry, ThreatTierToken, WorldData,
+  ProjectEntry, ProjectStage, QuestEntry, RegionEntry, RevealTrigger, SkillEntry, TaleBeat, ThreatTierToken, WorldData,
 } from '../types.ts'
 import { COMPETENCY_TIERS, THREAT_TIERS, tierToWord, wordToTier, displayThreatLabel } from '../lib/tiers.ts'
 import { trustWord } from '../lib/npcs.ts'
@@ -75,6 +75,8 @@ interface CodexProps {
   items: Record<string, ItemEntry>
   crafting: CraftingJob[]
   projects: Record<string, ProjectEntry>
+  beats: TaleBeat[]
+  onUpdateBeats: (beats: TaleBeat[]) => void
   onUpdateNpc: (id: string, patch: Partial<NpcEntry> | null) => void
   onUpdateFaction: (id: string, patch: Partial<FactionEntry> | null) => void
   onUpdateLocation: (id: string, patch: Partial<LocationEntry> | null) => void
@@ -1038,6 +1040,8 @@ export default function Codex({
   items,
   crafting,
   projects,
+  beats,
+  onUpdateBeats,
   onUpdateNpc,
   onUpdateFaction,
   onUpdateLocation,
@@ -1903,6 +1907,89 @@ export default function Codex({
                 <TextField label="World Background" value={draft.background ?? ''} onChange={(v) => setDraft((d) => ({ ...d, background: v }))} textarea />
               </DetailPanel>
             </>
+          ) : editing && entryId === '__beats__' ? (
+            <>
+              <div className="flex justify-end mb-3">
+                <CrudToolbar
+                  editing
+                  canDelete={false}
+                  onEdit={() => {}}
+                  onSave={() => {
+                    onUpdateBeats((draft.beats as TaleBeat[] | undefined) ?? [])
+                    setEditing(false)
+                    setDraft({})
+                  }}
+                  onCancel={cancelEdit}
+                  onDelete={() => {}}
+                />
+              </div>
+              <DetailPanel>
+                <p className="font-narrative text-xs italic text-ink-muted">
+                  §7 Pre-Authored Arc — an ordered outline of major beats. Reaching and completing the
+                  last one is this Tale's real ending, superseding !conclude's quick version. A beat's
+                  Summary is only ever shown to the narrator once it's Active or later — write it as the
+                  spoiler-bearing premise, freely.
+                </p>
+                {((draft.beats as TaleBeat[] | undefined) ?? []).map((beat, i) => (
+                  <div key={beat.id} className="rounded-lg border border-[#e8ca8a]/25 p-3 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono text-ink-muted uppercase">Beat {i + 1}</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setDraft((d) => ({ ...d, beats: ((d.beats as TaleBeat[]).filter((_, idx) => idx !== i)) }))
+                        }
+                        className="text-red-400 hover:text-red-300 p-1"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                    <TextField
+                      label="Title"
+                      value={beat.title}
+                      onChange={(v) =>
+                        setDraft((d) => ({ ...d, beats: (d.beats as TaleBeat[]).map((b, idx) => (idx === i ? { ...b, title: v } : b)) }))
+                      }
+                    />
+                    <TextField
+                      label="Summary (spoiler — shown once Active)"
+                      value={beat.summary ?? ''}
+                      textarea
+                      onChange={(v) =>
+                        setDraft((d) => ({ ...d, beats: (d.beats as TaleBeat[]).map((b, idx) => (idx === i ? { ...b, summary: v } : b)) }))
+                      }
+                    />
+                    <label className="block">
+                      <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Status</span>
+                      <select
+                        value={beat.status}
+                        onChange={(e) =>
+                          setDraft((d) => ({
+                            ...d,
+                            beats: (d.beats as TaleBeat[]).map((b, idx) => (idx === i ? { ...b, status: e.target.value as TaleBeat['status'] } : b)),
+                          }))
+                        }
+                        className={SELECT_CLASS}
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="active">Active</option>
+                        <option value="completed">Completed</option>
+                        <option value="skipped">Skipped</option>
+                      </select>
+                    </label>
+                  </div>
+                ))}
+                <AddButton
+                  label="Add Beat"
+                  onClick={() =>
+                    setDraft((d) => ({
+                      ...d,
+                      beats: [...((d.beats as TaleBeat[] | undefined) ?? []), { id: `beat_${Date.now()}`, title: '', status: 'pending' as const }],
+                    }))
+                  }
+                />
+              </DetailPanel>
+            </>
           ) : (
             <div className="flex flex-col gap-3">
               <SectionCard
@@ -1962,6 +2049,26 @@ export default function Codex({
                       </div>
                     }
                   />
+                )}
+              </SectionCard>
+              <SectionCard
+                accent={NEUTRAL_ACCENT}
+                icon={Flag}
+                title="Story Arc"
+                badge={<GlassIconButton icon={Pencil} label="Edit Story Arc" compact onClick={() => startEdit('__beats__', { beats })} />}
+              >
+                {beats.length === 0 ? (
+                  <p className="font-narrative italic text-xs text-ink-muted">
+                    No pre-authored beats yet — this Tale's ending is left to !conclude alone.
+                  </p>
+                ) : (
+                  beats.map((b, i) => (
+                    <FieldRow
+                      key={b.id}
+                      label={`${i + 1}. ${b.title}`}
+                      value={b.status === 'active' && b.summary ? b.summary : b.status[0].toUpperCase() + b.status.slice(1)}
+                    />
+                  ))
                 )}
               </SectionCard>
             </div>

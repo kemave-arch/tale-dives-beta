@@ -31,6 +31,7 @@ import { applyNpcUpdates } from './lib/npcs.ts'
 import { applyKeywordLinks, applyEnrichUpdates } from './lib/codex.ts'
 import { applyQuestUpdate } from './lib/quests.ts'
 import { applyProjectUpdate } from './lib/projects.ts'
+import { applyBeatUpdate } from './lib/beats.ts'
 import { applySkillLearn } from './lib/skills.ts'
 import { applyInventoryChanges, equipItem, unequipSlot } from './lib/inventory.ts'
 import { resolveBangCommand, findEntry } from './lib/bangCommands.ts'
@@ -68,7 +69,7 @@ import * as store from './lib/store.ts'
 import { CURRENT_SCHEMA_VERSION, EQUIPPABLE_TYPES } from './types.ts'
 import type {
   BestiaryEntry, Campaign, CombatState, ConditionTag, Dict, EquipSlot, FactionEntry, GameTime, HistoryTurn, ItemEntry, KeywordLink, LocationEntry, LogEntry, LoreEntry,
-  NpcEntry, Player, ProjectEntry, ProtagonistData, QuestEntry, RegionEntry, SkillEntry, SlashCommand, TurnState, WorldData,
+  NpcEntry, Player, ProjectEntry, ProtagonistData, QuestEntry, RegionEntry, SkillEntry, SlashCommand, TaleBeat, TurnState, WorldData,
 } from './types.ts'
 
 const KEYWORD_CATEGORY_TO_CODEX: Record<KeywordLink['category'], CategoryId> = {
@@ -878,6 +879,7 @@ export default function App() {
       const nextNpcs = applyNpcUpdates(linked.npcs, turn.npc_mem_up, turn.loc_id, nextPlayer.time, turnRef)
       const nextQuests = applyQuestUpdate(linked.quests, turn.quest_update, turnRef)
       const nextProjects = applyProjectUpdate(current.projects, turn.project_update, turnRef)
+      const nextBeats = applyBeatUpdate(current.beats, turn.beat_update)
       // §6.4D — a skill_learn record fills in (or upgrades) whatever the
       // {{Term|skill}} keyword pass already stubbed out.
       const nextSkills = applySkillLearn(linked.skills, turn.skill_learn, turnRef)
@@ -1046,6 +1048,7 @@ export default function App() {
         player: finalPlayer,
         minions: upkeep.minions,
         projects: nextProjects,
+        beats: nextBeats,
         locations: reveals.locations,
         npcs: reveals.npcs,
         factions: reveals.factions,
@@ -1282,6 +1285,13 @@ export default function App() {
 
   function updateWorld(patch: Partial<WorldData>) {
     setGame((g) => g && { ...g, world: { ...g.world, ...patch } })
+  }
+
+  // §7 Pre-Authored Arc — hand-authored via Codex CRUD today (the whole
+  // list is replaced at once, same "own the array" pattern as Codex's other
+  // reorderable-list fields like ProjectEntry.stages).
+  function updateBeats(beats: TaleBeat[]) {
+    setGame((g) => g && { ...g, beats })
   }
 
   // §5.8 Crafting — the player-triggered "queue a job" action (Codex's
@@ -1797,6 +1807,8 @@ export default function App() {
         onUpdateItem={updateItem}
         onEquipItem={equipFromCodex}
         onUnequipSlot={unequipFromCodex}
+        beats={game.beats ?? []}
+        onUpdateBeats={updateBeats}
         onUpdateWorld={updateWorld}
         onEvolveClass={evolveClass}
         onStartCraft={startCraftingJob}
@@ -1839,6 +1851,8 @@ export default function App() {
         onUpdateItem={updateItem}
         onEquipItem={equipFromCodex}
         onUnequipSlot={unequipFromCodex}
+        beats={game.beats ?? []}
+        onUpdateBeats={updateBeats}
         onUpdateWorld={updateWorld}
         onEvolveClass={evolveClass}
         onStartCraft={startCraftingJob}

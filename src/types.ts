@@ -618,6 +618,26 @@ export interface Campaign {
   // going, e.g. to explore an epilogue), but the Chronicle surfaces it as a
   // permanent banner once present.
   concluded?: { outcome: EndingOutcome; turnRef: string }
+  // §7 Pre-Authored Arc — an optional ordered outline of major story beats
+  // (hand-authored via Codex CRUD today; the future Tale Weaving flow is
+  // meant to author these interactively). Reaching and completing the LAST
+  // beat is this Tale's "real" ending condition, superseding !conclude's
+  // player-invoked quick version — turnContract.ts instructs the model to
+  // also emit <end> the same turn it completes that final beat. Titles are
+  // always sent to the model; a beat's `summary` is the spoiler-bearing
+  // premise/goal text and is only ever surfaced once that beat is "active"
+  // or later — same title-only-until-earned discipline as everything else
+  // concealment-gated in this app.
+  beats?: TaleBeat[]
+}
+
+export type TaleBeatStatus = 'pending' | 'active' | 'completed' | 'skipped'
+
+export interface TaleBeat {
+  id: string
+  title: string
+  summary?: string
+  status: TaleBeatStatus
 }
 
 export interface ApiSettings {
@@ -687,6 +707,14 @@ export interface EnrichUpdate {
   kind: 'lore' | 'beast'
   id: string
   desc: string
+}
+
+// §7 Pre-Authored Arc — mirrors QuestUpdate's "stat" full-word convention.
+// At most one per turn (or omitted) — a beat transition is a significant
+// narrative marker, not a routine per-turn field.
+export interface BeatUpdate {
+  beat_id: string
+  status: 'active' | 'completed' | 'skipped'
 }
 
 export interface QuestUpdate {
@@ -782,6 +810,7 @@ export interface TurnResponse {
   act: string[]
   flag_add?: string[]
   quest_update?: QuestUpdate
+  beat_update?: BeatUpdate
   project_update?: ProjectUpdate[]
   npc_mem_up?: NpcMemoryUpdate[]
   class_evolution?: ClassEvolutionUpdate

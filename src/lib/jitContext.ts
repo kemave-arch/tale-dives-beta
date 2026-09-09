@@ -64,7 +64,7 @@ function lastNarratedTurnState(log: LogEntry[] | undefined): string | undefined 
 // Builds the compact per-turn header re-sent alongside the player's action;
 // this (not model memory) is what keeps state consistent turn to turn.
 export function buildContextSlice(state: Campaign, craftReadyLine?: string | null): string {
-  const { player, proseDepth, narrationStyle, locations, npcs, factions, lore, world, flags, quests, log, items, combat, bestiary, projects } = state
+  const { player, proseDepth, narrationStyle, locations, npcs, factions, lore, world, flags, quests, log, items, combat, bestiary, projects, beats } = state
 
   const playerIdentity = [player.gender && `Gender: ${player.gender}`, player.age !== undefined && `Age: ${player.age}`]
     .filter(Boolean)
@@ -254,6 +254,22 @@ export function buildContextSlice(state: Campaign, craftReadyLine?: string | nul
     .map((p) => (p.note ? `${p.name} (${p.note})` : p.name))
   if (activeProjects.length > 0) {
     lines.push(`Active Projects: ${activeProjects.join(', ')}`)
+  }
+
+  // §7 Pre-Authored Arc — titles only for every beat (so the model always
+  // knows the shape of the whole arc and where it's heading), but the
+  // spoiler-bearing "summary" text is shown only for the currently active
+  // one — same title-only-until-earned discipline as quest/lore concealment
+  // elsewhere. Reaching and completing the LAST beat here is instructed
+  // (turnContract.ts) to also emit <end>, the real pre-authored ending.
+  if (beats && beats.length > 0) {
+    const arc = beats
+      .map((b, i) => {
+        const tag = b.status === 'active' && b.summary ? `ACTIVE: ${b.summary}` : b.status
+        return `${i + 1}. ${b.title} [${tag}]`
+      })
+      .join(' | ')
+    lines.push(`Story Arc: ${arc}`)
   }
 
   if (flags && flags.length > 0) {

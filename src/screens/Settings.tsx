@@ -9,6 +9,7 @@ import type { LucideIcon } from 'lucide-react'
 import { PROSE_DEPTHS } from '../api/turnContract.ts'
 import { allProviders, getProvider } from '../api/providers/index.ts'
 import { forgetSaveFolder, loadSaveFolder, pickSaveFolder, supportsFileSystemAccess } from '../lib/fsAccess.ts'
+import { downloadSchemaCsv } from '../lib/schemaExport.ts'
 import {
   FIELD_CLASS, GlassButton, GlassIconButton, GlassSegmented, InfoTooltip, LABEL_CLASS, SELECT_CLASS,
 } from '../lib/glassChrome.tsx'
@@ -504,6 +505,20 @@ export default function Settings({
                   }}
                 />
               </div>
+
+              {debugMode && (
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-gold-accent/25 bg-gold-accent/[0.04] p-3">
+                  <FieldLabel
+                    icon={Download}
+                    tip="Exports every field across every game-data interface in types.ts to a CSV — schema name, field name, type, required, and its own explanatory comment as the description. Scanned live from the actual source each time, not a hand-maintained list, so a future schema addition (a music cue field, an image-asset field, a new Codex category) shows up automatically without this tool needing an update."
+                  >
+                    Export Schema (CSV)
+                  </FieldLabel>
+                  <GlassButton className="shrink-0" onClick={downloadSchemaCsv}>
+                    Export
+                  </GlassButton>
+                </div>
+              )}
             </div>
           )}
 

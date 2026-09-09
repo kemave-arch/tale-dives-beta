@@ -1,6 +1,6 @@
 import { COMPETENCY_TIERS } from './tiers.ts'
 import type {
-  BreakthroughUpdate, ClassEvolutionUpdate, ConditionUpdate, EffortTier, EnrichUpdate, FactionRepChange, InventoryAcquisition,
+  BreakthroughUpdate, ClassEvolutionUpdate, ConditionUpdate, EffortTier, EndingOutcome, EnrichUpdate, FactionRepChange, InventoryAcquisition,
   InventoryChange, ItemType, NpcMemoryUpdate, ProjectUpdate, QuestUpdate, SkillLearn, TurnResponse, TurnState,
 } from '../types.ts'
 import { XmlParseError, decodeXmlEntities, num, reqNum, str, reqStr, reqTierWord, optTierWord, signToDelta, parseXmlBlock } from './xmlHelpers.ts'
@@ -35,6 +35,7 @@ export { decodeXmlEntities }
 
 const EFFORT_TIERS = ['minor', 'focused', 'taxing'] as const
 const PROJECT_STATS = ['advanced', 'completed', 'stalled'] as const
+const ENDING_OUTCOMES = ['win', 'lose', 'neutral'] as const
 // A breakthrough always moves an attribute forward from wherever it already
 // is — "Untrained" (rank 1, the floor) is never a valid *result*, so it's
 // excluded from the tier word set breakthrough.tier is checked against,
@@ -197,6 +198,14 @@ export function parseXmlTurnResponse(raw: string): TurnResponse {
     throw new XmlTurnParseError('<enrich> requires either a "lore" or "beast" attribute')
   })
 
+  // <end> — only ever present on a turn the client marked as a !conclude
+  // request (see turnContract.ts rule 2d); an off-vocabulary outcome throws
+  // the same as any other fixed-word attribute.
+  const endEl = doc.querySelector('end')
+  const end: { outcome: EndingOutcome } | undefined = endEl
+    ? { outcome: reqTierWord(endEl.getAttribute('outcome'), 'end.outcome', ENDING_OUTCOMES) }
+    : undefined
+
   return {
     nar,
     turn_state,
@@ -220,6 +229,7 @@ export function parseXmlTurnResponse(raw: string): TurnResponse {
     fac_rep: fac_rep.length ? fac_rep : undefined,
     skill_learn: skill_learn.length ? skill_learn : undefined,
     enrich: enrich.length ? enrich : undefined,
+    end,
   }
 }
 

@@ -32,6 +32,7 @@ export const BANG_COMMANDS: { name: string; usage: string; description: string }
   { name: 'bestiary', usage: '!bestiary [name]', description: 'Adversaries encountered so far' },
   { name: 'skills', usage: '!skills [name]', description: 'Spells & abilities you have learned' },
   { name: 'recall', usage: '!recall', description: 'Full Codex snapshot — also reminds the AI' },
+  { name: 'conclude', usage: '!conclude', description: 'End this Tale now with a definitive win/lose/neutral conclusion (costs an API call)' },
   { name: 'minions', usage: '!minions', description: 'Your current summoned army' },
   { name: 'corpses', usage: '!corpses', description: 'Harvestable slain-enemy essence (necromancer/Shadow Monarch)' },
   { name: 'arise', usage: '!arise', description: 'Shadow Monarch — extract a shadow from a slain corpse' },

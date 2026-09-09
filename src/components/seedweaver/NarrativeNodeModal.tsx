@@ -12,6 +12,7 @@ import {
 import type { ProtagonistData, TierSkin, WorldData } from '../../types.ts'
 import type { SeedNarrativePreset } from './types.ts'
 import { BUILTIN_NARRATIVE_PRESETS } from './defaultPacks.ts'
+import { ENCOUNTER_ELEMENTS, AUTHOR_STYLE_PRESETS } from './flavorPresets.ts'
 import { THREAT_LABEL_PRESETS } from '../../lib/tiers.ts'
 
 const STORAGE_KEY_NARRATIVE_PRESETS = 'td_seed_narrative_presets_v1'
@@ -344,6 +345,20 @@ export default function NarrativeNodeModal({
               placeholder="The precise situation Turn 1 opens on (e.g. standing before the rain-slicked Parapet, entering the high academy gates)..."
               className="w-full px-3 py-2 rounded-xl bg-[#221708] border border-amber-500/30 text-xs font-narrative text-[#fbf4e2] focus:border-amber-400 outline-none resize-none leading-relaxed"
             />
+            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+              <span className="text-[9px] font-mono uppercase tracking-wide text-amber-300/50 mr-0.5">Spark:</span>
+              {ENCOUNTER_ELEMENTS.map((el) => (
+                <button
+                  key={el.id}
+                  type="button"
+                  onClick={() => setData({ ...data, opening: data.opening.trim() ? `${data.opening.trim()} ${el.text}` : el.text })}
+                  title={el.text}
+                  className="px-2 py-0.5 rounded-lg text-[10px] font-mono border transition-colors bg-[#221708] border-amber-500/25 text-amber-300/70 hover:border-amber-400/50"
+                >
+                  {el.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div>
@@ -355,6 +370,20 @@ export default function NarrativeNodeModal({
               placeholder="e.g. Visceral close POV, short breath-tight sentences during peril, rich banter..."
               className="w-full px-3 py-2 rounded-xl bg-[#221708] border border-amber-500/30 text-xs font-narrative text-[#fbf4e2] focus:border-amber-400 outline-none resize-none"
             />
+            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+              <span className="text-[9px] font-mono uppercase tracking-wide text-amber-300/50 mr-0.5">Style:</span>
+              {AUTHOR_STYLE_PRESETS.map((style) => (
+                <button
+                  key={style.id}
+                  type="button"
+                  onClick={() => setData({ ...data, narrationStyle: style.text })}
+                  title={style.text}
+                  className="px-2 py-0.5 rounded-lg text-[10px] font-mono border transition-colors bg-[#221708] border-amber-500/25 text-amber-300/70 hover:border-amber-400/50"
+                >
+                  {style.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div>

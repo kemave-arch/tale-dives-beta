@@ -13,6 +13,7 @@ import {
   X,
 } from 'lucide-react'
 import type { WorldData, WorldFaction, WorldLocation } from '../../types.ts'
+import { LOCATION_ARCHETYPES, REGION_ARCHETYPES } from './flavorPresets.ts'
 
 interface WorldNodeModalProps {
   world: WorldData
@@ -416,6 +417,19 @@ export default function WorldNodeModal({
                                 placeholder="e.g. Basgiath, Eastern Frontier"
                                 className="w-full px-2 py-1.5 rounded-xl bg-[#162a42] border border-sky-500/30 text-sky-100 outline-none"
                               />
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {REGION_ARCHETYPES.map((r) => (
+                                  <button
+                                    key={r.id}
+                                    type="button"
+                                    onClick={() => handleUpdateLocation(idx, { region: r.text })}
+                                    title={r.text}
+                                    className="px-1.5 py-0.5 rounded-md text-[9px] font-mono border transition-colors bg-[#162a42] border-sky-500/25 text-sky-300/70 hover:border-sky-400/50"
+                                  >
+                                    {r.label}
+                                  </button>
+                                ))}
+                              </div>
                             </div>
                             <div>
                               <label className="block text-[10px] font-mono text-sky-300/80 uppercase mb-1">Danger</label>
@@ -469,6 +483,22 @@ export default function WorldNodeModal({
                               placeholder="Visual atmosphere, environmental hazards, tactical landmarks..."
                               className="w-full px-3 py-1.5 rounded-xl bg-[#162a42] border border-sky-500/30 text-xs font-narrative text-sky-100 outline-none resize-none"
                             />
+                            <div className="flex flex-wrap items-center gap-1 mt-1">
+                              <span className="text-[9px] font-mono uppercase tracking-wide text-sky-300/50 mr-0.5">Archetype:</span>
+                              {LOCATION_ARCHETYPES.map((a) => (
+                                <button
+                                  key={a.id}
+                                  type="button"
+                                  onClick={() =>
+                                    handleUpdateLocation(idx, { locationType: a.locationType, dangerLevel: a.dangerLevel, description: a.description })
+                                  }
+                                  title={a.description}
+                                  className="px-1.5 py-0.5 rounded-md text-[9px] font-mono border transition-colors bg-[#162a42] border-sky-500/25 text-sky-300/70 hover:border-sky-400/50"
+                                >
+                                  {a.label}
+                                </button>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       )}

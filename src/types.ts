@@ -493,6 +493,7 @@ export interface LogEntry {
   classEvolution?: { className: string; reason?: string } // §5.1b — the player's single class slot was just replaced
   craftReady?: { recipeName: string; outputId: string; outputQty: number }[] // §5.8 — crafting jobs that finished this turn
   minionsDissipated?: string[] // §5.3 — familiar-branch minions whose upkeep couldn't be paid this turn
+  ending?: EndingOutcome // §6.6 — this turn was the Tale's own !conclude ending; see Campaign.concluded
   // Debug payload — the exact context sent and the raw text the model
   // returned for this turn, so a player can copy it out to report a bug
   // (to a Claude session or AI Studio) without reconstructing it by hand.
@@ -566,6 +567,11 @@ export interface Campaign {
   // there's no turn/log entry to attach this to since seeding isn't a turn.
   // Surfaced only under Debug Mode; never re-sent to the model.
   seedDebug?: { prompt: string; response?: string; error?: string }
+  // §6.6 !conclude — set once the model narrates this Tale's own ending
+  // turn; the client never blocks further play on it (the player may keep
+  // going, e.g. to explore an epilogue), but the Chronicle surfaces it as a
+  // permanent banner once present.
+  concluded?: { outcome: EndingOutcome; turnRef: string }
 }
 
 export interface ApiSettings {
@@ -704,6 +710,11 @@ export type TurnState =
   | 'INTIMACY'
   | 'PAUSE'
 
+// §6.6 !conclude — a Tale's genuine ending, never inferred, only ever set on
+// a turn the client explicitly marked as a conclusion request (see App.tsx's
+// sendAction and Chronicle.tsx's `!conclude` interception).
+export type EndingOutcome = 'win' | 'lose' | 'neutral'
+
 export interface TurnResponse {
   nar: string
   turn_state: TurnState
@@ -730,6 +741,10 @@ export interface TurnResponse {
   fac_rep?: FactionRepChange[]
   skill_learn?: SkillLearn[]
   enrich?: EnrichUpdate[]
+  // §6.6 — only present on the turn the client marked as a !conclude
+  // request; never inferred from ordinary narration. See turnContract.ts
+  // rule 2d.
+  end?: { outcome: EndingOutcome }
 }
 
 // §6.4D — the model's side of a newly-learned skill. Snake_case mirrors the

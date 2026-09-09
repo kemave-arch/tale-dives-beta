@@ -4,7 +4,7 @@ import {
   Home, Settings as SettingsIcon, Send, Star, BookOpen, Library, Sparkle, X, ExternalLink,
   ChevronUp, ChevronDown, ChevronsDown, History, Pause, Users, Backpack, Map as MapIcon, ShieldCheck, Target, Skull, HelpCircle,
   Unlock, Lock, Repeat, Hammer, Ghost, ScrollText, Swords, Sparkles, LayoutGrid,
-  AlertTriangle, Copy, Check, RotateCcw, Bug, Pencil, MoreHorizontal, Trash2, Heart, Coins,
+  AlertTriangle, Copy, Check, RotateCcw, Bug, Pencil, MoreHorizontal, Trash2, Heart, Coins, Flag,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { renderNarrative, type TapTermHandler } from '../lib/richText.tsx'
@@ -15,7 +15,7 @@ import { BANG_COMMANDS } from '../lib/bangCommands.ts'
 import { isHidden } from '../lib/discovery.ts'
 import type { CategoryId } from './Codex.tsx'
 import type {
-  ApiSettings, BestiaryEntry, Campaign, CombatState, CraftingJob, FactionEntry, GameTime, KeywordLink, LocationEntry, LogEntry, LoreEntry, NpcEntry, Player,
+  ApiSettings, BestiaryEntry, Campaign, CombatState, CraftingJob, EndingOutcome, FactionEntry, GameTime, KeywordLink, LocationEntry, LogEntry, LoreEntry, NpcEntry, Player,
   ProseDepthConfig, QuestEntry, SkillEntry, SlashCommand, ItemEntry,
 } from '../types.ts'
 import { trustWord } from '../lib/npcs.ts'
@@ -23,6 +23,9 @@ import { trustWord } from '../lib/npcs.ts'
 function traitsText(traits: ItemEntry['traits']): string | null {
   return traits?.length ? traits.join(', ') : null
 }
+
+// §6.6 !conclude — display words for LogEntry.ending's fixed outcome set.
+const ENDING_LABELS: Record<EndingOutcome, string> = { win: 'Victory', lose: 'Defeat', neutral: 'A Costly End' }
 
 interface ChronicleProps {
   title: string
@@ -718,6 +721,17 @@ const TurnBlock = memo(function TurnBlock({
           <Repeat size={12} /> Now a {entry.classEvolution.className}
         </p>
       )}
+      {entry.ending && (
+        <div className="flex flex-col items-center gap-2 py-2">
+          <div className="w-full flex items-center gap-3">
+            <div className="flex-1 h-px bg-gold-accent/40" />
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-gold-accent/15 border border-gold-accent/40 px-3 py-1 font-display text-xs uppercase tracking-wide text-gold-primary shrink-0">
+              <Flag size={12} /> The Tale Concludes — {ENDING_LABELS[entry.ending]}
+            </span>
+            <div className="flex-1 h-px bg-gold-accent/40" />
+          </div>
+        </div>
+      )}
       {entry.discoveries && entry.discoveries.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {entry.discoveries.map((d) => (
@@ -1145,9 +1159,15 @@ export default function Chronicle({
   function send() {
     const text = input.trim()
     if (!text || busy) return
-    // §6.6 Bang Commands — resolved entirely client-side (0 API tokens), so
-    // they bypass the busy-gated turn pipeline and never touch onSend.
-    if (text.startsWith('!')) {
+    // §6.6 !conclude — unlike every other bang command, this one costs a
+    // real API call (it asks the model to narrate the Tale's own ending),
+    // so it's intercepted before the 0-token bang branch below and routed
+    // through the normal onSend turn pipeline instead.
+    if (text.toLowerCase() === '!conclude') {
+      onSend('!conclude') // canonical casing — the exact trigger both App.tsx and the model's own rule (turnContract.ts 2d) match against
+    } else if (text.startsWith('!')) {
+      // §6.6 Bang Commands — resolved entirely client-side (0 API tokens), so
+      // they bypass the busy-gated turn pipeline and never touch onSend.
       onBangCommand(text)
     } else if (text.startsWith('/')) {
       // A completed slash command sends its saved prompt instead of the raw

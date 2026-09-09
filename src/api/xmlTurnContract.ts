@@ -89,6 +89,7 @@ distinct: what makes this specific NPC/creature/moment react differently than a 
   <class_evo id="CLASS_ID" reason="REASON" />
   <fac id="FACTION_ID" delta="±N" />
   <skill id="SKILL_ID" name="NAME" desc="DESC" class="CLASS_ID" effort="minor|focused|taxing" tier="Untrained|Novice|Adept|Expert|Master" />
+  <end outcome="win|lose|neutral" />
 </sync>
 
 Rules for <plan>:
@@ -111,6 +112,7 @@ Rules for <sync>:
 - <enrich> fills in or expands Lore/Bestiary content using the entity type as the attribute key itself (lore="ID" or beast="ID", never both on the same tag) — use it whenever the story reveals something substantive about an already-registered Lore entry or Bestiary adversary that its Codex entry doesn't yet capture.
 - <project> tracks a long-running multi-stage endeavor the PLAYER's own action is advancing (a city under construction, a piece of equipment mid-repair, any narrative undertaking with real duration) — a broader, client-tracked-but-LLM-narrated cousin of Crafting, not a replacement for it. "stat" uses the exact same full-word convention as Quest's "stat" (never abbreviated: advanced/completed/stalled). "stage" is optional — the 0-based index into that project's stage list that just got marked done this turn, meaningful only when stat="advanced". "note" is a short current-state blurb (e.g. "Scaffolding up on the east wall; masons want more timber"). Only emit <project> when the player's own action genuinely moved an already-established or brand-new endeavor forward — never invent construction/repair mechanics wholesale, and never use it for an ordinary Crafting-recipe item (that stays fully client-resolved, see the "c" currency rule above).
 - <skill>'s "effort" (minor/focused/taxing) is how visibly taxing a cast is — judged by the client against the protagonist's current Condition Tags, never a numeric MP/ST cost. "tier" is the skill's mastery rank on the same 5-word scale as attributes. Both are optional; omit either that doesn't apply.
+- <end> appears ONLY on a turn whose Player Action line reads exactly "!conclude" — never emit it otherwise, no matter how final or climactic the scene reads. "outcome" is required whenever <end> appears (win/lose/neutral, see rule 2d) — this is the Tale's real final scene, not a hook for the next one.
 - Every fixed-vocabulary attribute above (breakthrough tier, skill effort/tier, npc resolve, quest stat/type) MUST use one of its exact canonical words, spelled and cased as shown — never a number, never a close synonym, never an invented variant.
 - Escape literal & as &amp; inside attribute values and narration text; XML requires this even for narration prose.
 `.trim()

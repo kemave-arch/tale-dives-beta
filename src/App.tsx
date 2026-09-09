@@ -792,12 +792,16 @@ export default function App() {
     // the only sendAction call site that passes an empty overrideHistory, so
     // that's a reliable signal it's this call rather than an ordinary turn.
     const isWorldSeedingTurn = overrideHistory !== undefined && overrideHistory.length === 0
+    // §6.6 !conclude — the Tale's own final scene deserves the same
+    // unconstrained room as world seeding/chapter recaps get, not whatever
+    // ceiling the player's chosen Prose Depth happens to carry.
+    const isConcludeTurn = actionText.trim() === '!conclude'
     try {
       const result = await getProvider(apiSettings.provider).runTurn({
         apiKey: apiSettings.apiKey,
         model: apiSettings.model,
         temperature: apiSettings.temperature,
-        maxOutputTokens: isWorldSeedingTurn ? MAX_OUTPUT_TOKENS_CEILING : Math.max(current.proseDepth.maxOutputTokens, MIN_TURN_OUTPUT_CEILING),
+        maxOutputTokens: isWorldSeedingTurn || isConcludeTurn ? MAX_OUTPUT_TOKENS_CEILING : Math.max(current.proseDepth.maxOutputTokens, MIN_TURN_OUTPUT_CEILING),
         history: newHistory,
       })
 
@@ -1055,6 +1059,10 @@ export default function App() {
         crafting: craftResolution.jobs,
         lastPlayed: Date.now(),
         turnCount: turnNumber,
+        // §6.6 !conclude — once set, stays set: an ending is never
+        // overwritten by a later turn (the player may keep exploring an
+        // epilogue, but the Tale's own concluded banner persists).
+        ...(turn.end ? { concluded: current.concluded ?? { outcome: turn.end.outcome, turnRef } } : {}),
         log: [
           ...current.log,
           {
@@ -1078,6 +1086,7 @@ export default function App() {
               ? { craftReady: craftResolution.completed.map((c) => ({ recipeName: c.recipe.name, outputId: c.recipe.output.id, outputQty: c.recipe.output.qty })) }
               : {}),
             ...(upkeep.dissipated.length ? { minionsDissipated: upkeep.dissipated } : {}),
+            ...(turn.end ? { ending: turn.end.outcome } : {}),
           },
         ],
       }

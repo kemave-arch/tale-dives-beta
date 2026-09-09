@@ -41,6 +41,16 @@ whatever the main story will impose (e.g. "wants to found their own order,"
 "is building toward inheriting the family workshop"). If nothing like that
 is evident, omit <quest> entirely rather than inventing one.
 
+NPC Originality: Never reach for a worn-out backstory archetype for a seeded
+NPC — no "retired/washed-up mercenary," "orphaned street urchin," "disgraced
+fallen noble," "gruff mentor hiding a tragic past," "wise old sage,"
+"secretly-in-love childhood friend," "corrupt merchant," or any close
+variant of these. Give each NPC's personality a genuine contradiction or
+specific complexity paired with something they actually care about — "a
+meticulous ledger-keeper who has been quietly forging her own father's
+signature for years," not "brave" or "mysterious" alone — grounded in the
+World Background and Tale Dive Brief rather than a generic fantasy trope.
+
 A small number of Lore entries may be marked hidden — genuinely interesting
 background the protagonist wouldn't know yet, meant to be discovered through
 play rather than read in the Main Menu before the story gets there. Never

@@ -1521,6 +1521,7 @@ export default function Codex({
       wornArmor: draft.wornArmor?.trim() || undefined,
       personality: draft.personality?.trim() || undefined,
       voiceNotes: draft.voiceNotes?.trim() || undefined,
+      secretTruth: draft.secretTruth?.trim() || undefined,
       factionId: draft.factionId || null,
       tags: draft.tags,
       discovery: validateDiscovery(draft.discovery, { locations, npcs, quests }),
@@ -2107,6 +2108,13 @@ export default function Codex({
               <TextField label="Worn Armor" value={draft.wornArmor ?? ''} onChange={(v) => setDraft((d) => ({ ...d, wornArmor: v }))} placeholder="Currently worn armor/gear…" />
               <TextField label="Personality" value={draft.personality ?? ''} onChange={(v) => setDraft((d) => ({ ...d, personality: v }))} textarea placeholder="Brief trait summary…" />
               <TextField label="Voice Notes" value={draft.voiceNotes ?? ''} onChange={(v) => setDraft((d) => ({ ...d, voiceNotes: v }))} textarea placeholder="How they speak — a steering note for your own reference." />
+              <TextField
+                label="Secret Truth (hidden — the story knows this, the player doesn't)"
+                value={draft.secretTruth ?? ''}
+                onChange={(v) => setDraft((d) => ({ ...d, secretTruth: v }))}
+                textarea
+                placeholder="A motive, history, or loyalty the narration should let shape this NPC without ever stating it outright…"
+              />
               <TextField label="Memory" value={draft.memSummary ?? ''} onChange={(v) => setDraft((d) => ({ ...d, memSummary: v }))} textarea />
               <TextField
                 label="Deeds (comma-separated)"
@@ -2154,10 +2162,13 @@ export default function Codex({
                   {npcs[entryId].wornArmor && <FieldRow label="Armor" value={npcs[entryId].wornArmor} />}
                 </SectionCard>
               )}
-              {(npcs[entryId].personality || npcs[entryId].voiceNotes) && (
+              {(npcs[entryId].personality || npcs[entryId].voiceNotes || npcs[entryId].secretTruth) && (
                 <SectionCard accent={CATEGORY_ACCENTS.npcs} icon={ScrollText} title="Persona">
                   {npcs[entryId].personality && <FieldRow label="Traits" value={npcs[entryId].personality} />}
                   {npcs[entryId].voiceNotes && <FieldRow label="Voice" value={npcs[entryId].voiceNotes} />}
+                  {npcs[entryId].secretTruth && (
+                    <FieldRow label="Secret Truth (hidden from you in-story)" value={npcs[entryId].secretTruth} icon={Lock} />
+                  )}
                 </SectionCard>
               )}
               <SectionCard accent={CATEGORY_ACCENTS.npcs} icon={Clock} title="Chronicle">

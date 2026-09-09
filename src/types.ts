@@ -234,9 +234,10 @@ export interface NpcEntry {
   appearance?: string // freeform physical description
   heldWeapon?: string // currently wielded weapon, set/updated via npc_mem_up.held_weapon — restated every turn they're present (jitContext.ts) so an established detail can't silently drift turn to turn
   wornArmor?: string // currently worn armor/notable gear, same tracking as heldWeapon
-  personality?: string // freeform trait summary
+  personality?: string // freeform trait summary — set/revised by the LLM via npc_mem_up.personality, restated every turn present as ground truth (lib/npcs.ts describePresentNpc), same discipline as heldWeapon/wornArmor
   voiceNotes?: string // how they speak — a steering note for the player, not sent to the model
-  factionId?: string | null // affiliation, mirrors LocationEntry's factionOwner
+  factionId?: string | null // affiliation, mirrors LocationEntry's factionOwner — set/revised by the LLM via npc_mem_up.faction_id
+  secretTruth?: string // hidden ground truth (motive, history, loyalty) the model always knows for this NPC but must never state directly until the story earns the reveal — never shown to the player, distinct from Discovery's public teaser
   firstSeenTime?: GameTime // set once, at stub creation — same anti-drift anchor as LocationEntry's
   lastSeenTime?: GameTime // updated on every npc_mem_up touch
   tags?: string[]
@@ -670,6 +671,9 @@ export interface NpcMemoryUpdate {
   mem_summary?: string
   held_weapon?: string // only sent when first established or visibly changed — see NpcEntry.heldWeapon
   worn_armor?: string // only sent when first established or visibly changed — see NpcEntry.wornArmor
+  personality?: string // sets/revises NpcEntry.personality — only on introduction or a genuine change, restated every turn thereafter as ground truth (lib/npcs.ts describePresentNpc)
+  faction_id?: string | null // sets/revises NpcEntry.factionId
+  secret_truth?: string // sets/revises NpcEntry.secretTruth — known to the model as ground truth, never player-visible, never to be recited as exposition until the story itself earns the reveal
 }
 
 // §5.1b Class Evolution — the model may propose replacing the player's

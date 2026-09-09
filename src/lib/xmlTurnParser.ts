@@ -156,6 +156,9 @@ export function parseXmlTurnResponse(raw: string): TurnResponse {
       mem_summary: str(el.getAttribute('mem')),
       held_weapon: str(el.getAttribute('wld')),
       worn_armor: str(el.getAttribute('armor')),
+      personality: str(el.getAttribute('personality')),
+      faction_id: str(el.getAttribute('faction')),
+      secret_truth: str(el.getAttribute('secret')),
     }
   })
 

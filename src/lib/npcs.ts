@@ -77,6 +77,9 @@ export function applyNpcUpdates(
         memSummary: u.mem_summary || prev.memSummary,
         heldWeapon: u.held_weapon || prev.heldWeapon,
         wornArmor: u.worn_armor || prev.wornArmor,
+        personality: u.personality || prev.personality,
+        factionId: u.faction_id ?? prev.factionId,
+        secretTruth: u.secret_truth || prev.secretTruth,
         lastSeenLocId: locId ?? prev.lastSeenLocId,
         // Set-once, decoupled from ensureEntry's `created` flag: a {{Term|npc}}
         // tag frequently registers the dict entry first (same turn, before
@@ -118,7 +121,15 @@ export function describePresentNpc(id: string, entry: NpcEntry): string {
   // (only the display name), and will invent its own abbreviation (e.g.
   // "l_sorrengail" for "General Lilith Sorrengail") that forks a duplicate
   // stub entry instead of updating the real one.
-  return `NPC: ${entry.name} (id: ${id})${identity ? ` | ${identity}` : ''} | Stage: ${entry.stage} | Trust: ${trustWord(entry.trust)}${gear ? ` | ${gear}` : ''}${firstSeen} | Mem: "${entry.memSummary}"`
+  // Personality is restated here for the same reason gear is — a stable
+  // anchor for "distinct" reactions (the <plan> tag's own line) instead of
+  // the model re-improvising who this NPC is from prose memory each turn.
+  // Secret is ground truth ONLY the model sees, labeled to reinforce the
+  // Hidden Truths rule (turnContract.ts §2c) right where it's used, not just
+  // stated once far away in the system prompt.
+  const personality = entry.personality ? ` | Personality: ${entry.personality}` : ''
+  const secret = entry.secretTruth ? ` | Secret (never reveal directly): "${entry.secretTruth}"` : ''
+  return `NPC: ${entry.name} (id: ${id})${identity ? ` | ${identity}` : ''} | Stage: ${entry.stage} | Trust: ${trustWord(entry.trust)}${gear ? ` | ${gear}` : ''}${personality}${firstSeen} | Mem: "${entry.memSummary}"${secret}`
 }
 
 // Trust's own parallel word ladder — kept separate from affection's Stranger

@@ -992,14 +992,21 @@ function TagPills({ tags, accent }: { tags: string[] | undefined; accent: Catego
 // Freeform comma-separated tags input — parses to/from string[] so the CRUD
 // draft state (a plain Record<string, any>) can keep storing the same shape
 // the rest of the app persists, without a dedicated multi-select widget.
-function TagsField({ value, onChange }: { value: string[] | undefined; onChange: (tags: string[]) => void }) {
+function TagsField({
+  value, onChange, label = 'Tags (comma-separated)', placeholder = 'mentor, romance, hidden agenda',
+}: {
+  value: string[] | undefined
+  onChange: (tags: string[]) => void
+  label?: string
+  placeholder?: string
+}) {
   return (
     <label className="block">
-      <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Tags (comma-separated)</span>
+      <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">{label}</span>
       <input
         value={(value ?? []).join(', ')}
         onChange={(e) => onChange(e.target.value.split(',').map((t) => t.trim()).filter(Boolean))}
-        placeholder="mentor, romance, hidden agenda"
+        placeholder={placeholder}
         className="mt-1 w-full rounded-lg border border-[#e8ca8a]/25 bg-[#e8ca8a]/[0.04] backdrop-blur-sm px-3 py-2 font-narrative text-sm text-ink placeholder:text-[#e8ca8a]/35"
       />
     </label>
@@ -1594,6 +1601,17 @@ export default function Codex({
       mapX: draft.mapX === undefined || Number.isNaN(draft.mapX) ? undefined : draft.mapX,
       mapY: draft.mapY === undefined || Number.isNaN(draft.mapY) ? undefined : draft.mapY,
       mapRadius: draft.mapRadius === undefined || Number.isNaN(draft.mapRadius) ? undefined : draft.mapRadius,
+      // §7 local sub-area graph — re-keyed from the edited name list each
+      // save; an existing area's description survives a save that keeps its
+      // name unchanged (matched by slug), a renamed or removed one just
+      // starts fresh/drops, same as any other freeform-list field here.
+      areas: ((draft.areaNames as string[] | undefined) ?? []).length
+        ? (draft.areaNames as string[]).map((name: string) => {
+            const id = slugify(name)
+            const existing = (locations[entryId === NEW_ID ? '' : entryId!]?.areas ?? []).find((a) => a.id === id)
+            return { id, name, description: existing?.description }
+          })
+        : undefined,
     })
     setEntryId(id)
     setEditing(false)
@@ -2359,7 +2377,20 @@ export default function Codex({
       {category === 'locations' && entryId && (editing || locations[entryId]) && (
         <>
           <div className="flex justify-end mb-3">
-            <CrudToolbar editing={editing} canDelete={entryId !== NEW_ID} onEdit={() => startEdit(entryId, { ...locations[entryId], factionOwner: locations[entryId].factionOwner ?? '' })} onSave={saveLocation} onCancel={cancelEdit} onDelete={() => deleteEntry('locations')} />
+            <CrudToolbar
+              editing={editing}
+              canDelete={entryId !== NEW_ID}
+              onEdit={() =>
+                startEdit(entryId, {
+                  ...locations[entryId],
+                  factionOwner: locations[entryId].factionOwner ?? '',
+                  areaNames: locations[entryId].areas?.map((a) => a.name) ?? [],
+                })
+              }
+              onSave={saveLocation}
+              onCancel={cancelEdit}
+              onDelete={() => deleteEntry('locations')}
+            />
           </div>
           {editing ? (
             <DetailPanel>
@@ -2435,6 +2466,12 @@ export default function Codex({
               <TextField label="Description" value={draft.description ?? ''} onChange={(v) => setDraft((d) => ({ ...d, description: v }))} textarea />
               <TextField label="Notable Features" value={draft.notableFeatures ?? ''} onChange={(v) => setDraft((d) => ({ ...d, notableFeatures: v }))} textarea placeholder="What stands out about the place…" />
               <TextField label="Inhabitants" value={draft.inhabitants ?? ''} onChange={(v) => setDraft((d) => ({ ...d, inhabitants: v }))} textarea placeholder="Who or what lives or lurks here…" />
+              <TagsField
+                value={draft.areaNames}
+                onChange={(areaNames) => setDraft((d) => ({ ...d, areaNames }))}
+                label="Areas (comma-separated)"
+                placeholder="Outer Gates, Officer's Quarters, Dueling Court"
+              />
               <TagsField value={draft.tags} onChange={(tags) => setDraft((d) => ({ ...d, tags }))} />
               <DiscoveryEditor discovery={draft.discovery} onChange={(disc) => setDraft((d) => ({ ...d, discovery: disc }))} />
             </DetailPanel>
@@ -2468,6 +2505,11 @@ export default function Codex({
                 <SectionCard accent={CATEGORY_ACCENTS.locations} icon={ScrollText} title="Landmarks & Denizens">
                   {locations[entryId].notableFeatures && <FieldRow label="Landmarks" value={locations[entryId].notableFeatures} />}
                   {locations[entryId].inhabitants && <FieldRow label="Denizens" value={locations[entryId].inhabitants} />}
+                </SectionCard>
+              )}
+              {locations[entryId].areas && locations[entryId].areas!.length > 0 && (
+                <SectionCard accent={CATEGORY_ACCENTS.locations} icon={Compass} title="Areas">
+                  <FieldRow label="Named Sub-Zones" value={locations[entryId].areas!.map((a) => a.name).join(', ')} />
                 </SectionCard>
               )}
               <TagPills tags={locations[entryId].tags} accent={CATEGORY_ACCENTS.locations} />

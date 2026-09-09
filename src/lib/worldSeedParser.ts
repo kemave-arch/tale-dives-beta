@@ -55,6 +55,7 @@ export interface SeededLocation {
   locationType?: string
   danger?: string
   desc?: string
+  areas?: string // comma-separated sub-area names, same shape as a turn's <item traits="...">
 }
 
 export interface SeededFaction {
@@ -149,6 +150,7 @@ export function parseWorldSeedResponse(raw: string): WorldSeedResult {
       locationType: str(el.getAttribute('type')),
       danger: str(el.getAttribute('danger')),
       desc: str(el.getAttribute('desc')),
+      areas: str(el.getAttribute('areas')),
     })
   }
 

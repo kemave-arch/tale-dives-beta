@@ -1,4 +1,4 @@
-import type { ApiSettings, Dict, FactionEntry, ItemEntry, LocationEntry, LoreEntry, NpcEntry, QuestEntry, RegionEntry, WorldFaction, WorldLocation } from '../types.ts'
+import type { AreaEntry, ApiSettings, Dict, FactionEntry, ItemEntry, LocationEntry, LoreEntry, NpcEntry, QuestEntry, RegionEntry, WorldFaction, WorldLocation } from '../types.ts'
 import { getProvider } from '../api/providers/index.ts'
 import { buildWorldSeedSystemInstructions } from '../api/worldSeedContract.ts'
 import { MAX_OUTPUT_TOKENS_CEILING } from '../api/turnContract.ts'
@@ -183,6 +183,12 @@ export async function seedCampaign(input: SeedCampaignInput): Promise<SeedCampai
     // emitted is dropped rather than trusted, same defensive posture as
     // uniqueId's collision guard above.
     const regionId = l.regionId && regionIds.has(slugify(l.regionId)) ? slugify(l.regionId) : undefined
+    // §7 local sub-area graph — comma-separated names only (same shape as
+    // an item's "traits"), each minted its own slug id so Codex CRUD later
+    // has something stable to key an edit against.
+    const areas: AreaEntry[] | undefined = l.areas?.trim()
+      ? l.areas.split(',').map((name) => name.trim()).filter(Boolean).map((name) => ({ id: slugify(name), name }))
+      : undefined
     locations[id] = {
       name: l.name,
       region: l.region?.trim() || 'Known World',
@@ -195,6 +201,7 @@ export async function seedCampaign(input: SeedCampaignInput): Promise<SeedCampai
       ...(regionId ? { regionId } : {}),
       ...(l.mapX !== undefined ? { mapX: l.mapX } : {}),
       ...(l.mapY !== undefined ? { mapY: l.mapY } : {}),
+      ...(areas?.length ? { areas } : {}),
     }
   }
 

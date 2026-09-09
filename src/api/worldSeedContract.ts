@@ -66,7 +66,7 @@ OUTPUT FORMAT (read carefully — respond with exactly this, nothing else, no ma
   <npc id="NPC_ID" name="NAME" role="ROLE" personality="TRAIT_SUMMARY" appearance="PHYSICAL_DESC" aff="Stranger|Acquaintance|Friend|Confidant|Beloved" trust="Distrustful|Wary|Reliable|Trusted|Devoted" />
   <quest id="QUEST_ID" name="NAME" type="ambition" desc="PREMISE" />
   <region id="REGION_ID" name="NAME" desc="DESC" />
-  <location id="LOC_ID" name="NAME" region="REGION" region_id="REGION_ID" map_x="N" map_y="N" type="LOCATION_TYPE" danger="DANGER_LEVEL" desc="DESC" />
+  <location id="LOC_ID" name="NAME" region="REGION" region_id="REGION_ID" map_x="N" map_y="N" type="LOCATION_TYPE" danger="DANGER_LEVEL" desc="DESC" areas="AREA_1, AREA_2" />
   <faction id="FACTION_ID" name="NAME" attitude="allied|friendly|neutral|hostile|rival" territory="TERRITORY" desc="DESC" />
   <item id="ITEM_ID" name="NAME" type="weapon|armor|accessory|tool|key|consumable|material" desc="DESC" traits="TRAIT_1, TRAIT_2" />
 </seed>
@@ -77,6 +77,7 @@ Rules:
 - <quest>: at most 1, omitted entirely if no personal Ambition is evident (see system instructions). ~80-120 tokens for desc.
 - <location>/<faction>: ONLY emit these if the prompt below explicitly asks for them (it will say so when the player left that list empty) — otherwise omit both tags entirely, even if you can think of good ones. When asked for, 1-3 entries each, matching the same field detail a player would have typed by hand.
 - <region>: ONLY emit when the prompt asks for <location> entries (same condition as above) — 1-2 entries grouping the <location> entries you propose into a broader named area (e.g. "The Shattered Frontier" containing both a border garrison and a nearby ruin). Omit entirely when locations aren't being requested. Each <location> you emit may then set region_id to one of these region ids (never a region_id that doesn't match a <region> you actually emitted) — region_id, map_x, and map_y are all optional; when you do set them, map_x/map_y are integers 0-100 giving that location's rough normalized position on its region's own map, spaced out sensibly relative to the other locations in the same region rather than clustered together.
+- <location>'s "areas" attribute is optional — a short comma-separated list of named sub-zones within that one location (e.g. "Outer Gates, Officer's Quarters, Dueling Court" for a fortress), never a full description per area, just names. Only include it when the location genuinely has distinct internal zones worth naming up front; omit it entirely for a single-room or single-space location.
 - <item>: at most 1, emitted ONLY when the prompt gives you a key item name to flesh out — then required. desc ~40-80 tokens; traits is optional and freeform (e.g. "reach, heavy") — pure narrative flavor, never a number or a mechanical bonus — omit it for an item with nothing especially notable about it.
 - Every id is a short snake_case slug derived from the entry's own name (e.g. "Elana Voss" -> "elana_voss") — never invent a numbered or generic id.
 - Escape literal & as &amp; inside attribute values.

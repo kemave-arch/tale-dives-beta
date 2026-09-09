@@ -222,6 +222,18 @@ export interface LocationEntry {
   mapX?: number // 0-100, normalized position on the region's own map
   mapY?: number // 0-100, normalized position on the region's own map
   mapRadius?: number // optional — this location's rough area of influence on the map, same 0-100 scale
+  // §7 local sub-area graph — named sub-zones within this one location (e.g.
+  // a fortress's "Outer Gates"/"Officer's Quarters"/"Dueling Court"),
+  // distinct from Regions (which group whole locations, not zones inside
+  // one). Deliberately thin, no coordinates of its own — a full per-area
+  // visual layout is future/Tier-4 scope, this is just the named list.
+  areas?: AreaEntry[]
+}
+
+export interface AreaEntry {
+  id: string
+  name: string
+  description?: string
 }
 
 // §7 Region Map Pins — a lightweight named grouping locations attach to via

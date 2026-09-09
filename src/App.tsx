@@ -1993,6 +1993,7 @@ export default function App() {
     // return to yet.
     content = (
       <Codex
+        apiSettings={apiSettings}
         world={game.world}
         player={game.player}
         log={game.log}
@@ -2037,6 +2038,7 @@ export default function App() {
   } else if (screen === 'codex' && game) {
     content = (
       <Codex
+        apiSettings={apiSettings}
         world={game.world}
         player={game.player}
         log={game.log}

@@ -4,7 +4,7 @@ import {
   Globe, BookOpen, Users, ShieldCheck, Map, ScrollText, Target, Skull, Backpack,
   Pencil, Save, X, Trash2, Plus, Lock, User, Hammer, Clock, Sparkles, CheckCircle2, XCircle, ArrowRight, Ghost,
   Swords, Star, EyeOff, Search, MapPin, Heart, Coins, Gift, Zap, Compass, AlertTriangle, Shield, Flame, Milestone, ListChecks,
-  ChevronRight, Flag,
+  ChevronRight, Flag, ImagePlus, RotateCw,
 } from 'lucide-react'
 import { DASHED_ROW_CLASS, GLASS_SURFACE_LIST, GlassHeader, GlassIconButton, GlassScreen, SELECT_CLASS } from '../lib/glassChrome.tsx'
 import { slugify } from '../lib/slug.ts'
@@ -19,10 +19,13 @@ import { useConfirm } from '../lib/useConfirm.tsx'
 import { useLongTextEditor } from '../lib/useLongTextEditor.tsx'
 import { EQUIPPABLE_TYPES, LOCATION_DANGER_LEVELS, LOCATION_TYPES } from '../types.ts'
 import type {
-  BestiaryEntry, CompetencyTier, CraftingJob, Discovery, EquipSlot, FactionEntry, ItemEntry, ItemType, LocationEntry, LogEntry, LoreEntry, NpcEntry, Player,
+  ApiSettings, BestiaryEntry, CompetencyTier, CraftingJob, Discovery, EquipSlot, FactionEntry, ItemEntry, ItemType, LocationEntry, LogEntry, LoreEntry, NpcEntry, Player,
   ProjectEntry, ProjectStage, QuestEntry, RegionEntry, RevealTrigger, SkillEntry, TaleBeat, ThreatTierToken, WorldData,
 } from '../types.ts'
 import { COMPETENCY_TIERS, THREAT_TIERS, tierToWord, wordToTier, displayThreatLabel } from '../lib/tiers.ts'
+import { useEntityImage } from '../lib/useEntityImage.ts'
+import { generateAndStoreEntityImage } from '../lib/entityImages.ts'
+import { buildLocationImagePrompt, buildNpcPortraitPrompt, buildRegionMapPrompt } from '../lib/imageGeneration.ts'
 import { trustWord } from '../lib/npcs.ts'
 
 import codexArchiveBanner from '../assets/images/codex_archive_banner.webp'
@@ -59,6 +62,7 @@ export type CategoryId =
   | 'campaign' | 'crafting' | 'chapters' | 'npcs' | 'factions' | 'locations' | 'regions' | 'lore' | 'quests' | 'bestiary' | 'items' | 'skills' | 'projects'
 
 interface CodexProps {
+  apiSettings: ApiSettings
   world: WorldData
   player: Player
   log: LogEntry[]
@@ -991,6 +995,64 @@ function TagPills({ tags, accent }: { tags: string[] | undefined; accent: Catego
   )
 }
 
+// §7 Image Generation — the one shared "Generate/Retry" control every
+// Location/NPC/Region detail view gets. `imageKey` is the entity's own
+// stored key (undefined = never generated); `onSaveKey` persists a new key
+// onto the entity the moment generation succeeds, via whichever
+// onUpdateX handler the caller already has — this never touches the
+// edit-form draft state, since generating art isn't part of the Save flow.
+function EntityImagePanel({
+  imageKey, prompt, apiSettings, onSaveKey, aspectRatio,
+}: {
+  imageKey?: string
+  prompt: string
+  apiSettings: ApiSettings
+  onSaveKey: (key: string) => void
+  aspectRatio?: '1:1' | '16:9' | '9:16' | '4:3' | '3:2'
+}) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [refreshToken, setRefreshToken] = useState(0)
+  const url = useEntityImage(imageKey, refreshToken)
+
+  async function handleGenerate() {
+    if (!apiSettings.apiKey) {
+      setError('No API key set — open Settings and paste your Gemini API key first.')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    try {
+      const key = imageKey || `img_${Math.random().toString(36).slice(2)}_${Date.now()}`
+      await generateAndStoreEntityImage({ apiKey: apiSettings.apiKey, prompt, key, aspectRatio })
+      onSaveKey(key)
+      setRefreshToken((t) => t + 1)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {url && (
+        <img src={url} alt="" className="w-full max-h-48 object-cover rounded-xl border border-[#e8ca8a]/25" />
+      )}
+      <button
+        type="button"
+        onClick={handleGenerate}
+        disabled={busy}
+        className="self-start flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#e8ca8a]/15 border border-[#e8ca8a]/40 text-[#e8ca8a] text-xs font-display font-semibold disabled:opacity-50"
+      >
+        {busy ? <RotateCw size={13} className="animate-spin" /> : url ? <RotateCw size={13} /> : <ImagePlus size={13} />}
+        {busy ? 'Weaving image...' : url ? 'Retry' : 'Generate Image'}
+      </button>
+      {error && <p className="font-narrative text-xs text-red-400 italic">{error}</p>}
+    </div>
+  )
+}
+
 // Freeform comma-separated tags input — parses to/from string[] so the CRUD
 // draft state (a plain Record<string, any>) can keep storing the same shape
 // the rest of the app persists, without a dedicated multi-select widget.
@@ -1025,6 +1087,7 @@ function TagsField({
 // Realm's identity fields (narration style stays owned by Settings) supports
 // hand-authored add/edit/delete. `entryId === NEW_ID` is an unsaved draft.
 export default function Codex({
+  apiSettings,
   world,
   player,
   log,
@@ -2314,6 +2377,15 @@ export default function Codex({
                 subtitle={npcs[entryId].role || npcs[entryId].stage}
                 badges={<AutoBadge shown={npcs[entryId].autoLogged} />}
               />
+              <SectionCard accent={CATEGORY_ACCENTS.npcs} icon={ImagePlus} title="Portrait">
+                <EntityImagePanel
+                  imageKey={npcs[entryId].portraitKey}
+                  prompt={buildNpcPortraitPrompt(npcs[entryId].name, npcs[entryId].appearance, npcs[entryId].role)}
+                  apiSettings={apiSettings}
+                  onSaveKey={(key) => onUpdateNpc(entryId, { portraitKey: key })}
+                  aspectRatio="1:1"
+                />
+              </SectionCard>
               <SectionCard accent={CATEGORY_ACCENTS.npcs} icon={Heart} title="Bond & Status">
                 <FieldRow label="Stage" value={npcs[entryId].stage} icon={User} />
                 {npcs[entryId].partyStatus && (
@@ -2612,6 +2684,15 @@ export default function Codex({
                 subtitle={locations[entryId].locationType ? `${locations[entryId].locationType} · ${locations[entryId].region}` : locations[entryId].region}
                 badges={<AutoBadge shown={locations[entryId].autoLogged} />}
               />
+              <SectionCard accent={CATEGORY_ACCENTS.locations} icon={ImagePlus} title="Image">
+                <EntityImagePanel
+                  imageKey={locations[entryId].imageKey}
+                  prompt={buildLocationImagePrompt(locations[entryId].name, locations[entryId].description)}
+                  apiSettings={apiSettings}
+                  onSaveKey={(key) => onUpdateLocation(entryId, { imageKey: key })}
+                  aspectRatio="16:9"
+                />
+              </SectionCard>
               <SectionCard accent={CATEGORY_ACCENTS.locations} icon={MapPin} title="Geography">
                 <FieldRow label="Region" value={locations[entryId].region} icon={MapPin} />
                 {locations[entryId].regionId && (
@@ -2686,6 +2767,19 @@ export default function Codex({
           ) : (
             <div className="flex flex-col gap-3">
               <EntryHeroHeader accent={CATEGORY_ACCENTS.regions} title={regions[entryId].name} badges={<AutoBadge shown={regions[entryId].autoLogged} />} />
+              <SectionCard accent={CATEGORY_ACCENTS.regions} icon={ImagePlus} title="Map">
+                <EntityImagePanel
+                  imageKey={regions[entryId].mapImageKey}
+                  prompt={buildRegionMapPrompt(
+                    regions[entryId].name,
+                    regions[entryId].description,
+                    Object.values(locations).filter((l) => l.regionId === entryId).map((l) => l.name),
+                  )}
+                  apiSettings={apiSettings}
+                  onSaveKey={(key) => onUpdateRegion(entryId, { mapImageKey: key })}
+                  aspectRatio="4:3"
+                />
+              </SectionCard>
               <SectionCard accent={CATEGORY_ACCENTS.regions} icon={Compass} title="Overview">
                 {regions[entryId].description && <FieldRow label="Description" value={regions[entryId].description} />}
                 <FieldRow

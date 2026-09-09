@@ -228,6 +228,13 @@ export interface LocationEntry {
   // one). Deliberately thin, no coordinates of its own — a full per-area
   // visual layout is future/Tier-4 scope, this is just the named list.
   areas?: AreaEntry[]
+  // §7 Image Generation — a stable key into the client-side IndexedDB blob
+  // store (lib/imageStore.ts), NOT a real URL: images live only on this
+  // device (no backend to host them), so the client turns this key into a
+  // fresh blob: object URL each time it renders, never persists that URL
+  // itself. Absent/undefined means "no image generated (yet)" — the UI
+  // falls back to the existing flat parchment treatment, not an error.
+  imageKey?: string
 }
 
 export interface AreaEntry {
@@ -247,6 +254,7 @@ export interface RegionEntry {
   description?: string
   autoLogged?: boolean
   loggedAt?: string
+  mapImageKey?: string // §7 — same IndexedDB-key convention as LocationEntry.imageKey, a top-down map image for this region
 }
 
 // §5.5/§5.14 NPC Codex entry. affection/trust are two INDEPENDENT
@@ -275,6 +283,7 @@ export interface NpcEntry {
   factionId?: string | null // affiliation, mirrors LocationEntry's factionOwner — set/revised by the LLM via npc_mem_up.faction_id
   secretTruth?: string // hidden ground truth (motive, history, loyalty) the model always knows for this NPC but must never state directly until the story earns the reveal — never shown to the player, distinct from Discovery's public teaser
   partyStatus?: PartyStatus // §7 — set/revised by the LLM via npc_mem_up.party_status when this NPC actively joins/leaves the protagonist's travelling party; absent means they've never been a companion
+  portraitKey?: string // §7 — same IndexedDB-key convention as LocationEntry.imageKey, this NPC's generated portrait
   firstSeenTime?: GameTime // set once, at stub creation — same anti-drift anchor as LocationEntry's
   lastSeenTime?: GameTime // updated on every npc_mem_up touch
   tags?: string[]

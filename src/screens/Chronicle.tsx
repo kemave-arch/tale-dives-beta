@@ -18,7 +18,8 @@ import type {
   ApiSettings, BestiaryEntry, Campaign, CombatState, CraftingJob, EndingOutcome, FactionEntry, GameTime, KeywordLink, LocationEntry, LogEntry, LoreEntry, NpcEntry, Player,
   ProseDepthConfig, QuestEntry, SkillEntry, SlashCommand, ItemEntry,
 } from '../types.ts'
-import { trustWord } from '../lib/npcs.ts'
+import { trustWord, presentNpcs } from '../lib/npcs.ts'
+import { useEntityImage } from '../lib/useEntityImage.ts'
 
 function traitsText(traits: ItemEntry['traits']): string | null {
   return traits?.length ? traits.join(', ') : null
@@ -26,6 +27,24 @@ function traitsText(traits: ItemEntry['traits']): string | null {
 
 // §6.6 !conclude — display words for LogEntry.ending's fixed outcome set.
 const ENDING_LABELS: Record<EndingOutcome, string> = { win: 'Victory', lose: 'Defeat', neutral: 'A Costly End' }
+
+// §7 Image Generation — one present-NPC's portrait chip. A separate small
+// component (not inlined in a .map()) because useEntityImage is a hook —
+// it needs its own component instance per NPC, not one call shared across
+// a loop. No image yet (never generated) just renders nothing: the rail
+// only shows chips for NPCs that actually have art, never an empty frame.
+function NpcPortraitChip({ name, portraitKey }: { name: string; portraitKey?: string }) {
+  const url = useEntityImage(portraitKey)
+  if (!url) return null
+  return (
+    <img
+      src={url}
+      alt={name}
+      title={name}
+      className="w-10 h-10 rounded-full object-cover border-2 border-gold-accent/50 shrink-0 shadow-md"
+    />
+  )
+}
 
 interface ChronicleProps {
   title: string
@@ -1035,6 +1054,17 @@ export default function Chronicle({
 
   const lastLogEntry = useMemo(() => log[log.length - 1], [log])
 
+  // §7 Image Generation — the current location's own art becomes the
+  // parchment's background when one exists; absent/still-loading falls
+  // back to the existing flat parchment texture untouched (see the
+  // container's className below), never an error state.
+  const currentLocationImageUrl = useEntityImage(locations[player.locId]?.imageKey)
+  // Present-NPC portrait rail — same "0 tokens, purely a display nicety"
+  // spirit as everything else keyed off presentNpcs; an NPC with no
+  // generated portrait yet simply doesn't render a chip (NpcPortraitChip
+  // returns null), so the rail never shows an empty placeholder frame.
+  const presentNpcList = useMemo(() => presentNpcs(npcs, player.locId), [npcs, player.locId])
+
   const drawerActions = useMemo(() => {
     const actions: { icon: LucideIcon; label: string; onClick: () => void }[] = [
       { icon: Backpack, label: 'Items', onClick: () => onOpenCodexCategory('items') },
@@ -1399,12 +1429,42 @@ export default function Chronicle({
           {debugMode && sessionPayloadOpen && <SessionPayloadPanel log={log} title={title} seedDebug={seedDebug} />}
         </header>
 
-        {/* Parchment Log Container */}
+        {/* §7 Present-NPC portrait rail — floats just above the parchment,
+            only rendered when at least one present NPC actually has art. */}
+        {presentNpcList.length > 0 && (
+          <div className="absolute left-3 z-10 flex gap-1.5" style={{ top: headerHeight + 10 }}>
+            {presentNpcList.map(([id, n]) => (
+              <NpcPortraitChip key={id} name={n.name} portraitKey={n.portraitKey} />
+            ))}
+          </div>
+        )}
+
+        {/* Parchment Log Container — the current location's own generated
+            art becomes the background image when one exists (§7 Image
+            Generation); otherwise the existing flat parchment texture
+            below is completely untouched, exactly as it always was. */}
         <div
           ref={scrollRef}
           onClick={() => setDrawerOpen(false)}
-          className="parchment-surface absolute inset-0 overflow-y-auto bg-parchment parchment-texture rounded-xl pl-4 pr-6 space-y-4 cursor-default"
-          style={{ top: 6, bottom: 6, left: 6, right: 6, paddingTop: headerHeight + 16, paddingBottom: bottomHeight + 40 }}
+          className={`parchment-surface absolute inset-0 overflow-y-auto rounded-xl pl-4 pr-6 space-y-4 cursor-default ${currentLocationImageUrl ? 'bg-parchment' : 'bg-parchment parchment-texture'}`}
+          style={{
+            top: 6,
+            bottom: 6,
+            left: 6,
+            right: 6,
+            paddingTop: headerHeight + 16,
+            paddingBottom: bottomHeight + 40,
+            ...(currentLocationImageUrl
+              ? {
+                  // Tint matches --td-parchment (#f8f1de) exactly, at
+                  // enough opacity to keep narration text legible over
+                  // whatever the generated art looks like underneath.
+                  backgroundImage: `linear-gradient(rgba(248,241,222,0.88), rgba(248,241,222,0.88)), url(${currentLocationImageUrl})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }
+              : {}),
+          }}
         >
           <div className="max-w-2xl sm:max-w-3xl mx-auto w-full space-y-4">
             {log.length === 0 && (

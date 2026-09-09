@@ -17,7 +17,7 @@ import type { CompetencyTier } from '../types.ts'
 // parseWorldSeedResponse try/catch above, per this file's own "never throws,
 // never blocks campaign creation" design — a single off-vocabulary word here
 // should degrade to the floor tier, not crash the entire seeding pass.
-function seedRelationTier(word: string | undefined, scale: readonly string[]): CompetencyTier {
+export function seedRelationTier(word: string | undefined, scale: readonly string[]): CompetencyTier {
   if (!word) return 1
   const idx = scale.findIndex((w) => w.toLowerCase() === word.trim().toLowerCase())
   return idx === -1 ? 1 : idx + 1

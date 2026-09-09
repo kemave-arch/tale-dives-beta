@@ -21,13 +21,14 @@ const Codex = lazy(() => import('./screens/Codex.tsx'))
 const SlashCommandManager = lazy(() => import('./screens/SlashCommandManager.tsx'))
 const TaleDiveWeaver = lazy(() => import('./screens/TaleDiveWeaver.tsx'))
 const NovelWeaver = lazy(() => import('./screens/NovelWeaver.tsx'))
+const TaleWeaver = lazy(() => import('./screens/TaleWeaver.tsx'))
 const WeaverCalibrator = lazy(() => import('./components/seedweaver/WeaverCalibrator.tsx'))
-import { getClassById, findClassById } from './data/classes.ts'
+import { getClassById, findClassById, PRESET_CLASSES } from './data/classes.ts'
 import { FOURTH_WING_WORLD, VIOLET_SORRENGAIL } from './data/starterTemplates.ts'
 import { buildContextSlice } from './lib/jitContext.ts'
 import { applyTurn } from './lib/shadowReferee.ts'
 import { ensureLocation } from './lib/locations.ts'
-import { applyNpcUpdates } from './lib/npcs.ts'
+import { applyNpcUpdates, AFFECTION_STAGES, TRUST_WORDS } from './lib/npcs.ts'
 import { applyKeywordLinks, applyEnrichUpdates } from './lib/codex.ts'
 import { applyQuestUpdate } from './lib/quests.ts'
 import { applyProjectUpdate } from './lib/projects.ts'
@@ -35,8 +36,10 @@ import { applyBeatUpdate } from './lib/beats.ts'
 import { applySkillLearn } from './lib/skills.ts'
 import { applyInventoryChanges, equipItem, unequipSlot } from './lib/inventory.ts'
 import { resolveBangCommand, findEntry } from './lib/bangCommands.ts'
-import { checkCodexReveals } from './lib/discovery.ts'
-import { seedCampaign } from './lib/seeding.ts'
+import { checkCodexReveals, validateDiscovery } from './lib/discovery.ts'
+import { seedCampaign, seedRelationTier } from './lib/seeding.ts'
+import { parseTaleWeaverDraftAreas } from './lib/taleWeaving.ts'
+import type { TaleWeaverAccumulated } from './lib/taleWeaving.ts'
 import { queueCraftingJob, resolveCraftingJobs } from './lib/crafting.ts'
 import { applyMinionUpkeep, attemptSummon, type SummonCommand } from './lib/summoning.ts'
 import { applyFactionRepDeltas, attitudeToRepTier } from './lib/factions.ts'
@@ -68,7 +71,7 @@ import NowPlayingBanner from './components/NowPlayingBanner.tsx'
 import * as store from './lib/store.ts'
 import { CURRENT_SCHEMA_VERSION, EQUIPPABLE_TYPES } from './types.ts'
 import type {
-  BestiaryEntry, Campaign, CombatState, ConditionTag, Dict, EquipSlot, FactionEntry, GameTime, HistoryTurn, ItemEntry, KeywordLink, LocationEntry, LogEntry, LoreEntry,
+  AreaEntry, BestiaryEntry, Campaign, CombatState, ConditionTag, Dict, EquipSlot, FactionEntry, GameTime, HistoryTurn, ItemEntry, KeywordLink, LocationEntry, LogEntry, LoreEntry,
   NpcEntry, Player, ProjectEntry, ProtagonistData, QuestEntry, RegionEntry, SkillEntry, SlashCommand, TaleBeat, TurnState, WorldData,
 } from './types.ts'
 
@@ -87,7 +90,7 @@ const KEYWORD_CATEGORY_TO_CODEX: Record<KeywordLink['category'], CategoryId> = {
 // screen is current (same as SlashCommandManager), not a screen that replaces
 // it — that's what lets its glass read against the live Chronicle parchment or
 // the Title artwork behind it rather than a flat ground.
-type Screen = 'title' | 'mainmenu' | 'storymode' | 'worldsetup' | 'newgame' | 'talebrief' | 'chronicle' | 'codex' | 'diveloading' | 'seedingreview' | 'talediveweaver' | 'novelweaver'
+type Screen = 'title' | 'mainmenu' | 'storymode' | 'worldsetup' | 'newgame' | 'talebrief' | 'chronicle' | 'codex' | 'diveloading' | 'seedingreview' | 'talediveweaver' | 'novelweaver' | 'taleweaver'
 type CreationMode = 'tale' | 'library'
 
 // §5.7 Player Defeat State — soft-fail recovery, client-owned.
@@ -740,6 +743,202 @@ export default function App() {
     // just populated the Codex with (already sitting in campaign.locations/
     // npcs/factions/lore/quests/skills by the time this fires, so it flows
     // straight into jitContext.ts's existing hooks with no changes there).
+    const prologueLine =
+      "This is the Prologue — the opening chapter. Alongside narrating the opening scene, establish the protagonist's starting NPC/faction relations (npc_mem_up/fac_rep) for anyone from the Codex context below who is actually present or relevant, and make the protagonist's starting goal or challenge clear. Draw on the Codex context below rather than contradicting it."
+
+    const firstAction = [prologueLine, ...worldLines, backgroundLine, ...identityLines, briefLine].filter(Boolean).join('\n')
+
+    setGame(campaign)
+    setActiveCampaignId(campaignId)
+    setHistory([])
+    setError(null)
+    setPendingWorld(null)
+    setPendingFirstAction(firstAction)
+    if (uiPrefs.autoCloudBackup) {
+      triggerAutoCloudBackup()
+    }
+    navigateTo('seedingreview')
+  }
+
+  // Inspired Mode's "Tale Weaving" flow (screens/TaleWeaver.tsx) — a
+  // conversational alternative to beginCampaign's hand-typed-forms path
+  // above. Builds the same Campaign shape directly from the phases'
+  // accumulated draft content instead of calling seedCampaign(): Tale
+  // Weaving's own Lore/NPC/Faction/Region/Location/Story-Arc phases
+  // already cover everything that one-shot fallback call exists to
+  // provide, so running it again here would just duplicate content at an
+  // extra API call's cost. Ends the same way beginCampaign does — the
+  // Seeding Review screen, then Turn 1 — so both creation paths feel like
+  // one app, not two.
+  function beginInspiredTale(accumulated: TaleWeaverAccumulated) {
+    const w = accumulated.world
+    const p = accumulated.protagonist
+    const cls = PRESET_CLASSES[0]
+
+    const protagonistData: ProtagonistData = {
+      name: p?.name?.trim() || 'The Protagonist',
+      classId: cls.id,
+      className: cls.name,
+      background: p?.background,
+      personality: p?.personality,
+      motivation: p?.motivation,
+      physicalTrait: p?.physicalTrait,
+      secret: p?.secret,
+      opening: p?.opening?.trim() || 'The story begins.',
+    }
+
+    const player: Player = {
+      name: protagonistData.name,
+      background: protagonistData.background,
+      personality: protagonistData.personality,
+      motivation: protagonistData.motivation,
+      physicalTrait: protagonistData.physicalTrait,
+      secret: protagonistData.secret,
+      classId: cls.id,
+      className: cls.name,
+      level: 1,
+      attrs: { STR: 3, INT: 3, AGI: 3 },
+      conditions: [],
+      copper: 10_000,
+      locId: 'loc_start',
+      locDisp: 'An Unwritten Place',
+      time: { d: 1, h: '08:00 AM' },
+    }
+
+    const world: WorldData = {
+      name: w?.name?.trim() || 'A Woven World',
+      mode: 'inspired',
+      genreTone: w?.genreTone || '',
+      conflict: w?.conflict || '',
+      background: w?.background || '',
+      narrationStyle: DEFAULT_NARRATION_STYLE,
+      powerSystem: w?.powerSystem,
+      eraTechLevel: w?.eraTechLevel,
+      keyFactions: w?.keyFactions,
+    }
+
+    const regions: Dict<RegionEntry> = {}
+    for (const r of accumulated.regions) {
+      regions[r.id] = { name: r.name, description: r.desc?.trim() || undefined }
+    }
+
+    const locations: Dict<LocationEntry> = {}
+    for (const l of accumulated.locations) {
+      const areas: AreaEntry[] | undefined = parseTaleWeaverDraftAreas(l.areas)
+      const regionId = l.regionId && regions[l.regionId] ? l.regionId : undefined
+      locations[l.id] = {
+        name: l.name,
+        region: (regionId ? regions[regionId].name : undefined) ?? 'Known World',
+        description: l.desc?.trim() || '',
+        dangerLevel: l.danger || 'Safe',
+        factionOwner: null,
+        standing: 'neutral',
+        locationType: l.locationType || 'Landmark',
+        discovery: { state: 'known' },
+        ...(regionId ? { regionId } : {}),
+        ...(l.mapX !== undefined ? { mapX: l.mapX } : {}),
+        ...(l.mapY !== undefined ? { mapY: l.mapY } : {}),
+        ...(areas?.length ? { areas } : {}),
+      }
+    }
+
+    const factions: Dict<FactionEntry> = {}
+    for (const f of accumulated.factions) {
+      factions[f.id] = {
+        name: f.name,
+        repTier: attitudeToRepTier(f.attitude),
+        description: f.desc?.trim() || undefined,
+        territory: f.territory?.trim() || undefined,
+        tags: f.attitude ? [f.attitude] : undefined,
+        discovery: { state: 'known' },
+      }
+    }
+
+    const npcs: Dict<NpcEntry> = {}
+    for (const n of accumulated.npcs) {
+      npcs[n.id] = {
+        name: n.name,
+        role: n.role?.trim() || undefined,
+        personality: n.personality?.trim() || undefined,
+        appearance: n.appearance?.trim() || undefined,
+        affection: seedRelationTier(n.aff, AFFECTION_STAGES),
+        trust: seedRelationTier(n.trust, TRUST_WORDS),
+        stage: 'Stranger',
+        deeds: [],
+        memSummary: '',
+        lastSeenLocId: null,
+      }
+    }
+
+    const lore: Dict<LoreEntry> = {}
+    for (const l of accumulated.lore) {
+      lore[l.id] = {
+        name: l.name,
+        category: l.category?.trim() || 'General',
+        content: l.content?.trim() || undefined,
+        era: l.era?.trim() || undefined,
+        discovery: l.hidden
+          ? validateDiscovery({ state: 'hidden', revealTrigger: 'manual', teaser: l.teaser }, { locations, npcs, quests: {} })
+          : undefined,
+      }
+    }
+
+    const beats: TaleBeat[] = accumulated.beats.map((b) => ({ id: b.id, title: b.title, summary: b.summary, status: 'pending' as const }))
+
+    // Both land in their libraries the moment a Tale begins (§6.4B), same
+    // as beginCampaign's own Original Mode path.
+    const worldEntry = upsertWorld(world, world.id)
+    const protagonistEntry = upsertProtagonist(protagonistData, protagonistData.id, cls.name)
+
+    const campaignId = store.newId('campaign')
+    const campaign: Campaign = {
+      id: campaignId,
+      schemaVersion: CURRENT_SCHEMA_VERSION,
+      title: `${player.name}'s Tale`,
+      synopsis: (protagonistData.opening || world.background || '').slice(0, 140),
+      worldId: worldEntry.id!,
+      protagonistId: protagonistEntry.id!,
+      world,
+      player,
+      proseDepth: PROSE_DEPTHS.IMMERSIVE,
+      narrationStyle: world.narrationStyle,
+      locations,
+      regions,
+      npcs,
+      factions,
+      lore,
+      quests: {},
+      bestiary: {},
+      skills: {},
+      combat: { active: false },
+      flags: [],
+      inventory: {},
+      beats,
+      log: [],
+      createdAt: Date.now(),
+      lastPlayed: Date.now(),
+      turnCount: 0,
+    }
+
+    const worldLines = [
+      world.background?.trim() && `World Background: ${world.background.trim()}`,
+      world.genreTone?.trim() && `Genre & Tone: ${world.genreTone.trim()}`,
+      world.conflict?.trim() && `Core Regional Conflict: ${world.conflict.trim()}`,
+      world.powerSystem?.trim() && `Power System: ${world.powerSystem.trim()}`,
+      world.eraTechLevel?.trim() && `Era / Tech Level: ${world.eraTechLevel.trim()}`,
+      world.keyFactions?.trim() && `Key Factions: ${world.keyFactions.trim()}`,
+    ].filter(Boolean) as string[]
+
+    const identityLines = [
+      protagonistData.personality?.trim() && `Personality: ${protagonistData.personality.trim()}`,
+      protagonistData.motivation?.trim() && `Motivation: ${protagonistData.motivation.trim()}`,
+      protagonistData.physicalTrait?.trim() && `Physical Trait: ${protagonistData.physicalTrait.trim()}`,
+      protagonistData.secret?.trim() && `Secret: ${protagonistData.secret.trim()}`,
+    ].filter(Boolean) as string[]
+
+    const backgroundLine = protagonistData.background?.trim() && `Protagonist Background: ${protagonistData.background.trim()}`
+    const briefLine = `Tale Dive Brief — open Turn 1 here: ${protagonistData.opening.trim()}`
+
     const prologueLine =
       "This is the Prologue — the opening chapter. Alongside narrating the opening scene, establish the protagonist's starting NPC/faction relations (npc_mem_up/fac_rep) for anyone from the Codex context below who is actually present or relevant, and make the protagonist's starting goal or challenge clear. Draw on the Codex context below rather than contradicting it."
 
@@ -1709,7 +1908,19 @@ export default function App() {
     content = <DiveLoadingScreen gender={loadingGender ?? pendingProtagonist?.gender ?? game?.player?.gender} />
   } else if (screen === 'storymode') {
     content = (
-      <StoryMode onBack={() => goBack('mainmenu')} onSelectOriginal={() => navigateTo('talediveweaver')} />
+      <StoryMode
+        onBack={() => goBack('mainmenu')}
+        onSelectOriginal={() => navigateTo('talediveweaver')}
+        onSelectInspired={() => navigateTo('taleweaver')}
+      />
+    )
+  } else if (screen === 'taleweaver') {
+    content = (
+      <TaleWeaver
+        apiSettings={apiSettings}
+        onBack={() => goBack('storymode')}
+        onBeginTale={beginInspiredTale}
+      />
     )
   } else if (screen === 'worldsetup') {
     content = (

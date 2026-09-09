@@ -23,6 +23,15 @@ export interface TrackMetadata {
   album: string
   artist: string
   durationEstimate?: string
+  // §7 Mood Tag Matching — freeform lowercase words (e.g. "tense", "triumphant",
+  // "melancholy") describing this track's own emotional register, matched
+  // against a turn's "mood" ambient sensory tag (turnContract.ts's own
+  // "3-6 word ambient sensory tag" field) to pick a better-fitting track
+  // within a Turn State pool that has more than one. Entirely optional —
+  // an untagged track (every one shipped today) just keeps the existing
+  // sequential-rotation behavior; this only activates once real dual-mixed
+  // variants with distinct moods exist for the same Turn State.
+  moodTags?: string[]
 }
 
 export const SOUNDTRACK_TRACKS: TrackMetadata[] = [
@@ -82,6 +91,29 @@ export function parseTurnState(filename: string): TurnState | null {
   if (!match) return null
   const candidate = match[1].toUpperCase() as TurnState
   return TURN_STATES.includes(candidate) ? candidate : null
+}
+
+// §7 Mood Tag Matching — scores each candidate in `pool` (full src paths,
+// same shape backgroundMusic.tsx's pools already use) against a turn's
+// mood string by counting whole-word tag hits, case-insensitive. Returns
+// the single best-scoring src, or null when nothing scores above zero —
+// the caller (backgroundMusic.tsx's enterState) falls back to its existing
+// sequential rotation in that case, so a pool with no tagged tracks (every
+// pool today) is completely unaffected. Never throws.
+export function pickTrackByMood(pool: string[], mood: string | undefined | null): string | null {
+  if (!mood?.trim() || pool.length === 0) return null
+  const words = mood.toLowerCase().match(/[a-z']+/g)
+  if (!words) return null
+  const wordSet = new Set(words)
+
+  let best: { src: string; score: number } | null = null
+  for (const src of pool) {
+    const tags = getTrackMetadata(src).moodTags
+    if (!tags?.length) continue
+    const score = tags.reduce((n, tag) => n + (wordSet.has(tag.toLowerCase()) ? 1 : 0), 0)
+    if (score > 0 && (!best || score > best.score)) best = { src, score }
+  }
+  return best?.src ?? null
 }
 
 export function getTrackMetadata(srcOrFilename: string): TrackMetadata {

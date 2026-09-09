@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { TRACK_FILENAMES, TURN_STATES, getTrackMetadata, parseTurnState, type TrackMetadata } from '../data/soundtrackManifest.ts'
+import { TRACK_FILENAMES, TURN_STATES, getTrackMetadata, parseTurnState, pickTrackByMood, type TrackMetadata } from '../data/soundtrackManifest.ts'
 import type { TurnState } from '../types.ts'
 
 // Soundtrack lives in public/tracks/, listed explicitly in
@@ -139,7 +139,7 @@ export function useBackgroundMusic() {
   const resumeRef = useRef<() => void>(() => {})
   const playTrackRef = useRef<(filenameOrIndex: string | number) => void>(() => {})
   const nextTrackRef = useRef<() => void>(() => {})
-  const setTurnStateRef = useRef<(state: TurnState | null) => void>(() => {})
+  const setTurnStateRef = useRef<(state: TurnState | null, mood?: string | null) => void>(() => {})
   const prevTrackRef = useRef<() => void>(() => {})
   const [muted, setMuted] = useState(true)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -219,11 +219,19 @@ export function useBackgroundMusic() {
       startTrack(tracksRef.current[indexRef.current], showBanner)
     }
 
-    // Starts (or resumes rotation within) a Turn State pool.
-    function enterState(state: TurnState, showBanner = true) {
+    // Starts (or resumes rotation within) a Turn State pool. `mood` (the
+    // turn's own ambient sensory tag) is an optional §7 refinement — when a
+    // pool has more than one track and at least one carries moodTags that
+    // match, that track wins over plain rotation position; anything else
+    // (no mood, no tagged tracks, no match) falls through to the existing
+    // sequential behavior unchanged. Rotation position is updated to match
+    // so handleEnded's own "next in pool" still advances sensibly from here.
+    function enterState(state: TurnState, showBanner = true, mood?: string | null) {
       const pool = statePoolsRef.current[state]
       if (cancelled || !pool || pool.length === 0) return
-      const pos = (stateIndexRef.current[state] ?? 0) % pool.length
+      const matched = pool.length > 1 ? pickTrackByMood(pool, mood) : null
+      const pos = matched !== null ? pool.indexOf(matched) : (stateIndexRef.current[state] ?? 0) % pool.length
+      if (matched !== null) stateIndexRef.current[state] = pos
       audio.loop = pool.length === 1 // a single combat track just loops in place — no need to rotate through a pool of one
       startTrack(pool[pos], showBanner)
     }
@@ -265,7 +273,7 @@ export function useBackgroundMusic() {
     // `state` is null or has no pool of its own. A no-op if we're already in
     // the requested mode, so calling this every turn with an unchanged state
     // costs nothing.
-    function setTurnState(state: TurnState | null) {
+    function setTurnState(state: TurnState | null, mood?: string | null) {
       pendingTurnStateRef.current = state
       if (cancelled || !discoveredRef.current) return
 
@@ -279,7 +287,7 @@ export function useBackgroundMusic() {
       window.setTimeout(() => {
         if (cancelled) return
         if (poolKey !== null) {
-          enterState(poolKey, true)
+          enterState(poolKey, true, mood)
         } else if (tracksRef.current.length > 0) {
           playCurrent(true)
         }
@@ -477,8 +485,8 @@ export function useBackgroundMusic() {
   // who hasn't opted into audio yet. It still switches the underlying
   // <audio> element (silently, while muted) so the right track is already
   // playing whenever they do unmute.
-  function setTurnState(state: TurnState | null) {
-    setTurnStateRef.current(state)
+  function setTurnState(state: TurnState | null, mood?: string | null) {
+    setTurnStateRef.current(state, mood)
   }
 
   return {

@@ -416,7 +416,10 @@ export default function App() {
       return
     }
     const idx = findLastNarratedIndex(game.log)
-    setMusicTurnState(idx >= 0 ? game.log[idx].turnState ?? null : null)
+    // §7 Mood Tag Matching — the mood rides along purely as a refinement
+    // hint for picking among an already-selected Turn State pool's tracks;
+    // it never changes which pool plays, only which track within it.
+    setMusicTurnState(idx >= 0 ? game.log[idx].turnState ?? null : null, idx >= 0 ? game.log[idx].mood : undefined)
   }, [game?.log])
 
   // Completes a signInWithGoogle() that had to fall back to signInWithRedirect

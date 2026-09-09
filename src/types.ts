@@ -274,6 +274,7 @@ export interface NpcEntry {
   voiceNotes?: string // how they speak — a steering note for the player, not sent to the model
   factionId?: string | null // affiliation, mirrors LocationEntry's factionOwner — set/revised by the LLM via npc_mem_up.faction_id
   secretTruth?: string // hidden ground truth (motive, history, loyalty) the model always knows for this NPC but must never state directly until the story earns the reveal — never shown to the player, distinct from Discovery's public teaser
+  partyStatus?: PartyStatus // §7 — set/revised by the LLM via npc_mem_up.party_status when this NPC actively joins/leaves the protagonist's travelling party; absent means they've never been a companion
   firstSeenTime?: GameTime // set once, at stub creation — same anti-drift anchor as LocationEntry's
   lastSeenTime?: GameTime // updated on every npc_mem_up touch
   tags?: string[]
@@ -281,6 +282,14 @@ export interface NpcEntry {
   loggedAt?: string // see LocationEntry.loggedAt
   discovery?: Discovery
 }
+
+// §7 Party Status — an NPC's travelling-companion state, distinct from
+// Affection/Trust (which track the *relationship*, not physical presence in
+// the party). "companion" means actively travelling with the protagonist
+// right now; "departed" means they once were but have since left (so the
+// narrator and UI can tell that apart from an NPC who's simply never joined
+// at all — absent partyStatus).
+export type PartyStatus = 'companion' | 'departed'
 
 export interface FactionEntry {
   name: string
@@ -717,6 +726,7 @@ export interface NpcMemoryUpdate {
   personality?: string // sets/revises NpcEntry.personality — only on introduction or a genuine change, restated every turn thereafter as ground truth (lib/npcs.ts describePresentNpc)
   faction_id?: string | null // sets/revises NpcEntry.factionId
   secret_truth?: string // sets/revises NpcEntry.secretTruth — known to the model as ground truth, never player-visible, never to be recited as exposition until the story itself earns the reveal
+  party_status?: PartyStatus // sets/revises NpcEntry.partyStatus — only sent the turn this NPC actually joins or leaves the travelling party, never restated on an ordinary turn
 }
 
 // §5.1b Class Evolution — the model may propose replacing the player's

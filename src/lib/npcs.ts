@@ -80,6 +80,7 @@ export function applyNpcUpdates(
         personality: u.personality || prev.personality,
         factionId: u.faction_id ?? prev.factionId,
         secretTruth: u.secret_truth || prev.secretTruth,
+        partyStatus: u.party_status ?? prev.partyStatus,
         lastSeenLocId: locId ?? prev.lastSeenLocId,
         // Set-once, decoupled from ensureEntry's `created` flag: a {{Term|npc}}
         // tag frequently registers the dict entry first (same turn, before
@@ -129,7 +130,10 @@ export function describePresentNpc(id: string, entry: NpcEntry): string {
   // stated once far away in the system prompt.
   const personality = entry.personality ? ` | Personality: ${entry.personality}` : ''
   const secret = entry.secretTruth ? ` | Secret (never reveal directly): "${entry.secretTruth}"` : ''
-  return `NPC: ${entry.name} (id: ${id})${identity ? ` | ${identity}` : ''} | Stage: ${entry.stage} | Trust: ${trustWord(entry.trust)}${gear ? ` | ${gear}` : ''}${personality}${firstSeen} | Mem: "${entry.memSummary}"${secret}`
+  // Party status only shown when set at all — an NPC who's never joined
+  // costs 0 extra context, same economy as every other optional field here.
+  const party = entry.partyStatus ? ` | Party: ${entry.partyStatus === 'companion' ? 'Travelling companion' : 'Departed companion'}` : ''
+  return `NPC: ${entry.name} (id: ${id})${identity ? ` | ${identity}` : ''} | Stage: ${entry.stage} | Trust: ${trustWord(entry.trust)}${gear ? ` | ${gear}` : ''}${personality}${party}${firstSeen} | Mem: "${entry.memSummary}"${secret}`
 }
 
 // Trust's own parallel word ladder — kept separate from affection's Stranger

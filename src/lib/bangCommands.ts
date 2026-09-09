@@ -23,6 +23,7 @@ export interface BangResult {
 // keep `name` in sync with the switch cases in resolveBangCommand below.
 export const BANG_COMMANDS: { name: string; usage: string; description: string }[] = [
   { name: 'npc', usage: '!npc [name]', description: "NPC roster, or one companion's dossier" },
+  { name: 'party', usage: '!party', description: 'Currently travelling companions' },
   { name: 'items', usage: '!items', description: 'Everything currently carried' },
   { name: 'equip', usage: '!equip [item]', description: 'Equip a weapon, armor, or accessory' },
   { name: 'unequip', usage: '!unequip [weapon|armor|accessory]', description: 'Unequip a slot' },
@@ -159,6 +160,14 @@ export function resolveBangCommand(raw: string, campaign: Campaign): BangResult 
       }
       const rows = Object.entries(campaign.npcs ?? {}).map(([id, n]) => npcRow(id, n))
       return tableResult('NPC', rows, 'No NPCs met yet.')
+    }
+    // §7 Party Status — a filtered view of the same NPC roster, showing only
+    // those currently marked as an active travelling companion.
+    case 'party': {
+      const rows = Object.entries(campaign.npcs ?? {})
+        .filter(([, n]) => n.partyStatus === 'companion')
+        .map(([id, n]) => npcRow(id, n))
+      return tableResult('Party', rows, 'No companions travelling with you right now.')
     }
     case 'items': {
       const equippedBy = new Map<string, EquipSlot>()

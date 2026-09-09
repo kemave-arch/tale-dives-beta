@@ -36,6 +36,7 @@ export { decodeXmlEntities }
 const EFFORT_TIERS = ['minor', 'focused', 'taxing'] as const
 const PROJECT_STATS = ['advanced', 'completed', 'stalled'] as const
 const ENDING_OUTCOMES = ['win', 'lose', 'neutral'] as const
+const PARTY_STATUSES = ['companion', 'departed'] as const
 // A breakthrough always moves an attribute forward from wherever it already
 // is — "Untrained" (rank 1, the floor) is never a valid *result*, so it's
 // excluded from the tier word set breakthrough.tier is checked against,
@@ -160,6 +161,7 @@ export function parseXmlTurnResponse(raw: string): TurnResponse {
       personality: str(el.getAttribute('personality')),
       faction_id: str(el.getAttribute('faction')),
       secret_truth: str(el.getAttribute('secret')),
+      party_status: optTierWord(el.getAttribute('party'), 'npc.party', PARTY_STATUSES),
     }
   })
 

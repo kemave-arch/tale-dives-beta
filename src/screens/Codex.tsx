@@ -1554,6 +1554,7 @@ export default function Codex({
       personality: draft.personality?.trim() || undefined,
       voiceNotes: draft.voiceNotes?.trim() || undefined,
       secretTruth: draft.secretTruth?.trim() || undefined,
+      partyStatus: draft.partyStatus || undefined,
       factionId: draft.factionId || null,
       tags: draft.tags,
       discovery: validateDiscovery(draft.discovery, { locations, npcs, quests }),
@@ -2163,6 +2164,18 @@ export default function Codex({
                   ))}
                 </select>
               </label>
+              <label className="block">
+                <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Party Status (§7)</span>
+                <select
+                  value={draft.partyStatus ?? ''}
+                  onChange={(e) => setDraft((d) => ({ ...d, partyStatus: e.target.value || undefined }))}
+                  className={SELECT_CLASS}
+                >
+                  <option value="">Never joined</option>
+                  <option value="companion">Travelling companion</option>
+                  <option value="departed">Departed companion</option>
+                </select>
+              </label>
               <TextField label="Appearance" value={draft.appearance ?? ''} onChange={(v) => setDraft((d) => ({ ...d, appearance: v }))} textarea placeholder="Physical description…" />
               <TextField label="Held Weapon" value={draft.heldWeapon ?? ''} onChange={(v) => setDraft((d) => ({ ...d, heldWeapon: v }))} placeholder="Currently wielded weapon…" />
               <TextField label="Worn Armor" value={draft.wornArmor ?? ''} onChange={(v) => setDraft((d) => ({ ...d, wornArmor: v }))} placeholder="Currently worn armor/gear…" />
@@ -2196,6 +2209,13 @@ export default function Codex({
               />
               <SectionCard accent={CATEGORY_ACCENTS.npcs} icon={Heart} title="Bond & Status">
                 <FieldRow label="Stage" value={npcs[entryId].stage} icon={User} />
+                {npcs[entryId].partyStatus && (
+                  <FieldRow
+                    label="Party Status"
+                    value={npcs[entryId].partyStatus === 'companion' ? 'Travelling companion' : 'Departed companion'}
+                    icon={Users}
+                  />
+                )}
                 <div className="flex flex-col gap-2 pt-1">
                   <StatBar label="Trust" value={npcs[entryId].trust} max={5} displayValue={trustWord(npcs[entryId].trust)} />
                   <StatBar label="Affection" value={npcs[entryId].affection} max={5} displayValue={npcs[entryId].stage} />

@@ -1,4 +1,4 @@
-import type { ApiSettings, Dict, FactionEntry, ItemEntry, LocationEntry, LoreEntry, NpcEntry, QuestEntry, WorldFaction, WorldLocation } from '../types.ts'
+import type { ApiSettings, Dict, FactionEntry, ItemEntry, LocationEntry, LoreEntry, NpcEntry, QuestEntry, RegionEntry, WorldFaction, WorldLocation } from '../types.ts'
 import { getProvider } from '../api/providers/index.ts'
 import { buildWorldSeedSystemInstructions } from '../api/worldSeedContract.ts'
 import { MAX_OUTPUT_TOKENS_CEILING } from '../api/turnContract.ts'
@@ -52,6 +52,7 @@ export interface SeedCampaignResult {
   lore: Dict<LoreEntry>
   npcs: Dict<NpcEntry>
   quests: Dict<QuestEntry>
+  regions: Dict<RegionEntry>
   locations: Dict<LocationEntry>
   factions: Dict<FactionEntry>
   items: Dict<ItemEntry>
@@ -96,7 +97,7 @@ function uniqueId(name: string, existingIds: Set<string>, prefix = ''): string {
 
 export async function seedCampaign(input: SeedCampaignInput): Promise<SeedCampaignResult> {
   const prompt = buildSeedPrompt(input)
-  const empty: SeedCampaignResult = { lore: {}, npcs: {}, quests: {}, locations: {}, factions: {}, items: {}, inventory: {}, debug: { prompt } }
+  const empty: SeedCampaignResult = { lore: {}, npcs: {}, quests: {}, regions: {}, locations: {}, factions: {}, items: {}, inventory: {}, debug: { prompt } }
 
   let raw: string
   try {
@@ -158,11 +159,30 @@ export async function seedCampaign(input: SeedCampaignInput): Promise<SeedCampai
     }
   }
 
+  // §7 Region Map Pins — regions only ever accompany a seeded location batch
+  // (see worldSeedContract.ts's <region> rule), so id collisions against
+  // player-authored content aren't a real concern the way locations/factions
+  // need existingLocIds/existingFacIds guards for.
+  const regionIds = new Set<string>()
+  const regions: Dict<RegionEntry> = {}
+  for (const r of seed.regions) {
+    const id = slugify(r.id) || slugify(r.name)
+    if (!id || regions[id]) continue
+    regionIds.add(id)
+    regions[id] = { name: r.name, description: r.desc?.trim() || undefined }
+  }
+
   const existingLocIds = new Set(input.existingLocations.map((l) => 'loc_' + slugify(l.name)))
   const locations: Dict<LocationEntry> = {}
   for (const l of seed.locations) {
     const id = uniqueId(l.name, existingLocIds, 'loc_')
     existingLocIds.add(id)
+    // regionId/mapX/mapY are write-once, at creation, exactly like every
+    // other field seeded here — never re-derived on a later turn. A
+    // region_id that doesn't match a <region> this same pass actually
+    // emitted is dropped rather than trusted, same defensive posture as
+    // uniqueId's collision guard above.
+    const regionId = l.regionId && regionIds.has(slugify(l.regionId)) ? slugify(l.regionId) : undefined
     locations[id] = {
       name: l.name,
       region: l.region?.trim() || 'Known World',
@@ -172,6 +192,9 @@ export async function seedCampaign(input: SeedCampaignInput): Promise<SeedCampai
       standing: 'neutral',
       locationType: l.locationType || 'Landmark',
       discovery: { state: 'known' },
+      ...(regionId ? { regionId } : {}),
+      ...(l.mapX !== undefined ? { mapX: l.mapX } : {}),
+      ...(l.mapY !== undefined ? { mapY: l.mapY } : {}),
     }
   }
 
@@ -205,5 +228,5 @@ export async function seedCampaign(input: SeedCampaignInput): Promise<SeedCampai
     }
   }
 
-  return { lore, npcs, quests, locations, factions, items, inventory, debug: { prompt, response: raw } }
+  return { lore, npcs, quests, regions, locations, factions, items, inventory, debug: { prompt, response: raw } }
 }

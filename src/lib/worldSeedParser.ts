@@ -1,5 +1,5 @@
 import type { ItemType } from '../types.ts'
-import { XmlParseError, str, parseXmlBlock } from './xmlHelpers.ts'
+import { XmlParseError, str, num, parseXmlBlock } from './xmlHelpers.ts'
 
 // Parses the <seed> grammar (api/worldSeedContract.ts) returned by the
 // one-time world-seeding call. Unlike parseXmlTurnResponse, a single
@@ -39,10 +39,19 @@ export interface SeededQuest {
   desc?: string
 }
 
+export interface SeededRegion {
+  id: string
+  name: string
+  desc?: string
+}
+
 export interface SeededLocation {
   id: string
   name: string
   region?: string
+  regionId?: string
+  mapX?: number
+  mapY?: number
   locationType?: string
   danger?: string
   desc?: string
@@ -68,6 +77,7 @@ export interface WorldSeedResult {
   lore: SeededLore[]
   npcs: SeededNpc[]
   quest?: SeededQuest
+  regions: SeededRegion[]
   locations: SeededLocation[]
   factions: SeededFaction[]
   item?: SeededItem
@@ -116,6 +126,14 @@ export function parseWorldSeedResponse(raw: string): WorldSeedResult {
   const quest: SeededQuest | undefined =
     questEl && questId && questName ? { id: questId, name: questName, desc: str(questEl.getAttribute('desc')) } : undefined
 
+  const regions: SeededRegion[] = []
+  for (const el of Array.from(doc.querySelectorAll('region'))) {
+    const id = str(el.getAttribute('id'))
+    const name = str(el.getAttribute('name'))
+    if (!id || !name) continue
+    regions.push({ id, name, desc: str(el.getAttribute('desc')) })
+  }
+
   const locations: SeededLocation[] = []
   for (const el of Array.from(doc.querySelectorAll('location'))) {
     const id = str(el.getAttribute('id'))
@@ -125,6 +143,9 @@ export function parseWorldSeedResponse(raw: string): WorldSeedResult {
       id,
       name,
       region: str(el.getAttribute('region')),
+      regionId: str(el.getAttribute('region_id')),
+      mapX: num(el.getAttribute('map_x')),
+      mapY: num(el.getAttribute('map_y')),
       locationType: str(el.getAttribute('type')),
       danger: str(el.getAttribute('danger')),
       desc: str(el.getAttribute('desc')),
@@ -154,7 +175,7 @@ export function parseWorldSeedResponse(raw: string): WorldSeedResult {
       ? { id: itemId, name: itemName, type: itemType as ItemType, desc: str(itemEl.getAttribute('desc')), traits: str(itemEl.getAttribute('traits')) }
       : undefined
 
-  return { lore, npcs, quest, locations, factions, item }
+  return { lore, npcs, quest, regions, locations, factions, item }
 }
 
 export { XmlParseError as WorldSeedParseError }

@@ -20,7 +20,7 @@ import { useLongTextEditor } from '../lib/useLongTextEditor.tsx'
 import { EQUIPPABLE_TYPES, LOCATION_DANGER_LEVELS, LOCATION_TYPES } from '../types.ts'
 import type {
   BestiaryEntry, CompetencyTier, CraftingJob, Discovery, EquipSlot, FactionEntry, ItemEntry, ItemType, LocationEntry, LogEntry, LoreEntry, NpcEntry, Player,
-  ProjectEntry, ProjectStage, QuestEntry, RevealTrigger, SkillEntry, ThreatTierToken, WorldData,
+  ProjectEntry, ProjectStage, QuestEntry, RegionEntry, RevealTrigger, SkillEntry, ThreatTierToken, WorldData,
 } from '../types.ts'
 import { COMPETENCY_TIERS, THREAT_TIERS, tierToWord, wordToTier, displayThreatLabel } from '../lib/tiers.ts'
 import { trustWord } from '../lib/npcs.ts'
@@ -56,7 +56,7 @@ function traitsText(traits: ItemEntry['traits']): string | null {
 }
 
 export type CategoryId =
-  | 'campaign' | 'crafting' | 'chapters' | 'npcs' | 'factions' | 'locations' | 'lore' | 'quests' | 'bestiary' | 'items' | 'skills' | 'projects'
+  | 'campaign' | 'crafting' | 'chapters' | 'npcs' | 'factions' | 'locations' | 'regions' | 'lore' | 'quests' | 'bestiary' | 'items' | 'skills' | 'projects'
 
 interface CodexProps {
   world: WorldData
@@ -66,6 +66,7 @@ interface CodexProps {
   skills: Record<string, SkillEntry>
   factions: Record<string, FactionEntry>
   locations: Record<string, LocationEntry>
+  regions: Record<string, RegionEntry>
   lore: Record<string, LoreEntry>
   quests: Record<string, QuestEntry>
   bestiary: Record<string, BestiaryEntry>
@@ -77,6 +78,7 @@ interface CodexProps {
   onUpdateNpc: (id: string, patch: Partial<NpcEntry> | null) => void
   onUpdateFaction: (id: string, patch: Partial<FactionEntry> | null) => void
   onUpdateLocation: (id: string, patch: Partial<LocationEntry> | null) => void
+  onUpdateRegion: (id: string, patch: Partial<RegionEntry> | null) => void
   onUpdateLore: (id: string, patch: Partial<LoreEntry> | null) => void
   onUpdateQuest: (id: string, patch: Partial<QuestEntry> | null) => void
   onUpdateBestiary: (id: string, patch: Partial<BestiaryEntry> | null) => void
@@ -416,7 +418,7 @@ function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
 // source, so a `` `border-[${accent.hex}]/35` `` built at runtime would
 // silently never get its CSS generated. This mirrors how MainMenu's own
 // cyan/purple cards are written (also full literal strings, not templated).
-type CoreCategoryId = 'npcs' | 'factions' | 'locations' | 'lore' | 'quests' | 'bestiary' | 'skills' | 'items' | 'projects'
+type CoreCategoryId = 'npcs' | 'factions' | 'locations' | 'regions' | 'lore' | 'quests' | 'bestiary' | 'skills' | 'items' | 'projects'
 
 interface CategoryAccent {
   icon: LucideIcon
@@ -462,6 +464,16 @@ const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
   },
   locations: {
     icon: Map,
+    card: GOLD_CARD_STYLE,
+    iconBadge: GOLD_ICON_BADGE,
+    kicker: GOLD_KICKER,
+    badge: GOLD_BADGE,
+    sectionIcon: 'text-[#f0ca65]',
+    tag: GOLD_TAG,
+    activeTab: GOLD_ACTIVE_TAB,
+  },
+  regions: {
+    icon: Compass,
     card: GOLD_CARD_STYLE,
     iconBadge: GOLD_ICON_BADGE,
     kicker: GOLD_KICKER,
@@ -1010,6 +1022,7 @@ export default function Codex({
   npcs,
   factions,
   locations,
+  regions,
   lore,
   quests,
   bestiary,
@@ -1021,6 +1034,7 @@ export default function Codex({
   onUpdateNpc,
   onUpdateFaction,
   onUpdateLocation,
+  onUpdateRegion,
   onUpdateLore,
   onUpdateQuest,
   onUpdateBestiary,
@@ -1168,6 +1182,16 @@ export default function Codex({
       return true
     })
   }, [locations, searchQuery, activeSubtab])
+
+  const filteredRegions = useMemo(() => {
+    return Object.entries(regions).filter(([, r]) => {
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase()
+        if (!r.name.toLowerCase().includes(q) && !r.description?.toLowerCase().includes(q)) return false
+      }
+      return true
+    })
+  }, [regions, searchQuery])
 
   const filteredLore = useMemo(() => {
     return Object.entries(lore).filter(([, l]) => {
@@ -1468,6 +1492,7 @@ export default function Codex({
     { id: 'npcs', label: 'NPCs', description: 'NPCs, Companions & Trust Ratings', icon: Users, count: Object.keys(npcs).length },
     { id: 'factions', label: 'Factions', description: 'Political Cabals, Guilds & Territory', icon: ShieldCheck, count: Object.keys(factions).length },
     { id: 'locations', label: 'Locations', description: 'Regions, Danger Levels & Map Conditions', icon: Map, count: Object.keys(locations).length },
+    { id: 'regions', label: 'Regions', description: 'Named Areas Grouping Locations on the Map', icon: Compass, count: Object.keys(regions).length },
     { id: 'lore', label: 'Lore', description: 'Historical Legends, Secrets & Magic', icon: ScrollText, count: Object.keys(lore).length },
     { id: 'skills', label: 'Skills', description: 'Combat Spells, Techniques & Abilities', icon: Sparkles, count: Object.keys(skills).length },
     { id: 'items', label: 'Items', description: 'Equipment, Artifacts & Quest Items', icon: Backpack, count: Object.keys(inventory).length },
@@ -1561,7 +1586,22 @@ export default function Codex({
       inhabitants: draft.inhabitants?.trim() || undefined,
       tags: draft.tags,
       discovery: validateDiscovery(draft.discovery, { locations, npcs, quests }),
+      // §7 Region Map Pins — hand-edited here the same as any other Codex
+      // field; write-once in practice (world seeding sets these once, at
+      // creation) but Codex CRUD is still the escape hatch to fix/set them
+      // by hand, exactly like every other field on this entry.
+      regionId: draft.regionId?.trim() || undefined,
+      mapX: draft.mapX === undefined || Number.isNaN(draft.mapX) ? undefined : draft.mapX,
+      mapY: draft.mapY === undefined || Number.isNaN(draft.mapY) ? undefined : draft.mapY,
+      mapRadius: draft.mapRadius === undefined || Number.isNaN(draft.mapRadius) ? undefined : draft.mapRadius,
     })
+    setEntryId(id)
+    setEditing(false)
+  }
+
+  function saveRegion() {
+    const id = entryId === NEW_ID ? genId(draft.name, regions) : entryId!
+    onUpdateRegion(id, { name: draft.name, description: draft.description?.trim() || undefined })
     setEntryId(id)
     setEditing(false)
   }
@@ -1694,6 +1734,7 @@ export default function Codex({
     if (kind === 'npcs') onUpdateNpc(entryId, null)
     else if (kind === 'factions') onUpdateFaction(entryId, null)
     else if (kind === 'locations') onUpdateLocation(entryId, null)
+    else if (kind === 'regions') onUpdateRegion(entryId, null)
     else if (kind === 'lore') onUpdateLore(entryId, null)
     else if (kind === 'quests') onUpdateQuest(entryId, null)
     else if (kind === 'bestiary') onUpdateBestiary(entryId, null)
@@ -1738,6 +1779,7 @@ export default function Codex({
     entryId && category === 'npcs' ? (npcs[entryId] && isHidden(npcs[entryId]) ? '???' : npcs[entryId]?.name) :
     entryId && category === 'factions' ? (factions[entryId] && isHidden(factions[entryId]) ? '???' : factions[entryId]?.name) :
     entryId && category === 'locations' ? (locations[entryId] && isHidden(locations[entryId]) ? '???' : locations[entryId]?.name) :
+    entryId && category === 'regions' ? (regions[entryId]?.name ?? entryId.replace(/_/g, ' ')) :
     entryId && category === 'lore' ? (lore[entryId] && isHidden(lore[entryId]) ? '???' : lore[entryId]?.name) :
     entryId && category === 'quests' ? (quests[entryId] && isHidden(quests[entryId]) ? '???' : quests[entryId]?.name) :
     entryId && category === 'bestiary' ? (bestiary[entryId] && isHidden(bestiary[entryId]) ? '???' : bestiary[entryId]?.name) :
@@ -2337,6 +2379,26 @@ export default function Codex({
               </label>
               <TextField label="Region" value={draft.region ?? ''} onChange={(v) => setDraft((d) => ({ ...d, region: v }))} />
               <label className="block">
+                <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Region Map Pin (§7)</span>
+                <select
+                  value={draft.regionId ?? ''}
+                  onChange={(e) => setDraft((d) => ({ ...d, regionId: e.target.value || undefined }))}
+                  className={SELECT_CLASS}
+                >
+                  <option value="">Unassigned</option>
+                  {Object.entries(regions).map(([id, r]) => (
+                    <option key={id} value={id}>{r.name}</option>
+                  ))}
+                </select>
+              </label>
+              {draft.regionId && (
+                <div className="grid grid-cols-3 gap-2">
+                  <TextField label="Map X (0-100)" value={draft.mapX !== undefined ? String(draft.mapX) : ''} onChange={(v) => setDraft((d) => ({ ...d, mapX: v === '' ? undefined : Number(v) }))} />
+                  <TextField label="Map Y (0-100)" value={draft.mapY !== undefined ? String(draft.mapY) : ''} onChange={(v) => setDraft((d) => ({ ...d, mapY: v === '' ? undefined : Number(v) }))} />
+                  <TextField label="Radius" value={draft.mapRadius !== undefined ? String(draft.mapRadius) : ''} onChange={(v) => setDraft((d) => ({ ...d, mapRadius: v === '' ? undefined : Number(v) }))} />
+                </div>
+              )}
+              <label className="block">
                 <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Danger Level</span>
                 <select
                   value={draft.dangerLevel ?? ''}
@@ -2388,6 +2450,13 @@ export default function Codex({
               />
               <SectionCard accent={CATEGORY_ACCENTS.locations} icon={MapPin} title="Geography">
                 <FieldRow label="Region" value={locations[entryId].region} icon={MapPin} />
+                {locations[entryId].regionId && (
+                  <FieldRow
+                    label="Map Pin"
+                    value={`${regions[locations[entryId].regionId!]?.name ?? locations[entryId].regionId} (${locations[entryId].mapX ?? '?'}, ${locations[entryId].mapY ?? '?'})`}
+                    icon={Compass}
+                  />
+                )}
                 <FieldRow label="Danger" value={locations[entryId].dangerLevel} icon={AlertTriangle} />
                 <FieldRow label="Standing" value={effectiveStanding(locations[entryId], factions)} icon={ShieldCheck} />
                 {locations[entryId].factionOwner && (
@@ -2402,6 +2471,65 @@ export default function Codex({
                 </SectionCard>
               )}
               <TagPills tags={locations[entryId].tags} accent={CATEGORY_ACCENTS.locations} />
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Regions — §7 Region Map Pins, the write-once backing store for a
+          future visual top-down region map (Tier 4). Deliberately thin: no
+          Discovery gating (an organizational container, not a
+          narratively-concealable fact), no tags. */}
+      {category === 'regions' && !entryId && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <AddButton label="Add Region" onClick={() => startCreate({ name: '', description: '' })} />
+          {filteredRegions.map(([id, r]) => {
+            const locCount = Object.values(locations).filter((l) => l.regionId === id).length
+            return (
+              <DeckEntryCard
+                key={id}
+                accent={CATEGORY_ACCENTS.regions}
+                title={r.name}
+                subtitle={r.description || 'A named region on the map.'}
+                badge={<AutoBadge shown={r.autoLogged} />}
+                metaChips={[{ icon: MapPin, label: `${locCount} location${locCount === 1 ? '' : 's'}` }]}
+                onClick={() => setEntryId(id)}
+              />
+            )
+          })}
+          {Object.keys(regions).length === 0 ? (
+            <p className="font-narrative italic text-sm text-ink-muted col-span-full">No regions charted yet.</p>
+          ) : filteredRegions.length === 0 ? (
+            <p className="font-narrative italic text-sm text-ink-muted col-span-full">No regions match current filters.</p>
+          ) : null}
+        </div>
+      )}
+      {category === 'regions' && entryId && (editing || regions[entryId]) && (
+        <>
+          <div className="flex justify-end mb-3">
+            <CrudToolbar editing={editing} canDelete={entryId !== NEW_ID} onEdit={() => startEdit(entryId, regions[entryId])} onSave={saveRegion} onCancel={cancelEdit} onDelete={() => deleteEntry('regions')} />
+          </div>
+          {editing ? (
+            <DetailPanel>
+              <TextField label="Name" value={draft.name ?? ''} onChange={(v) => setDraft((d) => ({ ...d, name: v }))} />
+              <TextField label="Description" value={draft.description ?? ''} onChange={(v) => setDraft((d) => ({ ...d, description: v }))} textarea />
+            </DetailPanel>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <EntryHeroHeader accent={CATEGORY_ACCENTS.regions} title={regions[entryId].name} badges={<AutoBadge shown={regions[entryId].autoLogged} />} />
+              <SectionCard accent={CATEGORY_ACCENTS.regions} icon={Compass} title="Overview">
+                {regions[entryId].description && <FieldRow label="Description" value={regions[entryId].description} />}
+                <FieldRow
+                  label="Locations"
+                  value={
+                    Object.entries(locations)
+                      .filter(([, l]) => l.regionId === entryId)
+                      .map(([, l]) => l.name)
+                      .join(', ') || undefined
+                  }
+                  icon={MapPin}
+                />
+              </SectionCard>
             </div>
           )}
         </>

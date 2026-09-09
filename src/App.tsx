@@ -68,7 +68,7 @@ import * as store from './lib/store.ts'
 import { CURRENT_SCHEMA_VERSION, EQUIPPABLE_TYPES } from './types.ts'
 import type {
   BestiaryEntry, Campaign, CombatState, ConditionTag, Dict, EquipSlot, FactionEntry, GameTime, HistoryTurn, ItemEntry, KeywordLink, LocationEntry, LogEntry, LoreEntry,
-  NpcEntry, Player, ProjectEntry, ProtagonistData, QuestEntry, SkillEntry, SlashCommand, TurnState, WorldData,
+  NpcEntry, Player, ProjectEntry, ProtagonistData, QuestEntry, RegionEntry, SkillEntry, SlashCommand, TurnState, WorldData,
 } from './types.ts'
 
 const KEYWORD_CATEGORY_TO_CODEX: Record<KeywordLink['category'], CategoryId> = {
@@ -713,6 +713,7 @@ export default function App() {
       proseDepth: PROSE_DEPTHS.IMMERSIVE, // default changed 2026-09-04 per explicit request for the most immersive prose by default; still overridable per-campaign in Settings
       narrationStyle: world.narrationStyle || DEFAULT_NARRATION_STYLE,
       locations: { ...initialLocations, ...seeded.locations }, // §5.10 — player-authored + World Seeding fallback + later auto-registration
+      regions: seeded.regions, // §7 Region Map Pins — World Seeding's regions, if any; write-once, no later auto-registration path
       npcs: { ...initialNpcs, ...seeded.npcs }, // §5.5/§5.14 — World Seeding's starting relations, then auto-registration
       factions: { ...initialFactions, ...seeded.factions }, // §5.14 — player-authored + World Seeding fallback + later keyword links
       lore: seeded.lore, // §5.14 — World Seeding, then {{Term|lore}} keyword links
@@ -1226,7 +1227,7 @@ export default function App() {
   // whatever's already at that id, so the same call creates a fresh entry
   // when the id doesn't exist yet.
   function patchCodexDict(
-    dictKey: 'npcs' | 'factions' | 'locations' | 'lore' | 'quests' | 'bestiary' | 'skills' | 'projects',
+    dictKey: 'npcs' | 'factions' | 'locations' | 'regions' | 'lore' | 'quests' | 'bestiary' | 'skills' | 'projects',
     id: string,
     patch: Record<string, unknown> | null,
   ) {
@@ -1774,6 +1775,7 @@ export default function App() {
         npcs={game.npcs}
         factions={game.factions}
         locations={game.locations}
+        regions={game.regions ?? {}}
         lore={game.lore}
         quests={game.quests}
         bestiary={game.bestiary}
@@ -1785,6 +1787,7 @@ export default function App() {
         onUpdateNpc={(id: string, patch: Partial<NpcEntry> | null) => patchCodexDict('npcs', id, patch as Record<string, unknown> | null)}
         onUpdateFaction={(id: string, patch: Partial<FactionEntry> | null) => patchCodexDict('factions', id, patch as Record<string, unknown> | null)}
         onUpdateLocation={(id: string, patch: Partial<LocationEntry> | null) => patchCodexDict('locations', id, patch as Record<string, unknown> | null)}
+        onUpdateRegion={(id: string, patch: Partial<RegionEntry> | null) => patchCodexDict('regions', id, patch as Record<string, unknown> | null)}
         onUpdateLore={(id: string, patch: Partial<LoreEntry> | null) => patchCodexDict('lore', id, patch as Record<string, unknown> | null)}
         onUpdateQuest={(id: string, patch: Partial<QuestEntry> | null) => patchCodexDict('quests', id, patch as Record<string, unknown> | null)}
         onUpdateBestiary={(id: string, patch: Partial<BestiaryEntry> | null) => patchCodexDict('bestiary', id, patch as Record<string, unknown> | null)}
@@ -1814,6 +1817,7 @@ export default function App() {
         npcs={game.npcs}
         factions={game.factions}
         locations={game.locations}
+        regions={game.regions ?? {}}
         lore={game.lore}
         quests={game.quests}
         bestiary={game.bestiary}
@@ -1825,6 +1829,7 @@ export default function App() {
         onUpdateNpc={(id: string, patch: Partial<NpcEntry> | null) => patchCodexDict('npcs', id, patch as Record<string, unknown> | null)}
         onUpdateFaction={(id: string, patch: Partial<FactionEntry> | null) => patchCodexDict('factions', id, patch as Record<string, unknown> | null)}
         onUpdateLocation={(id: string, patch: Partial<LocationEntry> | null) => patchCodexDict('locations', id, patch as Record<string, unknown> | null)}
+        onUpdateRegion={(id: string, patch: Partial<RegionEntry> | null) => patchCodexDict('regions', id, patch as Record<string, unknown> | null)}
         onUpdateLore={(id: string, patch: Partial<LoreEntry> | null) => patchCodexDict('lore', id, patch as Record<string, unknown> | null)}
         onUpdateQuest={(id: string, patch: Partial<QuestEntry> | null) => patchCodexDict('quests', id, patch as Record<string, unknown> | null)}
         onUpdateBestiary={(id: string, patch: Partial<BestiaryEntry> | null) => patchCodexDict('bestiary', id, patch as Record<string, unknown> | null)}

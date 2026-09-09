@@ -211,6 +211,30 @@ export interface LocationEntry {
   autoLogged?: boolean
   loggedAt?: string // the turn this entry was first created, e.g. "C1-3" (Chapter 1, block 3) — see lib/leveling.ts's turnRefFor
   discovery?: Discovery
+  // §7 Region Map Pins — a structured link into Campaign.regions, distinct
+  // from the plain `region` display string above (which stays freeform and
+  // untouched for backward compat). Write-once: set only at this location's
+  // creation time (world seeding or Codex CRUD), never re-derived or
+  // overwritten on a later turn — a raw coordinate is only a hallucination
+  // risk when a recurring channel re-asserts it every turn, not when it's
+  // authored once like any other static Codex fact.
+  regionId?: string
+  mapX?: number // 0-100, normalized position on the region's own map
+  mapY?: number // 0-100, normalized position on the region's own map
+  mapRadius?: number // optional — this location's rough area of influence on the map, same 0-100 scale
+}
+
+// §7 Region Map Pins — a lightweight named grouping locations attach to via
+// LocationEntry.regionId, the write-once backing store for a future visual
+// top-down region map (Tier 4 — mapImageUrl lands separately once image
+// generation exists). Auto-registered by world seeding, or by hand via
+// Codex CRUD; deliberately thin (no Discovery gating of its own) since a
+// region is an organizational container, not a narratively-concealable fact.
+export interface RegionEntry {
+  name: string
+  description?: string
+  autoLogged?: boolean
+  loggedAt?: string
 }
 
 // §5.5/§5.14 NPC Codex entry. affection/trust are two INDEPENDENT
@@ -545,6 +569,7 @@ export interface Campaign {
   proseDepth: ProseDepthConfig
   narrationStyle: string
   locations: Dict<LocationEntry>
+  regions?: Dict<RegionEntry> // §7 Region Map Pins — optional since older saves predate it
   npcs: Dict<NpcEntry>
   factions: Dict<FactionEntry>
   lore: Dict<LoreEntry>

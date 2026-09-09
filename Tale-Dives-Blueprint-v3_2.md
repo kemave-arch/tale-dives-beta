@@ -583,35 +583,44 @@ Motion should always be interruptible (a fast second tap cancels/reverses an in-
 
 ### 6.1 Theme Palette & Visual Tokens
 
-**Light mode, gold glassmorphism.** The app runs on a warm ivory/parchment base, not a dark obsidian one — gold is reserved for accents, borders, icons, and buttons, never for body text on a light background, since gold-on-light fails readability. All body copy uses the dark ink tone (`#2a241e`) regardless of which light surface it sits on.
+**Dark obsidian glass, gold accents — the app-wide base theme.** The earlier light-ivory/parchment palette documented in prior blueprint revisions was retired: running Codex/Settings/the creation flow on a light base while Title and Main Menu ran dark obsidian made those screens read as a different app from the front door, so the dark chrome that Title/Main Menu already established was promoted to the whole app instead (`src/index.css` `:root`). Gold (`--td-gold-accent`/`--td-gold-primary`) stays reserved for accents, borders, icons, and buttons — never for body text, which uses the warm off-white ink tone (`--td-ink`) regardless of which dark surface it sits on. The one deliberate exception is the reading surface itself: the Story Chronicle/Story Viewer's parchment box (`.parchment-surface` in `src/index.css`) stays light, warm paper on purpose — see the readability note below.
 
-| Element | Hex Color | Tailwind Equivalent | Role |
+| Element | Token (`src/index.css`) | Hex | Role |
 | --- | --- | --- | --- |
-| **Ivory Canvas** | `#f8f4ea` | `bg-[#f8f4ea]` | Main app background |
-| **Card Surface** | `#fdfaf0` | `bg-[#fdfaf0]` | Main cards, menu panels, Settings Drawer |
-| **Ink (body text)** | `#2a241e` | `text-[#2a241e]` | Default body/paragraph text on every light surface — never gold |
-| **Gold Primary** | `#9c7a2e` | `text-[#9c7a2e]` / `border-[#e2c275]` | Titles, Cinzel headers — deepened from decorative gold so header text stays AA-contrast on ivory |
-| **Gold Accent (decorative)** | `#e2c275` | `border-[#e2c275]` / `bg-[#e2c275]/15` | Borders, glass tints, icon strokes, dividers — not for text |
-| **Action Gold** | `#f0ca65` | `bg-[#f0ca65] text-[#2a241e]` | **RESUME** / **SAVE SETTINGS** primary buttons — dark ink text on the gold fill keeps this one AA-compliant |
-| **Emerald Highlight** | `#0f5132` on `#dff3e8` | `bg-[#dff3e8] text-[#0f5132]` | **NEW SESSION** / status connectivity badges |
-| **Aged Parchment** | `#e5d9c3` | `bg-[#e5d9c3] text-[#2a241e]` | Story Chronicle reader scroll box — deliberately a shade darker than Ivory Canvas so the reading surface still reads as distinct "paper" against the app chrome |
-| **Parchment Header** | `#e0d3ba` | `bg-[#e0d3ba] text-[#5a4d3e]` | Parchment metadata status bar |
-| **Prompt Input Tray** | `#fdfaf0` | `bg-[#fdfaf0] border-[#e2c275]/50` | Bottom action entry bar |
+| **Obsidian Canvas** | `--td-canvas` | `#07050c` | Main app background |
+| **Surface** | `--td-surface` | `#14101ccc` (~80% alpha baked in) | Cards, menu panels, `.glass-panel`'s flat/performance-mode fallback |
+| **Surface Raised** | `--td-surface-raised` | `#1b1626` | Nested/elevated panels inside a Surface card |
+| **Ink (body text)** | `--td-ink` | `#f0e3c4` | Default body/paragraph text on every dark surface — never gold |
+| **Ink Muted** | `--td-ink-muted` | `#d3c1a0` | Secondary text — kept well above a typical "muted" value since it sits on busy background art as often as on flat dark |
+| **Gold Primary** | `--td-gold-primary` | `#f0ca65` | Titles, Cinzel headers, Action Gold buttons |
+| **Gold Accent (decorative)** | `--td-gold-accent` | `#e8ca8a` | Borders, glass tints, icon strokes, dividers — not for text |
+| **Emerald / Rose / Skill** | `--td-emerald` / `--td-rose` / `--td-skill` | `#34d399` / `#f87171` / `#a9c1f5` | Status highlights, faction/quest state, `[Active Skill]` inline tag |
+| **Parchment (reading-surface exception)** | `--td-parchment` | `#f8f1de` | Story Chronicle/Story Viewer scroll box ONLY — see below |
+| **Parchment Header** | `--td-parchment-header` | `#e0d3ba` | Parchment metadata status bar, same exception |
 
-**Readability rule.** Every text/background pairing above targets WCAG AA (4.5:1 for body copy, 3:1 for large headers) — this is the one non-negotiable constraint on an otherwise flexible palette. If a future accent color is added, check it against Ink-on-light and Ivory-on-accent before shipping it, not after.
+**The parchment reading-surface exception.** `.parchment-surface` (`src/index.css`) locally re-declares `--td-ink`/`--td-gold-accent`/`--td-emerald`/`--td-rose`/`--td-skill` to darker, light-background-appropriate values (e.g. `--td-ink: #2a241e`) purely so text and inline tags stay AA-readable when rendered inside that one light box — it does not change the app's base theme, which stays dark everywhere else. Any component nested inside the reading surface inherits these automatically through the cascade; nothing outside it should reference these overridden values.
+
+**Readability rule.** Every text/background pairing above targets WCAG AA (4.5:1 for body copy, 3:1 for large headers) — this is the one non-negotiable constraint on an otherwise flexible palette. If a future accent color is added, check it against Ink-on-dark (and, inside the parchment exception, Ink-on-light) before shipping it, not after.
 
 ### 6.1a Glassmorphism Component Styling
 
-Tailwind + glassmorphism is the default treatment for **floating/overlaying** surfaces — drawers, modals, the radial menu, the command palette, and toast notifications — layered on top of the Ivory Canvas background (§6.1) so depth reads clearly against the parchment/card layers beneath. Light-mode glass needs higher fill opacity than dark-mode glass to stay legible, so this is not a simple color swap of the old dark recipe:
+Glassmorphism is the aesthetic language for **floating/overlaying** surfaces — drawers, modals, the radial menu, the command palette, toast notifications, and menu/creation cards — via the shared `.glass-panel` class (`src/index.css`), layered on top of the Obsidian Canvas (§6.1). It is **not** the shipped default rendering, though: a Graphics setting (`UiPrefs.graphicsMode`, Settings → Graphics) picks between two modes, and **`'performance'` is the default for every new install** — full glass (`'glass'`) is opt-in.
 
-```html
-<!-- Standard glass surface utility class -->
-<div class="backdrop-blur-xl bg-[#fdfaf0]/80 border border-[#e2c275]/40 shadow-[0_8px_28px_rgba(120,90,20,0.12)] rounded-2xl">
+```css
+/* src/index.css — the real recipe, not a one-off utility string */
+.glass-panel {
+  backdrop-filter: blur(12px);
+  background: rgba(232, 202, 138, 0.045);
+  border: 1px solid color-mix(in srgb, var(--td-gold-accent) 25%, transparent);
+  box-shadow: var(--td-glow);
+}
 ```
 
-* **Base recipe**: `backdrop-blur-lg`–`backdrop-blur-xl`, background at 75–85% opacity of the Card Surface token (`#fdfaf0`) — noticeably higher than a dark-mode glass recipe would use, so body text (Ink, `#2a241e`) inside the panel stays AA-readable against whatever's behind it — a 1px gold-tinted border at 30–45% opacity (`border-[#e2c275]/40`), and a soft warm-toned shadow (not pure black) for lift.
-* **Where it applies**: Radial Menu (§6.5), Slash/Bang Command Palette (§6.6), bottom-sheet drawers (§9.3), the Settings Drawer (§6.4E), the API Failure Diagnostics Panel (§3.5), and modal confirmations (delete/reroll/overwrite).
-* **Where it does not apply**: the Parchment Story Canvas (§6.4C) stays fully opaque (`#e5d9c3`) — it's meant to read as physical paper, not glass, and mixing the two metaphors on the primary reading surface would hurt legibility on mobile screens in bright light.
+* **`'glass'` mode**: the recipe above, unmodified — `backdrop-filter: blur(12px)`, a near-transparent gold-tinted fill (4.5% alpha) that lets the ground show through, a thin gold hairline border, and the shared `--td-glow` shadow for lift. This is real per-frame GPU compositing cost — `backdrop-filter` is one of the most expensive things a phone GPU paints, especially several layers deep on a scrolling screen (Codex cards, nested modals) — which is exactly why it isn't the default.
+* **`'performance'` mode (default)**: `html.gfx-performance` strips `backdrop-filter` to `none` on every `.glass-panel`/`.backdrop-blur-*` element, and gives `.glass-panel` itself a **fake-frosted-glass fallback** instead of a flat single-color card — a subtle three-stop diagonal gradient (`color-mix` between `--td-surface-raised`, `--td-gold-accent`, and a darkened `--td-surface`) plus an inset top-edge sheen via `box-shadow`, with the border bumped slightly more opaque (32% vs. 25%) since there's no blur left to help it read against busy art. None of this touches `backdrop-filter` — a gradient and an inset shadow are each a one-time paint, not a per-frame re-blur — so it costs nothing beyond the flat fill it replaced, while still reading as "glass" through highlight/depth cues rather than an actual blur (which was only ever the cheapest way to get that read on a powerful GPU, not the point in itself).
+* A narrower mobile/coarse-pointer media query (independent of the Graphics setting) caps blur at a cheap `4px` on touch devices that haven't explicitly chosen `'performance'`, as a middle ground.
+* **Where it applies**: Main Menu/Story Creation cards, Radial Menu (§6.5), Slash/Bang Command Palette (§6.6), bottom-sheet drawers (§9.3), the Settings Drawer (§6.4E), the API Failure Diagnostics Panel (§3.5), and modal confirmations (delete/reroll/overwrite) — in both modes; only the fill/blur technique changes, never which surfaces get it.
+* **Where it does not apply**: the Parchment Story Canvas (§6.4C) stays fully opaque (`--td-parchment`) in either mode — it's meant to read as physical paper, not glass.
 
 ### 6.1b Iconography — Lucide
 
@@ -877,6 +886,7 @@ NARRATIVE & TONE RULES:
 1c. Thought/Dialogue Isolation: Give any inner thought or spoken/whispered line (the single-quoted material from rule 6) its own line, set apart from the surrounding narration — don't bury it mid-paragraph. A run of several consecutive thoughts or dialogue lines may stay grouped together, one per line, rather than each being forced apart with narration in between.
 1d. NPC Behavior: Every present NPC should feel like they're actively responding to what just happened, not reciting a line. Ground their dialogue, body language, and reactions in their established personality, tone of voice, current Trust/Affection toward the player, and stake in the unfolding situation — narrate what they're doing, not only what they say.
 1e. Protagonist Framing: When "Protagonist Identity" is present in the context slice, let it shape how the world reacts to the protagonist and what a scene chooses to emphasize — an NPC reading their demeanor, a detail catching their eye because of what they want, a moment landing harder because of a trait or secret already established. This never overrides rule 3 (Player Agency): it steers what you narrate around and about the protagonist, never what they think, say, or decide.
+1f. Banned Phrasing: Never use these worn-out stock phrases or close variants of them, in "plan" or "nar" alike: "delve"/"delved", "shrouded in mystery", "testament to", "a force to be reckoned with", "in the tapestry of", "beckoned", "loomed ominously", "sent a shiver down [their] spine", "a stark reminder", "little did [they] know", "the air was thick with", "with bated breath", "against all odds", "a dangerous game", "as the old adage goes". Where one of these would normally land, replace it with something concrete and sensory specific to this exact scene instead.
 2. Length: Treat the "Prose Depth" in the context slice as a floor to reach, not a ceiling to undercut — a turn that stops short of it is a failure regardless of how the scene resolves. Never default to a short, thin beat; use the full room the depth gives you to develop the scene, the NPCs present, and what's at stake.
 2a. Climax Overflow: If this turn's own events are significant enough to carry a class_evolution, a quest_update whose status is "completed", or the defeat of a genuinely major adversary, Prose Depth's target stops being a ceiling too — let the scene run as long as it actually needs to land with real weight, rather than compressing a class evolution or a quest's ending into the same room an ordinary turn gets, regardless of which Prose Depth the player has set. This is the exception, not the default: it applies only when the turn's own content already earns one of those three markers, never as license to pad an otherwise ordinary turn.
 3. Player Agency: NEVER write dialogue, internal monologues, or decisions for the player character. Describe the world's reaction to player choices only.
@@ -928,8 +938,12 @@ MECHANICS & GROUNDING DEFENSE:
 
 ```text
 OUTPUT FORMAT (read carefully — this replaces JSON output entirely):
-Respond with exactly two top-level elements, in this order, and nothing else — no markdown fences, no prose outside these tags:
+Respond with exactly three top-level elements, in this order, and nothing else — no markdown fences, no prose outside these tags:
 
+<plan>
+twist: the least-expected direction this beat can still take and honestly earn, given everything established so far — reject the safest, generic continuation before you write it
+distinct: what makes this specific NPC/creature/moment react differently than a stock version would, grounded in their established personality, stake, Trust/Affection, or history — never a generic reaction
+</plan>
 <nar>
 ...your narrative prose, using the existing markup rules above unchanged (double/single quotes, [Skill], [[Item]], {{Term|category}}, CAPITAL LETTERS for shouts)...
 </nar>
@@ -954,6 +968,11 @@ Respond with exactly two top-level elements, in this order, and nothing else —
   <skill id="SKILL_ID" name="NAME" desc="DESC" class="CLASS_ID" effort="minor|focused|taxing" tier="Untrained|Novice|Adept|Expert|Master" />
 </sync>
 
+Rules for <plan>:
+- <plan> always comes first, before <nar>. It is never shown to the player and never read by the game engine. Exactly the two lines shown above — "twist" and "distinct" — never more; this is not a place to draft the scene itself or restate mechanical context you already have.
+- Do this on every turn, including a terse CONCISE one. If there is no NPC present this turn, apply "distinct" to whatever the scene's most notable actor is instead (a creature, the environment itself, a faction's response) — never skip the line or leave it generic filler.
+- The point of both lines is to reject your own first instinct: name the safe/generic option only long enough to consciously pick something else. If your honest answer is that the generic option truly is the right call this turn (a quiet, uneventful beat is sometimes correct), say so briefly rather than manufacturing a twist that doesn't fit — forced surprises read worse than none.
+
 Rules for <sync>:
 - <turn> is the only always-required tag — attributes state/d/h/loc are always present; locdisp/desc/mood/c are omitted when not applicable. locdisp follows the same "only on first visit or genuine change" economy loc_desc already has — the client already knows a visited place's display name from its own registry, so don't restate it on an ordinary same-location turn. "c" is a currency delta in base copper (e.g. c="+500", c="-1200") — omit entirely when nothing was gained or spent this turn.
 - Every other tag is OMITTED ENTIRELY when that turn has nothing to report for it — do not emit an empty tag as a placeholder. This mirrors each field's own optionality in the schema below; the same "only when it actually changed" rules apply per field exactly as described there.
@@ -971,6 +990,8 @@ Rules for <sync>:
 - Every fixed-vocabulary attribute above (breakthrough tier, skill effort/tier, npc resolve, quest stat/type) MUST use one of its exact canonical words, spelled and cased as shown — never a number, never a close synonym, never an invented variant.
 - Escape literal & as &amp; inside attribute values and narration text; XML requires this even for narration prose.
 ```
+
+**Why `<plan>` exists and comes first (added 2026-09-08).** A short pre-prose scratchpad aimed at one specific failure mode of fast/lite models (Gemini 3.5 Flash-Lite is this app's configured default): defaulting to the safest, most generic continuation and the most stock NPC reaction, because the model is composing that judgment call and the prose simultaneously under token pressure. Two lines only, on purpose — it's real per-turn output-token cost that never benefits from prompt caching (unlike the static system prompt above), so it stays as small as it can while still doing its job. It is never parsed into the internal turn-response shape below, never shown to the player, and stripped out of conversational `history` on the next call (`gemini.ts`'s `stripSyncForHistory`) the same way `<sync>` itself is — a one-turn cost, not a compounding one. Placed ahead of `<nar>` specifically so it causally informs the prose that follows (an "after" placement would just be a second summary with no influence on what already got written) — the accepted tradeoff is that a `MAX_TOKENS` truncation landing mid-`<plan>` now loses the turn's prose entirely rather than just its trailing `<sync>` deltas, since `<nar>` is no longer the very first tag emitted. Kept small enough, against the per-turn floor `MIN_TURN_OUTPUT_CEILING` already guarantees regardless of Prose Depth, that this should be rare in practice. A first attempt at this tag (a generic tone/senses/beat scratchpad) was tried and deliberately reverted the same day for being decorative bookkeeping that didn't change what got written — the twist/distinct framing above is the version that survived.
 
 **Why `<item>` merges acquisition and removal into one tag** rather than two (the pre-migration JSON schema's `inv_add`/`inv_rem` split): one fewer tag name to hold in mind for the same field coverage, distinguished by which of `add=`/`rem=` is present. **Why tag/attribute names are left readable** rather than squeezed to 2-3 letter mnemonics: the measured ~25% saving (§3.3) came from switching JSON `"key":"value"` to XML `attribute="value"`, not from shaving tag-name characters — those cost a handful of tokens each either way, and cryptic names raise the model's own error rate for a saving that doesn't show up in a real token count.
 

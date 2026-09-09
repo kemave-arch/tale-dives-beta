@@ -115,7 +115,12 @@ LLM OUTPUT VALIDATION
 The turn-response wire format is XML, not JSON — this changed on
 2026-09-05 (see Revision Notes for the full reasoning and a verified
 token-count comparison run against the real Gemini tokenizer, not a
-guess). The model's raw response is exactly two top-level elements:
+guess). The model's raw response is exactly THREE top-level elements
+as of 2026-09-08 (it was two before this date — don't trust an older
+mental model or an older cached copy of this instruction file on that
+number): `<plan>...</plan>` (a two-line private pre-prose scratchpad —
+"twist"/"distinct" — never shown to the player, never parsed into any
+field, stripped out of `history` before the next call) followed by
 `<nar>...</nar>` (plain narrative prose, using the existing inline
 markup below) followed by `<sync>...</sync>` (a compact block of
 self-closing XML tags with shorthand attributes covering every
@@ -127,7 +132,10 @@ numeric field of any kind; currency (`c=`) remains the one genuine
 numeric delta in the whole schema. There is no
 `responseSchema`/`responseMimeType: application/json` on this call
 anymore, and there shouldn't be — the whole point was moving off that
-for a real, measured reduction in output tokens.
+for a real, measured reduction in output tokens. The system prompt also
+carries a fixed banned-phrasing list ("delve," "shrouded in mystery,"
+"testament to," and similar AI-fantasy stock phrases) — don't remove it
+if you're editing `SYSTEM_INSTRUCTIONS` for something else.
 - The current source of truth for the exact grammar is
   `src/api/xmlTurnContract.ts` (the tag/attribute spec, built to map
   1:1 onto `types.ts`'s `TurnResponse` fields — never invent a field or
@@ -150,6 +158,85 @@ for a real, measured reduction in output tokens.
   part of the same 2026-09-05 change specifically because a literal
   `<`/`>` in prose collides with real XML tags now also present in the
   same response — never reintroduce angle-bracket item markup.
+
+CHANGING THE GAME SCHEMA — MAINTENANCE & VERIFICATION
+"The game schema" means the turn-response contract: any mechanical
+field the model reports back each turn (a Condition Tag, an item, an
+NPC update, a quest/project update, a new tier vocabulary, a new
+`<sync>` tag) and the internal shape it parses into. This is the single
+most failure-prone part of the codebase to touch, because it spans six
+files that all have to move together and a mismatch between them fails
+silently at runtime (a parse error mid-session, or a field the client
+never reads) rather than at compile time. Follow this every time, no
+exceptions for "just a small addition":
+
+1. **Files that move together.** A schema change touches some or all
+   of: `types.ts` (the `TurnResponse`/entry-interface shape itself),
+   `src/api/turnContract.ts` (`SYSTEM_INSTRUCTIONS` prose describing the
+   rule, plus `TURN_SCHEMA` as the field-shape reference), 
+   `src/api/xmlTurnContract.ts` (`XML_OUTPUT_GRAMMAR` — the actual wire
+   tag/attribute syntax the model is told to emit, plus its own "Rules
+   for <tag>" prose), `src/lib/xmlTurnParser.ts` (the parser reading
+   that grammar back into `TurnResponse`), `src/lib/xmlHelpers.ts` (the
+   shared `reqStr`/`reqNum`/`reqTierWord`/`signToDelta` primitives the
+   parser is built from), and whichever domain file actually applies the
+   parsed update (`lib/npcs.ts`, `lib/quests.ts`, `lib/conditions.ts`,
+   `App.tsx`'s turn-application wiring, etc.). Adding a field to
+   `types.ts` alone without touching the grammar/parser is a dead field;
+   adding it to the grammar alone without a parser rule and a
+   `TurnResponse` field is a value the model dutifully sends every turn
+   that the client silently discards forever. Grep for the field/tag
+   name across `src/` before considering a change "done" — if it only
+   shows up in one or two of these files, something was missed.
+2. **Every new mechanical channel is a fixed WORD vocabulary, never a
+   number.** This project deliberately eliminated every numeric
+   mechanical channel except currency (`c=`) — see NARRATIVE-FIRST
+   OVERHAUL above. A new field must follow the same discipline: a small,
+   closed set of canonical words (like `CompetencyTier`'s
+   Untrained/Novice/Adept/Expert/Master, or a Condition Tag's plain
+   name), enforced at the PARSER boundary via `reqTierWord`/`optTierWord`
+   (throws `XmlParseError` on anything off-vocabulary or number-shaped),
+   not just described as a rule in the system prompt. A prompt-only rule
+   is not enough — the model will drift eventually, and the parser is
+   the actual backstop. If you genuinely need magnitude (rare — currency
+   is the one existing precedent), it needs an explicit, deliberate
+   discussion first per BEFORE BIG CHANGES below, not a quiet addition.
+3. **Verification checklist — do all of this before considering a
+   schema change finished, not just "it compiles":**
+   - `tsc --noEmit` and a production build both clean.
+   - Hand-write at least one sample response using the NEW grammar and
+     confirm the parser accepts it — and hand-write one with an
+     off-vocabulary or numeric-looking value in the new field and
+     confirm the parser REJECTS it with a clear `XmlParseError`, not a
+     silent pass-through. This project has done exactly this check for
+     every schema migration so far (see Revision Notes) — it is not
+     optional busywork, it's the only thing that actually proves the
+     anti-drift guard works rather than just existing in the code.
+   - Check the debug-payload tooling (`Chronicle.tsx`'s
+     `DebugPayloadButton`/`SessionPayloadPanel`, `extractSyncBlock`)
+     still displays a sample response correctly — these all pattern-
+     match on tag boundaries and have needed re-verification (not
+     re-writing, just checking) every time a new tag was added ahead of
+     an existing one in the output order.
+   - If the new field/tag is turn-scoped scratch data that shouldn't be
+     resent to the model on later turns (the way `<sync>` and `<plan>`
+     already are), confirm `gemini.ts`'s `stripSyncForHistory` (or
+     whatever it's called by the time you're reading this) strips it
+     too — otherwise `history` silently grows every turn with content
+     that costs tokens forever for no benefit.
+4. **Update BOTH docs in the same change, not "later."**
+   `PROJECT_REVISION_NOTES.md` (what actually shipped) AND
+   `Tale-Dives-Blueprint-v3_2.md` §7 (the exact grammar block — kept
+   "byte-identical" to the real `XML_OUTPUT_GRAMMAR`/`SYSTEM_INSTRUCTIONS`
+   on purpose, so a copy-paste into a fresh AI Studio System Instructions
+   box actually matches what's running) and, if the change is mechanic-
+   level rather than just wire-format, §5. A schema change that lands
+   without both of these updated in the same pass is not done — treat it
+   the same as a change that doesn't compile. This has already happened
+   more than once (the blueprint sat two features behind the live code
+   for less than a day before being caught and fixed) purely because
+   this step was skipped in the moment the schema change itself felt
+   finished.
 
 EXISTING ARCHITECTURE — READ BEFORE BUILDING SCREENS
 There is ONE unified dark-glass theme (no selectable skins). Screens use
@@ -224,15 +311,64 @@ VISUAL STYLE
   Reserve text labels only for buttons triggering complex/consequential
   actions where the player needs explicit context (e.g. "Abandon Quest",
   "Delete Save") — not for routine navigation/actions
-- Performance: backdrop-blur is expensive on lower-end mobile GPUs.
-  Opacity-based translucency (semi-transparent background, no blur) is
-  an acceptable alternative. Avoid stacking multiple blurred layers at
-  once. Exclude `backdrop-filter` from transition lists (Tailwind's
-  `backdrop-blur-none` compiles to keyword `none`, which can't animate
-  against a numeric blur — causes a "stuck blur" bug).
+- Performance: see PERFORMANCE below — read it before adding any new
+  blur, glow, or continuously-animated visual effect, not just when
+  something already feels slow.
 - Contrast: text/UI over the cycling background must stay legible
   regardless of which image is active — use a scrim, gradient overlay,
   or sufficiently opaque backing behind text.
+
+PERFORMANCE — READ THIS BEFORE ADDING ANY NEW VISUAL EFFECT
+This has been a recurring, repeated problem on this project — new
+visuals keep shipping that cost real frame time on weaker mobile GPUs,
+each one requiring a separate follow-up pass to fix after the fact.
+Treat performance as a constraint to check BEFORE building a new visual
+effect, not something to patch afterward once it "feels slow":
+- **The app already has a two-mode Graphics system — use it, don't
+  bypass it.** `UiPrefs.graphicsMode` (`'glass' | 'performance'`,
+  `store.ts`) toggles an `html.gfx-performance` class (`App.tsx`) that
+  `src/index.css` uses to strip `backdrop-filter` app-wide via the
+  shared `.glass-panel` class and `.backdrop-blur-*` utilities.
+  **`'performance' is the default for every new install`** — most
+  players are seeing the flat/no-blur mode, not the full-glass one, so
+  design and test against that mode as the real default, not as a
+  fallback you check once at the end. A NEW component that wants a
+  glassy look should use the existing `.glass-panel` class (or the
+  `GLASS_SURFACE` pattern in `lib/glassChrome.tsx`) so it automatically
+  gets both modes for free — never hand-roll a one-off
+  `backdrop-blur-xl` + custom opacity combo on a new element that
+  isn't wired through this system, since that reintroduces exactly the
+  ungated blur cost the system exists to prevent.
+- **Cheap vs. expensive, by category — default to the cheap column.**
+  Expensive (a real per-frame GPU compositing/re-blur cost,
+  particularly stacked several layers deep or under scroll/animation):
+  `backdrop-filter`, an animated `filter: blur()` (a permanently-
+  `animate-pulse`d blurred layer is the worst version of this — it was
+  the actual root cause the last time "screen response is slow" got
+  reported), `will-change` applied broadly across many simultaneous
+  elements. Cheap (a one-time paint, not recomputed every frame):
+  `opacity`, `transform` (scale/translate — this is what Framer Motion's
+  `whileHover`/`whileTap` already use), CSS gradients, `box-shadow`
+  (including `inset`). A convincing "glass" look does not require a real
+  blur — a subtle multi-stop gradient plus an inset top-edge highlight
+  reads as glassy through the same depth/highlight cues a human eye
+  actually associates with glass, at a fraction of the cost; see
+  `html.gfx-performance .glass-panel`'s own fallback recipe in
+  `index.css` for the exact technique if a new component needs one.
+- **Pure-atmosphere effects with no information value get hidden on
+  mobile outright, not just shrunk.** If an effect is decorative only
+  (an ambient particle, a glow orb, a sparkle) and animates
+  continuously for as long as a screen is mounted, gate it out entirely
+  under `@media (max-width: 768px), (pointer: coarse)` rather than
+  reducing its blur radius or size — a hidden effect costs nothing; a
+  smaller animated blur still costs a per-frame re-composite. An effect
+  that DOES carry information (e.g. a state indicator) can shrink/cheapen
+  instead of disappearing.
+- **Test in Performance mode, on the checklist, every time.** Before
+  calling a new screen or component done, toggle Settings → Graphics →
+  Performance ON and look at it — that is what a real default install
+  looks like. A visual that only looks right under full Glass mode is
+  only right for players who've opted into a setting most won't touch.
 
 TYPOGRAPHY
 Harmonized three-font system:

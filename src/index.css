@@ -457,10 +457,29 @@ html.gfx-performance .glass-panel {
    assuming blur does the real legibility work underneath it — strip the
    blur alone (the rule above) and it reads as near-transparent glass over
    whatever busy art sits behind it, the exact halation/contrast problem a
-   flat mode is supposed to fix. Give it the app's own existing near-opaque
-   surface token instead, so text has an actual solid plane to sit on. */
+   flat mode is supposed to fix. A flat, single-color --td-surface fill
+   solved the legibility problem but reads as a plain opaque card, not
+   "glass" — losing the depth cue entirely rather than faking it cheaply.
+   This is the fake-frosted-glass trick instead: a subtle diagonal gradient
+   (three color-mix stops, cheap — no different from any other CSS
+   background-image, computed once per layout not per frame) plus an inset
+   top-edge sheen via box-shadow (also a one-time paint, not a per-frame
+   composite) sell "glass" through highlight/depth cues rather than through
+   an actual blur, which is what a viewer's eye actually reads as "glassy" —
+   the blur itself was never the point, just the cheapest way to get there
+   on a powerful GPU. None of this touches backdrop-filter, so it costs
+   nothing extra over the flat single-color fill it replaces. */
 html.gfx-performance .glass-panel {
-  background: var(--td-surface);
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--td-surface-raised) 92%, var(--td-gold-accent) 8%) 0%,
+    var(--td-surface) 55%,
+    color-mix(in srgb, var(--td-surface) 94%, black 10%) 100%
+  );
+  border-color: color-mix(in srgb, var(--td-gold-accent) 32%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, white 8%, transparent),
+    var(--td-glow);
 }
 
 /* World Seed Weaver mobile perf — the constellation screen runs several

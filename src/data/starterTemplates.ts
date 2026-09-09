@@ -74,12 +74,13 @@ export const FOURTH_WING_WORLD: WorldData = {
       dangerLevel: 'High',
       locationType: 'Fortress',
       factionOwner: 'Riders Quadrant',
+      areas: ["General Sorrengail's Office", "Registration Courtyard", "Cadet Barracks", "Flight Field"],
     },
     {
       id: 'loc_parapet',
       name: 'The Parapet',
       region: 'Basgiath War College',
-      description: 'An eighteen-inch wide rain-slicked stone bridge straddling a twenty-foot gorge. Entering cadets must cross it without falling to their deaths.',
+      description: 'An eighteen-inch wide rain-slicked stone bridge straddling a two-hundred-foot gorge. Entering cadets must cross it in driving wind without falling to their deaths.',
       dangerLevel: 'Lethal',
       locationType: 'Fortress',
       factionOwner: 'Riders Quadrant',
@@ -149,6 +150,7 @@ export const VIOLET_SORRENGAIL: ProtagonistData = {
   motivation: 'Survive the lethal Parapet, bond a dragon at Threshing, and prove her worth despite everyone expecting her fragile body to break or wash out.',
   physicalTrait: 'Hypermobile joints and frail bone density prone to dislocation; waist-length hair that pales to silver-white at the ends.',
   secret: 'Carries hidden boots lined with poisoned daggers and notes detailing the physical vulnerabilities of instructors and fellow cadets.',
+  keyItem: "Mira's Dragon-Scale Corset & Poisoned Boot Daggers",
   opening:
-    "The dive opens on Conscription Day in General Lilith Sorrengail's office during a tense final uniform fitting. Violet binds her fragile joints with leather wraps while her sister Mira argues furiously with their mother. Beyond the high turret window, the rain-slicked, narrow stone Parapet awaits over a deadly gorge.",
+    "The dive opens on Conscription Day in General Lilith Sorrengail's turret office during Violet's tense final preparation. Violet binds her fragile knee and shoulder joints with reinforced leather while her decorated rider sister Mira furiously pleads with their impassive mother to revoke the conscription order. When General Sorrengail refuses, Mira secretly equips Violet with illicit armor crafted from Teine's dragon scales and daggers hidden in her boots before sending her down to the registration courtyard, where the lethal, two-hundred-foot-high Parapet awaits.",
 }

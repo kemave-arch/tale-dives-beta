@@ -46,6 +46,7 @@ export interface SeedCampaignInput {
   existingLocations: WorldLocation[]
   startingSkillNames: string[]
   keyItemName?: string
+  signal?: AbortSignal
 }
 
 export interface SeedCampaignResult {
@@ -101,6 +102,9 @@ export async function seedCampaign(input: SeedCampaignInput): Promise<SeedCampai
 
   let raw: string
   try {
+    if (input.signal?.aborted) {
+      return { ...empty, debug: { prompt, error: 'Aborted by user' } }
+    }
     raw = await getProvider(input.apiSettings.provider).runSeed({
       apiKey: input.apiSettings.apiKey,
       model: input.apiSettings.model,
@@ -108,6 +112,7 @@ export async function seedCampaign(input: SeedCampaignInput): Promise<SeedCampai
       maxOutputTokens: MAX_OUTPUT_TOKENS_CEILING,
       systemInstructions: buildWorldSeedSystemInstructions(),
       prompt,
+      signal: input.signal,
     })
   } catch (err) {
     return { ...empty, debug: { prompt, error: err instanceof Error ? err.message : String(err) } }
@@ -137,14 +142,16 @@ export async function seedCampaign(input: SeedCampaignInput): Promise<SeedCampai
   for (const n of seed.npcs) {
     const id = slugify(n.id) || slugify(n.name)
     if (!id || npcs[id]) continue
+    const affTier = seedRelationTier(n.aff, AFFECTION_STAGES)
     npcs[id] = {
       name: n.name,
       role: n.role?.trim() || undefined,
       personality: n.personality?.trim() || undefined,
       appearance: n.appearance?.trim() || undefined,
-      affection: seedRelationTier(n.aff, AFFECTION_STAGES),
+      kinship: n.kinship,
+      affection: affTier,
       trust: seedRelationTier(n.trust, TRUST_WORDS),
-      stage: 'Stranger',
+      stage: AFFECTION_STAGES[affTier - 1] || 'Stranger',
       deeds: [],
       memSummary: '',
       lastSeenLocId: null,

@@ -52,6 +52,7 @@ export interface RunSeedParams {
   maxOutputTokens: number
   systemInstructions: string
   prompt: string
+  signal?: AbortSignal
 }
 
 // One config, every call type (§3.4) — Turn narration, Chapter Milestone

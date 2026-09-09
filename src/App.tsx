@@ -128,6 +128,7 @@ export default function App() {
 
   // Navigate to screen and sync with browser history so mobile hardware back-key works
   const navigateTo = (nextScreen: Screen, replace = false) => {
+    sessionStorage.setItem('td_active_screen', nextScreen)
     if (nextScreen === screen && !replace) return
 
     if (replace) {
@@ -155,6 +156,8 @@ export default function App() {
     }
   }
 
+  const diveAbortRef = useRef<AbortController | null>(null)
+
   // Handle mobile hardware back button / browser popstate events
   useEffect(() => {
     if (!window.history.state || typeof window.history.state.depth !== 'number') {
@@ -165,6 +168,17 @@ export default function App() {
     }
 
     const handlePopState = (event: PopStateEvent) => {
+      // Sync depth ref with state
+      const popDepth = typeof event.state?.depth === 'number' ? event.state.depth : 0
+      historyDepthRef.current = popDepth
+
+      // If diving was in-flight, cancel it immediately
+      if (diveAbortRef.current) {
+        diveAbortRef.current.abort()
+        diveAbortRef.current = null
+      }
+      setBusy(false)
+
       // If the pop event is for an in-app modal (handled by modal listener), do not change screen
       if (event.state?.modal) {
         return
@@ -182,13 +196,19 @@ export default function App() {
         return
       }
 
-      const nextScreen = event.state?.screen as Screen | undefined
+      let nextScreen = event.state?.screen as Screen | undefined
+
+      // Never pop back into transient loading/review steps via browser history
+      if (nextScreen === 'seedingreview' || nextScreen === 'diveloading') {
+        nextScreen = 'mainmenu'
+      }
+
       if (nextScreen) {
-        historyDepthRef.current = event.state.depth ?? 0
+        sessionStorage.setItem('td_active_screen', nextScreen)
         setScreen(nextScreen)
       } else {
-        historyDepthRef.current = 0
-        setScreen((curr) => curr || 'title')
+        sessionStorage.setItem('td_active_screen', 'mainmenu')
+        setScreen('mainmenu')
       }
     }
 
@@ -220,8 +240,13 @@ export default function App() {
   const [pendingFirstAction, setPendingFirstAction] = useState<string | null>(null)
 
   useEffect(() => {
-    if (screen === 'diveloading' && game && game.log.length > 0) {
-      navigateTo('chronicle', true)
+    if (screen === 'diveloading') {
+      if (game && game.log.length > 0) {
+        navigateTo('chronicle', true)
+      } else if (!diveAbortRef.current) {
+        // Not actively creating a new campaign and no campaign log to resume — safely fallback
+        navigateTo('mainmenu', true)
+      }
     }
   }, [screen, game])
   const [worldSetupMode, setWorldSetupMode] = useState<CreationMode>('tale')
@@ -510,11 +535,13 @@ export default function App() {
   }
 
   function resumeCampaign(id: string) {
-    setGame(campaigns[id])
+    const target = campaigns[id]
+    if (!target) return
+    setGame(target)
     setActiveCampaignId(id)
     setHistory([])
-    setLoadingGender(campaigns[id]?.player?.gender)
-    navigateTo('diveloading')
+    setLoadingGender(target.player?.gender)
+    navigateTo('chronicle')
     onPlayTrack('TempestDive_ost03.opus')
   }
 
@@ -604,6 +631,7 @@ export default function App() {
           factionOwner: loc.factionOwner?.trim() || null,
           standing: 'neutral',
           locationType: loc.locationType || 'Landmark',
+          areas: loc.areas?.map((a) => ({ id: slugify(a), name: a })),
           discovery: { state: 'known' },
         }
       })
@@ -691,17 +719,32 @@ export default function App() {
     // back empty) a small Location/Faction fallback plus a named key item's
     // full content. Never blocks campaign creation — a failed/malformed call
     // just means no enrichment this campaign (lib/seeding.ts never throws).
+    const abortCtrl = new AbortController()
+    diveAbortRef.current = abortCtrl
     navigateTo('diveloading')
-    const seeded = await seedCampaign({
-      apiSettings,
-      worldLines,
-      protagonistLines: [backgroundLine, ...identityLines].filter(Boolean) as string[],
-      briefLine,
-      existingFactions: world.factionsList ?? [],
-      existingLocations: world.locationsList ?? [],
-      startingSkillNames: Object.values(initialSkills).map((s) => s.name),
-      keyItemName: protagonistData.keyItem,
-    })
+
+    let seeded: Awaited<ReturnType<typeof seedCampaign>>
+    try {
+      seeded = await seedCampaign({
+        apiSettings,
+        worldLines,
+        protagonistLines: [backgroundLine, ...identityLines].filter(Boolean) as string[],
+        briefLine,
+        existingFactions: world.factionsList ?? [],
+        existingLocations: world.locationsList ?? [],
+        startingSkillNames: Object.values(initialSkills).map((s) => s.name),
+        keyItemName: protagonistData.keyItem,
+        signal: abortCtrl.signal,
+      })
+    } finally {
+      if (diveAbortRef.current === abortCtrl) {
+        diveAbortRef.current = null
+      }
+    }
+
+    if (abortCtrl.signal.aborted) {
+      return
+    }
 
     // Both land in their libraries the moment a Tale begins (§6.4B) —
     // creation IS how the World/Protagonist Library gets populated.
@@ -758,7 +801,7 @@ export default function App() {
     if (uiPrefs.autoCloudBackup) {
       triggerAutoCloudBackup()
     }
-    navigateTo('seedingreview')
+    navigateTo('seedingreview', true)
   }
 
   // Inspired Mode's "Tale Weaving" flow (screens/TaleWeaver.tsx) — a
@@ -1983,7 +2026,19 @@ export default function App() {
       />
     )
   } else if (screen === 'diveloading') {
-    content = <DiveLoadingScreen gender={loadingGender ?? pendingProtagonist?.gender ?? game?.player?.gender} />
+    content = (
+      <DiveLoadingScreen
+        gender={loadingGender ?? pendingProtagonist?.gender ?? game?.player?.gender}
+        onCancel={() => {
+          if (diveAbortRef.current) {
+            diveAbortRef.current.abort()
+            diveAbortRef.current = null
+          }
+          setBusy(false)
+          navigateTo('mainmenu')
+        }}
+      />
+    )
   } else if (screen === 'storymode') {
     content = (
       <StoryMode
@@ -2114,7 +2169,7 @@ export default function App() {
         onBack={() => {
           const action = pendingFirstAction
           setPendingFirstAction(null)
-          navigateTo('chronicle')
+          navigateTo('chronicle', true)
           if (action) sendAction(action, false, game, [])
         }}
       />

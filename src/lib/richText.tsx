@@ -29,10 +29,21 @@ function locationIcon(locationType: string | undefined): string {
   return '📍'
 }
 
+const lookupCache = new WeakMap<object, Map<string, any>>()
+
 function buildNameLookup<T extends { name: string }>(dict: Dict<T> | undefined): Map<string, T> {
-  const map = new Map<string, T>()
-  for (const entry of Object.values(dict ?? {})) map.set(entry.name.toLowerCase(), entry)
-  return map
+  if (!dict) return new Map()
+  let cached = lookupCache.get(dict)
+  if (!cached) {
+    cached = new Map<string, T>()
+    for (const entry of Object.values(dict)) {
+      if (entry?.name) {
+        cached.set(entry.name.toLowerCase(), entry)
+      }
+    }
+    lookupCache.set(dict, cached)
+  }
+  return cached
 }
 
 // Blueprint §4.2 Mandatory Rich Text Markup — renders the four narrative

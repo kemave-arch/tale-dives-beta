@@ -80,6 +80,7 @@ export function applyNpcUpdates(
         personality: u.personality || prev.personality,
         factionId: u.faction_id ?? prev.factionId,
         secretTruth: u.secret_truth || prev.secretTruth,
+        kinship: u.kinship ?? prev.kinship,
         partyStatus: u.party_status ?? prev.partyStatus,
         lastSeenLocId: locId ?? prev.lastSeenLocId,
         // Set-once, decoupled from ensureEntry's `created` flag: a {{Term|npc}}
@@ -106,6 +107,7 @@ export function describePresentNpc(id: string, entry: NpcEntry): string {
   // problem this can't force, but showing it back every turn at least gives
   // the model a consistent handle to check its own naming against.
   const identity = [
+    entry.kinship && `Kinship: ${entry.kinship}`,
     entry.role && `Role: ${entry.role}`,
     entry.gender && `Gender: ${entry.gender}`,
     entry.age !== undefined && `Age: ${entry.age}`,

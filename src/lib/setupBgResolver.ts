@@ -83,24 +83,23 @@ export function getCandidateSetupUrls(
 /** Preloads all potential setupscreen & loading screen variants for optimal performance */
 export function preloadAllSetupAssets(): void {
   if (typeof window === 'undefined') return
-  const devices: ('pc' | 'm')[] = ['pc', 'm']
-  const genders: ('female' | 'male' | 'neutral')[] = ['female', 'male', 'neutral']
-
-  for (const dev of devices) {
-    for (const g of genders) {
-      const candidates = getCandidateSetupUrls(dev, g)
-      for (const url of candidates) {
-        preloadImage(url)
-      }
-    }
-  }
-
-  // Also preload loading screens
   const base = import.meta.env.BASE_URL
-  preloadImage(`${base}img/loadingscreens/pc_dive-in-female.webp`)
-  preloadImage(`${base}img/loadingscreens/pc_dive-in-male.webp`)
-  preloadImage(`${base}img/loadingscreens/m_dive-in-female.webp`)
-  preloadImage(`${base}img/loadingscreens/m_dive-in-male.webp`)
+
+  // Preload verified existing setup & loading screen assets without 404 floods
+  const assets = [
+    `${base}img/taleweaver/pc_setupscreen-female.webp`,
+    `${base}img/taleweaver/pc_setupscreen-male.webp`,
+    `${base}img/taleweaver/m_setupscreen-female.webp`,
+    `${base}img/taleweaver/m_setupscreen-male.webp`,
+    `${base}img/loadingscreens/pc_dive-in-female.webp`,
+    `${base}img/loadingscreens/pc_dive-in-male.webp`,
+    `${base}img/loadingscreens/m_dive-in-female.webp`,
+    `${base}img/loadingscreens/m_dive-in-male.webp`,
+  ]
+
+  for (const url of assets) {
+    preloadImage(url)
+  }
 }
 
 /** Custom hook to resolve and preload the best matching setup screen URL */

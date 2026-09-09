@@ -1,4 +1,5 @@
-import type { ItemType } from '../types.ts'
+import type { ItemType, KinshipType } from '../types.ts'
+import { KINSHIP_VALUES } from '../types.ts'
 import { XmlParseError, str, num, parseXmlBlock } from './xmlHelpers.ts'
 
 // Parses the <seed> grammar (api/worldSeedContract.ts) returned by the
@@ -25,6 +26,7 @@ export interface SeededNpc {
   role?: string
   personality?: string
   appearance?: string
+  kinship?: KinshipType
   // Starting relationship, expressed as the same canonical tier word the
   // rest of the app already displays (npcs.ts's AFFECTION_STAGES/
   // TRUST_WORDS) — never a numeric offset. Absent means "unset/neutral,"
@@ -110,12 +112,15 @@ export function parseWorldSeedResponse(raw: string): WorldSeedResult {
     const id = str(el.getAttribute('id'))
     const name = str(el.getAttribute('name'))
     if (!id || !name) continue
+    const kinWord = str(el.getAttribute('kin'))
+    const kinship = kinWord && (KINSHIP_VALUES as readonly string[]).includes(kinWord) ? (kinWord as KinshipType) : undefined
     npcs.push({
       id,
       name,
       role: str(el.getAttribute('role')),
       personality: str(el.getAttribute('personality')),
       appearance: str(el.getAttribute('appearance')),
+      kinship,
       aff: str(el.getAttribute('aff')),
       trust: str(el.getAttribute('trust')),
     })

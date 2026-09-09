@@ -698,6 +698,11 @@ const TurnBlock = memo(function TurnBlock({
   const stateMeta = entry.turnState ? TURN_STATE_META[entry.turnState] : null
   const StateIcon = stateMeta?.icon
 
+  const renderedNarrative = useMemo(
+    () => renderNarrative(entry.nar, onTapTerm, items, locations),
+    [entry.nar, onTapTerm, items, locations]
+  )
+
   return (
     <div
       ref={setRef}
@@ -728,7 +733,7 @@ const TurnBlock = memo(function TurnBlock({
         </p>
       )}
       <div className="font-narrative text-sm leading-relaxed whitespace-pre-wrap text-left">
-        {renderNarrative(entry.nar, onTapTerm, items, locations)}
+        {renderedNarrative}
       </div>
       {entry.levelUp && (
         <p className="inline-flex items-center gap-1.5 rounded-full bg-gold-accent/15 border border-gold-accent/40 px-3 py-1 font-display text-xs text-gold-primary">

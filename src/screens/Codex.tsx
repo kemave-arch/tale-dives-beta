@@ -19,7 +19,7 @@ import { useConfirm } from '../lib/useConfirm.tsx'
 import { useLongTextEditor } from '../lib/useLongTextEditor.tsx'
 import { EQUIPPABLE_TYPES, LOCATION_DANGER_LEVELS, LOCATION_TYPES } from '../types.ts'
 import type {
-  ApiSettings, BestiaryEntry, CompetencyTier, CraftingJob, DeathRule, Dict, Discovery, EndingOutcome, EquipSlot, FactionEntry, ItemEntry, ItemType, LocationEntry, LogEntry, LoreEntry,
+  ApiSettings, BestiaryEntry, CompetencyTier, CraftingJob, DeathRule, Dict, Discovery, EndingOutcome, EquipSlot, FactionEntry, ItemEntry, ItemType, KinshipType, LocationEntry, LogEntry, LoreEntry,
   NarrativeEvent, NpcEntry, Player, ProjectEntry, ProjectStage, QuestEntry, RegionEntry, RevealTrigger, SkillEntry, TaleBeat, ThreatTierToken, WorldData,
 } from '../types.ts'
 import { COMPETENCY_TIERS, THREAT_TIERS, tierToWord, wordToTier, displayThreatLabel } from '../lib/tiers.ts'
@@ -1627,6 +1627,7 @@ export default function Codex({
       memSummary: draft.memSummary,
       deeds: typeof draft.deeds === 'string' ? draft.deeds.split(',').map((s: string) => s.trim()).filter(Boolean) : draft.deeds,
       role: draft.role?.trim() || undefined,
+      kinship: draft.kinship || undefined,
       appearance: draft.appearance?.trim() || undefined,
       heldWeapon: draft.heldWeapon?.trim() || undefined,
       wornArmor: draft.wornArmor?.trim() || undefined,
@@ -2598,6 +2599,22 @@ export default function Codex({
                   <option value="departed">Departed companion</option>
                 </select>
               </label>
+              <label className="block">
+                <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Kinship (Family & Lineage Gate)</span>
+                <select
+                  value={draft.kinship ?? ''}
+                  onChange={(e) => setDraft((d) => ({ ...d, kinship: (e.target.value as KinshipType) || undefined }))}
+                  className={SELECT_CLASS}
+                >
+                  <option value="">None (Standard NPC)</option>
+                  <option value="parent">Parent (Intimacy Gated)</option>
+                  <option value="sibling">Sibling (Intimacy Gated)</option>
+                  <option value="child">Child (Intimacy Gated)</option>
+                  <option value="spouse">Spouse (Descriptive)</option>
+                  <option value="mentor">Mentor (Descriptive)</option>
+                  <option value="clan">Clan / House (Descriptive)</option>
+                </select>
+              </label>
               <TextField label="Appearance" value={draft.appearance ?? ''} onChange={(v) => setDraft((d) => ({ ...d, appearance: v }))} textarea placeholder="Physical description…" />
               <TextField label="Held Weapon" value={draft.heldWeapon ?? ''} onChange={(v) => setDraft((d) => ({ ...d, heldWeapon: v }))} placeholder="Currently wielded weapon…" />
               <TextField label="Worn Armor" value={draft.wornArmor ?? ''} onChange={(v) => setDraft((d) => ({ ...d, wornArmor: v }))} placeholder="Currently worn armor/gear…" />
@@ -2639,6 +2656,20 @@ export default function Codex({
                 />
               </SectionCard>
               <SectionCard accent={CATEGORY_ACCENTS.npcs} icon={Heart} title="Bond & Status">
+                {npcs[entryId].kinship && (
+                  <FieldRow
+                    label="Kinship"
+                    value={
+                      npcs[entryId].kinship === 'parent' ? 'Parent (Lineage Gate)' :
+                      npcs[entryId].kinship === 'sibling' ? 'Sibling (Lineage Gate)' :
+                      npcs[entryId].kinship === 'child' ? 'Child (Lineage Gate)' :
+                      npcs[entryId].kinship === 'spouse' ? 'Spouse' :
+                      npcs[entryId].kinship === 'mentor' ? 'Mentor' :
+                      'Clan / House'
+                    }
+                    icon={Users}
+                  />
+                )}
                 <FieldRow label="Stage" value={npcs[entryId].stage} icon={User} />
                 {npcs[entryId].partyStatus && (
                   <FieldRow

@@ -257,6 +257,9 @@ export interface RegionEntry {
   mapImageKey?: string // §7 — same IndexedDB-key convention as LocationEntry.imageKey, a top-down map image for this region
 }
 
+export type KinshipType = 'parent' | 'sibling' | 'child' | 'spouse' | 'mentor' | 'clan'
+export const KINSHIP_VALUES = ['parent', 'sibling', 'child', 'spouse', 'mentor', 'clan'] as const
+
 // §5.5/§5.14 NPC Codex entry. affection/trust are two INDEPENDENT
 // CompetencyTier ladders (own words each, see lib/npcs.ts) — never
 // collapsed into one shared relationship axis: a mercenary can respect the
@@ -267,6 +270,7 @@ export interface NpcEntry {
   name: string
   gender?: string // player-set via Codex CRUD only — never asked of the model (§3.6, no new schema field)
   age?: number
+  kinship?: KinshipType // structural relationship anchor: 'parent'|'sibling'|'child' hard-gates against romantic/intimacy escalation (Rule 5a); 'spouse'|'mentor'|'clan' are descriptive
   affection: CompetencyTier
   trust: CompetencyTier
   resolve?: CompetencyTier // this NPC's social/rhetorical resistance — set/revised by the LLM on introduction, same as Bestiary's threatTier; used only for the SOCIAL compareTiers() hint, omitted for minor NPCs who never need it
@@ -455,6 +459,7 @@ export interface WorldLocation {
   dangerLevel?: string
   locationType?: string
   factionOwner?: string
+  areas?: string[]
 }
 
 // Client-side-only display reskin for the Threat/Power ladder — the LLM
@@ -826,6 +831,7 @@ export interface NpcMemoryUpdate {
   personality?: string // sets/revises NpcEntry.personality — only on introduction or a genuine change, restated every turn thereafter as ground truth (lib/npcs.ts describePresentNpc)
   faction_id?: string | null // sets/revises NpcEntry.factionId
   secret_truth?: string // sets/revises NpcEntry.secretTruth — known to the model as ground truth, never player-visible, never to be recited as exposition until the story itself earns the reveal
+  kinship?: KinshipType // sets/revises NpcEntry.kinship — structural anchor: parent|sibling|child hard-gates against intimacy escalation (Rule 5a)
   party_status?: PartyStatus // sets/revises NpcEntry.partyStatus — only sent the turn this NPC actually joins or leaves the travelling party, never restated on an ordinary turn
 }
 

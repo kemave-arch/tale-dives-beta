@@ -238,6 +238,7 @@ interface SeedParams {
   maxOutputTokens: number
   systemInstructions: string
   prompt: string
+  signal?: AbortSignal
 }
 
 // The one-time World Seeding call (api/worldSeedContract.ts, lib/seeding.ts)
@@ -245,7 +246,7 @@ interface SeedParams {
 // this is a single one-shot request with its own system_instruction and a
 // single user turn. Mirrors runSummary's shape (own inline fetch body, no
 // shared parsing — the caller parses the raw text via worldSeedParser.ts).
-export async function runSeed({ apiKey, model, temperature, maxOutputTokens, systemInstructions, prompt }: SeedParams): Promise<string> {
+export async function runSeed({ apiKey, model, temperature, maxOutputTokens, systemInstructions, prompt, signal }: SeedParams): Promise<string> {
   const url = `${BASE_URL}/${encodeURIComponent(model)}:generateContent`
 
   const body = {
@@ -258,6 +259,7 @@ export async function runSeed({ apiKey, model, temperature, maxOutputTokens, sys
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
     body: JSON.stringify(body),
+    signal,
   })
 
   if (!res.ok) {

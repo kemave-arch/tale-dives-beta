@@ -4,9 +4,10 @@ import { preloadImage } from '../lib/setupBgResolver.ts'
 
 interface DiveLoadingScreenProps {
   gender?: string
+  onCancel?: () => void
 }
 
-export default function DiveLoadingScreen({ gender }: DiveLoadingScreenProps) {
+export default function DiveLoadingScreen({ gender, onCancel }: DiveLoadingScreenProps) {
   const normGender = (gender ?? '').trim().toLowerCase()
   const isFemale = normGender === 'female' || normGender === 'f' || normGender.startsWith('fem')
   const genderKey = isFemale ? 'female' : 'male'
@@ -21,7 +22,7 @@ export default function DiveLoadingScreen({ gender }: DiveLoadingScreenProps) {
 
   return (
     <div
-      className="h-dvh relative flex flex-col justify-end items-center text-center px-6 overflow-hidden bg-[#050308] select-none"
+      className="h-dvh relative flex flex-col justify-end items-center text-center px-6 overflow-hidden bg-[#050308] select-none touch-none overscroll-none"
       style={{ paddingBottom: 'max(3rem, env(safe-area-inset-bottom))' }}
     >
       {/* Background artwork with responsive PC vs Mobile selection */}
@@ -33,7 +34,7 @@ export default function DiveLoadingScreen({ gender }: DiveLoadingScreenProps) {
             alt="Diving in..."
             fetchPriority="high"
             decoding="async"
-            className="absolute inset-0 w-full h-full object-cover animate-[fade-in_1s_ease-in_forwards]"
+            className="absolute inset-0 w-full h-full object-cover animate-[fade-in_0.6s_ease-in_forwards]"
           />
         </picture>
       </div>
@@ -47,12 +48,15 @@ export default function DiveLoadingScreen({ gender }: DiveLoadingScreenProps) {
         }}
       />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,rgba(5,3,9,0.65)_100%)] pointer-events-none" />
-      <AmbientSparks />
+      {/* Restrict sparks on desktop only to avoid mobile GPU stutter */}
+      <div className="hidden sm:block">
+        <AmbientSparks count={12} />
+      </div>
 
       {/* Center/Bottom Loading HUD */}
       <div className="relative z-10 w-full max-w-sm sm:max-w-md flex flex-col items-center gap-3.5 mb-6 sm:mb-10 px-4">
         <div className="flex flex-col items-center gap-1">
-          <h2 className="font-display font-bold text-2xl sm:text-3xl tracking-[0.25em] text-[#fae5b5] uppercase drop-shadow-[0_2px_16px_rgba(240,202,101,0.5)]">
+          <h2 className="font-display font-bold text-2xl sm:text-3xl tracking-[0.25em] text-[#fae5b5] uppercase drop-shadow-[0_2px_12px_rgba(240,202,101,0.4)]">
             DIVING...
           </h2>
           <p className="font-narrative text-xs sm:text-sm text-[#d8c49e]/80 italic">
@@ -61,12 +65,21 @@ export default function DiveLoadingScreen({ gender }: DiveLoadingScreenProps) {
         </div>
 
         {/* Elegant glowing loading bar */}
-        <div className="w-full max-w-xs sm:max-w-sm h-2.5 sm:h-3 rounded-full bg-[#120c1f]/90 border border-[#e8ca8a]/40 p-[2px] shadow-[0_0_20px_rgba(0,0,0,0.9)] overflow-hidden relative">
-          <div className="h-full rounded-full bg-gradient-to-r from-amber-500 via-[#f0ca65] to-purple-500 shadow-[0_0_12px_rgba(240,202,101,0.6)] w-full relative overflow-hidden">
+        <div className="w-full max-w-xs sm:max-w-sm h-2.5 sm:h-3 rounded-full bg-[#120c1f]/90 border border-[#e8ca8a]/40 p-[2px] shadow-[0_0_12px_rgba(0,0,0,0.8)] overflow-hidden relative">
+          <div className="h-full rounded-full bg-gradient-to-r from-amber-500 via-[#f0ca65] to-purple-500 shadow-[0_0_8px_rgba(240,202,101,0.5)] w-full relative overflow-hidden">
             {/* Smooth animated shimmer sweep */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-[shimmer_2s_infinite]" />
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-[shimmer_2s_infinite]" />
           </div>
         </div>
+
+        {onCancel && (
+          <button
+            onClick={onCancel}
+            className="mt-2 font-mono text-[11px] uppercase tracking-wider text-[#d8c49e]/70 hover:text-[#fae5b5] active:scale-95 transition-all py-1.5 px-4 rounded-full border border-white/10 hover:border-[#e8ca8a]/40 bg-black/40"
+          >
+            Cancel & Return
+          </button>
+        )}
       </div>
     </div>
   )

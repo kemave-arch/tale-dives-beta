@@ -1,7 +1,8 @@
 import { COMPETENCY_TIERS } from './tiers.ts'
-import type {
-  BeatUpdate, BreakthroughUpdate, ClassEvolutionUpdate, ConditionUpdate, EffortTier, EndingOutcome, EnrichUpdate, EventUpdate, FactionRepChange, InventoryAcquisition,
-  InventoryChange, ItemType, NpcMemoryUpdate, ProjectUpdate, QuestUpdate, SkillLearn, TurnResponse, TurnState,
+import {
+  KINSHIP_VALUES,
+  type BeatUpdate, type BreakthroughUpdate, type ClassEvolutionUpdate, type ConditionUpdate, type EffortTier, type EndingOutcome, type EnrichUpdate, type EventUpdate, type FactionRepChange, type InventoryAcquisition,
+  type InventoryChange, type ItemType, type KinshipType, type NpcMemoryUpdate, type ProjectUpdate, type QuestUpdate, type SkillLearn, type TurnResponse, type TurnState,
 } from '../types.ts'
 import { XmlParseError, decodeXmlEntities, num, reqNum, str, reqStr, reqTierWord, optTierWord, signToDelta, parseXmlBlock } from './xmlHelpers.ts'
 
@@ -178,6 +179,7 @@ export function parseXmlTurnResponse(raw: string): TurnResponse {
       personality: str(el.getAttribute('personality')),
       faction_id: str(el.getAttribute('faction')),
       secret_truth: str(el.getAttribute('secret')),
+      kinship: optTierWord(el.getAttribute('kin'), 'npc.kin', KINSHIP_VALUES) as KinshipType | undefined,
       party_status: optTierWord(el.getAttribute('party'), 'npc.party', PARTY_STATUSES),
     }
   })

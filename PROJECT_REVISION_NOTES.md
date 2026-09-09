@@ -1,5 +1,28 @@
 # Tale Dives — Project Revision Notes
 
+**Last updated:** 2026-09-09 — Kinship Classification & Intimacy Hard-Gating, Affection & Trust Scale Architecture, Fourth Wing Preset Calibration (`src/types.ts`, `src/api/turnContract.ts`, `src/api/xmlTurnContract.ts`, `src/api/worldSeedContract.ts`, `src/lib/xmlTurnParser.ts`, `src/lib/worldSeedParser.ts`, `src/lib/seeding.ts`, `src/lib/npcs.ts`, `src/screens/Codex.tsx`, `src/data/starterTemplates.ts`, `src/App.tsx`):
+- **What changed**:
+  1. **Kinship & Intimacy Hard-Gate (Option C)**:
+     - Added `KinshipType = 'parent' | 'sibling' | 'child' | 'spouse' | 'mentor' | 'clan'` and `KINSHIP_VALUES` to `src/types.ts`, wired through `NpcEntry.kinship` and `NpcMemoryUpdate.kinship`.
+     - Updated `src/api/turnContract.ts` Rule 5a (Relationships & Intimacy Gating) with an absolute hard gate: any NPC whose kinship is `parent`, `sibling`, or `child` is permanently barred from romantic or sexual escalation, regardless of Trust/Affection tier. For these kinship types, `Beloved` and `Devoted` represent unconditional, profound familial love and fidelity.
+     - Updated `src/api/xmlTurnContract.ts` and `src/api/worldSeedContract.ts` with the new optional `kin="parent|sibling|child|spouse|mentor|clan"` attribute on `<npc>` tags.
+     - Updated `src/lib/xmlTurnParser.ts` and `src/lib/worldSeedParser.ts` to parse the `kin` attribute safely with vocabulary clamping.
+     - Updated `src/lib/npcs.ts` (`describePresentNpc`) to include `Kinship: <type>` in the ground-truth context line alongside Role, Gender, and Age, and updated `applyNpcUpdates` to maintain kinship state.
+     - Updated `src/screens/Codex.tsx` to provide a dedicated Kinship selector in the NPC editor with lineage gate tags, and display Kinship in the Bond & Status card.
+  2. **Fourth Wing Starter Preset Adjustments**:
+     - Corrected The Parapet location in `starterTemplates.ts` to an eighteen-inch-wide rain-slicked stone bridge straddling a two-hundred-foot gorge (aligning with Chapter 1 of *Fourth Wing*).
+     - Added sub-areas to Basgiath War College: General Sorrengail's Office, Registration Courtyard, Cadet Barracks, Flight Field. Added `areas?: string[]` to `WorldLocation` in `src/types.ts` and mapped `areas` in `App.tsx`'s `initialLocations`.
+     - Calibrated Violet Sorrengail's opening scene and equipment: added `Mira's Dragon-Scale Corset & Poisoned Boot Daggers` as keyItem, and refined the opening paragraph to capture the joint-binding preparation, Mira's heated argument with General Sorrengail, and the illicit dragon scale armor gifted before the descent to the registration courtyard.
+- **Verification**: `tsc --noEmit` and `vite build` clean; zero lint warnings.
+
+**Last updated:** 2026-09-09 — Fix Dive Loading Screen Back Button Stuck & Mobile Lag (`src/App.tsx`, `src/screens/DiveLoadingScreen.tsx`, `src/lib/setupBgResolver.ts`, `src/lib/seeding.ts`, `src/api/providers/gemini.ts`, `src/api/providers/types.ts`):
+- **What changed**:
+  1. **AbortController for Seeding**: Added `AbortController` (`diveAbortRef`) in `App.tsx`, threaded through `seedCampaign` and `runSeed` into `fetch(..., { signal })`. When the phone's hardware back button or the "Cancel & Return" button is pressed while on the `diveloading` screen, the in-flight World Seeding network request is immediately aborted, avoiding orphaned generation that hijacked navigation later.
+  2. **Back Navigation & Stuck Prevention**: Updated `handlePopState` in `App.tsx` to abort active dives and redirect any browser history pop targeting `diveloading` or `seedingreview` to `mainmenu`. Also updated `resumeCampaign` to navigate directly to `chronicle` instead of bouncing through `diveloading` (which previously hung indefinitely if `log.length === 0`).
+  3. **Dive Screen Mobile Lag & GPU Load**: In `DiveLoadingScreen.tsx`, restricted `AmbientSparks` to desktop (`hidden sm:block`) so mobile GPUs aren't running 22 continuous animating CSS box-shadows, added `touch-none overscroll-none` to eliminate touch drag/scroll jitter, and replaced heavy drop-shadows with performant GPU-friendly gradients.
+  4. **Preload Asset Storm Fix**: In `setupBgResolver.ts`, replaced the speculative candidate permutation generator in `preloadAllSetupAssets` with an explicit list of the 8 real existing asset files, eliminating 20 failing 404 network requests that flooded the mobile network tab on setup screens.
+- **Verification**: `tsc --noEmit` and `vite build` clean.
+
 **Last updated:** 2026-09-09 — Narrative Events, Death Rules, End Game Rules (`src/types.ts`, `src/lib/narrativeEvents.ts` (new), `src/api/xmlTurnContract.ts`, `src/api/turnContract.ts`, `src/lib/xmlTurnParser.ts`, `src/lib/jitContext.ts`, `src/App.tsx`, `src/screens/Chronicle.tsx`, `src/screens/Codex.tsx`):
 
 Ports Voyage's "Narrative Events"/`death`/`endGame` Mechanics concepts into Tale Dives' own architecture — giving the author "some control on storyline" via condition-triggered complications, configurable death consequences, and per-outcome ending tone — while deliberately leaving out every numeric RPG-crunch system visible in the same Voyage JSON (attributes, skills/XP, resource pools, abilities/cooldowns, combat damage types, progression/leveling), which would reopen the exact hallucination-prone numeric layer this project's earlier Narrative-First Overhaul removed.

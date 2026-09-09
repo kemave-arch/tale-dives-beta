@@ -49,7 +49,8 @@ function matchesReveal(discovery: Discovery, turn: TurnResponse, nextFlags: stri
     case 'quest_complete':
       return turn.quest_update?.quest_id === discovery.revealCondition && turn.quest_update.status === 'completed'
     case 'manual':
-      return false // only the player, via CRUD, ever reveals a manual-trigger entry
+    case 'story':
+      return false // only the player, via CRUD, ever reveals a manual-trigger entry (story triggers apply to Narrative Events)
   }
 }
 

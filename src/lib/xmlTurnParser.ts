@@ -154,6 +154,12 @@ export function parseXmlTurnResponse(raw: string): TurnResponse {
     ? { event_id: reqStr(eventEl.getAttribute('id'), 'event.id'), status: reqTierWord(eventEl.getAttribute('stat'), 'event.stat', EVENT_STATUSES) }
     : undefined
 
+  // <event_trip> — trips a dormant story-trigger event when LLM narrative
+  // satisfies its watch condition.
+  const event_trips: string[] = Array.from(doc.querySelectorAll('event_trip'))
+    .map((el) => str(el.getAttribute('id')))
+    .filter((id): id is string => !!id)
+
   // <project> — mirrors <quest> exactly (same "stat" full-word convention),
   // but plural/repeatable since more than one project could plausibly
   // update in the same turn. "stage" is the 0-based index of a stage just
@@ -246,6 +252,7 @@ export function parseXmlTurnResponse(raw: string): TurnResponse {
     quest_update,
     beat_update,
     event_update,
+    event_trips: event_trips.length ? event_trips : undefined,
     project_update: project_update.length ? project_update : undefined,
     npc_mem_up: npc_mem_up.length ? npc_mem_up : undefined,
     class_evolution,

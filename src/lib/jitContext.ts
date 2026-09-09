@@ -276,11 +276,22 @@ export function buildContextSlice(state: Campaign, craftReadyLine?: string | nul
   // shown at all (it's the story's own surprise, client-checked with zero
   // LLM involvement); only an already-ACTIVE event's title+guidance appears,
   // so the model has something to weave in but nothing to leak early.
+  // Exception: 'story' triggers need the model to observe when a specific narrative
+  // condition occurs in prose. We surface only the event ID and condition description
+  // (never the spoiler guidance!) as "Dormant Story Watches" so the model knows to emit
+  // <event_trip id="..."/> when it happens.
   if (narrativeEvents) {
     const active = Object.values(narrativeEvents).filter((e) => e.status === 'active')
     if (active.length > 0) {
       const line = active.map((e) => (e.guidance ? `${e.title}: ${e.guidance}` : e.title)).join(' | ')
       lines.push(`Active Narrative Events: ${line}`)
+    }
+    const dormantStory = Object.values(narrativeEvents)
+      .filter((e) => e.status === 'dormant' && e.trigger === 'story' && e.condition?.trim())
+      .slice(0, 3)
+    if (dormantStory.length > 0) {
+      const watches = dormantStory.map((e) => `[${e.id}]: ${e.condition!.trim()}`).join(' | ')
+      lines.push(`Dormant Story Watches: ${watches}`)
     }
   }
 

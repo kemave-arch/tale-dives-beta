@@ -42,7 +42,10 @@ Story Arc phase only: a beat's "title" is the only part ever shown back to
 the player in the ordinary chat flow — write "summary" as the real,
 spoiler-bearing premise anyway (it is stored and only surfaces to the
 narrator once that beat is actually reached in play), never a vague
-restatement of the title.
+restatement of the title. Additionally, propose 2-3 dormant Narrative Events
+(<narrative_event>) as dynamic complications or encounters, an optional
+Death Rule (<death_rule>), and optional End Game Guidance (<end_game>) to define
+what victory, defeat, and bittersweet outcomes look like for this tale.
 `.trim()
 
 export const TALE_WEAVER_GRAMMAR = `
@@ -57,6 +60,9 @@ OUTPUT FORMAT (read carefully — respond with exactly this, nothing else, no ma
   <npc id="NPC_ID" name="NAME" role="ROLE" personality="TRAIT_SUMMARY" appearance="PHYSICAL_DESC" aff="Stranger|Acquaintance|Friend|Confidant|Beloved" trust="Distrustful|Wary|Reliable|Trusted|Devoted" />
   <lore id="LORE_ID" name="NAME" category="CATEGORY" content="CONTENT" era="ERA" hidden="1" tease="TEASER_TEXT" />
   <beat id="BEAT_ID" title="TITLE" summary="SPOILER_PREMISE" />
+  <narrative_event id="EVENT_ID" title="TITLE" trigger="flag|location_visit|npc_met|quest_complete|story" cond="TARGET_OR_CONDITION" guide="GUIDANCE_TEXT" />
+  <death_rule mode="soft_fail|permadeath" instructions="DEATH_INSTRUCTIONS" />
+  <end_game win="WIN_GUIDANCE" lose="LOSE_GUIDANCE" neutral="NEUTRAL_GUIDANCE" />
 </phase>
 
 Rules:
@@ -67,7 +73,7 @@ Rules:
 - Factions phase: 1-4 <faction> tags.
 - Cast of Characters phase: 1-4 <npc> tags. aff/trust are each one of their exact canonical words, omitted entirely for a neutral/unestablished relationship.
 - Lore & Secrets phase: 2-5 <lore> tags. hidden/tease are optional — omit both for a normal entry, include both only for the rare deliberately-hidden one.
-- Story Arc phase: 3-6 <beat> tags in the order they should occur, each a distinct escalating movement of the story toward a real ending — title short and evocative, summary the full spoiler-bearing premise (see the system instructions above on how each is used).
+- Story Arc phase: 3-6 <beat> tags in the order they should occur, each a distinct escalating movement of the story toward a real ending — title short and evocative, summary the full spoiler-bearing premise (see the system instructions above on how each is used). Also include 2-3 <narrative_event> tags for dormant complications/encounters (trigger="flag|location_visit|npc_met|quest_complete|story", cond="target", guide="steering guidance"), an optional <death_rule mode="soft_fail|permadeath" instructions="..." />, and an optional <end_game win="..." lose="..." neutral="..." /> for story conclusion guidance.
 - Every id is a short snake_case slug derived from the entry's own name (e.g. "Elana Voss" -> "elana_voss") — never invent a numbered or generic id.
 - Escape literal & as &amp; inside attribute values.
 `.trim()

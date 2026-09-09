@@ -1,4 +1,4 @@
-import type { AreaEntry, ApiSettings, Dict, FactionEntry, ItemEntry, LocationEntry, LoreEntry, NpcEntry, QuestEntry, RegionEntry, WorldFaction, WorldLocation } from '../types.ts'
+import type { AreaEntry, ApiSettings, Dict, FactionEntry, ItemEntry, LocationEntry, LoreEntry, NarrativeEvent, NpcEntry, QuestEntry, RegionEntry, WorldFaction, WorldLocation } from '../types.ts'
 import { getProvider } from '../api/providers/index.ts'
 import { buildWorldSeedSystemInstructions } from '../api/worldSeedContract.ts'
 import { MAX_OUTPUT_TOKENS_CEILING } from '../api/turnContract.ts'
@@ -58,6 +58,7 @@ export interface SeedCampaignResult {
   factions: Dict<FactionEntry>
   items: Dict<ItemEntry>
   inventory: Dict<number>
+  narrativeEvents: Dict<NarrativeEvent>
   debug: { prompt: string; response?: string; error?: string }
 }
 
@@ -98,7 +99,7 @@ function uniqueId(name: string, existingIds: Set<string>, prefix = ''): string {
 
 export async function seedCampaign(input: SeedCampaignInput): Promise<SeedCampaignResult> {
   const prompt = buildSeedPrompt(input)
-  const empty: SeedCampaignResult = { lore: {}, npcs: {}, quests: {}, regions: {}, locations: {}, factions: {}, items: {}, inventory: {}, debug: { prompt } }
+  const empty: SeedCampaignResult = { lore: {}, npcs: {}, quests: {}, regions: {}, locations: {}, factions: {}, items: {}, inventory: {}, narrativeEvents: {}, debug: { prompt } }
 
   let raw: string
   try {
@@ -242,5 +243,19 @@ export async function seedCampaign(input: SeedCampaignInput): Promise<SeedCampai
     }
   }
 
-  return { lore, npcs, quests, regions, locations, factions, items, inventory, debug: { prompt, response: raw } }
+  const narrativeEvents: Dict<NarrativeEvent> = {}
+  for (const e of seed.events) {
+    const id = slugify(e.id) || slugify(e.title)
+    if (!id || narrativeEvents[id]) continue
+    narrativeEvents[id] = {
+      id,
+      title: e.title,
+      status: 'dormant',
+      trigger: e.trigger || 'story',
+      condition: e.condition?.trim() || undefined,
+      guidance: e.guidance?.trim() || undefined,
+    }
+  }
+
+  return { lore, npcs, quests, regions, locations, factions, items, inventory, narrativeEvents, debug: { prompt, response: raw } }
 }

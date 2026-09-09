@@ -1,5 +1,39 @@
 # Tale Dives — Project Revision Notes
 
+**Last updated:** 2026-09-09 — Tale Weaver XML Parser Fallback (`src/lib/taleWeaverParser.ts`):
+- **What changed**: Added a fallback in `parseTaleWeaverResponse` to strip markdown fences and wrap the response in a synthetic `<root>` if the model generates valid inner tags but fails to wrap its output in the required `<phase>` block. This prevents the "No `<phase>` block found" error that sometimes occurred during the Protagonist phase or other steps.
+- **Verification**: `npm run build` succeeds, the parser now gracefully handles raw unwrapped XML blocks.
+
+**Last updated:** 2026-09-09 — Tale Weaver UX/UI Cleanup & Linter Fixes (`src/screens/TaleWeaver.tsx`):
+- **What changed**:
+  1. Fixed TypeScript linter errors introduced during the recent Tale Weaver UX/UI overhaul.
+  2. Removed unused `Send` and `RotateCcw` lucide-react imports.
+  3. Fixed a strict boolean assignment error in `hasPhaseContent` (case 'arc') by correctly coalescing `acc.narrativeEvents?.length` to a number.
+  4. Replaced incorrect `affectionTier` and `trustTier` properties with `aff` and `trust` when mapping over `TaleWeaverNpc` in the 'npcs' phase view, matching the interface defined in `src/lib/taleWeaverParser.ts`.
+- **Verification**: `tsc --noEmit` and `vite build` complete cleanly with zero warnings/errors.
+
+**Last updated:** 2026-09-09 — Narrative Events, Story Triggers, Tale Weaver Integration & Seeding Enrichment (`src/types.ts`, `src/api/turnContract.ts`, `src/api/xmlTurnContract.ts`, `src/api/worldSeedContract.ts`, `src/api/taleWeaverContract.ts`, `src/lib/xmlTurnParser.ts`, `src/lib/worldSeedParser.ts`, `src/lib/taleWeaverParser.ts`, `src/lib/narrativeEvents.ts`, `src/lib/discovery.ts`, `src/lib/seeding.ts`, `src/lib/taleWeaving.ts`, `src/lib/jitContext.ts`, `src/screens/TaleWeaver.tsx`, `src/App.tsx`):
+- **What changed**:
+  1. **Narrative Story Triggers (`story` trigger type & `<event_trip>` tag)**:
+     - Extended `RevealTrigger` in `src/types.ts` with `'story'`, allowing Narrative Events to be tripped by dramatic prose condition fulfillment rather than solely mechanical state deltas.
+     - Updated `src/api/turnContract.ts` and `src/api/xmlTurnContract.ts` to document `<event_trip id="..." />` in `<sync>`.
+     - Updated `src/lib/xmlTurnParser.ts` to parse `<event_trip>` elements into `TurnResponse.event_trips`.
+     - Updated `src/lib/narrativeEvents.ts` and `src/lib/discovery.ts` (`matchesTrigger`) to evaluate `case 'story': return turn.event_trips?.includes(event.id) ?? false`.
+     - Updated `src/lib/jitContext.ts` to surface active dormant story watches (`Dormant Story Watches: [Event ID]: [Condition]`) to the model, giving it the exact cue to emit `<event_trip id="..." />` when the scene meets the condition, triggering the event at zero client-side guesswork.
+  2. **World Seeding Enrichment**:
+     - Updated `src/api/worldSeedContract.ts` with `<event id="..." title="..." trig="flag|location_visit|npc_met|quest_complete|story|manual" cond="..." guide="..." />` XML grammar and system instructions.
+     - Updated `src/lib/worldSeedParser.ts` to parse `<event>` tags into `SeededEvent`.
+     - Updated `src/lib/seeding.ts` to accumulate seeded narrative events and populate `SeedCampaignResult.narrativeEvents`.
+  3. **Tale Weaver Generation & UI Integration**:
+     - Updated `src/api/taleWeaverContract.ts` Phase 7 (Story Arc) grammar and instructions to output `<narrative_event>`, `<death_rule>`, and `<end_game>` tags alongside `<beat>`.
+     - Updated `src/lib/taleWeaverParser.ts` to parse `<narrative_event>`, `<death_rule>`, and `<end_game>`.
+     - Updated `src/lib/taleWeaving.ts` to track `narrativeEvents`, `deathRule`, `deathInstructions`, and `endGameRules` in `TaleWeaverAccumulated`.
+     - Updated `src/screens/TaleWeaver.tsx` to handle, accumulate, display, and remove generated Narrative Events and display configured Death / End Game Rules in the Arc phase batch view.
+  4. **Campaign Initialization Wiring**:
+     - In `src/App.tsx`, updated `beginCampaign` to wire `narrativeEvents: Object.keys(seeded.narrativeEvents).length > 0 ? seeded.narrativeEvents : undefined` into the created Campaign.
+     - In `src/App.tsx`, updated `beginInspiredTale` to map `accumulated.narrativeEvents`, `accumulated.deathRule`, `accumulated.deathInstructions`, and `accumulated.endGameRules` directly into the created Campaign.
+- **Verification**: `tsc --noEmit` and `vite build` completed cleanly with zero warnings/errors.
+
 **Last updated:** 2026-09-09 — Kinship Classification & Intimacy Hard-Gating, Affection & Trust Scale Architecture, Fourth Wing Preset Calibration (`src/types.ts`, `src/api/turnContract.ts`, `src/api/xmlTurnContract.ts`, `src/api/worldSeedContract.ts`, `src/lib/xmlTurnParser.ts`, `src/lib/worldSeedParser.ts`, `src/lib/seeding.ts`, `src/lib/npcs.ts`, `src/screens/Codex.tsx`, `src/data/starterTemplates.ts`, `src/App.tsx`):
 - **What changed**:
   1. **Kinship & Intimacy Hard-Gate (Option C)**:

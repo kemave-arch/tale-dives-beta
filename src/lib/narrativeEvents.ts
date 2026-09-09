@@ -1,4 +1,4 @@
-import type { Dict, EventUpdate, NarrativeEvent, RevealTrigger, TurnResponse } from '../types.ts'
+import type { Dict, EventUpdate, NarrativeEvent, TurnResponse } from '../types.ts'
 
 // §9 Narrative Events — condition-triggered story complications/scenes,
 // checked entirely client-side at zero LLM cost. Mirrors lib/discovery.ts's
@@ -7,17 +7,19 @@ import type { Dict, EventUpdate, NarrativeEvent, RevealTrigger, TurnResponse } f
 // Event's own dormant->active transition is conceptually identical to a
 // Discovery's hidden->known reveal — just applied to a story beat instead
 // of a Codex entry.
-function matchesTrigger(trigger: RevealTrigger | undefined, condition: string | undefined, turn: TurnResponse, nextFlags: string[]): boolean {
-  if (!trigger || !condition) return false
-  switch (trigger) {
+function matchesTrigger(event: NarrativeEvent, turn: TurnResponse, nextFlags: string[]): boolean {
+  if (!event.trigger) return false
+  switch (event.trigger) {
     case 'flag':
-      return nextFlags.includes(condition)
+      return !!event.condition && nextFlags.includes(event.condition)
     case 'location_visit':
-      return turn.loc_id === condition
+      return !!event.condition && turn.loc_id === event.condition
     case 'npc_met':
-      return turn.npc_mem_up?.some((u) => u.npc_id === condition) ?? false
+      return !!event.condition && (turn.npc_mem_up?.some((u) => u.npc_id === event.condition) ?? false)
     case 'quest_complete':
-      return turn.quest_update?.quest_id === condition && turn.quest_update.status === 'completed'
+      return !!event.condition && turn.quest_update?.quest_id === event.condition && turn.quest_update.status === 'completed'
+    case 'story':
+      return turn.event_trips?.includes(event.id) ?? false
     case 'manual':
       return false // only the player, via CRUD, ever activates a manual-trigger event
   }
@@ -40,7 +42,7 @@ export function checkNarrativeEventTriggers(
   const activated: NarrativeEvent[] = []
   for (const event of Object.values(events)) {
     if (event.status !== 'dormant') continue
-    if (matchesTrigger(event.trigger, event.condition, turn, nextFlags)) activated.push(event)
+    if (matchesTrigger(event, turn, nextFlags)) activated.push(event)
   }
   if (!activated.length) return { events, activated }
 

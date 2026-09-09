@@ -1,4 +1,4 @@
-import type { ItemType, KinshipType } from '../types.ts'
+import type { ItemType, KinshipType, RevealTrigger } from '../types.ts'
 import { KINSHIP_VALUES } from '../types.ts'
 import { XmlParseError, str, num, parseXmlBlock } from './xmlHelpers.ts'
 
@@ -76,6 +76,14 @@ export interface SeededItem {
   traits?: string // freeform narrative flavor tags, comma-separated — same shape as a turn's <item traits="...">, never a numeric stat bonus
 }
 
+export interface SeededEvent {
+  id: string
+  title: string
+  trigger?: RevealTrigger
+  condition?: string
+  guidance?: string
+}
+
 export interface WorldSeedResult {
   lore: SeededLore[]
   npcs: SeededNpc[]
@@ -84,6 +92,7 @@ export interface WorldSeedResult {
   locations: SeededLocation[]
   factions: SeededFaction[]
   item?: SeededItem
+  events: SeededEvent[]
 }
 
 export function parseWorldSeedResponse(raw: string): WorldSeedResult {
@@ -182,7 +191,26 @@ export function parseWorldSeedResponse(raw: string): WorldSeedResult {
       ? { id: itemId, name: itemName, type: itemType as ItemType, desc: str(itemEl.getAttribute('desc')), traits: str(itemEl.getAttribute('traits')) }
       : undefined
 
-  return { lore, npcs, quest, regions, locations, factions, item }
+  const events: SeededEvent[] = []
+  for (const el of Array.from(doc.querySelectorAll('event'))) {
+    const id = str(el.getAttribute('id'))
+    const title = str(el.getAttribute('title'))
+    if (!id || !title) continue
+    const trg = str(el.getAttribute('trigger'))
+    const trigger: RevealTrigger | undefined =
+      trg && (['flag', 'location_visit', 'npc_met', 'quest_complete', 'story', 'manual'] as const).includes(trg as any)
+        ? (trg as RevealTrigger)
+        : undefined
+    events.push({
+      id,
+      title,
+      trigger,
+      condition: str(el.getAttribute('cond')),
+      guidance: str(el.getAttribute('guide')),
+    })
+  }
+
+  return { lore, npcs, quest, regions, locations, factions, item, events }
 }
 
 export { XmlParseError as WorldSeedParseError }

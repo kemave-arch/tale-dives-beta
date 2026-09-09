@@ -36,7 +36,7 @@ export const TALE_WEAVER_PHASES: TaleWeaverPhaseDef[] = [
   { id: 'factions', label: 'Factions', prompt: 'Describe the powers and groups that shape this world.' },
   { id: 'npcs', label: 'Cast of Characters', prompt: 'Describe who the protagonist already knows, or will soon meet.' },
   { id: 'lore', label: 'Lore & Secrets', prompt: 'Describe the history, myths, or secrets woven into this world.' },
-  { id: 'arc', label: 'Story Arc', prompt: 'Describe the shape of the story you want — how it should escalate, and how it should end.' },
+  { id: 'arc', label: 'Story Arc', prompt: 'Describe the shape of the story you want — key story beats, possible complications or events, and death/end-game stakes.' },
 ]
 
 // Everything confirmed so far, across every phase — re-sent in full on
@@ -52,10 +52,14 @@ export interface TaleWeaverAccumulated {
   npcs: TaleWeaverDraft['npcs']
   lore: TaleWeaverDraft['lore']
   beats: TaleWeaverDraft['beats']
+  narrativeEvents?: TaleWeaverDraft['narrativeEvents']
+  deathRule?: TaleWeaverDraft['deathRule']
+  deathInstructions?: TaleWeaverDraft['deathInstructions']
+  endGameRules?: TaleWeaverDraft['endGameRules']
 }
 
 export function emptyAccumulated(): TaleWeaverAccumulated {
-  return { regions: [], locations: [], factions: [], npcs: [], lore: [], beats: [] }
+  return { regions: [], locations: [], factions: [], npcs: [], lore: [], beats: [], narrativeEvents: [] }
 }
 
 function buildPhasePrompt(phase: TaleWeaverPhaseDef, accumulated: TaleWeaverAccumulated, guidance: string): string {

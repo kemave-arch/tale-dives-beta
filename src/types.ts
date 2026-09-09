@@ -178,7 +178,7 @@ export interface ItemEntry {
 // is no seeding/grounding call yet that pre-populates masked lore). Reveal
 // checks run client-side each turn (§5.12) against the turn's own deltas —
 // no new LLM call, no schema field on the turn response itself.
-export type RevealTrigger = 'flag' | 'location_visit' | 'npc_met' | 'quest_complete' | 'manual'
+export type RevealTrigger = 'flag' | 'location_visit' | 'npc_met' | 'quest_complete' | 'story' | 'manual'
 
 export interface Discovery {
   state: 'known' | 'hidden'
@@ -890,6 +890,7 @@ export interface TurnResponse {
   quest_update?: QuestUpdate
   beat_update?: BeatUpdate
   event_update?: EventUpdate
+  event_trips?: string[] // event IDs tripped this turn via <event_trip id="..."/> for 'story' trigger narrative events
   project_update?: ProjectUpdate[]
   npc_mem_up?: NpcMemoryUpdate[]
   class_evolution?: ClassEvolutionUpdate

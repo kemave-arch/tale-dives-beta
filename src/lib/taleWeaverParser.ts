@@ -1,4 +1,5 @@
-import { str, num, parseXmlBlock } from './xmlHelpers.ts'
+import type { DeathRule, EndingOutcome, RevealTrigger } from '../types.ts'
+import { str, num, parseXmlBlock, XmlParseError } from './xmlHelpers.ts'
 
 // Parses the <phase> grammar (api/taleWeaverContract.ts) — one call's worth
 // of draft content for whichever single phase was active. Mirrors
@@ -80,6 +81,14 @@ export interface TaleWeaverBeat {
   summary?: string
 }
 
+export interface TaleWeaverNarrativeEvent {
+  id: string
+  title: string
+  trigger?: RevealTrigger
+  condition?: string
+  guidance?: string
+}
+
 export interface TaleWeaverDraft {
   world?: TaleWeaverWorldDraft
   protagonist?: TaleWeaverProtagonistDraft
@@ -89,10 +98,24 @@ export interface TaleWeaverDraft {
   npcs: TaleWeaverNpc[]
   lore: TaleWeaverLore[]
   beats: TaleWeaverBeat[]
+  narrativeEvents: TaleWeaverNarrativeEvent[]
+  deathRule?: DeathRule
+  deathInstructions?: string
+  endGameRules?: Partial<Record<EndingOutcome, string>>
 }
 
 export function parseTaleWeaverResponse(raw: string): TaleWeaverDraft {
-  const doc = parseXmlBlock(raw, 'phase')
+  let doc: Document
+  try {
+    doc = parseXmlBlock(raw, 'phase')
+  } catch (err) {
+    // Fallback: Model may have omitted the <phase> wrapper or used markdown fences.
+    // Strip markdown fences and wrap in a synthetic <root> directly.
+    const clean = raw.replace(/```xml\n?/gi, '').replace(/```\n?/g, '').trim()
+    doc = new DOMParser().parseFromString(`<root>${clean}</root>`, 'text/xml')
+    const parseError = doc.querySelector('parsererror')
+    if (parseError) throw new XmlParseError(`Malformed XML fallback: ${parseError.textContent}`)
+  }
 
   const worldEl = doc.querySelector('world')
   const world: TaleWeaverWorldDraft | undefined = worldEl
@@ -202,5 +225,36 @@ export function parseTaleWeaverResponse(raw: string): TaleWeaverDraft {
     beats.push({ id, title, summary: str(el.getAttribute('summary')) })
   }
 
-  return { world, protagonist, regions, locations, factions, npcs, lore, beats }
+  const narrativeEvents: TaleWeaverNarrativeEvent[] = []
+  for (const el of Array.from(doc.querySelectorAll('narrative_event'))) {
+    const id = str(el.getAttribute('id'))
+    const title = str(el.getAttribute('title'))
+    if (!id || !title) continue
+    const trg = str(el.getAttribute('trigger'))
+    const trigger: RevealTrigger | undefined =
+      trg && (['flag', 'location_visit', 'npc_met', 'quest_complete', 'story', 'manual'] as const).includes(trg as any)
+        ? (trg as RevealTrigger)
+        : undefined
+    narrativeEvents.push({
+      id,
+      title,
+      trigger,
+      condition: str(el.getAttribute('cond')),
+      guidance: str(el.getAttribute('guide')),
+    })
+  }
+
+  const deathRuleEl = doc.querySelector('death_rule')
+  const deathMode = deathRuleEl ? str(deathRuleEl.getAttribute('mode')) : undefined
+  const deathRule: DeathRule | undefined = deathMode === 'permadeath' || deathMode === 'soft_fail' ? deathMode : undefined
+  const deathInstructions = deathRuleEl ? str(deathRuleEl.getAttribute('instructions')) : undefined
+
+  const endEl = doc.querySelector('end_game')
+  const win = endEl ? str(endEl.getAttribute('win')) : undefined
+  const lose = endEl ? str(endEl.getAttribute('lose')) : undefined
+  const neutral = endEl ? str(endEl.getAttribute('neutral')) : undefined
+  const endGameRules: Partial<Record<EndingOutcome, string>> | undefined =
+    win || lose || neutral ? { ...(win ? { win } : {}), ...(lose ? { lose } : {}), ...(neutral ? { neutral } : {}) } : undefined
+
+  return { world, protagonist, regions, locations, factions, npcs, lore, beats, narrativeEvents, deathRule, deathInstructions, endGameRules }
 }

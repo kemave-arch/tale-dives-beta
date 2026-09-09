@@ -775,6 +775,7 @@ export default function App() {
       combat: { active: false }, // §2 Phase D.2/§5.13 — ephemeral, reset each encounter
       flags: [], // §5.6 World Impact Ledger
       inventory: seeded.inventory, // §5.9
+      narrativeEvents: Object.keys(seeded.narrativeEvents).length > 0 ? seeded.narrativeEvents : undefined,
       log: [],
       createdAt: Date.now(),
       lastPlayed: Date.now(),
@@ -929,6 +930,20 @@ export default function App() {
 
     const beats: TaleBeat[] = accumulated.beats.map((b) => ({ id: b.id, title: b.title, summary: b.summary, status: 'pending' as const }))
 
+    const narrativeEvents: Dict<NarrativeEvent> = {}
+    if (accumulated.narrativeEvents?.length) {
+      for (const e of accumulated.narrativeEvents) {
+        narrativeEvents[e.id] = {
+          id: e.id,
+          title: e.title,
+          status: 'dormant',
+          trigger: e.trigger || 'story',
+          condition: e.condition?.trim() || undefined,
+          guidance: e.guidance?.trim() || undefined,
+        }
+      }
+    }
+
     // Both land in their libraries the moment a Tale begins (§6.4B), same
     // as beginCampaign's own Original Mode path.
     const worldEntry = upsertWorld(world, world.id)
@@ -958,6 +973,10 @@ export default function App() {
       flags: [],
       inventory: {},
       beats,
+      narrativeEvents: Object.keys(narrativeEvents).length > 0 ? narrativeEvents : undefined,
+      deathRule: accumulated.deathRule,
+      deathInstructions: accumulated.deathInstructions,
+      endGameRules: accumulated.endGameRules,
       log: [],
       createdAt: Date.now(),
       lastPlayed: Date.now(),

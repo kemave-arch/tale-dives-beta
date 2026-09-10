@@ -168,10 +168,6 @@ export default function App() {
     }
 
     const handlePopState = (event: PopStateEvent) => {
-      // Sync depth ref with state
-      const popDepth = typeof event.state?.depth === 'number' ? event.state.depth : 0
-      historyDepthRef.current = popDepth
-
       // If diving was in-flight, cancel it immediately
       if (diveAbortRef.current) {
         diveAbortRef.current.abort()
@@ -180,6 +176,8 @@ export default function App() {
       setBusy(false)
 
       // If the pop event is for an in-app modal (handled by modal listener), do not change screen
+      // or touch the depth ref — modal pushState carries no `depth` of its own, so syncing here
+      // would incorrectly zero out the real screen-navigation depth on every modal close.
       if (event.state?.modal) {
         return
       }
@@ -204,9 +202,11 @@ export default function App() {
       }
 
       if (nextScreen) {
+        historyDepthRef.current = typeof event.state?.depth === 'number' ? event.state.depth : 0
         sessionStorage.setItem('td_active_screen', nextScreen)
         setScreen(nextScreen)
       } else {
+        historyDepthRef.current = 0
         sessionStorage.setItem('td_active_screen', 'mainmenu')
         setScreen('mainmenu')
       }

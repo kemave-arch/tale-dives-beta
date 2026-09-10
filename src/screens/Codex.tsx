@@ -4,7 +4,7 @@ import {
   Globe, BookOpen, Users, ShieldCheck, Map, ScrollText, Target, Skull, Backpack,
   Pencil, Save, X, Trash2, Plus, Lock, User, Hammer, Clock, Sparkles, CheckCircle2, XCircle, ArrowRight, Ghost,
   Swords, Star, EyeOff, Search, MapPin, Heart, Coins, Gift, Zap, Compass, AlertTriangle, AlertCircle, Shield, Flame, Milestone, ListChecks,
-  ChevronRight, Flag, ImagePlus, RotateCw,
+  ChevronRight, ChevronLeft, Flag, ImagePlus, RotateCw,
 } from 'lucide-react'
 import { DASHED_ROW_CLASS, GLASS_SURFACE_LIST, GlassHeader, GlassIconButton, GlassScreen, SELECT_CLASS } from '../lib/glassChrome.tsx'
 import { slugify } from '../lib/slug.ts'
@@ -26,7 +26,8 @@ import { COMPETENCY_TIERS, THREAT_TIERS, tierToWord, wordToTier, displayThreatLa
 import { useEntityImage } from '../lib/useEntityImage.ts'
 import { generateAndStoreEntityImage } from '../lib/entityImages.ts'
 import { buildLocationImagePrompt, buildNpcPortraitPrompt, buildRegionMapPrompt, getPremiumApiKey } from '../lib/imageGeneration.ts'
-import { useImageCooldown } from '../lib/imageCooldown.ts'
+import { useImageCooldown } from "../lib/imageCooldown.ts"
+import { deleteImageBlob } from "../lib/imageStore.ts"
 import { trustWord } from '../lib/npcs.ts'
 
 import codexArchiveBanner from '../assets/images/codex_archive_banner.webp'
@@ -1009,12 +1010,13 @@ function TagPills({ tags, accent }: { tags: string[] | undefined; accent: Catego
 // onUpdateX handler the caller already has — this never touches the
 // edit-form draft state, since generating art isn't part of the Save flow.
 function EntityImagePanel({
-  imageKey, prompt: initialPrompt, apiSettings, onSaveKey, aspectRatio,
+  imageKey, imageHistory, prompt: initialPrompt, apiSettings, onSaveKey, aspectRatio,
 }: {
   imageKey?: string
+  imageHistory?: string[]
   prompt: string
   apiSettings: ApiSettings
-  onSaveKey: (key: string) => void
+  onSaveKey: (key: string, history?: string[]) => void
   aspectRatio?: '1:1' | '16:9' | '9:16' | '4:3' | '3:2'
 }) {
   const [busy, setBusy] = useState(false)
@@ -1055,16 +1057,17 @@ function EntityImagePanel({
     start62sCooldown()
 
     try {
-      const key = imageKey || `img_${Math.random().toString(36).slice(2)}_${Date.now()}`
+      const generatedKey = `img_${Math.random().toString(36).slice(2)}_${Date.now()}`
       const usedModel = await generateAndStoreEntityImage({
         apiKey: targetKey,
         prompt: finalPrompt,
-        key,
+        key: generatedKey,
         aspectRatio,
         isPremium,
       })
       setModelUsed(usedModel)
-      onSaveKey(key)
+      const newHistory = [...(imageHistory || (imageKey ? [imageKey] : [])), generatedKey]
+      onSaveKey(generatedKey, newHistory)
       setRefreshToken((t) => t + 1)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
@@ -1078,11 +1081,68 @@ function EntityImagePanel({
     setShowPromptEdit(true)
   }
 
+  const effectiveHistory = imageHistory || (imageKey ? [imageKey] : [])
+  const currentIndex = imageKey ? effectiveHistory.indexOf(imageKey) : -1
+
+  async function handleDelete() {
+    if (!imageKey) return
+    const confirmed = confirm('Delete this image?')
+    if (!confirmed) return
+    try {
+      setBusy(true)
+      await deleteImageBlob(imageKey)
+      const newHistory = effectiveHistory.filter((k) => k !== imageKey)
+      onSaveKey(newHistory[newHistory.length - 1] || '', newHistory)
+      setRefreshToken((t) => t + 1)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-2">
       {url && (
-        <div className="relative rounded-xl overflow-hidden border border-[#e8ca8a]/25 bg-black/60 shadow-md flex justify-center items-center p-1 min-h-[160px] max-h-72">
+        <div className="relative rounded-xl overflow-hidden border border-[#e8ca8a]/25 bg-black/60 shadow-md flex justify-center items-center p-1 min-h-[160px] max-h-72 group">
           <img src={url} alt="" className="w-full max-h-64 object-contain rounded-lg" />
+          
+          {effectiveHistory.length > 1 && currentIndex >= 0 && (
+            <>
+              {currentIndex > 0 && (
+                <button
+                  type="button"
+                  onClick={() => onSaveKey(effectiveHistory[currentIndex - 1], effectiveHistory)}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/50 text-[#e8ca8a] hover:bg-[#e8ca8a] hover:text-black transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+              )}
+              {currentIndex < effectiveHistory.length - 1 && (
+                <button
+                  type="button"
+                  onClick={() => onSaveKey(effectiveHistory[currentIndex + 1], effectiveHistory)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/50 text-[#e8ca8a] hover:bg-[#e8ca8a] hover:text-black transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              )}
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 bg-black/50 px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                {effectiveHistory.map((_, i) => (
+                  <div key={i} className={`w-1.5 h-1.5 rounded-full ${i === currentIndex ? 'bg-[#e8ca8a]' : 'bg-white/30'}`} />
+                ))}
+              </div>
+            </>
+          )}
+
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="absolute top-2 right-2 p-1.5 rounded-md bg-black/50 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors opacity-0 group-hover:opacity-100"
+            title="Delete this image"
+          >
+            <Trash2 size={16} />
+          </button>
         </div>
       )}
 

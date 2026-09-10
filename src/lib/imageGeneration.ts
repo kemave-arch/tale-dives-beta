@@ -1,6 +1,20 @@
 import { GoogleGenAI } from "@google/genai"
 
-export type ImageAspectRatio = '1:1' | '16:9' | '9:16' | '4:3' | '3:2'
+export type ImageAspectRatio =
+  | "1:1"
+  | "1:4"
+  | "4:1"
+  | "1:8"
+  | "8:1"
+  | "2:3"
+  | "3:2"
+  | "3:4"
+  | "4:3"
+  | "4:5"
+  | "5:4"
+  | "9:16"
+  | "16:9"
+  | "21:9"
 
 export interface GenerateImageInput {
   apiKey: string
@@ -13,6 +27,8 @@ export interface GenerateImageResult {
   blob: Blob
   modelUsed: string
 }
+
+const IMAGE_MODEL = "gemini-3.1-flash-lite-image"
 
 /**
   * Resolves the premium API key from environment variables (Gemini_Prem_Key / VITE_GEMINI_PREM_KEY)
@@ -27,69 +43,65 @@ export function getPremiumApiKey(apiSettings?: { apiKey?: string; premiumApiKey?
 }
 
 /**
- * Generate image using Nanobanana 2 (gemini-3.1-flash-image / nanobanana-2).
- * All fallback models (Puter, Pollinations) have been removed per configuration.
+ * Generate image using Gemini 3.1 Flash Lite Image.
  */
 export async function generateImageBytes(input: GenerateImageInput): Promise<GenerateImageResult> {
-  if (!input.apiKey) {
-    throw new Error('Gemini API key is required for Nanobanana 2 image generation.')
+  if (!input.apiKey?.trim()) {
+    throw new Error('Gemini API key is required for image generation.')
+  }
+
+  if (!input.prompt?.trim()) {
+    throw new Error('Image prompt is required.')
   }
 
   const ai = new GoogleGenAI({ apiKey: input.apiKey })
-  // Primary Nanobanana / Gemini Flash Image models using standard generateContent
-  const nanobananaModels = [
-    'gemini-3.1-flash-image',
-    'nanobanana-2',
-    'gemini-3.1-flash-lite-image',
-    'gemini-2.5-flash-image',
-  ]
   let lastError: any = null
 
-  for (const model of nanobananaModels) {
-    try {
-      const response = await ai.models.generateContent({
-        model,
-        contents: {
-          parts: [{ text: input.prompt }],
-        },
-        config: {
-          ...(input.aspectRatio ? { imageConfig: { aspectRatio: input.aspectRatio } } : {}),
-        },
-      })
+  try {
+    const response = await ai.models.generateContent({
+      model: IMAGE_MODEL,
+      contents: input.prompt,
+      config: {
+        responseModalities: ["IMAGE"],
+        imageConfig: {
+          ...(input.aspectRatio ? { aspectRatio: input.aspectRatio } : {}),
+        }
+      },
+    })
 
-      const parts = response.candidates?.[0]?.content?.parts ?? []
-      const imagePart = parts.find((p) => p.inlineData?.data)
-      if (imagePart?.inlineData?.data) {
-        const mimeType = imagePart.inlineData.mimeType || 'image/png'
-        const base64Data = imagePart.inlineData.data
-        const binary = atob(base64Data)
-        const bytes = new Uint8Array(binary.length)
-        for (let i = 0; i < binary.length; i++) {
-          bytes[i] = binary.charCodeAt(i)
-        }
-        return {
-          blob: new Blob([bytes], { type: mimeType }),
-          modelUsed: input.isPremium ? `Nanobanana Premium (${model})` : `Nanobanana (${model})`,
-        }
+    const parts = response.candidates?.[0]?.content?.parts ?? []
+    const imagePart = parts.find((p) => p.inlineData?.data)
+    
+    if (imagePart?.inlineData?.data) {
+      const mimeType = imagePart.inlineData.mimeType || 'image/png'
+      const base64Data = imagePart.inlineData.data
+      const binary = atob(base64Data)
+      const bytes = new Uint8Array(binary.length)
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i)
       }
-    } catch (err: any) {
-      lastError = err
-      console.info(`Nanobanana generation attempt with model "${model}" failed:`, err instanceof Error ? err.message : err)
+      return {
+        blob: new Blob([bytes], { type: mimeType }),
+        modelUsed: input.isPremium ? `Gemini Flash Lite — Premium` : `Gemini Flash Lite`,
+      }
     }
+  } catch (err: any) {
+    lastError = err
+    console.info(`Image generation attempt with model "${IMAGE_MODEL}" failed:`, err instanceof Error ? err.message : err)
   }
 
-  // Focused error handling for Nanobanana 2
-  const errMsg = lastError?.message || String(lastError || 'No image data returned from Nanobanana 2')
+  // Focused error handling
+  const errMsg = lastError?.message || String(lastError || 'No image data returned from generation model')
   const lower = errMsg.toLowerCase()
 
-  if (lower.includes('429') || lower.includes('quota') || lower.includes('resource_exhausted')) {
-    throw new Error('Nanobanana 2 quota or rate limit reached (HTTP 429). Please wait for the 62-second cooldown to expire before retrying.')
-  } else if (lower.includes('403') || lower.includes('permission')) {
-    throw new Error('Nanobanana 2 permission denied (HTTP 403). Ensure your Gemini API Key in Settings has image generation permissions enabled.')
-  } else if (lower.includes('404') || lower.includes('not_found')) {
-    throw new Error('Nanobanana 2 model endpoint not found (HTTP 404). Check model availability for your key.')
+  if (lower.includes('429') || lower.includes('quota') || lower.includes('resource_exhausted') || lower.includes('rate limit')) {
+    throw new Error('Quota or rate limit reached (HTTP 429). Please wait for the cooldown to expire before retrying.')
+  } else if (lower.includes('403') || lower.includes('permission') || lower.includes('forbidden')) {
+    throw new Error('Permission denied (HTTP 403). Ensure your Gemini API Key in Settings has image generation permissions enabled.')
+  } else if (lower.includes('404') || lower.includes('not_found') || lower.includes('not found')) {
+    throw new Error('Model endpoint not found (HTTP 404). Check model availability for your key.')
   } else {
-    throw new Error(`Nanobanana 2 image generation failed: ${errMsg}`)
+    throw new Error(`Image generation failed: ${errMsg}`)
   }
 }
 
@@ -99,10 +111,16 @@ export type WorldStyleData = {
   powerSystem?: string
 }
 
-function styleDirective(world?: WorldStyleData): string {
-  if (!world) return 'fantasy'
-  const parts = [world.genreTone, world.eraTechLevel].filter(Boolean)
-  return parts.length ? parts.join(', ') : 'fantasy'
+function worldDirective(world?: WorldStyleData): string {
+  if (!world) {
+    return 'an original fictional setting'
+  }
+
+  return [
+    world.genreTone && `tone: ${world.genreTone}`,
+    world.eraTechLevel && `technology/era: ${world.eraTechLevel}`,
+    world.powerSystem && `power system: ${world.powerSystem}`,
+  ].filter(Boolean).join('; ')
 }
 
 export function buildLocationImagePrompt(
@@ -110,8 +128,31 @@ export function buildLocationImagePrompt(
   description?: string,
   world?: WorldStyleData,
 ): string {
-  const style = styleDirective(world)
-  return `A single atmospheric fantasy illustration of a location called "${name}"${description ? `: ${description}` : ''}. ${style} illustration style, no text or watermarks.`
+  const style = worldDirective(world)
+
+  return `
+Create a single high-quality environmental illustration for the RPG location "${name}".
+
+World:
+${style || "an original fictional setting"}
+
+Location:
+${description?.trim() || "A distinctive and memorable location with a strong sense of place."}
+
+Composition:
+- Focus primarily on the environment and architecture.
+- Establish clear foreground, middle ground, and background.
+- Make the location visually distinctive and immediately recognizable.
+- Use lighting, atmosphere, weather, terrain, and environmental storytelling appropriate to the world.
+- Avoid generic stock scenery.
+
+Art direction:
+Cinematic RPG concept art, polished game illustration,
+strong composition, cohesive color and lighting,
+detailed environment.
+
+Do not place readable text, labels, or logos in the artwork. No UI, captions, borders, or decorative interface elements.
+`.trim()
 }
 
 export function buildNpcPortraitPrompt(
@@ -120,8 +161,36 @@ export function buildNpcPortraitPrompt(
   role?: string,
   world?: WorldStyleData,
 ): string {
-  const style = styleDirective(world)
-  return `A single character portrait illustration of "${name}"${role ? `, ${role}` : ''}${appearance ? ` — ${appearance}` : ''}. Waist-up fantasy character art, ${style} style, softly blurred background, no text or watermarks.`
+  const style = worldDirective(world)
+
+  return `
+Create a single character portrait illustration for the RPG character "${name}".
+
+World:
+${style || "an original fictional setting"}
+
+Role:
+${role?.trim() || "important RPG character"}
+
+Appearance:
+${appearance?.trim() || "Create a distinctive original character with memorable visual identity."}
+
+Character presentation:
+- Waist-up portrait.
+- Character is the clear focal point.
+- Keep facial features, hairstyle, clothing, accessories, and silhouette clearly readable.
+- Give the character a strong personality and presence.
+- Use a simple atmospheric background that supports the character without distracting from them.
+- Preserve coherent anatomy and believable proportions.
+- Clothing and equipment should fit the stated world, era, role, and power system.
+
+Art direction:
+High-quality RPG character concept art,
+cinematic lighting, polished illustration,
+expressive face, strong silhouette.
+
+Do not place readable text, labels, or logos in the artwork. No nameplates, UI, borders, or decorative interface elements.
+`.trim()
 }
 
 export function buildRegionMapPrompt(
@@ -130,8 +199,37 @@ export function buildRegionMapPrompt(
   locationNames: string[],
   world?: WorldStyleData,
 ): string {
-  const style = styleDirective(world)
-  return `A top-down stylized fantasy map illustration of a region called "${name}"${description ? `: ${description}` : ''}${
-    locationNames.length ? `. It contains these named locations: ${locationNames.join(', ')}.` : ''
-  } ${style} map aesthetic, muted colors, no readable text labels, no legend.`
+  const style = worldDirective(world)
+
+  const locations = locationNames.length > 0
+    ? locationNames.join(", ")
+    : "No specific locations provided."
+
+  return `
+Create a top-down illustrated regional map for the RPG region "${name}".
+
+World:
+${style || "an original fictional setting"}
+
+Region:
+${description?.trim() || "A distinctive region with varied terrain, settlements, and landmarks."}
+
+Required locations:
+${locations}
+
+Map design:
+- Top-down geographic composition.
+- Clearly distinguish terrain, settlements, roads, rivers, mountains, forests, ruins, coastlines, and other appropriate features.
+- Each required location should have a visually distinct landmark or geographic feature.
+- Keep the geography coherent and believable.
+- Make the map readable as a game-world exploration map.
+- Use an elegant illustrated RPG map aesthetic appropriate to the world.
+
+Important:
+Do not generate readable text labels.
+Do not create a legend.
+Do not create UI panels.
+Do not add decorative borders.
+Do not add a title.
+`.trim()
 }

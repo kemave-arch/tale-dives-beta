@@ -18,7 +18,8 @@ import {
 import { useEntityImage } from '../lib/useEntityImage.ts'
 import { generateAndStoreEntityImage } from '../lib/entityImages.ts'
 import { buildLocationImagePrompt, buildNpcPortraitPrompt, buildRegionMapPrompt, getPremiumApiKey } from '../lib/imageGeneration.ts'
-import { useImageCooldown } from '../lib/imageCooldown.ts'
+import { useImageCooldown } from "../lib/imageCooldown.ts"
+import { deleteImageBlob } from "../lib/imageStore.ts"
 
 // Inspired Mode's "Tale Weaving" screen — a focused, step-guided creation
 // experience. One phase at a time, the player describes their vision, the
@@ -121,6 +122,7 @@ function TaleWeaverImageGenerator({
   const [customPrompt, setCustomPrompt] = useState(initialPrompt)
   const [showPromptEdit, setShowPromptEdit] = useState(false)
   const url = useEntityImage(imageKey, refreshToken)
+  const [localHistory, setLocalHistory] = useState<string[]>(imageKey ? [imageKey] : [])
   const { cooldownRemaining, isCooldownActive, start62sCooldown } = useImageCooldown()
 
   useEffect(() => {
@@ -151,16 +153,20 @@ function TaleWeaverImageGenerator({
     start62sCooldown()
 
     try {
-      const key = imageKey || `img_${Math.random().toString(36).slice(2)}_${Date.now()}`
+      const generatedKey = `img_${Math.random().toString(36).slice(2)}_${Date.now()}`
       const usedModel = await generateAndStoreEntityImage({
         apiKey: targetKey,
         prompt: finalPrompt,
-        key,
+        key: generatedKey,
         aspectRatio,
         isPremium,
       })
       setModelUsed(usedModel)
-      onSaveKey(key)
+      setLocalHistory(prev => {
+        const next = [...prev, generatedKey]
+        return Array.from(new Set(next))
+      })
+      onSaveKey(generatedKey)
       setRefreshToken((t) => t + 1)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -175,15 +181,74 @@ function TaleWeaverImageGenerator({
     setShowPromptEdit(true)
   }
 
+  const currentIndex = imageKey ? localHistory.indexOf(imageKey) : -1
+
+  async function handleDelete() {
+    if (!imageKey) return
+    const confirmed = confirm('Delete this image?')
+    if (!confirmed) return
+    try {
+      setBusy(true)
+      await deleteImageBlob(imageKey)
+      setLocalHistory(prev => {
+        const next = prev.filter((k) => k !== imageKey)
+        onSaveKey(next[next.length - 1] || '')
+        return next
+      })
+      setRefreshToken((t) => t + 1)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-1.5 mt-1.5">
       {url && (
-        <div className="relative rounded-lg overflow-hidden border border-gold-accent/30 bg-black/60 shadow-md flex justify-center items-center p-1">
+        <div className="relative rounded-lg overflow-hidden border border-gold-accent/30 bg-black/60 shadow-md flex justify-center items-center p-1 group">
           <img
             src={url}
             alt=""
             className={`w-full ${aspectRatio === '1:1' ? 'max-h-48 max-w-[192px] aspect-square object-contain' : 'max-h-56 object-contain'}`}
           />
+          
+          {localHistory.length > 1 && currentIndex >= 0 && (
+            <>
+              {currentIndex > 0 && (
+                <button
+                  type="button"
+                  onClick={() => onSaveKey(localHistory[currentIndex - 1])}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/50 text-[#e8ca8a] hover:bg-[#e8ca8a] hover:text-black transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+              )}
+              {currentIndex < localHistory.length - 1 && (
+                <button
+                  type="button"
+                  onClick={() => onSaveKey(localHistory[currentIndex + 1])}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/50 text-[#e8ca8a] hover:bg-[#e8ca8a] hover:text-black transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              )}
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 bg-black/50 px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                {localHistory.map((_, i) => (
+                  <div key={i} className={`w-1.5 h-1.5 rounded-full ${i === currentIndex ? 'bg-[#e8ca8a]' : 'bg-white/30'}`} />
+                ))}
+              </div>
+            </>
+          )}
+
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="absolute top-2 right-2 p-1.5 rounded-md bg-black/50 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors opacity-0 group-hover:opacity-100"
+            title="Delete this image"
+          >
+            <Trash2 size={16} />
+          </button>
         </div>
       )}
 

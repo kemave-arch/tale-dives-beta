@@ -235,6 +235,7 @@ export interface LocationEntry {
   // itself. Absent/undefined means "no image generated (yet)" — the UI
   // falls back to the existing flat parchment treatment, not an error.
   imageKey?: string
+  imageHistory?: string[]
 }
 
 export interface AreaEntry {
@@ -254,7 +255,8 @@ export interface RegionEntry {
   description?: string
   autoLogged?: boolean
   loggedAt?: string
-  mapImageKey?: string // §7 — same IndexedDB-key convention as LocationEntry.imageKey, a top-down map image for this region
+  mapImageKey?: string
+  imageHistory?: string[]
 }
 
 export type KinshipType = 'parent' | 'sibling' | 'child' | 'spouse' | 'mentor' | 'clan'
@@ -287,7 +289,8 @@ export interface NpcEntry {
   factionId?: string | null // affiliation, mirrors LocationEntry's factionOwner — set/revised by the LLM via npc_mem_up.faction_id
   secretTruth?: string // hidden ground truth (motive, history, loyalty) the model always knows for this NPC but must never state directly until the story earns the reveal — never shown to the player, distinct from Discovery's public teaser
   partyStatus?: PartyStatus // §7 — set/revised by the LLM via npc_mem_up.party_status when this NPC actively joins/leaves the protagonist's travelling party; absent means they've never been a companion
-  portraitKey?: string // §7 — same IndexedDB-key convention as LocationEntry.imageKey, this NPC's generated portrait
+  portraitKey?: string
+  imageHistory?: string[]
   firstSeenTime?: GameTime // set once, at stub creation — same anti-drift anchor as LocationEntry's
   lastSeenTime?: GameTime // updated on every npc_mem_up touch
   tags?: string[]

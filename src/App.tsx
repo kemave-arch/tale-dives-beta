@@ -40,6 +40,7 @@ import { checkCodexReveals, validateDiscovery } from './lib/discovery.ts'
 import { seedCampaign, seedRelationTier } from './lib/seeding.ts'
 import { parseTaleWeaverDraftAreas } from './lib/taleWeaving.ts'
 import type { TaleWeaverAccumulated } from './lib/taleWeaving.ts'
+import { hasAnyContent } from './screens/TaleWeaver.tsx'
 import { queueCraftingJob, resolveCraftingJobs } from './lib/crafting.ts'
 import { applyMinionUpkeep, attemptSummon, type SummonCommand } from './lib/summoning.ts'
 import { applyFactionRepDeltas, attitudeToRepTier } from './lib/factions.ts'
@@ -838,6 +839,8 @@ export default function App() {
   // Seeding Review screen, then Turn 1 — so both creation paths feel like
   // one app, not two.
   function beginInspiredTale(accumulated: TaleWeaverAccumulated) {
+    if (!hasAnyContent(accumulated)) return
+
     const w = accumulated.world
     const p = accumulated.protagonist
     const cls = PRESET_CLASSES[0]

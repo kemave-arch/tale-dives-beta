@@ -49,5 +49,6 @@ Every dated session entry through 2026-09-09 has been moved to [`PROJECT_REVISIO
 
 ### New entries below, most recent first.
 
+- **2026-09-09** — Updated Tale Weaving (`TaleWeaver.tsx`) to disable the "Dive in" button and show an informational banner in the Tale Overview modal when all 7 phases are blank. Refined `hasPhaseContent` and `hasAnyContent` to check for trimmed string values across all phases, and added a guard in `App.tsx` (`beginInspiredTale`) to prevent campaign creation from an empty Tale Weaving state. Verified clean build and linter passing.
 - **2026-09-09** — Docs-only current-state refresh in `PROJECT_REVISION_NOTES.md` (no code touched). Updated §3 with recently shipped systems (Narrative Events, Death & End Game Rules, NPC Kinship, Tale Weaving & Seeding integration) and added a removal note in §4 for Novel Weaver as a follow-up to the prior archiving pass.
 - **2026-09-09** — Updated the image generation pipeline to use `@google/genai` with the `gemini-3.1-flash-image` model per custom AI Studio system instructions, replacing the previous raw `fetch` to `gemini-2.5-flash-image`. Verified mapping for NPCs, Locations, and Regions. Modified TaleWeaver flow to require opening the "Tale Overview" modal before starting the campaign via the "Dive in" button. Verified cleanly with `tsc --noEmit`.

@@ -121,12 +121,23 @@ export function parseTaleWeaverResponse(raw: string): TaleWeaverDraft {
   const world: TaleWeaverWorldDraft | undefined = worldEl
     ? {
         name: str(worldEl.getAttribute('name')),
-        genreTone: str(worldEl.getAttribute('genre_tone')),
-        conflict: str(worldEl.getAttribute('conflict')),
-        powerSystem: str(worldEl.getAttribute('power_system')),
-        eraTechLevel: str(worldEl.getAttribute('era_tech')),
-        keyFactions: str(worldEl.getAttribute('key_factions')),
-        background: str(worldEl.getAttribute('background')),
+        genreTone: str(worldEl.getAttribute('genre_tone')) || str(worldEl.getAttribute('genre')) || str(worldEl.getAttribute('tone')),
+        conflict: str(worldEl.getAttribute('conflict')) || str(worldEl.getAttribute('core_conflict')) || str(worldEl.getAttribute('regional_conflict')),
+        powerSystem: str(worldEl.getAttribute('power_system')) || str(worldEl.getAttribute('magic_system')) || str(worldEl.getAttribute('magic')),
+        eraTechLevel:
+          str(worldEl.getAttribute('era_tech')) ||
+          str(worldEl.getAttribute('era_technology')) ||
+          str(worldEl.getAttribute('tech_era')) ||
+          str(worldEl.getAttribute('era_tech_level')) ||
+          [
+            str(worldEl.getAttribute('era')),
+            str(worldEl.getAttribute('technology') || worldEl.getAttribute('tech') || worldEl.getAttribute('tech_level')),
+          ]
+            .filter(Boolean)
+            .join(' / ') ||
+          undefined,
+        keyFactions: str(worldEl.getAttribute('key_factions')) || str(worldEl.getAttribute('factions')),
+        background: str(worldEl.getAttribute('background')) || str(worldEl.getAttribute('world_background')) || str(worldEl.getAttribute('desc')),
       }
     : undefined
 
@@ -134,12 +145,12 @@ export function parseTaleWeaverResponse(raw: string): TaleWeaverDraft {
   const protagonist: TaleWeaverProtagonistDraft | undefined = protagEl
     ? {
         name: str(protagEl.getAttribute('name')),
-        background: str(protagEl.getAttribute('background')),
-        personality: str(protagEl.getAttribute('personality')),
-        motivation: str(protagEl.getAttribute('motivation')),
-        physicalTrait: str(protagEl.getAttribute('physical_trait')),
-        secret: str(protagEl.getAttribute('secret')),
-        opening: str(protagEl.getAttribute('opening')),
+        background: str(protagEl.getAttribute('background')) || str(protagEl.getAttribute('backstory')),
+        personality: str(protagEl.getAttribute('personality')) || str(protagEl.getAttribute('traits')),
+        motivation: str(protagEl.getAttribute('motivation')) || str(protagEl.getAttribute('goal')),
+        physicalTrait: str(protagEl.getAttribute('physical_trait')) || str(protagEl.getAttribute('appearance')) || str(protagEl.getAttribute('trait')),
+        secret: str(protagEl.getAttribute('secret')) || str(protagEl.getAttribute('hidden')),
+        opening: str(protagEl.getAttribute('opening')) || str(protagEl.getAttribute('opening_scene')),
       }
     : undefined
 

@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
 import {
   X, ChevronRight, ChevronLeft, Sparkles, Lock, Unlock,
-  BookOpen, AlertCircle, Check, ArrowRight
+  BookOpen, AlertCircle, Check, ArrowRight, Pencil, Plus, Save
 } from 'lucide-react'
 import { GlassScreen, GlassHeader } from '../lib/glassChrome.tsx'
 import { useConfirm } from '../lib/useConfirm.tsx'
-import type { ApiSettings } from '../types.ts'
+import type { ApiSettings, RevealTrigger } from '../types.ts'
 import {
   TALE_WEAVER_PHASES, emptyAccumulated, runTaleWeaverPhase,
   type TaleWeaverAccumulated, type TaleWeaverPhaseDef,
@@ -32,9 +32,9 @@ function fieldSummary(fields: (string | undefined)[]): string {
 function hasPhaseContent(phaseId: TaleWeaverPhaseDef['id'], acc: TaleWeaverAccumulated): boolean {
   switch (phaseId) {
     case 'world':
-      return Boolean(acc.world?.name || acc.world?.genreTone)
+      return Boolean(acc.world?.name?.trim() || acc.world?.genreTone?.trim() || acc.world?.background?.trim() || acc.world?.conflict?.trim())
     case 'protagonist':
-      return Boolean(acc.protagonist?.name || acc.protagonist?.background)
+      return Boolean(acc.protagonist?.name?.trim() || acc.protagonist?.background?.trim() || acc.protagonist?.personality?.trim())
     case 'regions':
       return acc.locations.length > 0 || acc.regions.length > 0
     case 'factions':
@@ -53,9 +53,9 @@ function hasPhaseContent(phaseId: TaleWeaverPhaseDef['id'], acc: TaleWeaverAccum
 function getPhaseCount(phaseId: TaleWeaverPhaseDef['id'], acc: TaleWeaverAccumulated): number {
   switch (phaseId) {
     case 'world':
-      return acc.world ? 1 : 0
+      return hasPhaseContent('world', acc) ? 1 : 0
     case 'protagonist':
-      return acc.protagonist ? 1 : 0
+      return hasPhaseContent('protagonist', acc) ? 1 : 0
     case 'regions':
       return acc.locations.length + acc.regions.length
     case 'factions':
@@ -71,18 +71,8 @@ function getPhaseCount(phaseId: TaleWeaverPhaseDef['id'], acc: TaleWeaverAccumul
   }
 }
 
-function hasAnyContent(acc: TaleWeaverAccumulated): boolean {
-  return (
-    Boolean(acc.world) ||
-    Boolean(acc.protagonist) ||
-    acc.regions.length > 0 ||
-    acc.locations.length > 0 ||
-    acc.factions.length > 0 ||
-    acc.npcs.length > 0 ||
-    acc.lore.length > 0 ||
-    acc.beats.length > 0 ||
-    (acc.narrativeEvents?.length ?? 0) > 0
-  )
+export function hasAnyContent(acc: TaleWeaverAccumulated): boolean {
+  return TALE_WEAVER_PHASES.some((p) => hasPhaseContent(p.id, acc))
 }
 
 function getTotalEntityCount(acc: TaleWeaverAccumulated): number {
@@ -109,6 +99,9 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
   const [accumulated, setAccumulated] = useState<TaleWeaverAccumulated>(emptyAccumulated())
   const [showOverview, setShowOverview] = useState(false)
 
+  const [editingKey, setEditingKey] = useState<string | null>(null)
+  const [editFormData, setEditFormData] = useState<any>({})
+
   const { confirm, dialog: confirmDialog } = useConfirm()
   const contentAreaRef = useRef<HTMLDivElement | null>(null)
 
@@ -121,7 +114,122 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
   useEffect(() => {
     contentAreaRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
     setErrorMessage(null)
+    setEditingKey(null)
+    setEditFormData({})
   }, [phaseIdx])
+
+  function startEditing(key: string, initialData: any) {
+    setEditingKey(key)
+    setEditFormData({ ...initialData })
+  }
+
+  function cancelEditing() {
+    setEditingKey(null)
+    setEditFormData({})
+  }
+
+  function saveEditing(key: string) {
+    setAccumulated((prev) => {
+      const next = { ...prev }
+      if (key === 'world') {
+        next.world = { ...editFormData }
+      } else if (key === 'protagonist') {
+        next.protagonist = { ...editFormData }
+      } else if (key.startsWith('region_')) {
+        const id = key.replace('region_', '')
+        next.regions = prev.regions.map((r) => (r.id === id ? { ...r, ...editFormData } : r))
+      } else if (key.startsWith('location_')) {
+        const id = key.replace('location_', '')
+        next.locations = prev.locations.map((l) => (l.id === id ? { ...l, ...editFormData } : l))
+      } else if (key.startsWith('faction_')) {
+        const id = key.replace('faction_', '')
+        next.factions = prev.factions.map((f) => (f.id === id ? { ...f, ...editFormData } : f))
+      } else if (key.startsWith('npc_')) {
+        const id = key.replace('npc_', '')
+        next.npcs = prev.npcs.map((n) => (n.id === id ? { ...n, ...editFormData } : n))
+      } else if (key.startsWith('lore_')) {
+        const id = key.replace('lore_', '')
+        next.lore = prev.lore.map((l) => (l.id === id ? { ...l, ...editFormData } : l))
+      } else if (key.startsWith('beat_')) {
+        const id = key.replace('beat_', '')
+        next.beats = prev.beats.map((b) => (b.id === id ? { ...b, ...editFormData } : b))
+      } else if (key.startsWith('event_')) {
+        const id = key.replace('event_', '')
+        next.narrativeEvents = (prev.narrativeEvents || []).map((e) => (e.id === id ? { ...e, ...editFormData } : e))
+      } else if (key === 'stakes') {
+        next.deathRule = editFormData.deathRule
+        next.deathInstructions = editFormData.deathInstructions
+        next.endGameRules = { ...editFormData.endGameRules }
+      }
+      return next
+    })
+    setEditingKey(null)
+    setEditFormData({})
+  }
+
+  function addCustomItem(category: 'regions' | 'locations' | 'factions' | 'npcs' | 'lore' | 'beats' | 'narrativeEvents') {
+    const timeId = `${category.slice(0, 3)}_${Date.now().toString(36)}`
+    if (category === 'regions') {
+      const newRegion = { id: timeId, name: 'New Region', desc: '' }
+      setAccumulated((prev) => ({ ...prev, regions: [...prev.regions, newRegion] }))
+      startEditing(`region_${timeId}`, newRegion)
+    } else if (category === 'locations') {
+      const newLoc = { id: timeId, name: 'New Location', locationType: 'Landmark', danger: 'Safe', desc: '', regionId: accumulated.regions[0]?.id }
+      setAccumulated((prev) => ({ ...prev, locations: [...prev.locations, newLoc] }))
+      startEditing(`location_${timeId}`, newLoc)
+    } else if (category === 'factions') {
+      const newFaction = { id: timeId, name: 'New Faction', attitude: 'neutral' as const, territory: '', desc: '' }
+      setAccumulated((prev) => ({ ...prev, factions: [...prev.factions, newFaction] }))
+      startEditing(`faction_${timeId}`, newFaction)
+    } else if (category === 'npcs') {
+      const newNpc = { id: timeId, name: 'New Character', role: 'Ally', personality: '', appearance: '' }
+      setAccumulated((prev) => ({ ...prev, npcs: [...prev.npcs, newNpc] }))
+      startEditing(`npc_${timeId}`, newNpc)
+    } else if (category === 'lore') {
+      const newLore = { id: timeId, name: 'New Secret / History', category: 'History', content: '' }
+      setAccumulated((prev) => ({ ...prev, lore: [...prev.lore, newLore] }))
+      startEditing(`lore_${timeId}`, newLore)
+    } else if (category === 'beats') {
+      const newBeat = { id: timeId, title: 'New Story Beat', summary: '' }
+      setAccumulated((prev) => ({ ...prev, beats: [...prev.beats, newBeat] }))
+      startEditing(`beat_${timeId}`, newBeat)
+    } else if (category === 'narrativeEvents') {
+      const newEvent = { id: timeId, title: 'New Complication', trigger: 'story' as RevealTrigger, condition: '', guidance: '' }
+      setAccumulated((prev) => ({
+        ...prev,
+        narrativeEvents: [...(prev.narrativeEvents || []), newEvent],
+      }))
+      startEditing(`event_${timeId}`, newEvent)
+    }
+  }
+
+  function startManualWorld() {
+    const defaultWorld = {
+      name: 'A Custom Realm',
+      genreTone: 'Dark Fantasy',
+      conflict: '',
+      powerSystem: '',
+      eraTechLevel: 'Late Medieval',
+      keyFactions: '',
+      background: '',
+    }
+    setAccumulated((prev) => ({ ...prev, world: defaultWorld }))
+    startEditing('world', defaultWorld)
+  }
+
+  function startManualProtagonist() {
+    const defaultProtag = {
+      name: 'Hero',
+      background: '',
+      personality: '',
+      motivation: '',
+      physicalTrait: '',
+      secret: '',
+      opening: '',
+    }
+    setAccumulated((prev) => ({ ...prev, protagonist: defaultProtag }))
+    startEditing('protagonist', defaultProtag)
+  }
 
   async function handleSafeExit() {
     if (hasAnyContent(accumulated)) {
@@ -284,7 +392,112 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
     switch (phase.id) {
       case 'world': {
         const w = accumulated.world
-        if (!w) return null
+        if (!w) {
+          return (
+            <div className="flex justify-center pt-2">
+              <button
+                type="button"
+                onClick={startManualWorld}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/15 text-gold-primary text-xs font-display transition-colors"
+              >
+                <Plus size={14} />
+                <span>Create World Foundation Manually</span>
+              </button>
+            </div>
+          )
+        }
+
+        if (editingKey === 'world') {
+          return (
+            <div className="rounded-xl border border-gold-primary/60 bg-[#161a28] p-4 flex flex-col gap-3">
+              <div className="flex items-center justify-between border-b border-gold-accent/20 pb-2">
+                <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary font-bold">Edit World Foundation</span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => saveEditing('world')}
+                    className="px-2.5 py-1 rounded-lg bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1 hover:bg-gold-primary/90 transition-colors"
+                  >
+                    <Save size={13} /> Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cancelEditing}
+                    className="px-2 py-1 rounded-lg border border-gold-accent/30 text-ink-muted font-display text-xs hover:text-ink transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="flex flex-col gap-1">
+                  <label className="font-mono text-[10px] uppercase text-gold-primary/70">World Name</label>
+                  <input
+                    type="text"
+                    value={editFormData.name || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                    className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="font-mono text-[10px] uppercase text-gold-primary/70">Genre & Tone</label>
+                  <input
+                    type="text"
+                    value={editFormData.genreTone || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, genreTone: e.target.value })}
+                    className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="font-mono text-[10px] uppercase text-gold-primary/70">Era & Technology</label>
+                  <input
+                    type="text"
+                    value={editFormData.eraTechLevel || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, eraTechLevel: e.target.value })}
+                    className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="font-mono text-[10px] uppercase text-gold-primary/70">Power & Magic System</label>
+                  <input
+                    type="text"
+                    value={editFormData.powerSystem || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, powerSystem: e.target.value })}
+                    className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="font-mono text-[10px] uppercase text-gold-primary/70">Key Factions Summary</label>
+                <input
+                  type="text"
+                  value={editFormData.keyFactions || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, keyFactions: e.target.value })}
+                  className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="font-mono text-[10px] uppercase text-gold-primary/70">Central Conflict</label>
+                <textarea
+                  rows={2}
+                  value={editFormData.conflict || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, conflict: e.target.value })}
+                  className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary resize-none"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="font-mono text-[10px] uppercase text-gold-primary/70">World Background / Lore</label>
+                <textarea
+                  rows={3}
+                  value={editFormData.background || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, background: e.target.value })}
+                  className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary resize-none"
+                />
+              </div>
+            </div>
+          )
+        }
+
         return (
           <div className="rounded-xl border border-gold-accent/35 bg-[#161a28] p-4 flex flex-col gap-3">
             <div className="flex items-start justify-between gap-2">
@@ -292,14 +505,24 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">World Foundation</span>
                 <h3 className="font-display font-bold text-base text-gold-primary">{w.name || 'Untitled World'}</h3>
               </div>
-              <button
-                type="button"
-                onClick={() => clearSingle('world')}
-                className="text-red-400/70 hover:text-red-300 p-1 rounded hover:bg-red-400/10 transition-colors"
-                title="Clear and re-weave world"
-              >
-                <X size={15} />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => startEditing('world', w)}
+                  className="text-gold-primary/70 hover:text-gold-primary p-1 rounded hover:bg-gold-accent/10 transition-colors"
+                  title="Edit World Foundation"
+                >
+                  <Pencil size={15} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => clearSingle('world')}
+                  className="text-red-400/70 hover:text-red-300 p-1 rounded hover:bg-red-400/10 transition-colors"
+                  title="Clear world"
+                >
+                  <X size={15} />
+                </button>
+              </div>
             </div>
             {w.genreTone && (
               <div>
@@ -325,13 +548,124 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 <p className="font-narrative text-xs text-ink">{w.eraTechLevel}</p>
               </div>
             )}
+            {w.background && (
+              <div>
+                <span className="font-mono text-[10px] uppercase text-ink-muted/80">Background & History</span>
+                <p className="font-narrative text-xs text-ink/80">{w.background}</p>
+              </div>
+            )}
           </div>
         )
       }
 
       case 'protagonist': {
         const p = accumulated.protagonist
-        if (!p) return null
+        if (!p) {
+          return (
+            <div className="flex justify-center pt-2">
+              <button
+                type="button"
+                onClick={startManualProtagonist}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/15 text-gold-primary text-xs font-display transition-colors"
+              >
+                <Plus size={14} />
+                <span>Create Protagonist Manually</span>
+              </button>
+            </div>
+          )
+        }
+
+        if (editingKey === 'protagonist') {
+          return (
+            <div className="rounded-xl border border-gold-primary/60 bg-[#161a28] p-4 flex flex-col gap-3">
+              <div className="flex items-center justify-between border-b border-gold-accent/20 pb-2">
+                <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary font-bold">Edit Protagonist</span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => saveEditing('protagonist')}
+                    className="px-2.5 py-1 rounded-lg bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1 hover:bg-gold-primary/90 transition-colors"
+                  >
+                    <Save size={13} /> Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cancelEditing}
+                    className="px-2 py-1 rounded-lg border border-gold-accent/30 text-ink-muted font-display text-xs hover:text-ink transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="flex flex-col gap-1">
+                  <label className="font-mono text-[10px] uppercase text-gold-primary/70">Name</label>
+                  <input
+                    type="text"
+                    value={editFormData.name || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                    className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="font-mono text-[10px] uppercase text-gold-primary/70">Demeanor & Traits</label>
+                  <input
+                    type="text"
+                    value={editFormData.personality || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, personality: e.target.value })}
+                    className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="font-mono text-[10px] uppercase text-gold-primary/70">Core Drive & Goal</label>
+                  <input
+                    type="text"
+                    value={editFormData.motivation || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, motivation: e.target.value })}
+                    className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="font-mono text-[10px] uppercase text-gold-primary/70">Physical Trait</label>
+                  <input
+                    type="text"
+                    value={editFormData.physicalTrait || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, physicalTrait: e.target.value })}
+                    className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="font-mono text-[10px] uppercase text-gold-primary/70">Origin & Background</label>
+                <textarea
+                  rows={2}
+                  value={editFormData.background || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, background: e.target.value })}
+                  className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary resize-none"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="font-mono text-[10px] uppercase text-gold-primary/70">Hidden Secret</label>
+                <input
+                  type="text"
+                  value={editFormData.secret || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, secret: e.target.value })}
+                  className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="font-mono text-[10px] uppercase text-gold-primary/70">Opening Scene Setup</label>
+                <textarea
+                  rows={2}
+                  value={editFormData.opening || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, opening: e.target.value })}
+                  className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary resize-none"
+                />
+              </div>
+            </div>
+          )
+        }
+
         return (
           <div className="rounded-xl border border-gold-accent/35 bg-[#161a28] p-4 flex flex-col gap-3">
             <div className="flex items-start justify-between gap-2">
@@ -339,14 +673,24 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">Protagonist</span>
                 <h3 className="font-display font-bold text-base text-gold-primary">{p.name || 'Unnamed Protagonist'}</h3>
               </div>
-              <button
-                type="button"
-                onClick={() => clearSingle('protagonist')}
-                className="text-red-400/70 hover:text-red-300 p-1 rounded hover:bg-red-400/10 transition-colors"
-                title="Clear and re-weave protagonist"
-              >
-                <X size={15} />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => startEditing('protagonist', p)}
+                  className="text-gold-primary/70 hover:text-gold-primary p-1 rounded hover:bg-gold-accent/10 transition-colors"
+                  title="Edit Protagonist"
+                >
+                  <Pencil size={15} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => clearSingle('protagonist')}
+                  className="text-red-400/70 hover:text-red-300 p-1 rounded hover:bg-red-400/10 transition-colors"
+                  title="Clear protagonist"
+                >
+                  <X size={15} />
+                </button>
+              </div>
             </div>
             {p.background && (
               <div>
@@ -377,172 +721,635 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
       }
 
       case 'regions': {
-        if (!accumulated.regions.length && !accumulated.locations.length) return null
+        const hasRegions = accumulated.regions.length > 0
+        const hasLocations = accumulated.locations.length > 0
+        if (!hasRegions && !hasLocations) {
+          return (
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => addCustomItem('regions')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/15 text-gold-primary text-xs font-display transition-colors"
+              >
+                <Plus size={14} />
+                <span>Add Region</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => addCustomItem('locations')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/15 text-gold-primary text-xs font-display transition-colors"
+              >
+                <Plus size={14} />
+                <span>Add Location</span>
+              </button>
+            </div>
+          )
+        }
+
         return (
-          <div className="flex flex-col gap-3">
-            {accumulated.regions.length > 0 && (
-              <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-4">
+            {/* Regions Section */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
                 <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">Regions</span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {accumulated.regions.map((r) => (
+                <button
+                  type="button"
+                  onClick={() => addCustomItem('regions')}
+                  className="flex items-center gap-1 font-mono text-[10px] text-gold-primary hover:underline"
+                >
+                  <Plus size={12} /> Add Region
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {accumulated.regions.map((r) => {
+                  const isEditing = editingKey === `region_${r.id}`
+                  if (isEditing) {
+                    return (
+                      <div key={r.id} className="rounded-xl border border-gold-primary/60 bg-[#161a28] p-3 flex flex-col gap-2 col-span-1 sm:col-span-2">
+                        <div className="flex items-center justify-between border-b border-gold-accent/20 pb-1.5">
+                          <span className="font-mono text-[10px] uppercase text-gold-primary font-bold">Edit Region</span>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => saveEditing(`region_${r.id}`)}
+                              className="px-2 py-0.5 rounded bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1"
+                            >
+                              <Save size={12} /> Save
+                            </button>
+                            <button type="button" onClick={cancelEditing} className="px-2 py-0.5 rounded border border-gold-accent/30 text-xs">
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                        <input
+                          type="text"
+                          value={editFormData.name || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                          placeholder="Region Name"
+                          className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                        />
+                        <textarea
+                          rows={2}
+                          value={editFormData.desc || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, desc: e.target.value })}
+                          placeholder="Region Description"
+                          className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary resize-none"
+                        />
+                      </div>
+                    )
+                  }
+                  return (
                     <div key={r.id} className="rounded-xl border border-gold-accent/30 bg-[#161a28] p-3 flex items-start justify-between gap-2">
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="font-display font-semibold text-sm text-gold-primary truncate">{r.name}</p>
                         {r.desc && <p className="font-narrative text-xs text-ink-muted line-clamp-2">{r.desc}</p>}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => removeItem('regions', r.id)}
-                        className="text-red-400/70 hover:text-red-300 p-1 shrink-0"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {accumulated.locations.length > 0 && (
-              <div className="flex flex-col gap-2">
-                <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">Locations</span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {accumulated.locations.map((l) => {
-                    const region = accumulated.regions.find((r) => r.id === l.regionId)
-                    return (
-                      <div key={l.id} className="rounded-xl border border-gold-accent/30 bg-[#161a28] p-3 flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="font-display font-semibold text-sm text-gold-primary truncate">{l.name}</p>
-                          <p className="font-narrative text-xs text-ink-muted">
-                            {fieldSummary([region?.name, l.locationType, l.danger ? `Danger: ${l.danger}` : undefined])}
-                          </p>
-                          {l.desc && <p className="font-narrative text-xs text-ink/80 mt-1 line-clamp-2">{l.desc}</p>}
-                          {l.areas && (
-                            <div className="flex flex-wrap gap-1 mt-1.5">
-                              {l.areas.split(',').map((a, i) => (
-                                <span key={i} className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-gold-accent/15 text-gold-primary/80 border border-gold-accent/25">
-                                  {a.trim()}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                      <div className="flex items-center gap-1 shrink-0">
                         <button
                           type="button"
-                          onClick={() => removeItem('locations', l.id)}
-                          className="text-red-400/70 hover:text-red-300 p-1 shrink-0"
+                          onClick={() => startEditing(`region_${r.id}`, r)}
+                          className="text-gold-primary/70 hover:text-gold-primary p-1"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeItem('regions', r.id)}
+                          className="text-red-400/70 hover:text-red-300 p-1"
                         >
                           <X size={14} />
                         </button>
                       </div>
-                    )
-                  })}
-                </div>
+                    </div>
+                  )
+                })}
               </div>
-            )}
+            </div>
+
+            {/* Locations Section */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">Locations</span>
+                <button
+                  type="button"
+                  onClick={() => addCustomItem('locations')}
+                  className="flex items-center gap-1 font-mono text-[10px] text-gold-primary hover:underline"
+                >
+                  <Plus size={12} /> Add Location
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {accumulated.locations.map((l) => {
+                  const region = accumulated.regions.find((r) => r.id === l.regionId)
+                  const isEditing = editingKey === `location_${l.id}`
+                  if (isEditing) {
+                    return (
+                      <div key={l.id} className="rounded-xl border border-gold-primary/60 bg-[#161a28] p-3 flex flex-col gap-2 col-span-1 sm:col-span-2">
+                        <div className="flex items-center justify-between border-b border-gold-accent/20 pb-1.5">
+                          <span className="font-mono text-[10px] uppercase text-gold-primary font-bold">Edit Location</span>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => saveEditing(`location_${l.id}`)}
+                              className="px-2 py-0.5 rounded bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1"
+                            >
+                              <Save size={12} /> Save
+                            </button>
+                            <button type="button" onClick={cancelEditing} className="px-2 py-0.5 rounded border border-gold-accent/30 text-xs">
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <input
+                            type="text"
+                            value={editFormData.name || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                            placeholder="Location Name"
+                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                          />
+                          <select
+                            value={editFormData.regionId || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, regionId: e.target.value })}
+                            className="px-2 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                          >
+                            <option value="">No Specific Region</option>
+                            {accumulated.regions.map((r) => (
+                              <option key={r.id} value={r.id}>
+                                {r.name}
+                              </option>
+                            ))}
+                          </select>
+                          <input
+                            type="text"
+                            value={editFormData.locationType || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, locationType: e.target.value })}
+                            placeholder="Type (e.g. Landmark, Settlement)"
+                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                          />
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <input
+                            type="text"
+                            value={editFormData.danger || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, danger: e.target.value })}
+                            placeholder="Danger Level (e.g. Safe, Perilous)"
+                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                          />
+                          <input
+                            type="text"
+                            value={editFormData.areas || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, areas: e.target.value })}
+                            placeholder="Sub-areas (comma separated)"
+                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                          />
+                        </div>
+                        <textarea
+                          rows={2}
+                          value={editFormData.desc || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, desc: e.target.value })}
+                          placeholder="Location Description"
+                          className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none resize-none"
+                        />
+                      </div>
+                    )
+                  }
+                  return (
+                    <div key={l.id} className="rounded-xl border border-gold-accent/30 bg-[#161a28] p-3 flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-display font-semibold text-sm text-gold-primary truncate">{l.name}</p>
+                        <p className="font-narrative text-xs text-ink-muted">
+                          {fieldSummary([region?.name, l.locationType, l.danger ? `Danger: ${l.danger}` : undefined])}
+                        </p>
+                        {l.desc && <p className="font-narrative text-xs text-ink/80 mt-1 line-clamp-2">{l.desc}</p>}
+                        {l.areas && (
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            {l.areas.split(',').map((a, i) => (
+                              <span key={i} className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-gold-accent/15 text-gold-primary/80 border border-gold-accent/25">
+                                {a.trim()}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => startEditing(`location_${l.id}`, l)}
+                          className="text-gold-primary/70 hover:text-gold-primary p-1"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeItem('locations', l.id)}
+                          className="text-red-400/70 hover:text-red-300 p-1"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
           </div>
         )
       }
 
       case 'factions': {
-        if (!accumulated.factions.length) return null
         return (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {accumulated.factions.map((f) => (
-              <div key={f.id} className="rounded-xl border border-gold-accent/30 bg-[#161a28] p-3 flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-display font-semibold text-sm text-gold-primary truncate">{f.name}</p>
-                    {f.attitude && (
-                      <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-gold-accent/15 text-gold-primary/90 border border-gold-accent/25 shrink-0">
-                        {f.attitude}
-                      </span>
-                    )}
-                  </div>
-                  {f.territory && <p className="font-narrative text-xs text-ink-muted truncate">Territory: {f.territory}</p>}
-                  {f.desc && <p className="font-narrative text-xs text-ink/80 mt-1 line-clamp-2">{f.desc}</p>}
-                </div>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">Factions</span>
+              <button
+                type="button"
+                onClick={() => addCustomItem('factions')}
+                className="flex items-center gap-1 font-mono text-[10px] text-gold-primary hover:underline"
+              >
+                <Plus size={12} /> Add Faction
+              </button>
+            </div>
+            {!accumulated.factions.length ? (
+              <div className="flex justify-center pt-2">
                 <button
                   type="button"
-                  onClick={() => removeItem('factions', f.id)}
-                  className="text-red-400/70 hover:text-red-300 p-1 shrink-0"
+                  onClick={() => addCustomItem('factions')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/15 text-gold-primary text-xs font-display transition-colors"
                 >
-                  <X size={14} />
+                  <Plus size={14} />
+                  <span>Add Faction Manually</span>
                 </button>
               </div>
-            ))}
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {accumulated.factions.map((f) => {
+                  const isEditing = editingKey === `faction_${f.id}`
+                  if (isEditing) {
+                    return (
+                      <div key={f.id} className="rounded-xl border border-gold-primary/60 bg-[#161a28] p-3 flex flex-col gap-2 col-span-1 sm:col-span-2">
+                        <div className="flex items-center justify-between border-b border-gold-accent/20 pb-1.5">
+                          <span className="font-mono text-[10px] uppercase text-gold-primary font-bold">Edit Faction</span>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => saveEditing(`faction_${f.id}`)}
+                              className="px-2 py-0.5 rounded bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1"
+                            >
+                              <Save size={12} /> Save
+                            </button>
+                            <button type="button" onClick={cancelEditing} className="px-2 py-0.5 rounded border border-gold-accent/30 text-xs">
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <input
+                            type="text"
+                            value={editFormData.name || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                            placeholder="Faction Name"
+                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                          />
+                          <select
+                            value={editFormData.attitude || 'neutral'}
+                            onChange={(e) => setEditFormData({ ...editFormData, attitude: e.target.value })}
+                            className="px-2 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                          >
+                            <option value="allied">Allied</option>
+                            <option value="friendly">Friendly</option>
+                            <option value="neutral">Neutral</option>
+                            <option value="hostile">Hostile</option>
+                            <option value="rival">Rival</option>
+                          </select>
+                          <input
+                            type="text"
+                            value={editFormData.territory || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, territory: e.target.value })}
+                            placeholder="Territory / Domain"
+                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                          />
+                        </div>
+                        <textarea
+                          rows={2}
+                          value={editFormData.desc || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, desc: e.target.value })}
+                          placeholder="Faction Description"
+                          className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none resize-none"
+                        />
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div key={f.id} className="rounded-xl border border-gold-accent/30 bg-[#161a28] p-3 flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-display font-semibold text-sm text-gold-primary truncate">{f.name}</p>
+                          {f.attitude && (
+                            <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-gold-accent/15 text-gold-primary/90 border border-gold-accent/25 shrink-0">
+                              {f.attitude}
+                            </span>
+                          )}
+                        </div>
+                        {f.territory && <p className="font-narrative text-xs text-ink-muted truncate">Territory: {f.territory}</p>}
+                        {f.desc && <p className="font-narrative text-xs text-ink/80 mt-1 line-clamp-2">{f.desc}</p>}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => startEditing(`faction_${f.id}`, f)}
+                          className="text-gold-primary/70 hover:text-gold-primary p-1"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeItem('factions', f.id)}
+                          className="text-red-400/70 hover:text-red-300 p-1"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )
       }
 
       case 'npcs': {
-        if (!accumulated.npcs.length) return null
         return (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {accumulated.npcs.map((n) => (
-              <div key={n.id} className="rounded-xl border border-gold-accent/30 bg-[#161a28] p-3 flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-display font-semibold text-sm text-gold-primary truncate">{n.name}</p>
-                    {n.role && (
-                      <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-gold-accent/15 text-gold-primary/90 border border-gold-accent/25 shrink-0">
-                        {n.role}
-                      </span>
-                    )}
-                  </div>
-                  {n.personality && <p className="font-narrative text-xs text-ink-muted line-clamp-1">{n.personality}</p>}
-                  {(n.aff || n.trust) && (
-                    <p className="font-mono text-[10px] text-gold-primary/70 mt-0.5">
-                      {fieldSummary([
-                        n.aff ? `Affection: ${n.aff}` : undefined,
-                        n.trust ? `Trust: ${n.trust}` : undefined,
-                      ])}
-                    </p>
-                  )}
-                  {n.appearance && <p className="font-narrative text-xs text-ink/80 mt-1 line-clamp-2">{n.appearance}</p>}
-                </div>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">Cast of Characters</span>
+              <button
+                type="button"
+                onClick={() => addCustomItem('npcs')}
+                className="flex items-center gap-1 font-mono text-[10px] text-gold-primary hover:underline"
+              >
+                <Plus size={12} /> Add Character
+              </button>
+            </div>
+            {!accumulated.npcs.length ? (
+              <div className="flex justify-center pt-2">
                 <button
                   type="button"
-                  onClick={() => removeItem('npcs', n.id)}
-                  className="text-red-400/70 hover:text-red-300 p-1 shrink-0"
+                  onClick={() => addCustomItem('npcs')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/15 text-gold-primary text-xs font-display transition-colors"
                 >
-                  <X size={14} />
+                  <Plus size={14} />
+                  <span>Add Character Manually</span>
                 </button>
               </div>
-            ))}
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {accumulated.npcs.map((n) => {
+                  const isEditing = editingKey === `npc_${n.id}`
+                  if (isEditing) {
+                    return (
+                      <div key={n.id} className="rounded-xl border border-gold-primary/60 bg-[#161a28] p-3 flex flex-col gap-2 col-span-1 sm:col-span-2">
+                        <div className="flex items-center justify-between border-b border-gold-accent/20 pb-1.5">
+                          <span className="font-mono text-[10px] uppercase text-gold-primary font-bold">Edit Character</span>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => saveEditing(`npc_${n.id}`)}
+                              className="px-2 py-0.5 rounded bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1"
+                            >
+                              <Save size={12} /> Save
+                            </button>
+                            <button type="button" onClick={cancelEditing} className="px-2 py-0.5 rounded border border-gold-accent/30 text-xs">
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <input
+                            type="text"
+                            value={editFormData.name || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                            placeholder="Character Name"
+                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                          />
+                          <input
+                            type="text"
+                            value={editFormData.role || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value })}
+                            placeholder="Role / Title"
+                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                          />
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <select
+                            value={editFormData.aff || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, aff: e.target.value })}
+                            className="px-2 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                          >
+                            <option value="">Affection (Default: Neutral)</option>
+                            <option value="Stranger">Stranger</option>
+                            <option value="Acquaintance">Acquaintance</option>
+                            <option value="Friend">Friend</option>
+                            <option value="Confidant">Confidant</option>
+                            <option value="Beloved">Beloved</option>
+                          </select>
+                          <select
+                            value={editFormData.trust || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, trust: e.target.value })}
+                            className="px-2 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                          >
+                            <option value="">Trust (Default: Neutral)</option>
+                            <option value="Distrustful">Distrustful</option>
+                            <option value="Wary">Wary</option>
+                            <option value="Reliable">Reliable</option>
+                            <option value="Trusted">Trusted</option>
+                            <option value="Devoted">Devoted</option>
+                          </select>
+                        </div>
+                        <input
+                          type="text"
+                          value={editFormData.personality || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, personality: e.target.value })}
+                          placeholder="Personality & Behavior"
+                          className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                        />
+                        <textarea
+                          rows={2}
+                          value={editFormData.appearance || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, appearance: e.target.value })}
+                          placeholder="Physical Appearance & Attire"
+                          className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none resize-none"
+                        />
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div key={n.id} className="rounded-xl border border-gold-accent/30 bg-[#161a28] p-3 flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-display font-semibold text-sm text-gold-primary truncate">{n.name}</p>
+                          {n.role && (
+                            <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-gold-accent/15 text-gold-primary/90 border border-gold-accent/25 shrink-0">
+                              {n.role}
+                            </span>
+                          )}
+                        </div>
+                        {n.personality && <p className="font-narrative text-xs text-ink-muted line-clamp-1">{n.personality}</p>}
+                        {(n.aff || n.trust) && (
+                          <p className="font-mono text-[10px] text-gold-primary/70 mt-0.5">
+                            {fieldSummary([
+                              n.aff ? `Affection: ${n.aff}` : undefined,
+                              n.trust ? `Trust: ${n.trust}` : undefined,
+                            ])}
+                          </p>
+                        )}
+                        {n.appearance && <p className="font-narrative text-xs text-ink/80 mt-1 line-clamp-2">{n.appearance}</p>}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => startEditing(`npc_${n.id}`, n)}
+                          className="text-gold-primary/70 hover:text-gold-primary p-1"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeItem('npcs', n.id)}
+                          className="text-red-400/70 hover:text-red-300 p-1"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )
       }
 
       case 'lore': {
-        if (!accumulated.lore.length) return null
         return (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {accumulated.lore.map((l) => (
-              <div key={l.id} className="rounded-xl border border-gold-accent/30 bg-[#161a28] p-3 flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-display font-semibold text-sm text-gold-primary truncate">
-                      {l.name} {l.hidden && <span className="text-[10px] text-ink-muted italic">(Hidden)</span>}
-                    </p>
-                    {l.category && (
-                      <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-gold-accent/15 text-gold-primary/90 border border-gold-accent/25 shrink-0">
-                        {l.category}
-                      </span>
-                    )}
-                  </div>
-                  {l.era && <p className="font-narrative text-xs text-ink-muted">Era: {l.era}</p>}
-                  {l.content && <p className="font-narrative text-xs text-ink/80 mt-1 line-clamp-2">{l.content}</p>}
-                </div>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">Lore & Secrets</span>
+              <button
+                type="button"
+                onClick={() => addCustomItem('lore')}
+                className="flex items-center gap-1 font-mono text-[10px] text-gold-primary hover:underline"
+              >
+                <Plus size={12} /> Add Lore
+              </button>
+            </div>
+            {!accumulated.lore.length ? (
+              <div className="flex justify-center pt-2">
                 <button
                   type="button"
-                  onClick={() => removeItem('lore', l.id)}
-                  className="text-red-400/70 hover:text-red-300 p-1 shrink-0"
+                  onClick={() => addCustomItem('lore')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/15 text-gold-primary text-xs font-display transition-colors"
                 >
-                  <X size={14} />
+                  <Plus size={14} />
+                  <span>Add Lore Manually</span>
                 </button>
               </div>
-            ))}
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {accumulated.lore.map((l) => {
+                  const isEditing = editingKey === `lore_${l.id}`
+                  if (isEditing) {
+                    return (
+                      <div key={l.id} className="rounded-xl border border-gold-primary/60 bg-[#161a28] p-3 flex flex-col gap-2 col-span-1 sm:col-span-2">
+                        <div className="flex items-center justify-between border-b border-gold-accent/20 pb-1.5">
+                          <span className="font-mono text-[10px] uppercase text-gold-primary font-bold">Edit Lore</span>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => saveEditing(`lore_${l.id}`)}
+                              className="px-2 py-0.5 rounded bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1"
+                            >
+                              <Save size={12} /> Save
+                            </button>
+                            <button type="button" onClick={cancelEditing} className="px-2 py-0.5 rounded border border-gold-accent/30 text-xs">
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <input
+                            type="text"
+                            value={editFormData.name || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                            placeholder="Lore Name"
+                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                          />
+                          <input
+                            type="text"
+                            value={editFormData.category || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value })}
+                            placeholder="Category (e.g. History, Myth)"
+                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                          />
+                          <input
+                            type="text"
+                            value={editFormData.era || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, era: e.target.value })}
+                            placeholder="Era / Period"
+                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                          />
+                        </div>
+                        <textarea
+                          rows={2}
+                          value={editFormData.content || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, content: e.target.value })}
+                          placeholder="Lore Content"
+                          className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none resize-none"
+                        />
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div key={l.id} className="rounded-xl border border-gold-accent/30 bg-[#161a28] p-3 flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-display font-semibold text-sm text-gold-primary truncate">
+                            {l.name} {l.hidden && <span className="text-[10px] text-ink-muted italic">(Hidden)</span>}
+                          </p>
+                          {l.category && (
+                            <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-gold-accent/15 text-gold-primary/90 border border-gold-accent/25 shrink-0">
+                              {l.category}
+                            </span>
+                          )}
+                        </div>
+                        {l.era && <p className="font-narrative text-xs text-ink-muted">Era: {l.era}</p>}
+                        {l.content && <p className="font-narrative text-xs text-ink/80 mt-1 line-clamp-2">{l.content}</p>}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => startEditing(`lore_${l.id}`, l)}
+                          className="text-gold-primary/70 hover:text-gold-primary p-1"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeItem('lore', l.id)}
+                          className="text-red-400/70 hover:text-red-300 p-1"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )
       }
@@ -551,16 +1358,73 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
         const hasBeats = accumulated.beats.length > 0
         const hasEvents = (accumulated.narrativeEvents?.length ?? 0) > 0
         const hasStakes = Boolean(accumulated.deathRule || accumulated.endGameRules)
-        if (!hasBeats && !hasEvents && !hasStakes) return null
 
         return (
-          <div className="flex flex-col gap-3">
-            {hasBeats && (
-              <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-4">
+            {/* Story Beats */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
                 <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">Story Beats</span>
+                <button
+                  type="button"
+                  onClick={() => addCustomItem('beats')}
+                  className="flex items-center gap-1 font-mono text-[10px] text-gold-primary hover:underline"
+                >
+                  <Plus size={12} /> Add Beat
+                </button>
+              </div>
+              {!hasBeats ? (
+                <div className="flex justify-center pt-1">
+                  <button
+                    type="button"
+                    onClick={() => addCustomItem('beats')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/15 text-gold-primary text-xs font-display transition-colors"
+                  >
+                    <Plus size={14} />
+                    <span>Add Story Beat Manually</span>
+                  </button>
+                </div>
+              ) : (
                 <div className="flex flex-col gap-2">
                   {accumulated.beats.map((b, i) => {
                     const revealed = revealedBeats.has(b.id)
+                    const isEditing = editingKey === `beat_${b.id}`
+                    if (isEditing) {
+                      return (
+                        <div key={b.id} className="rounded-xl border border-gold-primary/60 bg-[#161a28] p-3 flex flex-col gap-2">
+                          <div className="flex items-center justify-between border-b border-gold-accent/20 pb-1.5">
+                            <span className="font-mono text-[10px] uppercase text-gold-primary font-bold">Edit Story Beat #{i + 1}</span>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => saveEditing(`beat_${b.id}`)}
+                                className="px-2 py-0.5 rounded bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1"
+                              >
+                                <Save size={12} /> Save
+                              </button>
+                              <button type="button" onClick={cancelEditing} className="px-2 py-0.5 rounded border border-gold-accent/30 text-xs">
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                          <input
+                            type="text"
+                            value={editFormData.title || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                            placeholder="Beat Title"
+                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                          />
+                          <textarea
+                            rows={2}
+                            value={editFormData.summary || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, summary: e.target.value })}
+                            placeholder="Beat Summary / Spoiler Premise"
+                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none resize-none"
+                          />
+                        </div>
+                      )
+                    }
+
                     return (
                       <div key={b.id} className="rounded-xl border border-gold-accent/30 bg-[#161a28] p-3 flex flex-col gap-1.5">
                         <div className="flex items-center justify-between gap-2">
@@ -568,6 +1432,14 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                             {i + 1}. {b.title}
                           </span>
                           <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => startEditing(`beat_${b.id}`, b)}
+                              className="text-gold-primary/70 hover:text-gold-primary p-1 rounded hover:bg-gold-accent/10 transition-colors"
+                              title="Edit Beat"
+                            >
+                              <Pencil size={13} />
+                            </button>
                             <button
                               type="button"
                               onClick={() => toggleBeatReveal(b.id)}
@@ -594,68 +1466,260 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     )
                   })}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
-            {hasEvents && (
-              <div className="flex flex-col gap-2">
+            {/* Complications */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
                 <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">
-                  Narrative Events (Complications)
+                  Complications / Narrative Events
                 </span>
+                <button
+                  type="button"
+                  onClick={() => addCustomItem('narrativeEvents')}
+                  className="flex items-center gap-1 font-mono text-[10px] text-gold-primary hover:underline"
+                >
+                  <Plus size={12} /> Add Event
+                </button>
+              </div>
+              {hasEvents && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {accumulated.narrativeEvents!.map((e) => (
-                    <div key={e.id} className="rounded-xl border border-gold-accent/30 bg-[#161a28] p-3 flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="font-display font-semibold text-sm text-gold-primary truncate">{e.title}</p>
-                        <p className="font-mono text-[10px] text-ink-muted">
-                          Trigger: {e.trigger || 'story'}{e.condition ? ` · ${e.condition}` : ''}
-                        </p>
-                        {e.guidance && <p className="font-narrative text-xs text-ink/80 mt-1 line-clamp-2">{e.guidance}</p>}
+                  {accumulated.narrativeEvents!.map((e) => {
+                    const isEditing = editingKey === `event_${e.id}`
+                    if (isEditing) {
+                      return (
+                        <div key={e.id} className="rounded-xl border border-gold-primary/60 bg-[#161a28] p-3 flex flex-col gap-2 col-span-1 sm:col-span-2">
+                          <div className="flex items-center justify-between border-b border-gold-accent/20 pb-1.5">
+                            <span className="font-mono text-[10px] uppercase text-gold-primary font-bold">Edit Complication</span>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => saveEditing(`event_${e.id}`)}
+                                className="px-2 py-0.5 rounded bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1"
+                              >
+                                <Save size={12} /> Save
+                              </button>
+                              <button type="button" onClick={cancelEditing} className="px-2 py-0.5 rounded border border-gold-accent/30 text-xs">
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <input
+                              type="text"
+                              value={editFormData.title || ''}
+                              onChange={(ev) => setEditFormData({ ...editFormData, title: ev.target.value })}
+                              placeholder="Event Title"
+                              className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                            />
+                            <input
+                              type="text"
+                              value={editFormData.trigger || ''}
+                              onChange={(ev) => setEditFormData({ ...editFormData, trigger: ev.target.value })}
+                              placeholder="Trigger Type (story, location_visit, etc.)"
+                              className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                            />
+                          </div>
+                          <input
+                            type="text"
+                            value={editFormData.condition || ''}
+                            onChange={(ev) => setEditFormData({ ...editFormData, condition: ev.target.value })}
+                            placeholder="Condition / Target"
+                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                          />
+                          <textarea
+                            rows={2}
+                            value={editFormData.guidance || ''}
+                            onChange={(ev) => setEditFormData({ ...editFormData, guidance: ev.target.value })}
+                            placeholder="Steering Guidance"
+                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none resize-none"
+                          />
+                        </div>
+                      )
+                    }
+
+                    return (
+                      <div key={e.id} className="rounded-xl border border-gold-accent/30 bg-[#161a28] p-3 flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-display font-semibold text-sm text-gold-primary truncate">{e.title}</p>
+                          <p className="font-mono text-[10px] text-ink-muted">
+                            Trigger: {e.trigger || 'story'}{e.condition ? ` · ${e.condition}` : ''}
+                          </p>
+                          {e.guidance && <p className="font-narrative text-xs text-ink/80 mt-1 line-clamp-2">{e.guidance}</p>}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => startEditing(`event_${e.id}`, e)}
+                            className="text-gold-primary/70 hover:text-gold-primary p-1"
+                          >
+                            <Pencil size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeItem('narrativeEvents', e.id)}
+                            className="text-red-400/70 hover:text-red-300 p-1 shrink-0"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
                       </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Death / End Game Stakes */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">Death & End Game Stakes</span>
+                {!hasStakes && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      startEditing('stakes', {
+                        deathRule: 'soft_fail',
+                        deathInstructions: '',
+                        endGameRules: { win: '', lose: '', neutral: '' },
+                      })
+                    }
+                    className="flex items-center gap-1 font-mono text-[10px] text-gold-primary hover:underline"
+                  >
+                    <Plus size={12} /> Configure Stakes
+                  </button>
+                )}
+              </div>
+
+              {editingKey === 'stakes' ? (
+                <div className="rounded-xl border border-gold-primary/60 bg-[#161a28] p-3 flex flex-col gap-2.5">
+                  <div className="flex items-center justify-between border-b border-gold-accent/20 pb-1.5">
+                    <span className="font-mono text-[10px] uppercase text-gold-primary font-bold">Edit Death & Stakes</span>
+                    <div className="flex items-center gap-1.5">
                       <button
                         type="button"
-                        onClick={() => removeItem('narrativeEvents', e.id)}
-                        className="text-red-400/70 hover:text-red-300 p-1 shrink-0"
+                        onClick={() => saveEditing('stakes')}
+                        className="px-2 py-0.5 rounded bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1"
                       >
-                        <X size={14} />
+                        <Save size={12} /> Save
+                      </button>
+                      <button type="button" onClick={cancelEditing} className="px-2 py-0.5 rounded border border-gold-accent/30 text-xs">
+                        Cancel
                       </button>
                     </div>
-                  ))}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="flex flex-col gap-1">
+                      <label className="font-mono text-[10px] uppercase text-gold-primary/70">Death Rule</label>
+                      <select
+                        value={editFormData.deathRule || 'soft_fail'}
+                        onChange={(e) => setEditFormData({ ...editFormData, deathRule: e.target.value })}
+                        className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                      >
+                        <option value="soft_fail">Soft Fail (Knockout / Retreat / Rescue)</option>
+                        <option value="permadeath">Permadeath (Permanent End)</option>
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="font-mono text-[10px] uppercase text-gold-primary/70">Death / Defeat Instructions</label>
+                      <input
+                        type="text"
+                        value={editFormData.deathInstructions || ''}
+                        onChange={(e) => setEditFormData({ ...editFormData, deathInstructions: e.target.value })}
+                        placeholder="Instructions upon defeat..."
+                        className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2 pt-1 border-t border-gold-accent/15">
+                    <span className="font-mono text-[10px] uppercase text-gold-primary/70">End Game Outcome Guidance</span>
+                    <input
+                      type="text"
+                      value={editFormData.endGameRules?.win || ''}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          endGameRules: { ...(editFormData.endGameRules || {}), win: e.target.value },
+                        })
+                      }
+                      placeholder="Victory Outcome Guidance..."
+                      className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                    />
+                    <input
+                      type="text"
+                      value={editFormData.endGameRules?.lose || ''}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          endGameRules: { ...(editFormData.endGameRules || {}), lose: e.target.value },
+                        })
+                      }
+                      placeholder="Defeat Outcome Guidance..."
+                      className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                    />
+                    <input
+                      type="text"
+                      value={editFormData.endGameRules?.neutral || ''}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          endGameRules: { ...(editFormData.endGameRules || {}), neutral: e.target.value },
+                        })
+                      }
+                      placeholder="Bittersweet / Neutral Outcome Guidance..."
+                      className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                    />
+                  </div>
                 </div>
-              </div>
-            )}
-
-            {hasStakes && (
-              <div className="rounded-xl border border-gold-accent/25 bg-[#161a28]/70 p-3 flex flex-col gap-1.5 text-xs">
-                {accumulated.deathRule && (
-                  <p className="font-narrative text-ink">
-                    <span className="font-mono text-[10px] uppercase text-gold-primary font-bold">Death Rule: </span>
-                    {accumulated.deathRule === 'permadeath' ? 'Permadeath' : 'Soft Fail'}
-                    {accumulated.deathInstructions ? ` — ${accumulated.deathInstructions}` : ''}
-                  </p>
-                )}
-                {accumulated.endGameRules && (
-                  <div className="flex flex-col gap-0.5 mt-0.5">
-                    <span className="font-mono text-[10px] uppercase text-gold-primary font-bold">End Game Guidance:</span>
-                    {accumulated.endGameRules.win && (
-                      <p className="font-narrative text-ink-muted pl-2 border-l border-emerald-500/40">
-                        <span className="text-emerald-400 font-medium">Victory:</span> {accumulated.endGameRules.win}
+              ) : (
+                hasStakes && (
+                  <div className="rounded-xl border border-gold-accent/25 bg-[#161a28]/70 p-3 flex flex-col gap-1.5 text-xs relative">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        startEditing('stakes', {
+                          deathRule: accumulated.deathRule,
+                          deathInstructions: accumulated.deathInstructions,
+                          endGameRules: accumulated.endGameRules,
+                        })
+                      }
+                      className="absolute top-2.5 right-2.5 text-gold-primary/70 hover:text-gold-primary p-1"
+                      title="Edit Stakes"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                    {accumulated.deathRule && (
+                      <p className="font-narrative text-ink pr-6">
+                        <span className="font-mono text-[10px] uppercase text-gold-primary font-bold">Death Rule: </span>
+                        {accumulated.deathRule === 'permadeath' ? 'Permadeath' : 'Soft Fail'}
+                        {accumulated.deathInstructions ? ` — ${accumulated.deathInstructions}` : ''}
                       </p>
                     )}
-                    {accumulated.endGameRules.lose && (
-                      <p className="font-narrative text-ink-muted pl-2 border-l border-rose-500/40">
-                        <span className="text-rose-400 font-medium">Defeat:</span> {accumulated.endGameRules.lose}
-                      </p>
-                    )}
-                    {accumulated.endGameRules.neutral && (
-                      <p className="font-narrative text-ink-muted pl-2 border-l border-gold-accent/40">
-                        <span className="text-gold-primary font-medium">Bittersweet:</span> {accumulated.endGameRules.neutral}
-                      </p>
+                    {accumulated.endGameRules && (
+                      <div className="flex flex-col gap-0.5 mt-0.5 pr-6">
+                        <span className="font-mono text-[10px] uppercase text-gold-primary font-bold">End Game Guidance:</span>
+                        {accumulated.endGameRules.win && (
+                          <p className="font-narrative text-ink-muted pl-2 border-l border-emerald-500/40">
+                            <span className="text-emerald-400 font-medium">Victory:</span> {accumulated.endGameRules.win}
+                          </p>
+                        )}
+                        {accumulated.endGameRules.lose && (
+                          <p className="font-narrative text-ink-muted pl-2 border-l border-rose-500/40">
+                            <span className="text-rose-400 font-medium">Defeat:</span> {accumulated.endGameRules.lose}
+                          </p>
+                        )}
+                        {accumulated.endGameRules.neutral && (
+                          <p className="font-narrative text-ink-muted pl-2 border-l border-gold-accent/40">
+                            <span className="text-gold-primary font-medium">Bittersweet:</span> {accumulated.endGameRules.neutral}
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
-            )}
+                )
+              )}
+            </div>
           </div>
         )
       }
@@ -880,6 +1944,18 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
 
             {/* Modal Body */}
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3.5">
+              {!hasAnyContent(accumulated) && (
+                <div className="rounded-xl border border-amber-500/40 bg-amber-950/30 p-3 flex items-start gap-2.5 text-amber-200 text-xs">
+                  <AlertCircle size={16} className="shrink-0 text-amber-400 mt-0.5" />
+                  <div className="flex flex-col gap-0.5">
+                    <p className="font-display font-semibold text-amber-300">All 7 phases are currently blank</p>
+                    <p className="font-narrative text-amber-200/80 leading-relaxed">
+                      Please weave or manually create elements in at least one phase before diving in.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* World */}
               <div className="rounded-xl border border-gold-accent/25 bg-[#161a28] p-3 flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
@@ -1093,11 +2169,13 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
               <button
                 type="button"
                 onClick={() => {
+                  if (!hasAnyContent(accumulated)) return
                   setShowOverview(false)
                   onBeginTale(accumulated)
                 }}
-                disabled={busy}
-                className="px-6 py-2 rounded-xl bg-gold-primary hover:bg-gold-primary/90 text-black shadow-[0_0_15px_rgba(212,175,55,0.3)] font-display text-sm font-bold transition-all disabled:opacity-50"
+                disabled={busy || !hasAnyContent(accumulated)}
+                className="px-6 py-2 rounded-xl bg-gold-primary hover:bg-gold-primary/90 text-black shadow-[0_0_15px_rgba(212,175,55,0.3)] font-display text-sm font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gold-primary disabled:shadow-none"
+                title={!hasAnyContent(accumulated) ? 'Weave at least one phase before diving in' : 'Begin campaign'}
               >
                 Dive in
               </button>

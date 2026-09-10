@@ -67,16 +67,15 @@ OUTPUT FORMAT (read carefully — respond with exactly this, nothing else, no ma
 
 Rules:
 - Emit ONLY the tag(s) belonging to the Active Phase named in the prompt — never any tag from a different phase, and never more than one <world> or <protagonist> tag.
-- World Foundation phase: one <world> tag, every attribute filled in with real specific content grounded in the player's own guidance.
-- Protagonist phase: one <protagonist> tag, same standard.
+- World Foundation phase: exactly one <world> tag with EVERY attribute filled with rich, specific content. Always include era_tech specifying the historical era and technology level (e.g. "Late Medieval / Iron Age", "Victorian Gaslamp / Steampunk", "Far-Future Spacefaring"), power_system, genre_tone, conflict, key_factions, and background.
+- Protagonist phase: exactly one <protagonist> tag with every attribute populated.
 - Regions & Locations phase: 1-4 <region> tags and, for each, 1-4 <location> tags with region_id set to one of them — map_x/map_y (integers 0-100) are optional but encouraged, spaced out sensibly per region; "areas" is an optional comma-separated list of named sub-zones within that one location, only when it genuinely has distinct internal zones worth naming.
 - Factions phase: 1-4 <faction> tags.
 - Cast of Characters phase: 1-4 <npc> tags. aff/trust are each one of their exact canonical words, omitted entirely for a neutral/unestablished relationship.
 - Lore & Secrets phase: 2-5 <lore> tags. hidden/tease are optional — omit both for a normal entry, include both only for the rare deliberately-hidden one.
 - Story Arc phase: 3-6 <beat> tags in the order they should occur, each a distinct escalating movement of the story toward a real ending — title short and evocative, summary the full spoiler-bearing premise (see the system instructions above on how each is used). Also include 2-3 <narrative_event> tags for dormant complications/encounters (trigger="flag|location_visit|npc_met|quest_complete|story", cond="target", guide="steering guidance"), an optional <death_rule mode="soft_fail|permadeath" instructions="..." />, and an optional <end_game win="..." lose="..." neutral="..." /> for story conclusion guidance.
 - Every id is a short snake_case slug derived from the entry's own name (e.g. "Elana Voss" -> "elana_voss") — never invent a numbered or generic id.
-- Escape literal & as &amp; inside attribute values.
-`.trim()
+- Escape literal & as &amp; inside attribute values.`.trim()
 
 export function buildTaleWeaverSystemInstructions(): string {
   return `${TALE_WEAVER_SYSTEM_INSTRUCTIONS}\n\n${TALE_WEAVER_GRAMMAR}`

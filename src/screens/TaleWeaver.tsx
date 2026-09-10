@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import {
   X, ChevronRight, ChevronLeft, Sparkles, Lock, Unlock,
   BookOpen, AlertCircle, Check, ArrowRight, Pencil, Plus, Save,
-  ImagePlus, RotateCw, FolderOpen, Trash2, Bookmark, CheckCircle2
+  ImagePlus, RotateCw, FolderOpen, Trash2, Bookmark, CheckCircle2, Clock
 } from 'lucide-react'
 import { GlassScreen, GlassHeader } from '../lib/glassChrome.tsx'
 import { useConfirm } from '../lib/useConfirm.tsx'
@@ -17,7 +17,8 @@ import {
 } from '../lib/taleWeaverPresets.ts'
 import { useEntityImage } from '../lib/useEntityImage.ts'
 import { generateAndStoreEntityImage } from '../lib/entityImages.ts'
-import { buildLocationImagePrompt, buildNpcPortraitPrompt, buildRegionMapPrompt } from '../lib/imageGeneration.ts'
+import { buildLocationImagePrompt, buildNpcPortraitPrompt, buildRegionMapPrompt, getPremiumApiKey } from '../lib/imageGeneration.ts'
+import { useImageCooldown } from '../lib/imageCooldown.ts'
 
 // Inspired Mode's "Tale Weaving" screen — a focused, step-guided creation
 // experience. One phase at a time, the player describes their vision, the
@@ -99,7 +100,7 @@ function getTotalEntityCount(acc: TaleWeaverAccumulated): number {
 
 function TaleWeaverImageGenerator({
   imageKey,
-  prompt,
+  prompt: initialPrompt,
   apiSettings,
   onSaveKey,
   aspectRatio = '16:9',
@@ -116,19 +117,48 @@ function TaleWeaverImageGenerator({
   const [error, setError] = useState<string | null>(null)
   const [modelUsed, setModelUsed] = useState<string | null>(null)
   const [refreshToken, setRefreshToken] = useState(0)
+  const [lastUsedPrompt, setLastUsedPrompt] = useState(initialPrompt)
+  const [customPrompt, setCustomPrompt] = useState(initialPrompt)
+  const [showPromptEdit, setShowPromptEdit] = useState(false)
   const url = useEntityImage(imageKey, refreshToken)
+  const { cooldownRemaining, isCooldownActive, start62sCooldown } = useImageCooldown()
 
-  async function handleGenerate() {
-    if (!apiSettings.apiKey) {
-      setError('No API key set — configure your Gemini API key in Settings first.')
+  useEffect(() => {
+    setLastUsedPrompt(initialPrompt)
+    setCustomPrompt(initialPrompt)
+  }, [initialPrompt])
+
+  async function handleGenerate(promptToUse?: string, isPremium = false) {
+    if (busy || isCooldownActive) return
+    const targetKey = isPremium ? getPremiumApiKey(apiSettings) : apiSettings.apiKey
+    if (!targetKey) {
+      setError(
+        isPremium
+          ? 'No premium API key found — set Gemini_Prem_Key or VITE_GEMINI_PREM_KEY first.'
+          : 'No API key set — configure your Gemini API key in Settings first.'
+      )
       return
     }
+    const finalPrompt = (promptToUse ?? customPrompt).trim()
+    if (!finalPrompt) return
+
+    setLastUsedPrompt(finalPrompt)
+    setCustomPrompt(finalPrompt)
     setBusy(true)
     setError(null)
     setModelUsed(null)
+    setShowPromptEdit(false)
+    start62sCooldown()
+
     try {
       const key = imageKey || `img_${Math.random().toString(36).slice(2)}_${Date.now()}`
-      const usedModel = await generateAndStoreEntityImage({ apiKey: apiSettings.apiKey, prompt, key, aspectRatio })
+      const usedModel = await generateAndStoreEntityImage({
+        apiKey: targetKey,
+        prompt: finalPrompt,
+        key,
+        aspectRatio,
+        isPremium,
+      })
       setModelUsed(usedModel)
       onSaveKey(key)
       setRefreshToken((t) => t + 1)
@@ -140,34 +170,125 @@ function TaleWeaverImageGenerator({
     }
   }
 
+  function handleButtonClick() {
+    setCustomPrompt(lastUsedPrompt)
+    setShowPromptEdit(true)
+  }
+
   return (
     <div className="flex flex-col gap-1.5 mt-1.5">
       {url && (
-        <div className="relative rounded-lg overflow-hidden border border-gold-accent/30 bg-black/60 shadow-md">
+        <div className="relative rounded-lg overflow-hidden border border-gold-accent/30 bg-black/60 shadow-md flex justify-center items-center p-1">
           <img
             src={url}
             alt=""
-            className={`w-full ${aspectRatio === '1:1' ? 'max-h-36 max-w-[144px] aspect-square object-cover' : 'max-h-36 object-cover'}`}
+            className={`w-full ${aspectRatio === '1:1' ? 'max-h-48 max-w-[192px] aspect-square object-contain' : 'max-h-56 object-contain'}`}
           />
         </div>
       )}
-      <div className="flex items-center gap-2 flex-wrap">
-        <button
-          type="button"
-          onClick={handleGenerate}
-          disabled={busy}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gold-accent/15 border border-gold-accent/40 text-gold-primary text-[11px] font-display font-semibold hover:bg-gold-accent/25 transition-colors disabled:opacity-50"
-        >
-          {busy ? <RotateCw size={12} className="animate-spin" /> : url ? <RotateCw size={12} /> : <ImagePlus size={12} />}
-          {busy ? 'Weaving image...' : url ? 'Retry Image' : label}
-        </button>
-        {modelUsed && !busy && (
-          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 text-[10.5px] font-mono animate-fade-in shadow-sm">
-            <CheckCircle2 size={12} className="text-emerald-400 shrink-0" />
-            <span>Generated using <strong className="text-emerald-200 font-semibold">{modelUsed}</strong></span>
+
+      {showPromptEdit ? (
+        <div className="flex flex-col gap-2 p-2.5 rounded-lg bg-black/80 border border-gold-accent/40 shadow-inner text-xs animate-fade-in">
+          <div className="flex items-center justify-between text-[11px] font-display text-gold-primary">
+            <span className="flex items-center gap-1 font-semibold">
+              <Sparkles size={12} className="text-gold-accent" />
+              Edit Image Generation Prompt
+            </span>
+            {customPrompt !== initialPrompt && (
+              <button
+                type="button"
+                onClick={() => setCustomPrompt(initialPrompt)}
+                className="text-[10px] text-zinc-400 hover:text-amber-200 underline"
+              >
+                Reset to default
+              </button>
+            )}
           </div>
-        )}
-      </div>
+          <textarea
+            value={customPrompt}
+            onChange={(e) => setCustomPrompt(e.target.value)}
+            rows={3}
+            placeholder="Describe the image..."
+            className="w-full p-2 rounded bg-zinc-950/90 border border-zinc-700/60 text-amber-100 text-xs font-narrative focus:outline-none focus:border-gold-accent resize-y"
+          />
+          <div className="flex items-center gap-2 justify-end flex-wrap">
+            <button
+              type="button"
+              onClick={() => setShowPromptEdit(false)}
+              disabled={busy}
+              className="px-2.5 py-1 rounded text-[11px] text-zinc-400 hover:text-zinc-200 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => handleGenerate(customPrompt, false)}
+              disabled={busy || isCooldownActive || !customPrompt.trim()}
+              className="flex items-center gap-1.5 px-3 py-1 rounded bg-gold-accent/25 border border-gold-accent/60 text-gold-primary text-[11px] font-display font-semibold hover:bg-gold-accent/40 transition-colors disabled:opacity-50"
+            >
+              {busy ? <RotateCw size={12} className="animate-spin" /> : isCooldownActive ? <Clock size={12} className="animate-pulse" /> : <Sparkles size={12} />}
+              {busy ? 'Weaving Image...' : isCooldownActive ? `Cooldown (${cooldownRemaining}s)` : 'Confirm & Weave'}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleGenerate(customPrompt, true)}
+              disabled={busy || isCooldownActive || !customPrompt.trim()}
+              className="flex items-center gap-1.5 px-3 py-1 rounded bg-gradient-to-r from-[#f7e7ce] via-[#e8ca8a] to-[#d4af37] text-zinc-950 font-display font-bold text-[11px] border border-[#fff5e1] hover:brightness-110 shadow-[0_0_12px_rgba(247,231,206,0.35)] transition-all disabled:opacity-50"
+              title="Generate with premium paid tokens"
+            >
+              {busy ? <RotateCw size={12} className="animate-spin" /> : <Sparkles size={12} className="text-zinc-900" />}
+              <span>{busy ? 'Weaving...' : 'Premium'}</span>
+            </button>
+          </div>
+          <p className="text-[10px] text-amber-200/80 font-mono text-right mt-0.5">
+            ⚡ Warning: 'Premium' uses paid API tokens (Gemini_Prem_Key quota).
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={handleButtonClick}
+              disabled={busy || isCooldownActive}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gold-accent/15 border border-gold-accent/40 text-gold-primary text-[11px] font-display font-semibold hover:bg-gold-accent/25 transition-colors disabled:opacity-50"
+            >
+              {busy ? <RotateCw size={12} className="animate-spin" /> : isCooldownActive ? <Clock size={12} className="animate-pulse" /> : url ? <RotateCw size={12} /> : <ImagePlus size={12} />}
+              {busy ? 'Weaving image...' : isCooldownActive ? `Cooldown (${cooldownRemaining}s)` : url ? 'Retry Image' : label}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setCustomPrompt(lastUsedPrompt)
+                setShowPromptEdit(true)
+              }}
+              disabled={busy || isCooldownActive}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gradient-to-r from-[#f7e7ce] via-[#e8ca8a] to-[#d4af37] text-zinc-950 font-display font-bold text-[11px] border border-[#fff5e1] hover:brightness-110 shadow-[0_0_12px_rgba(247,231,206,0.35)] transition-all disabled:opacity-50"
+              title="Generate using paid API tokens"
+            >
+              <Sparkles size={12} className="text-zinc-900" />
+              <span>Premium</span>
+            </button>
+            {modelUsed && !busy && (
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 text-[10.5px] font-mono animate-fade-in shadow-sm">
+                <CheckCircle2 size={12} className="text-emerald-400 shrink-0" />
+                <span>Generated using <strong className="text-emerald-200 font-semibold">{modelUsed}</strong></span>
+              </div>
+            )}
+          </div>
+          <p className="text-[10px] text-amber-200/70 font-mono">
+            ⚡ Note: 'Premium' generation uses paid API tokens.
+          </p>
+        </div>
+      )}
+
+      {isCooldownActive && !busy && (
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-950/70 border border-amber-500/40 text-amber-300 text-[10.5px] font-mono animate-fade-in shadow-sm">
+          <Clock size={12} className="text-amber-400 shrink-0 animate-pulse" />
+          <span>Nanobanana 2 Cooldown: Retry available in <strong>{cooldownRemaining}s</strong></span>
+        </div>
+      )}
+
       {error && (
         <div className="rounded-lg bg-red-950/50 border border-red-500/30 p-2 text-[11px] font-narrative flex flex-col gap-1 text-red-300">
           <div className="flex items-center gap-1.5 font-semibold text-red-200">
@@ -175,16 +296,7 @@ function TaleWeaverImageGenerator({
             <span>Image Generation Failed</span>
           </div>
           <p className="text-red-300/90 text-[10.5px] leading-snug">
-            {(() => {
-              const lower = error.toLowerCase()
-              if (lower.includes('403') || lower.includes('permission_denied') || lower.includes('permission') || lower.includes('caller does not have permission')) {
-                return 'API Permission error (403: Permission Denied). Check your Gemini API Key in Settings to ensure Image Generation access is enabled.'
-              }
-              if (lower.includes('429') || lower.includes('quota') || lower.includes('resource_exhausted')) {
-                return 'AI model quota or rate limit reached. You can try again now, or retry later after your quota resets.'
-              }
-              return `${error}. You can retry now, or regenerate later in the Codex.`
-            })()}
+            {error}
           </p>
         </div>
       )}

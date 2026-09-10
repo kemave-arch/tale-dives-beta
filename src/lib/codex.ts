@@ -4,7 +4,7 @@ import { parseKeywordLinks } from './keywordLinks.ts'
 import { ensureLocation } from './locations.ts'
 import { emptyNpc } from './npcs.ts'
 import { emptySkill } from './skills.ts'
-import type { BestiaryEntry, Dict, EnrichUpdate, FactionEntry, LocationEntry, LoreEntry, NpcEntry, QuestEntry, SkillEntry } from '../types.ts'
+import type { BestiaryEntry, Dict, EnrichUpdate, FactionEntry, LocationEntry, LoreEntry, NpcEntry, QuestEntry, RegionEntry, SkillEntry } from '../types.ts'
 
 function ensureStub<T extends { autoLogged?: boolean; loggedAt?: string }>(
   dict: Dict<T> | undefined,
@@ -36,12 +36,40 @@ function isKnownByName<T extends { name: string }>(dict: Dict<T> | undefined, te
 
 export interface CodexDicts {
   locations: Dict<LocationEntry>
+  regions?: Dict<RegionEntry>
   npcs: Dict<NpcEntry>
   factions: Dict<FactionEntry>
   lore: Dict<LoreEntry>
   quests: Dict<QuestEntry>
   bestiary: Dict<BestiaryEntry>
   skills: Dict<SkillEntry>
+}
+
+// Cleans up any auto-logged location stub that duplicates an existing Region entry
+export function dedupLocationsWithRegions(
+  locations: Dict<LocationEntry>,
+  regions: Dict<RegionEntry> | undefined,
+): Dict<LocationEntry> {
+  if (!regions || Object.keys(regions).length === 0) return locations
+  const regionNames = new Set(Object.values(regions).map((r) => r.name.trim().toLowerCase()))
+  const regionIds = new Set(Object.keys(regions))
+
+  let changed = false
+  const cleaned: Dict<LocationEntry> = {}
+
+  for (const [id, loc] of Object.entries(locations)) {
+    const normName = loc.name.trim().toLowerCase()
+    const isAutoLogged = loc.autoLogged || loc.description === '(Auto-logged — visit again or add detail manually.)' || !loc.description
+    const matchesRegion = regionIds.has(id) || regionNames.has(normName)
+
+    if (isAutoLogged && matchesRegion) {
+      changed = true
+      continue
+    }
+    cleaned[id] = loc
+  }
+
+  return changed ? cleaned : locations
 }
 
 // §5.14 — applies every {{Term|category}} mention in this turn's prose to the
@@ -56,7 +84,7 @@ export interface CodexDicts {
 // (they're the player, not an NPC) — there's no existing "Kei Ashborn" NPC
 // entry to fuzzy-match against, so this needs its own explicit check.
 export function applyKeywordLinks(codex: CodexDicts, nar: string | undefined, turnRef?: string, playerName?: string): CodexDicts {
-  let { locations, npcs, factions, lore, quests, bestiary, skills } = codex
+  let { locations, regions, npcs, factions, lore, quests, bestiary, skills } = codex
   const playerNameLower = playerName?.trim().toLowerCase()
 
   for (const { term, category } of parseKeywordLinks(nar)) {
@@ -65,7 +93,9 @@ export function applyKeywordLinks(codex: CodexDicts, nar: string | undefined, tu
 
     switch (category) {
       case 'loc':
-        if (!isKnownByName(locations, term)) locations = ensureLocation(locations, id, term, undefined, undefined, turnRef).dict
+        if (!isKnownByName(locations, term) && !isKnownByName(regions, term)) {
+          locations = ensureLocation(locations, id, term, undefined, undefined, turnRef).dict
+        }
         break
       case 'npc':
         if (term.trim().toLowerCase() === playerNameLower) break

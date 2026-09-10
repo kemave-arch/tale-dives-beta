@@ -15,10 +15,11 @@ export interface GenerateEntityImageInput {
   aspectRatio?: ImageAspectRatio
   maxDim?: number
   quality?: number
+  isPremium?: boolean
 }
 
 export async function generateAndStoreEntityImage(input: GenerateEntityImageInput): Promise<string> {
-  const result = await generateImageBytes({ apiKey: input.apiKey, prompt: input.prompt, aspectRatio: input.aspectRatio })
+  const result = await generateImageBytes({ apiKey: input.apiKey, prompt: input.prompt, aspectRatio: input.aspectRatio, isPremium: input.isPremium })
   const resized = await resizeToWebP(result.blob, input.maxDim ?? MAX_DIM_STANDARD, input.quality ?? IMAGE_QUALITY_FULL)
   await putImageBlob(input.key, resized)
   return result.modelUsed

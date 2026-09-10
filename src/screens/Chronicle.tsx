@@ -16,7 +16,7 @@ import { isHidden } from '../lib/discovery.ts'
 import type { CategoryId } from './Codex.tsx'
 import type {
   ApiSettings, BestiaryEntry, Campaign, CombatState, CraftingJob, EndingOutcome, FactionEntry, GameTime, KeywordLink, LocationEntry, LogEntry, LoreEntry, NpcEntry, Player,
-  ProseDepthConfig, QuestEntry, SkillEntry, SlashCommand, ItemEntry,
+  ProseDepthConfig, QuestEntry, RegionEntry, SkillEntry, SlashCommand, ItemEntry,
 } from '../types.ts'
 import { trustWord, presentNpcs } from '../lib/npcs.ts'
 import { useEntityImage } from '../lib/useEntityImage.ts'
@@ -57,6 +57,7 @@ interface ChronicleProps {
   chromeOpacity: number
   npcs: Record<string, NpcEntry>
   locations: Record<string, LocationEntry>
+  regions?: Record<string, RegionEntry>
   factions: Record<string, FactionEntry>
   lore: Record<string, LoreEntry>
   quests: Record<string, QuestEntry>
@@ -1025,6 +1026,7 @@ export default function Chronicle({
   chromeOpacity: _chromeOpacity,
   npcs,
   locations,
+  regions = {},
   factions,
   lore,
   quests,
@@ -1337,27 +1339,50 @@ export default function Chronicle({
   const onTapTerm = useCallback<TapTermHandler>(
     (term, category) => {
       const dict = { npc: npcs, loc: locations, faction: factions, lore, quest: quests, beast: bestiary, skill: skills, item: items }[category]
-      if (!dict) return
-      const bareId = slugify(term)
-      if (dict[bareId]) {
-        setPopup({ category, id: bareId })
-        return
+      if (dict) {
+        const bareId = slugify(term)
+        if (dict[bareId]) {
+          setPopup({ category, id: bareId })
+          return
+        }
+        const needle = term.trim().toLowerCase()
+        const match = Object.entries(dict).find(([, entry]) => entry.name.trim().toLowerCase() === needle)
+        if (match) {
+          setPopup({ category, id: match[0] })
+          return
+        }
       }
-      // A player-authored or World-Seeded location/faction gets a category
-      // prefix at creation ("loc_"/"fac_" + slug) that a {{Term|category}}
-      // tag's bare slugified id never carries, so the direct lookup above
-      // always misses for one of those — fall back to a case-insensitive
-      // name match across the same dict before giving up.
-      const needle = term.trim().toLowerCase()
-      const match = Object.entries(dict).find(([, entry]) => entry.name.trim().toLowerCase() === needle)
-      if (match) setPopup({ category, id: match[0] })
+
+      if (category === 'loc' && regions) {
+        const bareId = slugify(term)
+        if (regions[bareId]) {
+          setPopup({ category: 'loc', id: bareId })
+          return
+        }
+        const needle = term.trim().toLowerCase()
+        const matchRegion = Object.entries(regions).find(([, entry]) => entry.name.trim().toLowerCase() === needle)
+        if (matchRegion) {
+          setPopup({ category: 'loc', id: matchRegion[0] })
+          return
+        }
+      }
     },
-    [npcs, locations, factions, lore, quests, bestiary, skills, items],
+    [npcs, locations, regions, factions, lore, quests, bestiary, skills, items],
   )
 
-  const popupEntry =
-    popup &&
-    ({ npc: npcs, loc: locations, faction: factions, lore, quest: quests, beast: bestiary, skill: skills, item: items }[popup.category]?.[popup.id] as
+  const popupEntry = useMemo(() => {
+    if (!popup) return undefined
+    const baseDict = { npc: npcs, loc: locations, faction: factions, lore, quest: quests, beast: bestiary, skill: skills, item: items }[popup.category]
+    const entry = baseDict?.[popup.id]
+    if (popup.category === 'loc' && regions) {
+      const locEntry = entry as LocationEntry | undefined
+      if (!locEntry || locEntry.autoLogged || locEntry.description === '(Auto-logged — visit again or add detail manually.)' || !locEntry.description) {
+        if (regions[popup.id]) return regions[popup.id] as unknown as LocationEntry
+        const matchReg = Object.values(regions).find((r) => r.name.trim().toLowerCase() === popup.id.replace(/_/g, ' ').toLowerCase())
+        if (matchReg) return matchReg as unknown as LocationEntry
+      }
+    }
+    return entry as
       | NpcEntry
       | LocationEntry
       | FactionEntry
@@ -1366,7 +1391,19 @@ export default function Chronicle({
       | BestiaryEntry
       | SkillEntry
       | ItemEntry
-      | undefined)
+      | undefined
+  }, [popup, npcs, locations, regions, factions, lore, quests, bestiary, skills, items])
+
+  const popupImageKey = useMemo<string | undefined>(() => {
+    if (!popupEntry) return undefined
+    const entry = (popupEntry as unknown) as Record<string, unknown>
+    if (typeof entry.portraitKey === 'string' && entry.portraitKey) return entry.portraitKey
+    if (typeof entry.imageKey === 'string' && entry.imageKey) return entry.imageKey
+    if (typeof entry.mapImageKey === 'string' && entry.mapImageKey) return entry.mapImageKey
+    return undefined
+  }, [popupEntry])
+
+  const popupImageUrl = useEntityImage(popupImageKey)
 
   return (
     <div className="fixed inset-0 overflow-hidden text-ink bg-canvas flex flex-col lg:flex-row">
@@ -1375,7 +1412,7 @@ export default function Chronicle({
         player={player}
         items={items}
         combat={combat}
-        locationName={locations[player.locId]?.name || player.locDisp}
+        locationName={locations[player.locId]?.name || player.locDisp || 'Unknown'}
       />
 
       {/* Main Story Container */}
@@ -1829,6 +1866,18 @@ export default function Chronicle({
               </svg>
               <div className="h-[1.5px] flex-1 bg-gradient-to-r from-[#c89d51] via-[#c89d51]/70 to-transparent" />
             </div>
+
+            {/* Entity Image preview if generated */}
+            {popupImageUrl && (!('discovery' in popupEntry) || !isHidden(popupEntry)) && (
+              <div className="relative w-full h-44 sm:h-52 rounded-lg overflow-hidden border border-[#c89d51]/50 bg-black/60 shadow-lg my-3">
+                <img
+                  src={popupImageUrl}
+                  alt={popupEntry.name}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#120d1b] via-transparent to-transparent opacity-80 pointer-events-none" />
+              </div>
+            )}
 
             {/* Content Body */}
             {'discovery' in popupEntry && isHidden(popupEntry) ? (

@@ -1,4 +1,4 @@
-import { createContext, useState, useMemo, useEffect, useContext } from 'react'
+import { createContext, useState, useMemo, useEffect, useContext, useRef } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
   Globe, BookOpen, Users, ShieldCheck, Map, ScrollText, Target, Skull, Backpack,
@@ -25,7 +25,8 @@ import type {
 import { COMPETENCY_TIERS, THREAT_TIERS, tierToWord, wordToTier, displayThreatLabel } from '../lib/tiers.ts'
 import { useEntityImage } from '../lib/useEntityImage.ts'
 import { generateAndStoreEntityImage } from '../lib/entityImages.ts'
-import { buildLocationImagePrompt, buildNpcPortraitPrompt, buildRegionMapPrompt } from '../lib/imageGeneration.ts'
+import { buildLocationImagePrompt, buildNpcPortraitPrompt, buildRegionMapPrompt, getPremiumApiKey } from '../lib/imageGeneration.ts'
+import { useImageCooldown } from '../lib/imageCooldown.ts'
 import { trustWord } from '../lib/npcs.ts'
 
 import codexArchiveBanner from '../assets/images/codex_archive_banner.webp'
@@ -1008,7 +1009,7 @@ function TagPills({ tags, accent }: { tags: string[] | undefined; accent: Catego
 // onUpdateX handler the caller already has — this never touches the
 // edit-form draft state, since generating art isn't part of the Save flow.
 function EntityImagePanel({
-  imageKey, prompt, apiSettings, onSaveKey, aspectRatio,
+  imageKey, prompt: initialPrompt, apiSettings, onSaveKey, aspectRatio,
 }: {
   imageKey?: string
   prompt: string
@@ -1020,19 +1021,48 @@ function EntityImagePanel({
   const [error, setError] = useState<string | null>(null)
   const [modelUsed, setModelUsed] = useState<string | null>(null)
   const [refreshToken, setRefreshToken] = useState(0)
+  const [lastUsedPrompt, setLastUsedPrompt] = useState(initialPrompt)
+  const [customPrompt, setCustomPrompt] = useState(initialPrompt)
+  const [showPromptEdit, setShowPromptEdit] = useState(false)
   const url = useEntityImage(imageKey, refreshToken)
+  const { cooldownRemaining, isCooldownActive, start62sCooldown } = useImageCooldown()
 
-  async function handleGenerate() {
-    if (!apiSettings.apiKey) {
-      setError('No API key set — open Settings and paste your Gemini API key first.')
+  useEffect(() => {
+    setLastUsedPrompt(initialPrompt)
+    setCustomPrompt(initialPrompt)
+  }, [initialPrompt])
+
+  async function handleGenerate(promptToUse?: string, isPremium = false) {
+    if (busy || isCooldownActive) return
+    const targetKey = isPremium ? getPremiumApiKey(apiSettings) : apiSettings.apiKey
+    if (!targetKey) {
+      setError(
+        isPremium
+          ? 'No premium API key found — set Gemini_Prem_Key or VITE_GEMINI_PREM_KEY first.'
+          : 'No API key set — configure your Gemini API key in Settings first.'
+      )
       return
     }
+    const finalPrompt = (promptToUse ?? customPrompt).trim()
+    if (!finalPrompt) return
+
+    setLastUsedPrompt(finalPrompt)
+    setCustomPrompt(finalPrompt)
     setBusy(true)
     setError(null)
     setModelUsed(null)
+    setShowPromptEdit(false)
+    start62sCooldown()
+
     try {
       const key = imageKey || `img_${Math.random().toString(36).slice(2)}_${Date.now()}`
-      const usedModel = await generateAndStoreEntityImage({ apiKey: apiSettings.apiKey, prompt, key, aspectRatio })
+      const usedModel = await generateAndStoreEntityImage({
+        apiKey: targetKey,
+        prompt: finalPrompt,
+        key,
+        aspectRatio,
+        isPremium,
+      })
       setModelUsed(usedModel)
       onSaveKey(key)
       setRefreshToken((t) => t + 1)
@@ -1043,28 +1073,121 @@ function EntityImagePanel({
     }
   }
 
+  function handleButtonClick() {
+    setCustomPrompt(lastUsedPrompt)
+    setShowPromptEdit(true)
+  }
+
   return (
     <div className="flex flex-col gap-2">
       {url && (
-        <img src={url} alt="" className="w-full max-h-48 object-cover rounded-xl border border-[#e8ca8a]/25" />
+        <div className="relative rounded-xl overflow-hidden border border-[#e8ca8a]/25 bg-black/60 shadow-md flex justify-center items-center p-1 min-h-[160px] max-h-72">
+          <img src={url} alt="" className="w-full max-h-64 object-contain rounded-lg" />
+        </div>
       )}
-      <div className="flex items-center gap-2 flex-wrap">
-        <button
-          type="button"
-          onClick={handleGenerate}
-          disabled={busy}
-          className="self-start flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#e8ca8a]/15 border border-[#e8ca8a]/40 text-[#e8ca8a] text-xs font-display font-semibold hover:bg-[#e8ca8a]/25 transition-colors disabled:opacity-50"
-        >
-          {busy ? <RotateCw size={13} className="animate-spin" /> : url ? <RotateCw size={13} /> : <ImagePlus size={13} />}
-          {busy ? 'Weaving image...' : url ? 'Retry' : 'Generate Image'}
-        </button>
-        {modelUsed && !busy && (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 text-xs font-mono animate-fade-in shadow-sm">
-            <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
-            <span>Generated using <strong className="text-emerald-200 font-semibold">{modelUsed}</strong></span>
+
+      {showPromptEdit ? (
+        <div className="flex flex-col gap-2 p-3 rounded-xl bg-black/80 border border-[#e8ca8a]/40 shadow-inner text-xs animate-fade-in">
+          <div className="flex items-center justify-between text-xs font-display text-[#e8ca8a]">
+            <span className="flex items-center gap-1.5 font-semibold">
+              <Sparkles size={13} className="text-[#e8ca8a]" />
+              Edit Image Generation Prompt
+            </span>
+            {customPrompt !== initialPrompt && (
+              <button
+                type="button"
+                onClick={() => setCustomPrompt(initialPrompt)}
+                className="text-[11px] text-zinc-400 hover:text-amber-200 underline"
+              >
+                Reset to default
+              </button>
+            )}
           </div>
-        )}
-      </div>
+          <textarea
+            value={customPrompt}
+            onChange={(e) => setCustomPrompt(e.target.value)}
+            rows={3}
+            placeholder="Describe the image..."
+            className="w-full p-2.5 rounded-lg bg-zinc-950/90 border border-zinc-700/60 text-amber-100 text-xs font-narrative focus:outline-none focus:border-[#e8ca8a] resize-y"
+          />
+          <div className="flex items-center gap-2 justify-end flex-wrap">
+            <button
+              type="button"
+              onClick={() => setShowPromptEdit(false)}
+              disabled={busy}
+              className="px-3 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => handleGenerate(customPrompt, false)}
+              disabled={busy || isCooldownActive || !customPrompt.trim()}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#e8ca8a]/25 border border-[#e8ca8a]/60 text-[#e8ca8a] text-xs font-display font-semibold hover:bg-[#e8ca8a]/40 transition-colors disabled:opacity-50"
+            >
+              {busy ? <RotateCw size={13} className="animate-spin" /> : isCooldownActive ? <Clock size={13} className="animate-pulse" /> : <Sparkles size={13} />}
+              {busy ? 'Weaving Image...' : isCooldownActive ? `Cooldown (${cooldownRemaining}s)` : 'Confirm & Weave'}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleGenerate(customPrompt, true)}
+              disabled={busy || isCooldownActive || !customPrompt.trim()}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-[#f7e7ce] via-[#e8ca8a] to-[#d4af37] text-zinc-950 text-xs font-display font-bold border border-[#fff5e1] hover:brightness-110 shadow-[0_0_12px_rgba(247,231,206,0.35)] transition-all disabled:opacity-50"
+              title="Generate with premium paid tokens"
+            >
+              {busy ? <RotateCw size={13} className="animate-spin" /> : <Sparkles size={13} className="text-zinc-900" />}
+              <span>{busy ? 'Weaving...' : 'Premium'}</span>
+            </button>
+          </div>
+          <p className="text-[10px] text-amber-200/80 font-mono text-right mt-0.5">
+            ⚡ Warning: 'Premium' uses paid API tokens (Gemini_Prem_Key quota).
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={handleButtonClick}
+              disabled={busy || isCooldownActive}
+              className="self-start flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#e8ca8a]/15 border border-[#e8ca8a]/40 text-[#e8ca8a] text-xs font-display font-semibold hover:bg-[#e8ca8a]/25 transition-colors disabled:opacity-50"
+            >
+              {busy ? <RotateCw size={13} className="animate-spin" /> : isCooldownActive ? <Clock size={13} className="animate-pulse" /> : url ? <RotateCw size={13} /> : <ImagePlus size={13} />}
+              {busy ? 'Weaving image...' : isCooldownActive ? `Cooldown (${cooldownRemaining}s)` : url ? 'Retry' : 'Generate Image'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setCustomPrompt(lastUsedPrompt)
+                setShowPromptEdit(true)
+              }}
+              disabled={busy || isCooldownActive}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#f7e7ce] via-[#e8ca8a] to-[#d4af37] text-zinc-950 text-xs font-display font-bold border border-[#fff5e1] hover:brightness-110 shadow-[0_0_12px_rgba(247,231,206,0.35)] transition-all disabled:opacity-50"
+              title="Generate using paid API tokens"
+            >
+              <Sparkles size={13} className="text-zinc-900" />
+              <span>Premium</span>
+            </button>
+            {modelUsed && !busy && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 text-xs font-mono animate-fade-in shadow-sm">
+                <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
+                <span>Generated using <strong className="text-emerald-200 font-semibold">{modelUsed}</strong></span>
+              </div>
+            )}
+          </div>
+          <p className="text-[10px] text-amber-200/70 font-mono">
+            ⚡ Note: 'Premium' generation uses paid API tokens.
+          </p>
+        </div>
+      )}
+
+      {isCooldownActive && !busy && (
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-950/70 border border-amber-500/40 text-amber-300 text-[11px] font-mono animate-fade-in shadow-sm">
+          <Clock size={12} className="text-amber-400 shrink-0 animate-pulse" />
+          <span>Nanobanana 2 Cooldown: Retry available in <strong>{cooldownRemaining}s</strong></span>
+        </div>
+      )}
+
       {error && (
         <div className="rounded-lg bg-red-950/50 border border-red-500/30 p-2 text-xs font-narrative flex flex-col gap-1 text-red-300">
           <div className="flex items-center gap-1.5 font-semibold text-red-200">
@@ -1072,16 +1195,7 @@ function EntityImagePanel({
             <span>Image Generation Failed</span>
           </div>
           <p className="text-red-300/90 text-[11px] leading-snug">
-            {(() => {
-              const lower = error.toLowerCase()
-              if (lower.includes('403') || lower.includes('permission_denied') || lower.includes('permission') || lower.includes('caller does not have permission')) {
-                return 'API Permission error (403: Permission Denied). Check your Gemini API Key in Settings to ensure Image Generation access is enabled.'
-              }
-              if (lower.includes('429') || lower.includes('quota') || lower.includes('resource_exhausted')) {
-                return 'AI model quota or rate limit reached. You can try again now, or retry later after your quota resets.'
-              }
-              return `${error}. You can retry now or regenerate later.`
-            })()}
+            {error}
           </p>
         </div>
       )}
@@ -1167,8 +1281,19 @@ export default function Codex({
   initialEntryId,
   onBack,
 }: CodexProps) {
-  const [category, setCategory] = useState<CategoryId | null>(initialCategory ?? null)
-  const [entryId, setEntryId] = useState<string | null>(initialEntryId ?? null)
+  const [category, setCategoryState] = useState<CategoryId | null>(initialCategory ?? null)
+  const [entryId, setEntryIdState] = useState<string | null>(initialEntryId ?? null)
+  const openedWithTargetRef = useRef(Boolean(initialCategory || initialEntryId))
+
+  const setCategory = (cat: CategoryId | null, fromUser = false) => {
+    if (fromUser) openedWithTargetRef.current = false
+    setCategoryState(cat)
+  }
+
+  const setEntryId = (id: string | null, fromUser = false) => {
+    if (fromUser) openedWithTargetRef.current = false
+    setEntryIdState(id)
+  }
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<Record<string, any>>({})
   const { confirm, dialog: confirmDialog } = useConfirm()
@@ -1620,6 +1745,10 @@ export default function Codex({
 
   function back() {
     if (editing) return cancelEdit()
+    if (openedWithTargetRef.current) {
+      openedWithTargetRef.current = false
+      return onBack()
+    }
     if (entryId) return setEntryId(null)
     if (category) return setCategory(null)
     onBack()

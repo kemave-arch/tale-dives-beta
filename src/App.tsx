@@ -28,7 +28,7 @@ import { buildContextSlice } from './lib/jitContext.ts'
 import { applyTurn } from './lib/shadowReferee.ts'
 import { ensureLocation } from './lib/locations.ts'
 import { applyNpcUpdates, AFFECTION_STAGES, TRUST_WORDS } from './lib/npcs.ts'
-import { applyKeywordLinks, applyEnrichUpdates } from './lib/codex.ts'
+import { applyKeywordLinks, applyEnrichUpdates, dedupLocationsWithRegions } from './lib/codex.ts'
 import { applyQuestUpdate } from './lib/quests.ts'
 import { applyProjectUpdate } from './lib/projects.ts'
 import { applyBeatUpdate } from './lib/beats.ts'
@@ -1156,6 +1156,7 @@ export default function App() {
       const linked = applyKeywordLinks(
         {
           locations: locationsWithCurrent,
+          regions: current.regions,
           npcs: current.npcs,
           factions: current.factions,
           lore: current.lore,
@@ -1167,7 +1168,7 @@ export default function App() {
         turnRef,
         current.player.name,
       )
-      const nextLocations = linked.locations
+      const nextLocations = dedupLocationsWithRegions(linked.locations, current.regions)
       const nextNpcs = applyNpcUpdates(linked.npcs, turn.npc_mem_up, turn.loc_id, nextPlayer.time, turnRef)
       const nextQuests = applyQuestUpdate(linked.quests, turn.quest_update, turnRef)
       const nextProjects = applyProjectUpdate(current.projects, turn.project_update, turnRef)
@@ -2266,7 +2267,8 @@ export default function App() {
         error={error}
         chromeOpacity={uiPrefs.chromeOpacity}
         npcs={game.npcs}
-        locations={game.locations}
+        locations={dedupLocationsWithRegions(game.locations, game.regions)}
+        regions={game.regions ?? {}}
         factions={game.factions}
         lore={game.lore}
         quests={game.quests}
@@ -2295,7 +2297,24 @@ export default function App() {
           navigateTo('codex')
         }}
         onOpenCodexEntry={(category, id) => {
-          setCodexTarget({ category: KEYWORD_CATEGORY_TO_CODEX[category], id })
+          let targetCategory: CategoryId = KEYWORD_CATEGORY_TO_CODEX[category]
+          let targetId = id
+          if (category === 'loc' && game?.regions) {
+            const normId = id.toLowerCase()
+            const matchRegion = game.regions[id]
+              ? id
+              : Object.entries(game.regions).find(
+                  ([regId, reg]) => regId.toLowerCase() === normId || reg.name.toLowerCase() === normId.replace(/_/g, ' ') || slugify(reg.name) === normId,
+                )?.[0]
+
+            const locEntry = game.locations[id]
+            const isBareLoc = !locEntry || locEntry.autoLogged || locEntry.description === '(Auto-logged — visit again or add detail manually.)' || !locEntry.description
+            if (matchRegion && isBareLoc) {
+              targetCategory = 'regions'
+              targetId = matchRegion
+            }
+          }
+          setCodexTarget({ category: targetCategory, id: targetId })
           navigateTo('codex')
         }}
         onOpenCodexCategory={(category) => {

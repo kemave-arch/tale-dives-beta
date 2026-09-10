@@ -722,6 +722,7 @@ export interface ApiSettings {
   model: string
   apiKey: string
   temperature: number
+  premiumApiKey?: string
 }
 
 // The parchment/obsidian skin toggle was retired when the app collapsed to a

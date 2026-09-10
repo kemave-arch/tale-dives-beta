@@ -188,6 +188,21 @@ exceptions for "just a small addition":
    that the client silently discards forever. Grep for the field/tag
    name across `src/` before considering a change "done" — if it only
    shows up in one or two of these files, something was missed.
+
+1a. Adding a value to an EXISTING shared union/enum type (RevealTrigger,
+   TurnState, EndingOutcome, KinshipType, etc.) is not the same as adding a
+   brand-new field — grep every switch/if-chain that already matches on that
+   type across src/, not just the one you're adding real behavior to. A
+   switch elsewhere may need a matching case added even if that consumer has
+   no real support for the new value (return false / no-op is correct there)
+   — TypeScript's exhaustiveness checking will not save you from a missed
+   one if the switch doesn't return from every branch, and a silently-
+   unhandled case is a runtime bug wire-format validation won't catch.
+   Concrete precedent: adding 'story' to RevealTrigger required a matching
+   `case 'story': return false` in discovery.ts's matchesReveal — a
+   different consumer of the same type, unrelated to why 'story' was added,
+   but broken without that case.
+
 2. **Every new mechanical channel is a fixed WORD vocabulary, never a
    number.** This project deliberately eliminated every numeric
    mechanical channel except currency (`c=`) — see NARRATIVE-FIRST
@@ -222,8 +237,23 @@ exceptions for "just a small addition":
      resent to the model on later turns (the way `<sync>` and `<plan>`
      already are), confirm `gemini.ts`'s `stripSyncForHistory` (or
      whatever it's called by the time you're reading this) strips it
-     too — otherwise `history` silently grows every turn with content
+   too — otherwise `history` silently grows every turn with content
      that costs tokens forever for no benefit.
+
+3a. 'tsc --noEmit and build clean' is not verification for a behavioral
+   or logic change — it only proves the code compiles, and proves nothing
+   about a navigation bug, a stale ref, a race condition, or an incorrect
+   state transition. This has already shipped a real regression: a
+   history-depth-tracking bug (App.tsx's handlePopState) went out with
+   exactly that line as its stated verification, because typecheck/build
+   cannot exercise runtime behavior. For any change to state logic,
+   navigation, or a turn-processing pipeline, verification means actually
+   running it — a live dev-server click-through of the changed flow, or
+   (for pure logic with no UI surface) a small in-browser or scripted check
+   that exercises the actual changed function against representative inputs,
+   not just the type layer. State what you actually ran and what it showed,
+   not just that the build succeeded.
+
 4. **Update BOTH docs in the same change, not "later."**
    `PROJECT_REVISION_NOTES.md` (what actually shipped) AND
    `Tale-Dives-Blueprint-v3_2.md` §7 (the exact grammar block — kept
@@ -430,10 +460,18 @@ at the top of the content panel when a category has groupable fields
 add filters to categories without meaningful groupable fields.
 
 SAVE DATA VERSIONING
-All save data includes a schemaVersion field. When the registry/save
-shape changes, add a migration step rather than assuming all saves
-match the current shape. Run migrations in sequence on load if a save's
-version is behind current.
+Campaign carries schemaVersion (types.ts, CURRENT_SCHEMA_VERSION). The
+real rule already in practice: a purely-additive OPTIONAL field (any
+`field?:` that reads as undefined on an old save and the app already
+handles that absence correctly) does NOT need a version bump — most
+schema growth is this kind. Bump CURRENT_SCHEMA_VERSION only for a
+genuinely incompatible shape change (a field renamed, a required field
+added, a type narrowed). This project does NOT write migrations for an
+incompatible bump — store.ts's loadCampaigns rejects/drops any save
+below CURRENT_SCHEMA_VERSION with a console warning rather than
+attempting automatic conversion (confirmed current behavior — check
+loadCampaigns before assuming a migration step is expected). Don't add a
+migration step unless explicitly asked to change this policy.
 
 CODE STYLE
 TypeScript required for all files (.ts/.tsx) — real types/interfaces for
@@ -475,8 +513,16 @@ and have it pick up instantly, without me re-explaining anything.
   matter to someone resuming the project cold, skip it.
 
 **What to write, each time:**
-- Add a new entry at the **top** of the Revision log section (most recent
-  first). Never delete or rewrite old entries — only add.
+- Add a new entry at the top of the LOG section specifically — check the
+  file's actual current structure first, don't assume line 1 is the log.
+  As of this revision, PROJECT_REVISION_NOTES.md opens with a 'current
+  state' summary (sections numbered 0 upward) and the actual dated log
+  lives under a `## Full revision history` heading, in a 'New entries
+  below, most recent first' subsection — new entries go there, immediately
+  under that subsection heading, not at the top of the file. If that
+  structure doesn't exist yet (a fresh or reset file), add entries directly
+  under the title instead. When in doubt, search the file for
+  '## Full revision history' before prepending anything.
 - Be concrete: name the actual files/functions changed, not vague summaries.
   "Fixed the audio bug" is useless later; "toggleMute() never called play(),
   so unmute did nothing — fixed in resume()" is useful.

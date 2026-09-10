@@ -24,6 +24,10 @@ jobs:
           node-version: 20
       - run: npm install
       - run: npm run build
+        env:
+          VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
+          VITE_GEMINI_PREM_KEY: ${{ secrets.VITE_GEMINI_PREM_KEY }}
+          VITE_IMGBB_API_KEY: ${{ secrets.VITE_IMGBB_API_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

@@ -1769,7 +1769,7 @@ export default function Chronicle({
               }}
               placeholder="What do you do?"
               disabled={busy}
-              className="turn-glow flex-1 resize-none rounded-xl border px-3 py-2 font-narrative text-sm leading-relaxed text-white/90 placeholder:text-white/35 min-h-[56px] bg-[#131622]"
+              className="turn-glow flex-1 resize-none rounded-xl border px-3 py-2 font-narrative text-[13px] leading-relaxed text-white/90 placeholder:text-white/35 min-h-[56px] bg-[#131622]"
               style={{
                 maxHeight: INPUT_MAX_HEIGHT,
                 ['--turn-accent' as string]: stateAccent,

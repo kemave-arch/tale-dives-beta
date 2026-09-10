@@ -44,3 +44,5 @@ An immersive, LLM-driven fantasy novel game. The protagonist's actions and the w
 Every dated session entry through 2026-09-09 has been moved to [`PROJECT_REVISION_NOTES_ARCHIVE.md`](./PROJECT_REVISION_NOTES_ARCHIVE.md). That file is a verbatim continuation of the same log; nothing was edited or condensed, only relocated. Read it only when a specific past decision needs more detail than the summary sections above give — for resuming work, everything above this line is what actually matters.
 
 ### New entries below, most recent first.
+
+- **2026-09-09** — Updated the image generation pipeline to use `@google/genai` with the `gemini-3.1-flash-image` model per custom AI Studio system instructions, replacing the previous raw `fetch` to `gemini-2.5-flash-image`. Verified mapping for NPCs, Locations, and Regions. Modified TaleWeaver flow to require opening the "Tale Overview" modal before starting the campaign via the "Dive in" button. Verified cleanly with `tsc --noEmit`.

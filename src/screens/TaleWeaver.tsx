@@ -251,10 +251,10 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
   async function handleNext() {
     if (isLastPhase) {
       if (!accumulated.beats.length) {
-        const ok = await confirm('No story beats have been woven yet. Begin this tale anyway?')
+        const ok = await confirm('No story beats have been woven yet. View the Tale Overview anyway?')
         if (!ok) return
       }
-      onBeginTale(accumulated)
+      setShowOverview(true)
       return
     }
 
@@ -803,7 +803,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
               placeholder={`Guide this phase (e.g. tone, names, themes), or leave blank for a surprise...`}
               rows={2}
               disabled={busy}
-              className="w-full px-3 py-2 rounded-xl bg-[#161a28] border border-gold-accent/30 text-sm text-ink placeholder:text-ink-muted/50 outline-none resize-none disabled:opacity-50 focus:border-gold-primary transition-colors"
+              className="w-full px-3 py-2 rounded-xl bg-[#161a28] border border-gold-accent/30 text-[13px] text-ink placeholder:text-ink-muted/50 outline-none resize-none disabled:opacity-50 focus:border-gold-primary transition-colors"
             />
           </div>
           <button
@@ -850,7 +850,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 : 'bg-gold-accent/25 hover:bg-gold-accent/35 border border-gold-accent/50 text-gold-primary'
             } disabled:opacity-40`}
           >
-            <span>{isLastPhase ? 'Begin This Tale' : 'Next Phase'}</span>
+            <span>{isLastPhase ? 'Tale Overview' : 'Next Phase'}</span>
             <ChevronRight size={16} />
           </button>
         </div>
@@ -1082,13 +1082,24 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
             </div>
 
             {/* Modal Footer */}
-            <div className="px-4 py-3 border-t border-gold-accent/20 flex justify-end">
+            <div className="px-4 py-3 border-t border-gold-accent/20 flex justify-between items-center bg-[#0d1017]">
               <button
                 type="button"
                 onClick={() => setShowOverview(false)}
-                className="px-4 py-1.5 rounded-lg border border-gold-accent/30 bg-gold-accent/20 hover:bg-gold-accent/30 text-gold-primary font-display text-xs transition-colors"
+                className="px-4 py-1.5 rounded-lg border border-gold-accent/30 hover:bg-gold-accent/10 text-gold-primary font-display text-xs transition-colors"
               >
-                Close Overview
+                Return to Editing
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowOverview(false)
+                  onBeginTale(accumulated)
+                }}
+                disabled={busy}
+                className="px-6 py-2 rounded-xl bg-gold-primary hover:bg-gold-primary/90 text-black shadow-[0_0_15px_rgba(212,175,55,0.3)] font-display text-sm font-bold transition-all disabled:opacity-50"
+              >
+                Dive in
               </button>
             </div>
           </div>

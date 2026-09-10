@@ -15,8 +15,7 @@
 // response shape — the calling UI (Codex's Generate/Retry button) is
 // built to treat that as an ordinary retryable failure, never a crash.
 
-const IMAGE_MODEL = 'gemini-2.5-flash-image'
-const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
+import { GoogleGenAI } from "@google/genai"
 
 export type ImageAspectRatio = '1:1' | '16:9' | '9:16' | '4:3' | '3:2'
 
@@ -26,43 +25,34 @@ export interface GenerateImageInput {
   aspectRatio?: ImageAspectRatio
 }
 
-interface GeminiImagePart {
-  inlineData?: { mimeType?: string; data?: string }
-}
-interface GeminiImageResponse {
-  candidates?: { content?: { parts?: GeminiImagePart[] } }[]
-}
-
 export async function generateImageBytes(input: GenerateImageInput): Promise<Blob> {
-  const url = `${BASE_URL}/${IMAGE_MODEL}:generateContent?key=${encodeURIComponent(input.apiKey)}`
-  const body = {
-    contents: [{ parts: [{ text: input.prompt }] }],
-    generationConfig: {
-      responseModalities: ['IMAGE'],
+  const ai = new GoogleGenAI({ apiKey: input.apiKey })
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-3.1-flash-image',
+    contents: {
+      parts: [{ text: input.prompt }],
+    },
+    config: {
       ...(input.aspectRatio ? { imageConfig: { aspectRatio: input.aspectRatio } } : {}),
     },
-  }
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
   })
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '')
-    throw new Error(`Image generation request failed (HTTP ${res.status}): ${detail.slice(0, 200)}`)
-  }
 
-  const json = (await res.json()) as GeminiImageResponse
-  const parts = json.candidates?.[0]?.content?.parts ?? []
+  const parts = response.candidates?.[0]?.content?.parts ?? []
   const imagePart = parts.find((p) => p.inlineData?.data)
   if (!imagePart?.inlineData?.data) {
     throw new Error('No image came back from the model — it may not support image generation, or the prompt was refused.')
   }
 
   const mimeType = imagePart.inlineData.mimeType || 'image/png'
-  const dataUrlResponse = await fetch(`data:${mimeType};base64,${imagePart.inlineData.data}`)
-  return dataUrlResponse.blob()
+  const base64Data = imagePart.inlineData.data
+
+  const binary = atob(base64Data)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i)
+  }
+  return new Blob([bytes], { type: mimeType })
 }
 
 // Kept short and generic on purpose — "an illustration of X," not a long

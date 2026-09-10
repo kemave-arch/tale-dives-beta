@@ -135,6 +135,14 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
 
   async function handleGenerate() {
     if (busy) return
+
+    if (phase.id === 'world' && accumulated.world) {
+      if (!(await confirm('Discard your current World Foundation draft and generate a new one?'))) return
+    }
+    if (phase.id === 'protagonist' && accumulated.protagonist) {
+      if (!(await confirm('Discard your current Protagonist draft and generate a new one?'))) return
+    }
+
     const text = guidance.trim()
     setBusy(true)
     setErrorMessage(null)

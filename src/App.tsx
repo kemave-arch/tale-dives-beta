@@ -20,7 +20,6 @@ const Chronicle = lazy(() => import('./screens/Chronicle.tsx'))
 const Codex = lazy(() => import('./screens/Codex.tsx'))
 const SlashCommandManager = lazy(() => import('./screens/SlashCommandManager.tsx'))
 const TaleDiveWeaver = lazy(() => import('./screens/TaleDiveWeaver.tsx'))
-const NovelWeaver = lazy(() => import('./screens/NovelWeaver.tsx'))
 const TaleWeaver = lazy(() => import('./screens/TaleWeaver.tsx'))
 const WeaverCalibrator = lazy(() => import('./components/seedweaver/WeaverCalibrator.tsx'))
 import { getClassById, findClassById, PRESET_CLASSES } from './data/classes.ts'
@@ -91,7 +90,7 @@ const KEYWORD_CATEGORY_TO_CODEX: Record<KeywordLink['category'], CategoryId> = {
 // screen is current (same as SlashCommandManager), not a screen that replaces
 // it — that's what lets its glass read against the live Chronicle parchment or
 // the Title artwork behind it rather than a flat ground.
-type Screen = 'title' | 'mainmenu' | 'storymode' | 'worldsetup' | 'newgame' | 'talebrief' | 'chronicle' | 'codex' | 'diveloading' | 'seedingreview' | 'talediveweaver' | 'novelweaver' | 'taleweaver'
+type Screen = 'title' | 'mainmenu' | 'storymode' | 'worldsetup' | 'newgame' | 'talebrief' | 'chronicle' | 'codex' | 'diveloading' | 'seedingreview' | 'talediveweaver' | 'taleweaver'
 type CreationMode = 'tale' | 'library'
 
 // §5.7 Player Defeat State — soft-fail recovery, client-owned.
@@ -477,6 +476,29 @@ export default function App() {
   useEffect(() => { store.saveGlobalSlashCommands(globalSlashCommands) }, [globalSlashCommands])
   useEffect(() => {
     sessionStorage.setItem('td_active_screen', screen)
+
+    // Cleanup orphaned campaigns (Tale Dives that were created but never started,
+    // e.g. player backed out from the Seeding Review screen before the Prologue fired).
+    if (screen === 'mainmenu' || screen === 'title') {
+      setGame((g) => {
+        if (g && g.log.length === 0) {
+          setActiveCampaignId(null)
+          return null
+        }
+        return g
+      })
+      setCampaigns((prev) => {
+        let changed = false
+        const next = { ...prev }
+        for (const [id, c] of Object.entries(next)) {
+          if (c.log.length === 0) {
+            delete next[id]
+            changed = true
+          }
+        }
+        return changed ? next : prev
+      })
+    }
   }, [screen])
 
   // The actively-played campaign is kept in `game` for the turn loop, and
@@ -1996,7 +2018,6 @@ export default function App() {
           })
         }}
         onOpenSettings={() => openSettings()}
-        onOpenNovelWeaver={() => navigateTo('novelweaver')}
         onBackToTitle={() => goBack('title')}
         musicMuted={musicMuted}
         onToggleMusicMute={toggleMusicMute}
@@ -2025,22 +2046,6 @@ export default function App() {
         onDeleteWorldPreset={deleteWorld}
         onBeginTale={(protagonistData: ProtagonistData, worldOverride: Partial<WorldData>, customTitle: string, customNpcs?: SeedNpcData[]) => {
           beginCampaign(protagonistData, worldOverride, customTitle, customNpcs)
-        }}
-      />
-    )
-  } else if (screen === 'novelweaver') {
-    content = (
-      <NovelWeaver
-        worldTemplates={Object.values(worlds)}
-        protagonistTemplates={Object.values(protagonists)}
-        existingTitles={Object.values(campaigns).map((c) => c.title)}
-        onBack={() => goBack('mainmenu')}
-        onSaveProtagonistPreset={(pData: ProtagonistData) => upsertProtagonist(pData, pData.id, pData.className || getClassById(pData.classId).name)}
-        onSaveWorldPreset={(wData: WorldData) => upsertWorld(wData, wData.id)}
-        onDeleteProtagonistPreset={deleteProtagonist}
-        onDeleteWorldPreset={deleteWorld}
-        onBeginTale={(protagonistData, worldOverride, customTitle, cast) => {
-          beginCampaign(protagonistData, worldOverride, customTitle, cast.map((c) => ({ ...c, role: c.role ?? '' })))
         }}
       />
     )

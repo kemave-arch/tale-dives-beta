@@ -47,8 +47,7 @@ export function displayThreatLabel(canonical: string, labels?: string[]): string
 // is purely an LLM/UI-facing representation, converted at the boundary. The
 // `CompetencyTier` type itself lives in types.ts (kept as a plain `number`,
 // not a `1|2|3|4|5` literal union: the existing point-buy attribute
-// allocators — NewGame.tsx, ProtagonistNodeModal.tsx,
-// novelweaver/ProtagonistChapter.tsx — still hand out a wider 10-20-ish raw
+// allocators — NewGame.tsx, ProtagonistNodeModal.tsx — still hand out a wider 10-20-ish raw
 // range today, and rescaling those pickers to a true 1-5 tier UI is Phase 6
 // UI work, not this pass — see PROJECT_REVISION_NOTES for the call-out). The
 // real anti-drift enforcement lives here and at the XML parser boundary

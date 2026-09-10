@@ -1,5 +1,15 @@
 # Tale Dives — Project Revision Notes
 
+**Last updated:** 2026-09-09 — Removed Novel Weaver Feature (`src/App.tsx`, `src/screens/MainMenu.tsx`, `src/lib/store.ts`, etc.):
+- **What changed**: Completely removed the "Novel Weaver" creation flow. Deleted `src/screens/NovelWeaver.tsx` and the entire `src/components/novelweaver/` directory. Removed the lazy import, screen state routing, and main menu button for it. Also removed its preset save fields (`novelCast`, `novelNarrative`) from `TextPresetField` in `src/lib/store.ts` and cleaned up references in `src/lib/tiers.ts`.
+- **Why**: Feature pruning per user request. "Tale Weaving" (Inspired Mode) remains as the primary generative creation flow.
+
+**Last updated:** 2026-09-09 — Tale Weaving UX Navigation & Cleanup Traps (`src/App.tsx`, `src/screens/TaleWeaver.tsx`):
+- **What changed**:
+  1. **Seeding Review Orphaned Tale Fix (`src/App.tsx`)**: Added a cleanup effect hooked to `screen` state that automatically purges any permanently-blank campaigns (`log.length === 0`) from `campaigns` and the active `game` state when landing on the Main Menu or Title screens. This safely prevents the "orphaned Tale" trap where backing out of the Seeding Review screen via hardware back left a broken zero-turn campaign in the library that could not trigger its Prologue on resume.
+  2. **Tale Weaver Overwrite Guard (`src/screens/TaleWeaver.tsx`)**: Added a `useConfirm` modal gate inside `handleGenerate` for the non-array single-object phases (World Foundation and Protagonist). Clicking Generate no longer silently overwrites an existing draft; it now asks for confirmation to match the safe merge-by-ID behavior of the other array-based phases.
+- **Why**: Protects against silent data loss during iterative LLM generation, and eliminates edge-case dead states in the campaign library caused by the browser navigation API interacting with the immediate state-commit on campaign creation.
+
 **Last updated:** 2026-09-09 — Tale Weaver XML Parser Fallback (`src/lib/taleWeaverParser.ts`):
 - **What changed**: Added a fallback in `parseTaleWeaverResponse` to strip markdown fences and wrap the response in a synthetic `<root>` if the model generates valid inner tags but fails to wrap its output in the required `<phase>` block. This prevents the "No `<phase>` block found" error that sometimes occurred during the Protagonist phase or other steps.
 - **Verification**: `npm run build` succeeds, the parser now gracefully handles raw unwrapped XML blocks.

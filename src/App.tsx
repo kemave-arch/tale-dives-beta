@@ -889,7 +889,7 @@ export default function App() {
 
     const regions: Dict<RegionEntry> = {}
     for (const r of accumulated.regions) {
-      regions[r.id] = { name: r.name, description: r.desc?.trim() || undefined }
+      regions[r.id] = { name: r.name, description: r.desc?.trim() || undefined, mapImageKey: r.mapImageKey }
     }
 
     const locations: Dict<LocationEntry> = {}
@@ -905,6 +905,7 @@ export default function App() {
         standing: 'neutral',
         locationType: l.locationType || 'Landmark',
         discovery: { state: 'known' },
+        imageKey: l.imageKey,
         ...(regionId ? { regionId } : {}),
         ...(l.mapX !== undefined ? { mapX: l.mapX } : {}),
         ...(l.mapY !== undefined ? { mapY: l.mapY } : {}),
@@ -937,6 +938,7 @@ export default function App() {
         deeds: [],
         memSummary: '',
         lastSeenLocId: null,
+        portraitKey: n.portraitKey,
       }
     }
 

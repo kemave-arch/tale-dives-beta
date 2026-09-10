@@ -3,7 +3,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   Globe, BookOpen, Users, ShieldCheck, Map, ScrollText, Target, Skull, Backpack,
   Pencil, Save, X, Trash2, Plus, Lock, User, Hammer, Clock, Sparkles, CheckCircle2, XCircle, ArrowRight, Ghost,
-  Swords, Star, EyeOff, Search, MapPin, Heart, Coins, Gift, Zap, Compass, AlertTriangle, Shield, Flame, Milestone, ListChecks,
+  Swords, Star, EyeOff, Search, MapPin, Heart, Coins, Gift, Zap, Compass, AlertTriangle, AlertCircle, Shield, Flame, Milestone, ListChecks,
   ChevronRight, Flag, ImagePlus, RotateCw,
 } from 'lucide-react'
 import { DASHED_ROW_CLASS, GLASS_SURFACE_LIST, GlassHeader, GlassIconButton, GlassScreen, SELECT_CLASS } from '../lib/glassChrome.tsx'
@@ -1018,6 +1018,7 @@ function EntityImagePanel({
 }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [modelUsed, setModelUsed] = useState<string | null>(null)
   const [refreshToken, setRefreshToken] = useState(0)
   const url = useEntityImage(imageKey, refreshToken)
 
@@ -1028,9 +1029,11 @@ function EntityImagePanel({
     }
     setBusy(true)
     setError(null)
+    setModelUsed(null)
     try {
       const key = imageKey || `img_${Math.random().toString(36).slice(2)}_${Date.now()}`
-      await generateAndStoreEntityImage({ apiKey: apiSettings.apiKey, prompt, key, aspectRatio })
+      const usedModel = await generateAndStoreEntityImage({ apiKey: apiSettings.apiKey, prompt, key, aspectRatio })
+      setModelUsed(usedModel)
       onSaveKey(key)
       setRefreshToken((t) => t + 1)
     } catch (err) {
@@ -1045,16 +1048,43 @@ function EntityImagePanel({
       {url && (
         <img src={url} alt="" className="w-full max-h-48 object-cover rounded-xl border border-[#e8ca8a]/25" />
       )}
-      <button
-        type="button"
-        onClick={handleGenerate}
-        disabled={busy}
-        className="self-start flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#e8ca8a]/15 border border-[#e8ca8a]/40 text-[#e8ca8a] text-xs font-display font-semibold disabled:opacity-50"
-      >
-        {busy ? <RotateCw size={13} className="animate-spin" /> : url ? <RotateCw size={13} /> : <ImagePlus size={13} />}
-        {busy ? 'Weaving image...' : url ? 'Retry' : 'Generate Image'}
-      </button>
-      {error && <p className="font-narrative text-xs text-red-400 italic">{error}</p>}
+      <div className="flex items-center gap-2 flex-wrap">
+        <button
+          type="button"
+          onClick={handleGenerate}
+          disabled={busy}
+          className="self-start flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#e8ca8a]/15 border border-[#e8ca8a]/40 text-[#e8ca8a] text-xs font-display font-semibold hover:bg-[#e8ca8a]/25 transition-colors disabled:opacity-50"
+        >
+          {busy ? <RotateCw size={13} className="animate-spin" /> : url ? <RotateCw size={13} /> : <ImagePlus size={13} />}
+          {busy ? 'Weaving image...' : url ? 'Retry' : 'Generate Image'}
+        </button>
+        {modelUsed && !busy && (
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 text-xs font-mono animate-fade-in shadow-sm">
+            <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
+            <span>Generated using <strong className="text-emerald-200 font-semibold">{modelUsed}</strong></span>
+          </div>
+        )}
+      </div>
+      {error && (
+        <div className="rounded-lg bg-red-950/50 border border-red-500/30 p-2 text-xs font-narrative flex flex-col gap-1 text-red-300">
+          <div className="flex items-center gap-1.5 font-semibold text-red-200">
+            <AlertCircle size={13} className="shrink-0 text-red-400" />
+            <span>Image Generation Failed</span>
+          </div>
+          <p className="text-red-300/90 text-[11px] leading-snug">
+            {(() => {
+              const lower = error.toLowerCase()
+              if (lower.includes('403') || lower.includes('permission_denied') || lower.includes('permission') || lower.includes('caller does not have permission')) {
+                return 'API Permission error (403: Permission Denied). Check your Gemini API Key in Settings to ensure Image Generation access is enabled.'
+              }
+              if (lower.includes('429') || lower.includes('quota') || lower.includes('resource_exhausted')) {
+                return 'AI model quota or rate limit reached. You can try again now, or retry later after your quota resets.'
+              }
+              return `${error}. You can retry now or regenerate later.`
+            })()}
+          </p>
+        </div>
+      )}
     </div>
   )
 }
@@ -2649,7 +2679,7 @@ export default function Codex({
               <SectionCard accent={CATEGORY_ACCENTS.npcs} icon={ImagePlus} title="Portrait">
                 <EntityImagePanel
                   imageKey={npcs[entryId].portraitKey}
-                  prompt={buildNpcPortraitPrompt(npcs[entryId].name, npcs[entryId].appearance, npcs[entryId].role)}
+                  prompt={buildNpcPortraitPrompt(npcs[entryId].name, npcs[entryId].appearance, npcs[entryId].role, world)}
                   apiSettings={apiSettings}
                   onSaveKey={(key) => onUpdateNpc(entryId, { portraitKey: key })}
                   aspectRatio="1:1"
@@ -2970,7 +3000,7 @@ export default function Codex({
               <SectionCard accent={CATEGORY_ACCENTS.locations} icon={ImagePlus} title="Image">
                 <EntityImagePanel
                   imageKey={locations[entryId].imageKey}
-                  prompt={buildLocationImagePrompt(locations[entryId].name, locations[entryId].description)}
+                  prompt={buildLocationImagePrompt(locations[entryId].name, locations[entryId].description, world)}
                   apiSettings={apiSettings}
                   onSaveKey={(key) => onUpdateLocation(entryId, { imageKey: key })}
                   aspectRatio="16:9"
@@ -3057,6 +3087,7 @@ export default function Codex({
                     regions[entryId].name,
                     regions[entryId].description,
                     Object.values(locations).filter((l) => l.regionId === entryId).map((l) => l.name),
+                    world,
                   )}
                   apiSettings={apiSettings}
                   onSaveKey={(key) => onUpdateRegion(entryId, { mapImageKey: key })}

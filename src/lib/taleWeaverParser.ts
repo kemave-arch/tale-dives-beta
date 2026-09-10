@@ -1,5 +1,44 @@
 import type { DeathRule, EndingOutcome, RevealTrigger } from '../types.ts'
-import { str, num, parseXmlBlock, XmlParseError } from './xmlHelpers.ts'
+import { str, num, parseXmlBlock, sanitizeXmlForParsing, decodeXmlEntities } from './xmlHelpers.ts'
+
+function parseXmlWithRegexFallback(raw: string): Document {
+  try {
+    return parseXmlBlock(raw, 'phase')
+  } catch {
+    const clean = sanitizeXmlForParsing(
+      raw.replace(/```xml\n?/gi, '').replace(/```\n?/g, '').trim()
+    )
+    const doc = new DOMParser().parseFromString(`<root>${clean}</root>`, 'text/xml')
+    const parseError = doc.querySelector('parsererror')
+    if (!parseError) return doc
+
+    // Secondary repair attempt: fix unclosed quotes before > or />
+    const repaired = clean.replace(/=([a-zA-Z0-9_\-\.\:\/]+)([\s/>])/g, '="$1"$2')
+    const repairedDoc = new DOMParser().parseFromString(`<root>${repaired}</root>`, 'text/xml')
+    if (!repairedDoc.querySelector('parsererror')) return repairedDoc
+
+    // Ultimate resilient fallback: construct a DOM Document directly via regex extraction
+    const mockDoc = document.implementation.createDocument(null, 'root', null)
+    const root = mockDoc.documentElement
+
+    const tagRegex = /<([a-zA-Z0-9_]+)\s+([^>]*)\/?>/g
+    let match: RegExpExecArray | null
+    while ((match = tagRegex.exec(clean)) !== null) {
+      const [, tagName, attrChunk] = match
+      if (tagName === 'root' || tagName === 'phase') continue
+      const el = mockDoc.createElement(tagName)
+      const attrRegex = /([a-zA-Z0-9_-]+)=(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g
+      let attrMatch: RegExpExecArray | null
+      while ((attrMatch = attrRegex.exec(attrChunk)) !== null) {
+        const key = attrMatch[1]
+        const val = attrMatch[2] ?? attrMatch[3] ?? attrMatch[4] ?? ''
+        el.setAttribute(key, decodeXmlEntities(val))
+      }
+      root.appendChild(el)
+    }
+    return mockDoc
+  }
+}
 
 // Parses the <phase> grammar (api/taleWeaverContract.ts) — one call's worth
 // of draft content for whichever single phase was active. Mirrors
@@ -27,12 +66,14 @@ export interface TaleWeaverProtagonistDraft {
   physicalTrait?: string
   secret?: string
   opening?: string
+  portraitKey?: string
 }
 
 export interface TaleWeaverRegion {
   id: string
   name: string
   desc?: string
+  mapImageKey?: string
 }
 
 export interface TaleWeaverLocation {
@@ -45,6 +86,7 @@ export interface TaleWeaverLocation {
   danger?: string
   desc?: string
   areas?: string
+  imageKey?: string
 }
 
 export interface TaleWeaverFaction {
@@ -63,6 +105,7 @@ export interface TaleWeaverNpc {
   appearance?: string
   aff?: string
   trust?: string
+  portraitKey?: string
 }
 
 export interface TaleWeaverLore {
@@ -105,17 +148,7 @@ export interface TaleWeaverDraft {
 }
 
 export function parseTaleWeaverResponse(raw: string): TaleWeaverDraft {
-  let doc: Document
-  try {
-    doc = parseXmlBlock(raw, 'phase')
-  } catch (err) {
-    // Fallback: Model may have omitted the <phase> wrapper or used markdown fences.
-    // Strip markdown fences and wrap in a synthetic <root> directly.
-    const clean = raw.replace(/```xml\n?/gi, '').replace(/```\n?/g, '').trim()
-    doc = new DOMParser().parseFromString(`<root>${clean}</root>`, 'text/xml')
-    const parseError = doc.querySelector('parsererror')
-    if (parseError) throw new XmlParseError(`Malformed XML fallback: ${parseError.textContent}`)
-  }
+  const doc = parseXmlWithRegexFallback(raw)
 
   const worldEl = doc.querySelector('world')
   const world: TaleWeaverWorldDraft | undefined = worldEl

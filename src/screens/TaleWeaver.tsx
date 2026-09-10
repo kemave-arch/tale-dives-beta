@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import {
   X, ChevronRight, ChevronLeft, Sparkles, Lock, Unlock,
-  BookOpen, AlertCircle, Check, ArrowRight, Pencil, Plus, Save
+  BookOpen, AlertCircle, Check, ArrowRight, Pencil, Plus, Save,
+  ImagePlus, RotateCw, FolderOpen, Trash2, Bookmark, CheckCircle2
 } from 'lucide-react'
 import { GlassScreen, GlassHeader } from '../lib/glassChrome.tsx'
 import { useConfirm } from '../lib/useConfirm.tsx'
@@ -10,6 +11,13 @@ import {
   TALE_WEAVER_PHASES, emptyAccumulated, runTaleWeaverPhase,
   type TaleWeaverAccumulated, type TaleWeaverPhaseDef,
 } from '../lib/taleWeaving.ts'
+import {
+  getTaleWeaverPresets, saveTaleWeaverPreset, deleteTaleWeaverPreset,
+  type TaleWeaverPreset
+} from '../lib/taleWeaverPresets.ts'
+import { useEntityImage } from '../lib/useEntityImage.ts'
+import { generateAndStoreEntityImage } from '../lib/entityImages.ts'
+import { buildLocationImagePrompt, buildNpcPortraitPrompt, buildRegionMapPrompt } from '../lib/imageGeneration.ts'
 
 // Inspired Mode's "Tale Weaving" screen — a focused, step-guided creation
 // experience. One phase at a time, the player describes their vision, the
@@ -89,6 +97,101 @@ function getTotalEntityCount(acc: TaleWeaverAccumulated): number {
   return count
 }
 
+function TaleWeaverImageGenerator({
+  imageKey,
+  prompt,
+  apiSettings,
+  onSaveKey,
+  aspectRatio = '16:9',
+  label = 'Generate Image',
+}: {
+  imageKey?: string
+  prompt: string
+  apiSettings: ApiSettings
+  onSaveKey: (key: string) => void
+  aspectRatio?: '1:1' | '16:9' | '9:16' | '4:3' | '3:2'
+  label?: string
+}) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [modelUsed, setModelUsed] = useState<string | null>(null)
+  const [refreshToken, setRefreshToken] = useState(0)
+  const url = useEntityImage(imageKey, refreshToken)
+
+  async function handleGenerate() {
+    if (!apiSettings.apiKey) {
+      setError('No API key set — configure your Gemini API key in Settings first.')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    setModelUsed(null)
+    try {
+      const key = imageKey || `img_${Math.random().toString(36).slice(2)}_${Date.now()}`
+      const usedModel = await generateAndStoreEntityImage({ apiKey: apiSettings.apiKey, prompt, key, aspectRatio })
+      setModelUsed(usedModel)
+      onSaveKey(key)
+      setRefreshToken((t) => t + 1)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setError(msg)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5 mt-1.5">
+      {url && (
+        <div className="relative rounded-lg overflow-hidden border border-gold-accent/30 bg-black/60 shadow-md">
+          <img
+            src={url}
+            alt=""
+            className={`w-full ${aspectRatio === '1:1' ? 'max-h-36 max-w-[144px] aspect-square object-cover' : 'max-h-36 object-cover'}`}
+          />
+        </div>
+      )}
+      <div className="flex items-center gap-2 flex-wrap">
+        <button
+          type="button"
+          onClick={handleGenerate}
+          disabled={busy}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gold-accent/15 border border-gold-accent/40 text-gold-primary text-[11px] font-display font-semibold hover:bg-gold-accent/25 transition-colors disabled:opacity-50"
+        >
+          {busy ? <RotateCw size={12} className="animate-spin" /> : url ? <RotateCw size={12} /> : <ImagePlus size={12} />}
+          {busy ? 'Weaving image...' : url ? 'Retry Image' : label}
+        </button>
+        {modelUsed && !busy && (
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 text-[10.5px] font-mono animate-fade-in shadow-sm">
+            <CheckCircle2 size={12} className="text-emerald-400 shrink-0" />
+            <span>Generated using <strong className="text-emerald-200 font-semibold">{modelUsed}</strong></span>
+          </div>
+        )}
+      </div>
+      {error && (
+        <div className="rounded-lg bg-red-950/50 border border-red-500/30 p-2 text-[11px] font-narrative flex flex-col gap-1 text-red-300">
+          <div className="flex items-center gap-1.5 font-semibold text-red-200">
+            <AlertCircle size={13} className="shrink-0 text-red-400" />
+            <span>Image Generation Failed</span>
+          </div>
+          <p className="text-red-300/90 text-[10.5px] leading-snug">
+            {(() => {
+              const lower = error.toLowerCase()
+              if (lower.includes('403') || lower.includes('permission_denied') || lower.includes('permission') || lower.includes('caller does not have permission')) {
+                return 'API Permission error (403: Permission Denied). Check your Gemini API Key in Settings to ensure Image Generation access is enabled.'
+              }
+              if (lower.includes('429') || lower.includes('quota') || lower.includes('resource_exhausted')) {
+                return 'AI model quota or rate limit reached. You can try again now, or retry later after your quota resets.'
+              }
+              return `${error}. You can retry now, or regenerate later in the Codex.`
+            })()}
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWeaverProps) {
   const [phaseIdx, setPhaseIdx] = useState(0)
   const [maxVisitedIdx, setMaxVisitedIdx] = useState(0)
@@ -98,6 +201,38 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
   const [revealedBeats, setRevealedBeats] = useState<Set<string>>(new Set())
   const [accumulated, setAccumulated] = useState<TaleWeaverAccumulated>(emptyAccumulated())
   const [showOverview, setShowOverview] = useState(false)
+
+  const [showSaveModal, setShowSaveModal] = useState(false)
+  const [showLoadModal, setShowLoadModal] = useState(false)
+  const [presetNameInput, setPresetNameInput] = useState('')
+  const [savedPresets, setSavedPresets] = useState<TaleWeaverPreset[]>([])
+  const [presetToast, setPresetToast] = useState<string | null>(null)
+
+  function handleSavePreset() {
+    if (!presetNameInput.trim()) return
+    saveTaleWeaverPreset(presetNameInput.trim(), accumulated)
+    setShowSaveModal(false)
+    setPresetToast(`Saved preset "${presetNameInput.trim()}"!`)
+    setTimeout(() => setPresetToast(null), 3500)
+  }
+
+  function handleOpenLoadModal() {
+    setSavedPresets(getTaleWeaverPresets())
+    setShowLoadModal(true)
+  }
+
+  function handleLoadPreset(preset: TaleWeaverPreset) {
+    setAccumulated(preset.accumulated)
+    setShowLoadModal(false)
+    setShowOverview(true)
+    setPresetToast(`Loaded preset "${preset.name}"!`)
+    setTimeout(() => setPresetToast(null), 3500)
+  }
+
+  function handleDeletePreset(id: string) {
+    const updated = deleteTaleWeaverPreset(id)
+    setSavedPresets(updated)
+  }
 
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const [editFormData, setEditFormData] = useState<any>({})
@@ -1771,21 +1906,48 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
           })}
         </div>
 
-        {/* Overview Button */}
-        <button
-          type="button"
-          onClick={() => setShowOverview(true)}
-          className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/15 text-gold-primary text-xs font-display transition-colors"
-          title="Review all established tale elements"
-        >
-          <BookOpen size={13} />
-          <span className="hidden xs:inline">Overview</span>
-          {totalCount > 0 && (
-            <span className="font-mono text-[10px] px-1.5 py-0.2 rounded-full bg-gold-accent/20 border border-gold-accent/30">
-              {totalCount}
-            </span>
-          )}
-        </button>
+        {/* Preset & Overview Action Bar */}
+        <div className="shrink-0 flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              setPresetNameInput(`${accumulated.world?.name || 'Custom World'} - ${accumulated.protagonist?.name || 'Hero'}`)
+              setShowSaveModal(true)
+            }}
+            disabled={!hasAnyContent(accumulated)}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/15 text-gold-primary text-xs font-display transition-colors disabled:opacity-40"
+            title="Save current settings as a World & Character Preset"
+          >
+            <Save size={13} />
+            <span className="hidden sm:inline">Save Draft</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleOpenLoadModal}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/15 text-gold-primary text-xs font-display transition-colors"
+            title="Load a saved World & Character Preset"
+          >
+            <FolderOpen size={13} />
+            <span className="hidden sm:inline">Load Draft</span>
+          </button>
+
+          {/* Overview Button */}
+          <button
+            type="button"
+            onClick={() => setShowOverview(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/15 text-gold-primary text-xs font-display transition-colors"
+            title="Review all established tale elements"
+          >
+            <BookOpen size={13} />
+            <span className="hidden xs:inline">Overview</span>
+            {totalCount > 0 && (
+              <span className="font-mono text-[10px] px-1.5 py-0.2 rounded-full bg-gold-accent/20 border border-gold-accent/30">
+                {totalCount}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Main Content Area */}
@@ -1853,7 +2015,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
       {/* Bottom Control Deck */}
       <div className="shrink-0 flex flex-col gap-2 pt-2 border-t border-gold-accent/20">
         {/* Guidance Input & Weave Trigger */}
-        <div className="flex items-end gap-2">
+        <div className="flex items-stretch gap-2">
           <div className="flex-1 relative">
             <textarea
               value={guidance}
@@ -1867,14 +2029,14 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
               placeholder={`Guide this phase (e.g. tone, names, themes), or leave blank for a surprise...`}
               rows={2}
               disabled={busy}
-              className="w-full px-3 py-2 rounded-xl bg-[#161a28] border border-gold-accent/30 text-[13px] text-ink placeholder:text-ink-muted/50 outline-none resize-none disabled:opacity-50 focus:border-gold-primary transition-colors"
+              className="w-full block px-3 py-2 rounded-xl bg-[#161a28] border border-gold-accent/30 text-[13px] text-ink placeholder:text-ink-muted/50 outline-none resize-none disabled:opacity-50 focus:border-gold-primary transition-colors"
             />
           </div>
           <button
             type="button"
             onClick={handleGenerate}
             disabled={busy}
-            className="shrink-0 px-3 py-2.5 h-[58px] rounded-xl bg-gold-accent/25 hover:bg-gold-accent/40 border border-gold-accent/50 text-gold-primary font-display font-semibold text-xs flex flex-col items-center justify-center gap-1 disabled:opacity-40 transition-colors min-w-[76px]"
+            className="shrink-0 px-3 py-2 rounded-xl bg-gold-accent/25 hover:bg-gold-accent/40 border border-gold-accent/50 text-gold-primary font-display font-semibold text-xs flex flex-col items-center justify-center gap-1 disabled:opacity-40 transition-colors min-w-[76px]"
           >
             <Sparkles size={15} className={busy ? 'animate-spin' : ''} />
             <span>{currentHasContent ? 'Add More' : 'Weave'}</span>
@@ -1925,21 +2087,47 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4">
           <div className="w-full max-w-2xl max-h-[85vh] rounded-2xl border border-gold-accent/40 bg-[#121520] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
-            <div className="px-4 py-3 border-b border-gold-accent/20 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <BookOpen size={16} className="text-gold-primary" />
-                <h2 className="font-display font-bold text-sm text-gold-primary">Tale Overview</h2>
-                <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-gold-accent/20 text-gold-primary/90 border border-gold-accent/30">
-                  {totalCount} elements established
+            <div className="px-4 py-3 border-b border-gold-accent/20 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <BookOpen size={16} className="text-gold-primary shrink-0" />
+                <h2 className="font-display font-bold text-sm text-gold-primary truncate">Tale Overview</h2>
+                <span className="hidden xs:inline font-mono text-[10px] px-2 py-0.5 rounded-full bg-gold-accent/20 text-gold-primary/90 border border-gold-accent/30 shrink-0">
+                  {totalCount} elements
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowOverview(false)}
-                className="text-ink-muted hover:text-ink p-1 rounded-lg hover:bg-white/5 transition-colors"
-              >
-                <X size={16} />
-              </button>
+
+              {/* Draft Preset Action Buttons */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPresetNameInput(`${accumulated.world?.name || 'Custom World'} - ${accumulated.protagonist?.name || 'Hero'}`)
+                    setShowSaveModal(true)
+                  }}
+                  disabled={!hasAnyContent(accumulated)}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gold-accent/15 border border-gold-accent/40 text-gold-primary text-xs font-display font-semibold hover:bg-gold-accent/25 transition-colors disabled:opacity-40"
+                  title="Save current settings as a World & Character Preset"
+                >
+                  <Save size={13} />
+                  <span className="hidden sm:inline">Save Draft</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleOpenLoadModal}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#161a28] border border-gold-accent/30 text-gold-primary text-xs font-display font-semibold hover:bg-gold-accent/15 transition-colors"
+                  title="Load a saved World & Character Preset"
+                >
+                  <FolderOpen size={13} />
+                  <span className="hidden sm:inline">Load Draft</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowOverview(false)}
+                  className="text-ink-muted hover:text-ink p-1 rounded-lg hover:bg-white/5 transition-colors ml-1"
+                >
+                  <X size={16} />
+                </button>
+              </div>
             </div>
 
             {/* Modal Body */}
@@ -1999,7 +2187,27 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 {accumulated.protagonist ? (
                   <div>
                     <p className="font-display font-semibold text-sm text-gold-primary">{accumulated.protagonist.name}</p>
-                    <p className="font-narrative text-xs text-ink-muted">{accumulated.protagonist.background}</p>
+                    {accumulated.protagonist.background && (
+                      <p className="font-narrative text-xs text-ink-muted">{accumulated.protagonist.background}</p>
+                    )}
+                    <TaleWeaverImageGenerator
+                      imageKey={accumulated.protagonist.portraitKey}
+                      prompt={buildNpcPortraitPrompt(
+                        accumulated.protagonist.name || 'Hero',
+                        accumulated.protagonist.physicalTrait || accumulated.protagonist.background,
+                        'Protagonist',
+                        accumulated.world,
+                      )}
+                      apiSettings={apiSettings}
+                      aspectRatio="1:1"
+                      label="Illustrate Hero Portrait"
+                      onSaveKey={(key) => {
+                        setAccumulated((prev) => ({
+                          ...prev,
+                          protagonist: prev.protagonist ? { ...prev.protagonist, portraitKey: key } : undefined,
+                        }))
+                      }}
+                    />
                   </div>
                 ) : (
                   <p className="font-narrative text-xs italic text-ink-muted">Not yet woven</p>
@@ -2007,7 +2215,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
               </div>
 
               {/* Regions & Locations */}
-              <div className="rounded-xl border border-gold-accent/25 bg-[#161a28] p-3 flex flex-col gap-1.5">
+              <div className="rounded-xl border border-gold-accent/25 bg-[#161a28] p-3 flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-[10px] uppercase text-gold-primary/70">
                     3. Places ({accumulated.regions.length} regions, {accumulated.locations.length} locations)
@@ -2023,12 +2231,56 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     Jump <ArrowRight size={10} />
                   </button>
                 </div>
-                {accumulated.locations.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5">
-                    {accumulated.locations.map((l) => (
-                      <span key={l.id} className="font-narrative text-xs px-2 py-0.5 rounded bg-black/40 border border-gold-accent/20 text-ink">
-                        {l.name}
-                      </span>
+                {accumulated.locations.length > 0 || accumulated.regions.length > 0 ? (
+                  <div className="flex flex-col gap-2.5">
+                    {accumulated.locations.map((l, idx) => (
+                      <div key={l.id} className="rounded-lg bg-black/40 border border-gold-accent/20 p-2 flex flex-col gap-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-display font-semibold text-gold-primary">{l.name}</span>
+                          <span className="font-mono text-[10px] text-ink-muted">{l.locationType || 'Landmark'}</span>
+                        </div>
+                        {l.desc && <p className="font-narrative text-[11px] text-ink-muted line-clamp-2">{l.desc}</p>}
+                        <TaleWeaverImageGenerator
+                          imageKey={l.imageKey}
+                          prompt={buildLocationImagePrompt(l.name, l.desc, accumulated.world)}
+                          apiSettings={apiSettings}
+                          aspectRatio="16:9"
+                          label="Illustrate Location"
+                          onSaveKey={(key) => {
+                            setAccumulated((prev) => ({
+                              ...prev,
+                              locations: prev.locations.map((loc, i) => (i === idx ? { ...loc, imageKey: key } : loc)),
+                            }))
+                          }}
+                        />
+                      </div>
+                    ))}
+
+                    {accumulated.regions.map((r, idx) => (
+                      <div key={r.id} className="rounded-lg bg-black/40 border border-gold-accent/20 p-2 flex flex-col gap-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-display font-semibold text-gold-primary">Region: {r.name}</span>
+                        </div>
+                        {r.desc && <p className="font-narrative text-[11px] text-ink-muted line-clamp-2">{r.desc}</p>}
+                        <TaleWeaverImageGenerator
+                          imageKey={r.mapImageKey}
+                          prompt={buildRegionMapPrompt(
+                            r.name,
+                            r.desc,
+                            accumulated.locations.filter((loc) => loc.regionId === r.id).map((loc) => loc.name),
+                            accumulated.world,
+                          )}
+                          apiSettings={apiSettings}
+                          aspectRatio="16:9"
+                          label="Illustrate Region Map"
+                          onSaveKey={(key) => {
+                            setAccumulated((prev) => ({
+                              ...prev,
+                              regions: prev.regions.map((reg, i) => (i === idx ? { ...reg, mapImageKey: key } : reg)),
+                            }))
+                          }}
+                        />
+                      </div>
                     ))}
                   </div>
                 ) : (
@@ -2067,7 +2319,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
               </div>
 
               {/* NPCs */}
-              <div className="rounded-xl border border-gold-accent/25 bg-[#161a28] p-3 flex flex-col gap-1.5">
+              <div className="rounded-xl border border-gold-accent/25 bg-[#161a28] p-3 flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-[10px] uppercase text-gold-primary/70">
                     5. Cast of Characters ({accumulated.npcs.length})
@@ -2084,11 +2336,28 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                   </button>
                 </div>
                 {accumulated.npcs.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5">
-                    {accumulated.npcs.map((n) => (
-                      <span key={n.id} className="font-narrative text-xs px-2 py-0.5 rounded bg-black/40 border border-gold-accent/20 text-ink">
-                        {n.name} {n.role && `— ${n.role}`}
-                      </span>
+                  <div className="flex flex-col gap-2">
+                    {accumulated.npcs.map((n, idx) => (
+                      <div key={n.id} className="rounded-lg bg-black/40 border border-gold-accent/20 p-2 flex flex-col gap-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-display font-semibold text-gold-primary">{n.name}</span>
+                          {n.role && <span className="font-mono text-[10px] text-ink-muted">{n.role}</span>}
+                        </div>
+                        {n.appearance && <p className="font-narrative text-[11px] text-ink-muted line-clamp-2">{n.appearance}</p>}
+                        <TaleWeaverImageGenerator
+                          imageKey={n.portraitKey}
+                          prompt={buildNpcPortraitPrompt(n.name, n.appearance, n.role, accumulated.world)}
+                          apiSettings={apiSettings}
+                          aspectRatio="1:1"
+                          label="Illustrate Character Portrait"
+                          onSaveKey={(key) => {
+                            setAccumulated((prev) => ({
+                              ...prev,
+                              npcs: prev.npcs.map((npc, i) => (i === idx ? { ...npc, portraitKey: key } : npc)),
+                            }))
+                          }}
+                        />
+                      </div>
                     ))}
                   </div>
                 ) : (
@@ -2179,6 +2448,170 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
               >
                 Dive in
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notice Banner */}
+      {presetToast && (
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gold-primary text-black font-display font-bold text-xs shadow-2xl animate-in fade-in slide-in-from-top-3 duration-200">
+          <CheckCircle2 size={15} />
+          <span>{presetToast}</span>
+        </div>
+      )}
+
+      {/* Save Preset Modal */}
+      {showSaveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-gold-accent/40 bg-[#121520] p-4 shadow-2xl flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-gold-accent/20 pb-2">
+              <div className="flex items-center gap-2">
+                <Save size={16} className="text-gold-primary" />
+                <h3 className="font-display font-bold text-sm text-gold-primary">Save Draft Preset</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSaveModal(false)}
+                className="text-ink-muted hover:text-ink p-1 rounded-lg hover:bg-white/5 transition-colors"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            <p className="font-narrative text-xs text-ink-muted leading-relaxed">
+              Save your current World foundation, Protagonist, Regions, Locations, Factions, NPCs, Lore, and Arc settings as a reusable preset.
+            </p>
+
+            <div className="flex flex-col gap-1 mt-1">
+              <label className="font-mono text-[10px] uppercase text-gold-primary/80">Preset Title</label>
+              <input
+                type="text"
+                value={presetNameInput}
+                onChange={(e) => setPresetNameInput(e.target.value)}
+                placeholder="e.g. Fourth Wing - Navarre & Basgiath"
+                className="w-full px-3 py-2 rounded-xl bg-[#161a28] border border-gold-accent/30 text-xs text-ink placeholder:text-ink-muted/50 outline-none focus:border-gold-primary transition-colors font-display"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-gold-accent/20">
+              <button
+                type="button"
+                onClick={() => setShowSaveModal(false)}
+                className="px-3 py-1.5 rounded-xl border border-gold-accent/20 bg-black/20 text-ink-muted font-display text-xs hover:bg-white/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSavePreset}
+                disabled={!presetNameInput.trim()}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-gold-primary text-black font-display font-semibold text-xs hover:bg-gold-primary/90 transition-colors disabled:opacity-40"
+              >
+                <Save size={13} />
+                <span>Save Preset</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Load Preset Modal */}
+      {showLoadModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg max-h-[80vh] rounded-2xl border border-gold-accent/40 bg-[#121520] p-4 shadow-2xl flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-gold-accent/20 pb-2">
+              <div className="flex items-center gap-2">
+                <FolderOpen size={16} className="text-gold-primary" />
+                <h3 className="font-display font-bold text-sm text-gold-primary">Load Draft Preset</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowLoadModal(false)}
+                className="text-ink-muted hover:text-ink p-1 rounded-lg hover:bg-white/5 transition-colors"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            <p className="font-narrative text-xs text-ink-muted leading-relaxed">
+              Select a previously saved World & Character preset to populate your Tale Weaver setup.
+            </p>
+
+            <div className="flex-1 overflow-y-auto flex flex-col gap-2.5 my-1 pr-1">
+              {savedPresets.length === 0 ? (
+                <div className="py-8 text-center flex flex-col items-center justify-center gap-2 text-ink-muted font-narrative text-xs">
+                  <Bookmark size={24} className="text-gold-primary/30" />
+                  <p>No saved draft presets found.</p>
+                  <p className="text-[11px] text-ink-muted/70">Click "Save Draft" in Tale Overview to save your first preset.</p>
+                </div>
+              ) : (
+                savedPresets.map((preset) => {
+                  const acc = preset.accumulated
+                  const dateStr = new Date(preset.createdAt).toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })
+                  return (
+                    <div
+                      key={preset.id}
+                      className="rounded-xl border border-gold-accent/25 bg-[#161a28] p-3 flex flex-col gap-2 hover:border-gold-accent/50 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h4 className="font-display font-bold text-sm text-gold-primary">{preset.name}</h4>
+                          <span className="font-mono text-[10px] text-ink-muted">{dateStr}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePreset(preset.id)}
+                          className="p-1 rounded text-red-400 hover:text-red-200 hover:bg-red-950/40 transition-colors shrink-0"
+                          title="Delete preset"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+
+                      {/* Preset Content Badges */}
+                      <div className="flex flex-wrap items-center gap-1.5 font-mono text-[10px]">
+                        {acc.world?.name && (
+                          <span className="px-2 py-0.5 rounded-full bg-gold-accent/15 border border-gold-accent/30 text-gold-primary">
+                            World: {acc.world.name}
+                          </span>
+                        )}
+                        {acc.protagonist?.name && (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
+                            Hero: {acc.protagonist.name}
+                          </span>
+                        )}
+                        {acc.regions.length > 0 && (
+                          <span className="px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300">
+                            {acc.regions.length} Regions / {acc.locations.length} Locs
+                          </span>
+                        )}
+                        {acc.npcs.length > 0 && (
+                          <span className="px-2 py-0.5 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300">
+                            {acc.npcs.length} NPCs
+                          </span>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleLoadPreset(preset)}
+                        className="mt-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-gold-accent/20 border border-gold-accent/40 text-gold-primary font-display text-xs font-semibold hover:bg-gold-accent/35 transition-colors"
+                      >
+                        <FolderOpen size={13} />
+                        <span>Load Preset</span>
+                      </button>
+                    </div>
+                  )
+                })
+              )}
             </div>
           </div>
         </div>

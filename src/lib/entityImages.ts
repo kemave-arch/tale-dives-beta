@@ -17,8 +17,9 @@ export interface GenerateEntityImageInput {
   quality?: number
 }
 
-export async function generateAndStoreEntityImage(input: GenerateEntityImageInput): Promise<void> {
-  const raw = await generateImageBytes({ apiKey: input.apiKey, prompt: input.prompt, aspectRatio: input.aspectRatio })
-  const resized = await resizeToWebP(raw, input.maxDim ?? MAX_DIM_STANDARD, input.quality ?? IMAGE_QUALITY_FULL)
+export async function generateAndStoreEntityImage(input: GenerateEntityImageInput): Promise<string> {
+  const result = await generateImageBytes({ apiKey: input.apiKey, prompt: input.prompt, aspectRatio: input.aspectRatio })
+  const resized = await resizeToWebP(result.blob, input.maxDim ?? MAX_DIM_STANDARD, input.quality ?? IMAGE_QUALITY_FULL)
   await putImageBlob(input.key, resized)
+  return result.modelUsed
 }

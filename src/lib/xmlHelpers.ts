@@ -82,6 +82,13 @@ export function signToDelta(raw: string | null, field: string): -1 | 1 | undefin
   throw new XmlParseError(`Invalid ${field}: expected a bare "+" or "-", got "${raw}"`)
 }
 
+// Sanitizes raw string for XML parsing by converting unescaped ampersands
+// into &amp; while leaving valid XML entities (like &amp;, &lt;, &#39;, etc.) intact.
+export function sanitizeXmlForParsing(xml: string): string {
+  if (!xml) return ''
+  return xml.replace(/&(?!amp;|lt;|gt;|quot;|apos;|#\d+;|#x[0-9a-fA-F]+;)/g, '&amp;')
+}
+
 // Extracts `<blockTag>...</blockTag>` from a raw response and parses its
 // inner content as XML via DOMParser, wrapped in a synthetic <root> so
 // multiple repeated sibling tags parse cleanly. Throws XmlParseError if the
@@ -90,7 +97,8 @@ export function signToDelta(raw: string | null, field: string): -1 | 1 | undefin
 export function parseXmlBlock(raw: string, blockTag: string): Document {
   const blockMatch = raw.match(new RegExp(`<${blockTag}>([\\s\\S]*?)</${blockTag}>`))
   if (!blockMatch) throw new XmlParseError(`No <${blockTag}> block found`)
-  const doc = new DOMParser().parseFromString(`<root>${blockMatch[1]}</root>`, 'text/xml')
+  const sanitized = sanitizeXmlForParsing(blockMatch[1])
+  const doc = new DOMParser().parseFromString(`<root>${sanitized}</root>`, 'text/xml')
   const parseError = doc.querySelector('parsererror')
   if (parseError) throw new XmlParseError(`Malformed <${blockTag}> XML: ${parseError.textContent}`)
   return doc

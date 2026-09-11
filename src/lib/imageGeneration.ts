@@ -31,6 +31,13 @@ export interface GenerateImageResult {
 const IMAGE_MODEL = "gemini-3.1-flash-lite-image"
 
 /**
+ * AUTOMATIC IMAGE GENERATION POLICY LOCK:
+ * Automatic image generation during Tale Weaver phases or story turns is strictly disabled.
+ * Only manual calls initiated directly by user clicking the generate/retry buttons are permitted.
+ */
+export const AUTOMATIC_IMAGE_GENERATION_ENABLED = false
+
+/**
   * Resolves the premium API key from environment variables (Gemini_Prem_Key / VITE_GEMINI_PREM_KEY)
   * or falls back to ApiSettings.premiumApiKey or ApiSettings.apiKey.
   */

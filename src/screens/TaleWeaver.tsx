@@ -2042,220 +2042,237 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
   }
 
   return (
-    <GlassScreen ground="dark" className="px-3 sm:px-4 pb-4 pt-2 flex flex-col h-full overflow-hidden">
-      {/* Top Header */}
-      <GlassHeader
-        title="Tale Weaving"
-        subtitle={`Phase ${phaseIdx + 1} of ${TALE_WEAVER_PHASES.length} — ${phase.label}`}
-        onBack={handleSafeExit}
-      />
+    <GlassScreen ground="dark" className="px-3 sm:px-6 pb-4 pt-2 flex flex-col h-full overflow-hidden">
+      <div className="max-w-4xl lg:max-w-5xl mx-auto w-full flex flex-col h-full overflow-hidden gap-2">
+        {/* Top Header */}
+        <GlassHeader
+          title="Tale Weaving"
+          subtitle={`Phase ${phaseIdx + 1} of ${TALE_WEAVER_PHASES.length} — ${phase.label}`}
+          onBack={handleSafeExit}
+        />
 
-      {/* Stepper Bar & Overview Trigger */}
-      <div className="shrink-0 flex items-center justify-between gap-2 py-2 border-b border-gold-accent/20">
-        <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-0.5 flex-1">
-          {TALE_WEAVER_PHASES.map((p, idx) => {
-            const isActive = idx === phaseIdx
-            const isCompleted = hasPhaseContent(p.id, accumulated)
-            const count = getPhaseCount(p.id, accumulated)
-            return (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => handleJumpToPhase(idx)}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-display transition-all shrink-0 ${
-                  isActive
-                    ? 'bg-gold-primary/20 border border-gold-primary text-gold-primary font-semibold shadow-[0_0_10px_rgba(212,175,55,0.15)]'
-                    : isCompleted
-                    ? 'bg-gold-accent/10 border border-gold-accent/35 text-gold-primary/85 hover:border-gold-accent/60'
-                    : 'bg-transparent border border-gold-accent/15 text-ink-muted/50 hover:text-ink-muted'
-                }`}
-                title={`Phase ${idx + 1}: ${p.label}`}
-              >
-                <span className="font-mono text-[10px] w-3.5 h-3.5 rounded-full flex items-center justify-center bg-black/40 border border-current">
-                  {isCompleted && !isActive ? <Check size={8} /> : idx + 1}
-                </span>
-                <span className="hidden sm:inline">{PHASE_SHORT_LABELS[idx]}</span>
-                {count > 0 && !isActive && (
-                  <span className="font-mono text-[9px] text-gold-accent/80 font-normal">({count})</span>
-                )}
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Preset & Overview Action Bar */}
-        <div className="shrink-0 flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => {
-              setPresetNameInput(`${accumulated.world?.name || 'Custom World'} - ${accumulated.protagonist?.name || 'Hero'}`)
-              setShowSaveModal(true)
-            }}
-            disabled={!hasAnyContent(accumulated)}
-            className="flex items-center gap-1 px-2 py-1 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/15 text-gold-primary text-xs font-display transition-colors disabled:opacity-40"
-            title="Save current settings as a World & Character Preset"
-          >
-            <Save size={13} />
-            <span className="hidden sm:inline">Save Draft</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleOpenLoadModal}
-            className="flex items-center gap-1 px-2 py-1 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/15 text-gold-primary text-xs font-display transition-colors"
-            title="Load a saved World & Character Preset"
-          >
-            <FolderOpen size={13} />
-            <span className="hidden sm:inline">Load Draft</span>
-          </button>
-
-          {/* Overview Button */}
-          <button
-            type="button"
-            onClick={() => setShowOverview(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/15 text-gold-primary text-xs font-display transition-colors"
-            title="Review all established tale elements"
-          >
-            <BookOpen size={13} />
-            <span className="hidden xs:inline">Overview</span>
-            {totalCount > 0 && (
-              <span className="font-mono text-[10px] px-1.5 py-0.2 rounded-full bg-gold-accent/20 border border-gold-accent/30">
-                {totalCount}
-              </span>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Main Content Area */}
-      <div ref={contentAreaRef} className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 py-3 pr-1">
-        {/* Phase Goal Banner */}
-        <div className="rounded-xl border border-gold-accent/25 bg-[#161a28]/60 p-3 flex flex-col gap-1">
-          <div className="flex items-center justify-between gap-2">
-            <span className="font-display font-semibold text-xs text-gold-primary uppercase tracking-wider">
-              {phase.label}
-            </span>
-            <span className="font-mono text-[10px] text-gold-accent/70">
-              {currentHasContent ? `${getPhaseCount(phase.id, accumulated)} established` : 'Not yet woven'}
-            </span>
+        {/* Stepper Bar & Overview Trigger */}
+        <div className="shrink-0 flex items-center justify-between gap-2 py-1.5 px-2 rounded-xl bg-[#121520]/80 border border-gold-accent/20">
+          <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-0.5 flex-1 justify-start md:justify-center">
+            {TALE_WEAVER_PHASES.map((p, idx) => {
+              const isActive = idx === phaseIdx
+              const isCompleted = hasPhaseContent(p.id, accumulated)
+              const count = getPhaseCount(p.id, accumulated)
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => handleJumpToPhase(idx)}
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-display transition-all shrink-0 ${
+                    isActive
+                      ? 'bg-gold-primary/20 border border-gold-primary text-gold-primary font-semibold shadow-[0_0_12px_rgba(212,175,55,0.2)]'
+                      : isCompleted
+                      ? 'bg-gold-accent/10 border border-gold-accent/35 text-gold-primary/85 hover:border-gold-accent/60'
+                      : 'bg-black/30 border border-gold-accent/15 text-ink-muted/50 hover:text-ink-muted hover:border-gold-accent/30'
+                  }`}
+                  title={`Phase ${idx + 1}: ${p.label}`}
+                >
+                  <span className="font-mono text-[10px] w-4 h-4 rounded-full flex items-center justify-center bg-black/50 border border-current shrink-0">
+                    {isCompleted && !isActive ? <Check size={10} /> : idx + 1}
+                  </span>
+                  <span className="hidden sm:inline font-medium">{PHASE_SHORT_LABELS[idx]}</span>
+                  {count > 0 && !isActive && (
+                    <span className="font-mono text-[9.5px] text-gold-accent/80 font-normal">({count})</span>
+                  )}
+                </button>
+              )
+            })}
           </div>
-          <p className="font-narrative text-xs text-ink-muted leading-relaxed">
-            {phase.prompt}
-          </p>
+
+          {/* Preset & Overview Action Bar */}
+          <div className="shrink-0 flex items-center gap-1.5 border-l border-gold-accent/20 pl-2">
+            <button
+              type="button"
+              onClick={() => {
+                setPresetNameInput(`${accumulated.world?.name || 'Custom World'} - ${accumulated.protagonist?.name || 'Hero'}`)
+                setShowSaveModal(true)
+              }}
+              disabled={!hasAnyContent(accumulated)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/20 text-gold-primary text-xs font-display transition-colors disabled:opacity-40"
+              title="Save current settings as a World & Character Preset"
+            >
+              <Save size={13} />
+              <span className="hidden lg:inline">Save Draft</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleOpenLoadModal}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/20 text-gold-primary text-xs font-display transition-colors"
+              title="Load a saved World & Character Preset"
+            >
+              <FolderOpen size={13} />
+              <span className="hidden lg:inline">Load Draft</span>
+            </button>
+
+            {/* Overview Button */}
+            <button
+              type="button"
+              onClick={() => setShowOverview(true)}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-gold-accent/40 bg-gold-accent/15 hover:bg-gold-accent/25 text-gold-primary text-xs font-display font-medium transition-colors"
+              title="Review all established tale elements"
+            >
+              <BookOpen size={13} />
+              <span className="hidden sm:inline">Overview</span>
+              {totalCount > 0 && (
+                <span className="font-mono text-[10px] px-1.5 py-0.2 rounded-full bg-gold-accent/25 border border-gold-accent/40 font-bold">
+                  {totalCount}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
-        {/* Error Alert */}
-        {errorMessage && (
-          <div className="rounded-xl border border-red-500/40 bg-red-950/30 p-3 flex items-start gap-2 text-red-300 text-xs">
-            <AlertCircle size={15} className="shrink-0 text-red-400 mt-0.5" />
-            <div className="flex-1">
-              <p className="font-narrative">{errorMessage}</p>
+        {/* Main Content Area */}
+        <div ref={contentAreaRef} className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 py-2 pr-1">
+          {/* Phase Goal Banner */}
+          <div className="rounded-xl border border-gold-accent/30 bg-[#161a28]/80 p-3.5 flex flex-col gap-1 shadow-md">
+            <div className="flex items-center justify-between gap-2 border-b border-gold-accent/15 pb-1.5">
+              <span className="font-display font-bold text-xs text-gold-primary uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles size={13} className="text-gold-accent" />
+                Phase {phaseIdx + 1}: {phase.label}
+              </span>
+              <span className="font-mono text-[10.5px] text-gold-accent/80 font-medium">
+                {currentHasContent ? `${getPhaseCount(phase.id, accumulated)} established` : 'Not yet woven'}
+              </span>
+            </div>
+            <p className="font-narrative text-xs text-ink/90 leading-relaxed pt-1">
+              {phase.prompt}
+            </p>
+          </div>
+
+          {/* Error Alert */}
+          {errorMessage && (
+            <div className="rounded-xl border border-red-500/40 bg-red-950/30 p-3 flex items-start gap-2 text-red-300 text-xs">
+              <AlertCircle size={15} className="shrink-0 text-red-400 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-narrative">{errorMessage}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setErrorMessage(null)}
+                className="text-red-400 hover:text-red-200 p-0.5 shrink-0"
+              >
+                <X size={13} />
+              </button>
+            </div>
+          )}
+
+          {/* Active Phase Content Cards */}
+          {renderActivePhaseContent()}
+
+          {/* Empty State */}
+          {!currentHasContent && !busy && (
+            <div className="rounded-xl border border-dashed border-gold-accent/25 bg-black/30 p-8 flex flex-col items-center justify-center text-center gap-3 my-auto max-w-lg mx-auto w-full">
+              <div className="p-3 rounded-full bg-gold-accent/10 border border-gold-accent/20 text-gold-primary">
+                <Sparkles size={24} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <p className="font-display font-bold text-sm text-gold-primary">
+                  No {phase.label.toLowerCase()} established yet
+                </p>
+                <p className="font-narrative text-xs text-ink-muted leading-relaxed">
+                  Type your specific vision in the guidance box below, or leave it blank to let the narrator craft it for you.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleGenerate}
+                className="mt-1 px-4 py-2 rounded-xl bg-gold-accent/25 hover:bg-gold-accent/40 border border-gold-accent/50 text-gold-primary font-display font-semibold text-xs flex items-center gap-1.5 transition-colors shadow-md"
+              >
+                <Sparkles size={14} />
+                <span>Auto-Weave {phase.label}</span>
+              </button>
+            </div>
+          )}
+
+          {/* Busy Indicator */}
+          {busy && (
+            <div className="rounded-xl border border-gold-accent/30 bg-[#161a28]/90 p-8 flex flex-col items-center justify-center gap-3 my-auto max-w-lg mx-auto w-full shadow-lg">
+              <Sparkles size={24} className="text-gold-primary animate-spin" />
+              <div className="text-center flex flex-col gap-1">
+                <p className="font-narrative italic text-base text-gold-primary font-medium">
+                  Weaving {phase.label.toLowerCase()}...
+                </p>
+                <p className="font-mono text-[11px] text-ink-muted">Grounded in all established lore and choices</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Bottom Control Deck */}
+        <div className="shrink-0 flex flex-col gap-2.5 pt-2.5 border-t border-gold-accent/20 bg-[#121520]/60 p-3 rounded-2xl">
+          {/* Guidance Input & Weave Trigger */}
+          <div className="flex items-stretch gap-2.5">
+            <div className="flex-1 relative">
+              <textarea
+                value={guidance}
+                onChange={(e) => setGuidance(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    handleGenerate()
+                  }
+                }}
+                placeholder={`Guide this phase (e.g. tone, names, themes), or leave blank for a surprise...`}
+                rows={2}
+                disabled={busy}
+                className="w-full block px-3.5 py-2.5 rounded-xl bg-[#161a28] border border-gold-accent/35 text-xs text-ink placeholder:text-ink-muted/50 outline-none resize-none disabled:opacity-50 focus:border-gold-primary transition-colors shadow-inner"
+              />
             </div>
             <button
               type="button"
-              onClick={() => setErrorMessage(null)}
-              className="text-red-400 hover:text-red-200 p-0.5 shrink-0"
+              onClick={handleGenerate}
+              disabled={busy}
+              className="shrink-0 px-4 py-2.5 rounded-xl bg-gradient-to-b from-gold-accent/35 to-gold-accent/20 hover:from-gold-accent/50 hover:to-gold-accent/30 border border-gold-accent/60 text-gold-primary font-display font-bold text-xs flex flex-col items-center justify-center gap-1 disabled:opacity-40 transition-all shadow-md min-w-[90px]"
             >
-              <X size={13} />
+              <Sparkles size={16} className={busy ? 'animate-spin' : ''} />
+              <span>{currentHasContent ? 'Add More' : 'Weave'}</span>
             </button>
           </div>
-        )}
 
-        {/* Active Phase Content Cards */}
-        {renderActivePhaseContent()}
+          {/* Navigation Actions (Previous vs Next) */}
+          <div className="flex items-center justify-between gap-3">
+            {phaseIdx > 0 ? (
+              <button
+                type="button"
+                onClick={handlePreviousPhase}
+                disabled={busy}
+                className="flex-1 max-w-[180px] flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/20 text-gold-primary/90 font-display font-medium text-xs disabled:opacity-40 transition-colors"
+              >
+                <ChevronLeft size={15} />
+                <span>Previous Phase</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSafeExit}
+                disabled={busy}
+                className="flex-1 max-w-[180px] flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-gold-accent/20 bg-black/30 hover:bg-gold-accent/10 text-ink-muted font-display text-xs disabled:opacity-40 transition-colors"
+              >
+                <span>Cancel</span>
+              </button>
+            )}
 
-        {/* Empty State */}
-        {!currentHasContent && !busy && (
-          <div className="rounded-xl border border-dashed border-gold-accent/20 bg-black/20 p-6 flex flex-col items-center justify-center text-center gap-2 my-auto">
-            <Sparkles size={24} className="text-gold-primary/40" />
-            <p className="font-display font-medium text-sm text-gold-primary/80">
-              No {phase.label.toLowerCase()} established yet
-            </p>
-            <p className="font-narrative text-xs text-ink-muted max-w-sm">
-              Type your specific vision in the guidance box below, or leave it blank to let the narrator craft it for you.
-            </p>
-          </div>
-        )}
-
-        {/* Busy Indicator */}
-        {busy && (
-          <div className="rounded-xl border border-gold-accent/30 bg-[#161a28]/80 p-6 flex flex-col items-center justify-center gap-2.5 my-auto">
-            <Sparkles size={20} className="text-gold-primary animate-spin" />
-            <p className="font-narrative italic text-sm text-gold-primary">
-              Weaving {phase.label.toLowerCase()}...
-            </p>
-            <p className="font-mono text-[10px] text-ink-muted">Grounded in all established history</p>
-          </div>
-        )}
-      </div>
-
-      {/* Bottom Control Deck */}
-      <div className="shrink-0 flex flex-col gap-2 pt-2 border-t border-gold-accent/20">
-        {/* Guidance Input & Weave Trigger */}
-        <div className="flex items-stretch gap-2">
-          <div className="flex-1 relative">
-            <textarea
-              value={guidance}
-              onChange={(e) => setGuidance(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  handleGenerate()
-                }
-              }}
-              placeholder={`Guide this phase (e.g. tone, names, themes), or leave blank for a surprise...`}
-              rows={2}
-              disabled={busy}
-              className="w-full block px-3 py-2 rounded-xl bg-[#161a28] border border-gold-accent/30 text-[13px] text-ink placeholder:text-ink-muted/50 outline-none resize-none disabled:opacity-50 focus:border-gold-primary transition-colors"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={handleGenerate}
-            disabled={busy}
-            className="shrink-0 px-3 py-2 rounded-xl bg-gold-accent/25 hover:bg-gold-accent/40 border border-gold-accent/50 text-gold-primary font-display font-semibold text-xs flex flex-col items-center justify-center gap-1 disabled:opacity-40 transition-colors min-w-[76px]"
-          >
-            <Sparkles size={15} className={busy ? 'animate-spin' : ''} />
-            <span>{currentHasContent ? 'Add More' : 'Weave'}</span>
-          </button>
-        </div>
-
-        {/* Navigation Actions (Previous vs Next) */}
-        <div className="flex items-center gap-2">
-          {phaseIdx > 0 ? (
             <button
               type="button"
-              onClick={handlePreviousPhase}
+              onClick={handleNext}
               disabled={busy}
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/15 text-gold-primary/90 font-display font-medium text-xs disabled:opacity-40 transition-colors"
+              className={`flex-1 max-w-sm flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-display font-bold text-xs sm:text-sm transition-all ${
+                isLastPhase
+                  ? 'bg-gold-primary hover:bg-gold-primary/90 text-black shadow-[0_0_18px_rgba(212,175,55,0.35)]'
+                  : 'bg-gold-accent/25 hover:bg-gold-accent/35 border border-gold-accent/50 text-gold-primary'
+              } disabled:opacity-40`}
             >
-              <ChevronLeft size={15} />
-              <span>Previous</span>
+              <span>{isLastPhase ? 'Review Tale Overview' : 'Next Phase'}</span>
+              <ChevronRight size={16} />
             </button>
-          ) : (
-            <button
-              type="button"
-              onClick={handleSafeExit}
-              disabled={busy}
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-gold-accent/20 bg-black/20 hover:bg-gold-accent/10 text-ink-muted font-display text-xs disabled:opacity-40 transition-colors"
-            >
-              <span>Cancel</span>
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={handleNext}
-            disabled={busy}
-            className={`flex-[2] flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl font-display font-semibold text-sm transition-all ${
-              isLastPhase
-                ? 'bg-gold-primary hover:bg-gold-primary/90 text-black shadow-[0_0_15px_rgba(212,175,55,0.3)]'
-                : 'bg-gold-accent/25 hover:bg-gold-accent/35 border border-gold-accent/50 text-gold-primary'
-            } disabled:opacity-40`}
-          >
-            <span>{isLastPhase ? 'Tale Overview' : 'Next Phase'}</span>
-            <ChevronRight size={16} />
-          </button>
+          </div>
         </div>
       </div>
 

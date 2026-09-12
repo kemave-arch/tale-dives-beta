@@ -1,5 +1,6 @@
 import type { ApiSettings } from '../types.ts'
 import { getProvider } from '../api/providers/index.ts'
+import { parseXmlBlock, str, XmlParseError } from './xmlHelpers.ts'
 
 // §7 Image Generation, Lore Accuracy — resolves a copyrighted-name-free,
 // image-prompt-ready description for an NPC portrait or location image, when
@@ -42,70 +43,190 @@ export interface ResolveCanonDescriptionInput {
   source: CanonDescriptionSourceMaterial
 }
 
-function buildSystemInstructions(kind: 'character' | 'location'): string {
-  const subject = kind === 'character' ? 'a character' : 'a location'
-  const visualAspect = kind === 'character' ? 'physical appearance — build, face, hair, attire, bearing, expression' : 'environment — architecture, terrain, lighting, atmosphere, notable features'
+function sourceLine(source: CanonDescriptionSourceMaterial): string | undefined {
+  if (!source.title?.trim()) return undefined
+  const attribution = source.author?.trim() ? `"${source.title.trim()}" by ${source.author.trim()}` : `"${source.title.trim()}"`
+  return `Source material: ${attribution}${source.scope?.trim() ? ` — canon scope boundary: ${source.scope.trim()}` : ' — no scope boundary given, treat only broad public facts as safe'}`
+}
 
+// ---- kind: 'character' — a fixed slot template, not free prose -----------
+//
+// A single freeform paragraph left real gaps in practice (a model would
+// happily describe attire and mood while skipping eye color or hair
+// entirely). Naming the slots explicitly is what actually gets consistent
+// coverage — the same discipline this app already uses for narration state
+// (fixed XML tags/attributes, never an LLM free-writing structure). The
+// slots are assembled into the final prose paragraph client-side, in a
+// fixed, predictable order — so formatting is always consistent even though
+// the model only ever fills in short fragments.
+
+export interface NpcVisualFields {
+  gender?: string
+  age?: string
+  skinTone?: string
+  hair?: string
+  eyes?: string
+  mouth?: string
+  otherFeatures?: string // scars, tattoos, jaw/brow shape, anything else facial not covered above
+  build?: string
+  attire?: string
+  status?: string // point-in-story visual state — "currently: ...", scoped to canon timeline or in-game session
+}
+
+function buildNpcVisualSystemInstructions(): string {
   return `
-You produce a single ${visualAspect} description of ${subject} for a Tale Dives campaign, written
-so it can be fed directly into an image generator. Output ONLY the description paragraph itself —
-no preamble, no headers, no markdown, no quotation marks around it.
+You fill in a fixed set of short visual-description slots for a Tale Dives character portrait, so
+the result can be assembled into an image-generation prompt. Output ONLY one <visual><npc_visual
+.../></visual> block, nothing else — no preamble, no markdown, no prose outside the tags.
 
-Never include this ${subject === 'a character' ? "character's" : "location's"} proper name, and
-never name or quote the title of the source material, anywhere in your output — the description
-must stand on its own as pure visual detail. This is deliberate: the name and title are known to
-you only as context for accuracy, never as something to pass on to whatever reads your output next.
+Each attribute should be a short, concrete fragment (a few words), not a full sentence — think
+"amber, slightly hooded" for eyes, not "Her eyes were a striking shade of amber." Fill in every
+attribute; never leave one blank.
 
-If an "Established description" is given below, that is this same entity's own prior resolved
-description — preserve it almost entirely (same build, features, attire, palette, defining visual
-traits) and change ONLY what the "What's changed" note specifically asks for. Do not redesign the
-subject from scratch; a reader comparing the old and new description should recognize continuity,
-not a different subject wearing the same name.
+LORE ACCURACY IS THE TOP PRIORITY for every slot: when source material is named below, ground each
+attribute in that source's actual canon, accurate up to the stated scope boundary. Only when no
+genuine canon detail exists for a slot (or no source material is named at all) should you invent a
+plausible original detail instead — inventing is the fallback, never the first move, and an
+invented detail must never contradict something the source actually establishes.
 
-If no established description is given and source material is named below, ground the description
-in that source's actual canon, accurate up to the stated scope boundary — correct build, features,
-attire, and bearing as the work itself establishes them. If you are not genuinely confident of a
-specific canon visual detail, invent a plausible original one rather than guessing wrong, and never
-let an invented detail contradict something the source actually establishes. If this ${subject}
-does not actually correspond to anything in the named source (an original addition to the
-campaign), simply write a clean, vivid description from the given notes instead — do not force a
-false canon connection.
+"status" is the point in the story or in-game session this portrait should reflect — e.g. "early in
+first-year training, before her injury" or "present day, after months in the field, more weathered."
+Ground this in whatever timeline context you're given; if none, describe them as currently
+established.
+
+If an "Established description" is given below, that is this same character's own prior resolved
+appearance — it was itself assembled from these same slots, so infer each slot's prior value from
+it and carry that value across UNCHANGED unless the "What's changed" note specifically calls for a
+different value in that exact slot. Do not redesign the character; a reader comparing the old and
+new fields should see the same person, with only the requested change applied.
+
+Never write this character's proper name or the source work's title into any attribute value — the
+output must stand on its own as pure visual detail, never as something that names who or what it's
+describing.
 `.trim()
 }
 
-function buildPrompt(input: ResolveCanonDescriptionInput): string {
-  const lines: string[] = []
-  const label = input.kind === 'character' ? input.role ? `Character, role: ${input.role}` : 'Character' : 'Location'
-  lines.push(label)
-
-  if (input.source.title?.trim()) {
-    const attribution = input.source.author?.trim() ? `"${input.source.title.trim()}" by ${input.source.author.trim()}` : `"${input.source.title.trim()}"`
-    lines.push(`Source material: ${attribution}${input.source.scope?.trim() ? ` — canon scope boundary: ${input.source.scope.trim()}` : ' — no scope boundary given, treat only broad public facts as safe'}`)
-  }
-  if (input.currentNotes?.trim()) {
-    lines.push(`Existing freeform notes (may be incomplete or non-visual): ${input.currentNotes.trim()}`)
-  }
-  if (input.existingDescription?.trim()) {
-    lines.push(`Established description (preserve this, changing only what's below): ${input.existingDescription.trim()}`)
-  }
+function buildNpcVisualPrompt(input: ResolveCanonDescriptionInput): string {
+  const lines: string[] = [input.role ? `Character, role: ${input.role}` : 'Character']
+  const src = sourceLine(input.source)
+  if (src) lines.push(src)
+  if (input.currentNotes?.trim()) lines.push(`Existing freeform notes (may be incomplete or non-visual): ${input.currentNotes.trim()}`)
+  if (input.existingDescription?.trim()) lines.push(`Established description (preserve this, changing only what's below): ${input.existingDescription.trim()}`)
   lines.push(`What's changed (optional, only apply if given): ${input.developmentNote?.trim() || '(nothing specified — describe as currently established)'}`)
-
-  // The subject's real name/title are given last, clearly labeled as
-  // context-only — the system instructions above already forbid echoing
-  // either back into the output.
   lines.push(`(Context only, do not repeat in your output) Name: ${input.name}`)
+  return lines.join('\n')
+}
 
+// This app never round-trips assembled prose back into structured
+// attributes — continuity across regenerations relies on the model itself
+// inferring consistent slot values from `existingDescription` (see the
+// system instructions above), not on the client parsing its own previous
+// output back apart.
+function parseNpcVisualFields(raw: string): NpcVisualFields {
+  let doc
+  try {
+    doc = parseXmlBlock(raw, 'visual')
+  } catch (err) {
+    throw new XmlParseError(`Could not parse NPC visual fields: ${err instanceof Error ? err.message : String(err)}`)
+  }
+  const el = doc.querySelector('npc_visual')
+  if (!el) throw new XmlParseError('No <npc_visual> tag found in response')
+  return {
+    gender: str(el.getAttribute('gender')),
+    age: str(el.getAttribute('age')),
+    skinTone: str(el.getAttribute('skin_tone')),
+    hair: str(el.getAttribute('hair')),
+    eyes: str(el.getAttribute('eyes')),
+    mouth: str(el.getAttribute('mouth')),
+    otherFeatures: str(el.getAttribute('other_features')),
+    build: str(el.getAttribute('build')),
+    attire: str(el.getAttribute('attire')),
+    status: str(el.getAttribute('status')),
+  }
+}
+
+function formatNpcVisualDescription(fields: NpcVisualFields): string {
+  const facial = [
+    fields.eyes && `eyes: ${fields.eyes}`,
+    fields.mouth && `mouth: ${fields.mouth}`,
+    fields.otherFeatures,
+  ].filter(Boolean).join('; ')
+
+  return [
+    [fields.gender, fields.age].filter(Boolean).join(', '),
+    fields.skinTone && `${fields.skinTone} skin`,
+    fields.hair && `${fields.hair} hair`,
+    facial && `Face — ${facial}.`,
+    fields.build,
+    fields.attire && `Wearing ${fields.attire}.`,
+    fields.status && `Currently: ${fields.status}.`,
+  ].filter(Boolean).join(' ').trim()
+}
+
+// ---- kind: 'location' — unchanged freeform paragraph ----------------------
+
+function buildLocationSystemInstructions(): string {
+  return `
+You produce a single environment description — architecture, terrain, lighting, atmosphere, notable
+features — of a location for a Tale Dives campaign, written so it can be fed directly into an image
+generator. Output ONLY the description paragraph itself — no preamble, no headers, no markdown, no
+quotation marks around it.
+
+Never include this location's proper name, and never name or quote the title of the source
+material, anywhere in your output — the description must stand on its own as pure visual detail.
+This is deliberate: the name and title are known to you only as context for accuracy, never as
+something to pass on to whatever reads your output next.
+
+If an "Established description" is given below, that is this same location's own prior resolved
+description — preserve it almost entirely (same architecture, palette, defining visual traits) and
+change ONLY what the "What's changed" note specifically asks for. Do not redesign the place from
+scratch; a reader comparing the old and new description should recognize continuity, not a
+different place sharing the same name.
+
+If no established description is given and source material is named below, ground the description
+in that source's actual canon, accurate up to the stated scope boundary. If you are not genuinely
+confident of a specific canon visual detail, invent a plausible original one rather than guessing
+wrong, and never let an invented detail contradict something the source actually establishes. If
+this location does not actually correspond to anything in the named source (an original addition
+to the campaign), simply write a clean, vivid description from the given notes instead — do not
+force a false canon connection.
+`.trim()
+}
+
+function buildLocationPrompt(input: ResolveCanonDescriptionInput): string {
+  const lines: string[] = ['Location']
+  const src = sourceLine(input.source)
+  if (src) lines.push(src)
+  if (input.currentNotes?.trim()) lines.push(`Existing freeform notes (may be incomplete or non-visual): ${input.currentNotes.trim()}`)
+  if (input.existingDescription?.trim()) lines.push(`Established description (preserve this, changing only what's below): ${input.existingDescription.trim()}`)
+  lines.push(`What's changed (optional, only apply if given): ${input.developmentNote?.trim() || '(nothing specified — describe as currently established)'}`)
+  lines.push(`(Context only, do not repeat in your output) Name: ${input.name}`)
   return lines.join('\n')
 }
 
 export async function resolveCanonDescription(input: ResolveCanonDescriptionInput): Promise<string> {
-  const raw = await getProvider(input.apiSettings.provider).runSeed({
+  const provider = getProvider(input.apiSettings.provider)
+
+  if (input.kind === 'character') {
+    const raw = await provider.runSeed({
+      apiKey: input.apiSettings.apiKey,
+      model: input.apiSettings.model,
+      temperature: input.apiSettings.temperature,
+      maxOutputTokens: 512,
+      systemInstructions: buildNpcVisualSystemInstructions(),
+      prompt: buildNpcVisualPrompt(input),
+    })
+    const fields = parseNpcVisualFields(raw)
+    return formatNpcVisualDescription(fields)
+  }
+
+  const raw = await provider.runSeed({
     apiKey: input.apiSettings.apiKey,
     model: input.apiSettings.model,
     temperature: input.apiSettings.temperature,
     maxOutputTokens: 512,
-    systemInstructions: buildSystemInstructions(input.kind),
-    prompt: buildPrompt(input),
+    systemInstructions: buildLocationSystemInstructions(),
+    prompt: buildLocationPrompt(input),
   })
   return raw.trim().replace(/^["'\s]+|["'\s]+$/g, '')
 }

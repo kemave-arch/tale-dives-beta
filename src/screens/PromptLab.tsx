@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { ArrowLeft, Copy, Image as ImageIcon, Sparkles, RotateCw } from 'lucide-react'
-import type { ApiSettings } from '../types.ts'
+import { ArrowLeft, Copy, Image as ImageIcon, Sparkles, RotateCw, Globe, User, MapPin, Map, RefreshCw } from 'lucide-react'
+import type { ApiSettings, WorldData } from '../types.ts'
+import * as store from '../lib/store.ts'
 import { resolveCanonDescription } from '../lib/canonDescription.ts'
 import { buildLocationImagePrompt, buildNpcPortraitPrompt, buildRegionMapPrompt, generateImageBytes, type ImageAspectRatio } from '../lib/imageGeneration.ts'
 
@@ -15,6 +16,7 @@ import { buildLocationImagePrompt, buildNpcPortraitPrompt, buildRegionMapPrompt,
 interface PromptLabProps {
   apiSettings: ApiSettings
   onBack: () => void
+  activeWorld?: WorldData | null
 }
 
 type EntityKind = 'character' | 'location' | 'map'
@@ -25,15 +27,55 @@ const ASPECT_BY_KIND: Record<EntityKind, ImageAspectRatio> = {
   map: '4:3',
 }
 
-function Field({ label, value, onChange, textarea, placeholder }: { label: string; value: string; onChange: (v: string) => void; textarea?: boolean; placeholder?: string }) {
-  const cls = 'w-full px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary font-narrative'
+function SectionCard({
+  title,
+  subtitle,
+  children,
+  badge,
+  icon: Icon,
+}: {
+  title: string
+  subtitle?: string
+  children: React.ReactNode
+  badge?: React.ReactNode
+  icon?: React.ComponentType<{ size?: number; className?: string }>
+}) {
   return (
-    <label className="flex flex-col gap-1">
-      <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">{label}</span>
+    <div className="rounded-xl border border-gold-accent/30 bg-[#141824] flex flex-col">
+      <div className="px-3.5 py-2.5 flex items-center justify-between bg-[#121522] border-b border-gold-accent/15 rounded-t-xl">
+        <div className="flex items-center gap-2 min-w-0">
+          {Icon && <Icon size={14} className="text-gold-primary shrink-0" />}
+          <span className="font-mono text-xs uppercase tracking-wider text-gold-primary font-bold">{title}</span>
+          {badge}
+        </div>
+        {subtitle && <span className="font-mono text-[10px] text-ink-muted/70 hidden sm:inline">{subtitle}</span>}
+      </div>
+      <div className="p-3.5 flex flex-col gap-3">{children}</div>
+    </div>
+  )
+}
+
+function Field({ label, value, onChange, textarea, placeholder }: { label: string; value: string; onChange: (v: string) => void; textarea?: boolean; placeholder?: string }) {
+  const cls = 'w-full px-3 py-2 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary font-narrative transition-colors placeholder:text-ink-muted/40'
+  return (
+    <label className="flex flex-col gap-1.5 text-left w-full">
+      <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/90 font-semibold">{label}</span>
       {textarea ? (
-        <textarea rows={2} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={`${cls} resize-y`} />
+        <textarea
+          rows={3}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className={`${cls} resize-y min-h-[84px] leading-relaxed`}
+        />
       ) : (
-        <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={cls} />
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className={cls}
+        />
       )}
     </label>
   )
@@ -41,11 +83,13 @@ function Field({ label, value, onChange, textarea, placeholder }: { label: strin
 
 function OutputPanel({ title, value, busy }: { title: string; value: string; busy?: boolean }) {
   const [copied, setCopied] = useState(false)
+
   if (!value && !busy) return null
+
   return (
-    <div className="rounded-xl border border-gold-accent/30 bg-[#12151f] p-3 flex flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/80">{title}</span>
+    <div className="rounded-xl border border-gold-accent/30 bg-[#12151f] flex flex-col">
+      <div className="flex items-center justify-between px-3.5 py-2.5 bg-[#0e101a] border-b border-gold-accent/15 rounded-t-xl">
+        <span className="font-mono text-xs uppercase tracking-wider text-gold-primary font-bold">{title}</span>
         {value && (
           <button
             type="button"
@@ -54,33 +98,56 @@ function OutputPanel({ title, value, busy }: { title: string; value: string; bus
               setCopied(true)
               setTimeout(() => setCopied(false), 1200)
             }}
-            className="flex items-center gap-1 text-[10px] text-ink-muted hover:text-gold-primary"
+            className="flex items-center gap-1 text-[10px] text-ink-muted hover:text-gold-primary px-2 py-0.5 rounded bg-gold-accent/10 hover:bg-gold-accent/20 border border-gold-accent/30 transition-colors shrink-0"
           >
             <Copy size={11} /> {copied ? 'Copied' : 'Copy'}
           </button>
         )}
       </div>
-      {busy ? (
-        <div className="flex items-center gap-2 text-xs text-ink-muted">
-          <RotateCw size={13} className="animate-spin" /> Working...
-        </div>
-      ) : (
-        <pre className="text-[11px] text-ink whitespace-pre-wrap font-mono max-h-56 overflow-y-auto">{value}</pre>
-      )}
+      <div className="p-3.5">
+        {busy ? (
+          <div className="flex items-center gap-2 text-xs text-ink-muted py-2">
+            <RotateCw size={13} className="animate-spin text-gold-primary" /> Working...
+          </div>
+        ) : (
+          <pre className="text-xs text-ink whitespace-pre-wrap font-mono leading-relaxed select-text">{value}</pre>
+        )}
+      </div>
     </div>
   )
 }
 
-export default function PromptLab({ apiSettings, onBack }: PromptLabProps) {
+export default function PromptLab({ apiSettings, onBack, activeWorld }: PromptLabProps) {
   const [kind, setKind] = useState<EntityKind>('character')
 
-  // World Foundation fields — same as WorldData's own image-relevant subset.
-  const [genreTone, setGenreTone] = useState('')
-  const [eraTechLevel, setEraTechLevel] = useState('')
-  const [powerSystem, setPowerSystem] = useState('')
-  const [sourceTitle, setSourceTitle] = useState('')
-  const [sourceAuthor, setSourceAuthor] = useState('')
-  const [sourceScope, setSourceScope] = useState('')
+  // Resolve session world: activeWorld prop first, fallback to store's active campaign world
+  const sessionWorld = activeWorld ?? (() => {
+    try {
+      const activeId = store.loadActiveCampaignId()
+      const campaigns = store.loadCampaigns()
+      return activeId && campaigns[activeId] ? campaigns[activeId].world : null
+    } catch {
+      return null
+    }
+  })()
+
+  // World Foundation fields — imported by default from in-game session's parameters
+  const [genreTone, setGenreTone] = useState(() => sessionWorld?.genreTone ?? '')
+  const [eraTechLevel, setEraTechLevel] = useState(() => sessionWorld?.eraTechLevel ?? '')
+  const [powerSystem, setPowerSystem] = useState(() => sessionWorld?.powerSystem ?? '')
+  const [sourceTitle, setSourceTitle] = useState(() => sessionWorld?.sourceTitle ?? '')
+  const [sourceAuthor, setSourceAuthor] = useState(() => sessionWorld?.sourceAuthor ?? '')
+  const [sourceScope, setSourceScope] = useState(() => sessionWorld?.sourceScope ?? '')
+
+  function handleReimportSession() {
+    if (!sessionWorld) return
+    setGenreTone(sessionWorld.genreTone ?? '')
+    setEraTechLevel(sessionWorld.eraTechLevel ?? '')
+    setPowerSystem(sessionWorld.powerSystem ?? '')
+    setSourceTitle(sessionWorld.sourceTitle ?? '')
+    setSourceAuthor(sessionWorld.sourceAuthor ?? '')
+    setSourceScope(sessionWorld.sourceScope ?? '')
+  }
 
   // Entity fields — same shape as NpcEntry/LocationEntry/RegionEntry's own.
   const [name, setName] = useState('')
@@ -161,6 +228,8 @@ export default function PromptLab({ apiSettings, onBack }: PromptLabProps) {
     }
   }
 
+  const kindIcon = kind === 'character' ? User : kind === 'location' ? MapPin : Map
+
   return (
     <div className="fixed inset-0 z-30 bg-[#0b0812] text-ink flex flex-col">
       <div className="flex items-center gap-3 px-4 py-3 border-b border-gold-accent/20">
@@ -173,7 +242,7 @@ export default function PromptLab({ apiSettings, onBack }: PromptLabProps) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4 max-w-2xl mx-auto w-full">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pt-4 pb-36 flex flex-col gap-4 max-w-2xl mx-auto w-full">
         <div className="flex gap-2">
           {(['character', 'location', 'map'] as EntityKind[]).map((k) => (
             <button
@@ -189,14 +258,38 @@ export default function PromptLab({ apiSettings, onBack }: PromptLabProps) {
           ))}
         </div>
 
-        <div className="rounded-xl border border-gold-accent/30 bg-[#161a28] p-3 flex flex-col gap-2.5">
-          <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary font-bold">World Foundation</span>
+        <SectionCard
+          title="World Foundation"
+          subtitle={loreAccuracyActive ? `Canon: ${sourceTitle}` : sessionWorld ? `Session: ${sessionWorld.name}` : 'Novel inspiration & world parameters'}
+          icon={Globe}
+          badge={
+            loreAccuracyActive ? (
+              <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-gold-primary/20 text-gold-primary border border-gold-primary/30">
+                Lore Active
+              </span>
+            ) : sessionWorld ? (
+              <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                Session Synced
+              </span>
+            ) : undefined
+          }
+        >
+          {sessionWorld && (
+            <div className="flex items-center justify-between gap-2 pb-2 border-b border-gold-accent/15">
+              <span className="font-mono text-[10px] text-ink-muted">
+                Imported from session: <strong className="text-gold-primary font-semibold">{sessionWorld.name}</strong>
+              </span>
+              <button
+                type="button"
+                onClick={handleReimportSession}
+                className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono bg-gold-accent/10 hover:bg-gold-accent/20 border border-gold-accent/30 text-gold-primary transition-colors shrink-0"
+                title="Reset World Foundation parameters to current in-game session values"
+              >
+                <RefreshCw size={11} /> Re-import Session
+              </button>
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            <Field label="Genre & Tone" value={genreTone} onChange={setGenreTone} placeholder="e.g. Dark gothic fantasy, gritty" />
-            <Field label="Era & Technology" value={eraTechLevel} onChange={setEraTechLevel} placeholder="e.g. Late medieval, iron and timber" />
-          </div>
-          <Field label="Power System" value={powerSystem} onChange={setPowerSystem} placeholder="e.g. Blood-oaths and glowing rune carving" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 border-t border-gold-accent/15">
             <Field label="Novel Inspiration" value={sourceTitle} onChange={setSourceTitle} placeholder="e.g. Fourth Wing" />
             <Field label="Author" value={sourceAuthor} onChange={setSourceAuthor} placeholder="e.g. Rebecca Yarros" />
           </div>
@@ -204,12 +297,18 @@ export default function PromptLab({ apiSettings, onBack }: PromptLabProps) {
           {sourceTitle && !sourceScope && (
             <p className="text-[10px] text-amber-300/80 font-mono">⚠ No scope set — same as in-game, sourceTitle alone stays attribution-only and won't gate lore-accuracy mode.</p>
           )}
-        </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 border-t border-gold-accent/15">
+            <Field label="Genre & Tone" value={genreTone} onChange={setGenreTone} placeholder="e.g. Dark gothic fantasy, gritty" />
+            <Field label="Era & Technology" value={eraTechLevel} onChange={setEraTechLevel} placeholder="e.g. Late medieval, iron and timber" />
+          </div>
+          <Field label="Power System" value={powerSystem} onChange={setPowerSystem} placeholder="e.g. Blood-oaths and glowing rune carving" />
+        </SectionCard>
 
-        <div className="rounded-xl border border-gold-accent/30 bg-[#161a28] p-3 flex flex-col gap-2.5">
-          <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary font-bold">
-            {kind === 'character' ? 'Character' : kind === 'location' ? 'Location' : 'Region'}
-          </span>
+        <SectionCard
+          title={kind === 'character' ? 'Character Details' : kind === 'location' ? 'Location Details' : 'Region Details'}
+          subtitle={name ? name : 'Name, role & visual parameters'}
+          icon={kindIcon}
+        >
           <Field label="Name" value={name} onChange={setName} placeholder="Entity name" />
           {kind === 'character' && <Field label="Role" value={role} onChange={setRole} placeholder="e.g. Rival Cadet" />}
           <Field
@@ -226,7 +325,7 @@ export default function PromptLab({ apiSettings, onBack }: PromptLabProps) {
               <Field label="What's Changed (development note)" value={developmentNote} onChange={setDevelopmentNote} placeholder="e.g. now has a scar over one eyebrow, cropped hair" />
             </>
           )}
-        </div>
+        </SectionCard>
 
         <div className="flex flex-wrap gap-2">
           {kind !== 'map' && (
@@ -234,7 +333,7 @@ export default function PromptLab({ apiSettings, onBack }: PromptLabProps) {
               type="button"
               onClick={handleResolve}
               disabled={busy !== null || !name.trim() || !apiSettings.apiKey}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#e8ca8a]/20 border border-[#e8ca8a]/50 text-[#e8ca8a] text-xs font-display font-semibold hover:bg-[#e8ca8a]/30 disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#e8ca8a]/20 border border-[#e8ca8a]/50 text-[#e8ca8a] text-xs font-display font-semibold hover:bg-[#e8ca8a]/30 disabled:opacity-50 transition-colors"
             >
               <Sparkles size={13} /> Resolve Canon Description {loreAccuracyActive ? '' : '(no source set — will just clean up notes)'}
             </button>
@@ -243,7 +342,7 @@ export default function PromptLab({ apiSettings, onBack }: PromptLabProps) {
             type="button"
             onClick={handleBuildPrompt}
             disabled={!name.trim()}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#161a28] border border-gold-accent/40 text-gold-primary text-xs font-display font-semibold hover:bg-gold-accent/10 disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#161a28] border border-gold-accent/40 text-gold-primary text-xs font-display font-semibold hover:bg-gold-accent/10 disabled:opacity-50 transition-colors"
           >
             Build Final Image Prompt
           </button>
@@ -251,7 +350,7 @@ export default function PromptLab({ apiSettings, onBack }: PromptLabProps) {
             type="button"
             onClick={handleGenerateImage}
             disabled={busy !== null || !finalPrompt.trim() || !apiSettings.apiKey}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#f7e7ce] via-[#e8ca8a] to-[#d4af37] text-zinc-950 text-xs font-display font-bold disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#f7e7ce] via-[#e8ca8a] to-[#d4af37] text-zinc-950 text-xs font-display font-bold hover:brightness-110 disabled:opacity-50 transition-all"
           >
             <ImageIcon size={13} /> Generate Test Image
           </button>
@@ -263,19 +362,22 @@ export default function PromptLab({ apiSettings, onBack }: PromptLabProps) {
         <OutputPanel title="Final Image Generation Prompt" value={finalPrompt} />
 
         {(imageUrl || busy === 'image') && (
-          <div className="rounded-xl border border-gold-accent/30 bg-[#12151f] p-3 flex flex-col gap-2 items-center">
-            {busy === 'image' ? (
-              <div className="flex items-center gap-2 text-xs text-ink-muted py-6">
-                <RotateCw size={14} className="animate-spin" /> Generating...
-              </div>
-            ) : (
-              imageUrl && (
-                <>
+          <div className="rounded-xl border border-gold-accent/30 bg-[#12151f] overflow-hidden">
+            <div className="flex items-center justify-between px-3.5 py-2.5 bg-[#0e101a] border-b border-gold-accent/15">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/90 font-bold">Generated Test Image</span>
+              {modelUsed && <span className="font-mono text-[10px] text-ink-muted">Model: {modelUsed}</span>}
+            </div>
+            <div className="p-3 flex flex-col gap-2 items-center">
+              {busy === 'image' ? (
+                <div className="flex items-center gap-2 text-xs text-ink-muted py-6">
+                  <RotateCw size={14} className="animate-spin" /> Generating...
+                </div>
+              ) : (
+                imageUrl && (
                   <img src={imageUrl} alt="" className="max-h-96 rounded-lg border border-gold-accent/20" />
-                  {modelUsed && <span className="font-mono text-[10px] text-ink-muted">Generated using {modelUsed}</span>}
-                </>
-              )
-            )}
+                )
+              )}
+            </div>
           </div>
         )}
       </div>

@@ -3593,3 +3593,21 @@ Ports Voyage's "Narrative Events"/`death`/`endGame` Mechanics concepts into Tale
 - **Verification**: `tsc --noEmit` and `npm run build` clean; live Playwright pass via the Image Prompt Lab confirmed a prompt built with Fourth Wing/Rebecca Yarros/Book 1 set now shows the real character name in the opening line plus a full Canon Reference block citing the book and author directly.
 
 
+- **Last updated:** 2026-09-12 — Image Prompt Lab UI Pass, Done in AI Studio (`src/screens/PromptLab.tsx`, `src/App.tsx`):
+- **What changed**: A batch of UI-only iterations on the Image Prompt Lab dev screen, made directly in AI Studio (not this session) and merged in here:
+  1. Reordered Form Fields — placed Novel Inspiration (`sourceTitle`), Author (`sourceAuthor`), and Canon Scope Boundary (`sourceScope`) as the top fields under World Foundation, above Genre & Tone/Era & Technology/Power System, so the primary canon-gating inputs are front and center when testing.
+  2. Organized the screen into collapsible `AccordionSection` components (custom icons, status badges, toggle headers) for World Foundation/Entity Details, and made `OutputPanel` blocks collapsible with quick-copy buttons.
+  3. Fixed accordion scrolling/textarea truncation: added `min-h-0 overscroll-contain pb-36` to the inner scroll container, set initial accordion state (World Foundation closed, Entity Details open by default), increased textarea minimum height to `76px` with resize enabled.
+  4. Imported session World Foundation parameters by default: `App.tsx` now passes `activeWorld={game?.world}` to `PromptLab`, whose state initializers load `sourceTitle`/`sourceAuthor`/`sourceScope`/`genreTone`/`eraTechLevel`/`powerSystem` from the active campaign (or store fallback) automatically, with a "Session Synced" badge and "Re-import Session" button to reset back to the campaign's values.
+  5. Replaced the collapsible accordions from #2 with permanently-open, unconstrained `SectionCard` containers — the accordion wrapper's `overflow-hidden` and collapsed headers were hiding fields, truncating content, and restricting visibility, so sections now stay fully visible with comfortable textarea sizing and page-level scrolling instead.
+- **Verification**: none stated in the originating commits; not independently re-verified in this session beyond confirming `tsc --noEmit`/`npm run build` stayed clean after merging.
+
+
+- **Last updated:** 2026-09-12 — Tale Weaver Creation Flow Refactor, Done in AI Studio (`src/screens/TaleWeaver.tsx`):
+- **What changed**: A visual/UX overhaul of the Tale Weaving phase screens, made directly in AI Studio (not this session) and merged in here:
+  1. **Prominent Inspiration Section (Phase 1 World)**: positioned Novel Title (`sourceTitle`), Author (`sourceAuthor`), and Canon Scope (`sourceScope`) as the highest-priority top fields in the World Foundation phase, with a notice that LLM generation naturally diverges from the original literature even when asked to stay faithful.
+  2. **Streamlined creation-tool layout**: replaced the heavy, screen-dominating phase cards with a low-profile phase header, and replaced the bulky dashed empty-state card with inline pending-draft rows across all phases (`world`, `protagonist`, `regions`, `factions`, `npcs`, `lore`, `arc`) offering direct "Auto-Weave"/manual-add actions.
+  3. **Concise, mobile-friendly Champagne Gold controls**: unified the bottom control deck into a single-line guidance input with an integrated "Weave"/"Weave More" button and concise nav buttons ("Back", "Next", "Review Tale", "Exit"), with all interactive accents unified to Champagne Gold and touch-friendly 36-40px heights.
+- **Verification**: `tsc --noEmit` and production build, per the originating commit message; not independently re-verified in this session beyond confirming both stayed clean after merging.
+
+

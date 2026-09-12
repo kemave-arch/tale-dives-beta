@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import {
   X, ChevronRight, ChevronLeft, Sparkles, Lock, Unlock,
   BookOpen, AlertCircle, Check, ArrowRight, Pencil, Plus, Save,
-  ImagePlus, RotateCw, FolderOpen, Trash2, Bookmark, CheckCircle2, Clock
+  ImagePlus, RotateCw, FolderOpen, Trash2, Bookmark, CheckCircle2, Clock, Info
 } from 'lucide-react'
 import { GlassScreen, GlassHeader } from '../lib/glassChrome.tsx'
 import { useConfirm } from '../lib/useConfirm.tsx'
@@ -440,11 +440,40 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
     setEditFormData({})
   }
 
+  function updateSourceMaterial(field: 'sourceTitle' | 'sourceAuthor' | 'sourceScope', val: string) {
+    setAccumulated((prev) => {
+      const baseWorld = prev.world || {
+        name: '',
+        genreTone: '',
+        conflict: '',
+        powerSystem: '',
+        eraTechLevel: '',
+        keyFactions: '',
+        background: '',
+      }
+      return {
+        ...prev,
+        world: {
+          ...baseWorld,
+          [field]: val,
+        },
+      }
+    })
+    if (editingKey === 'world') {
+      setEditFormData((prev: any) => ({ ...prev, [field]: val }))
+    }
+  }
+
   function saveEditing(key: string) {
     setAccumulated((prev) => {
       const next = { ...prev }
       if (key === 'world') {
-        next.world = { ...editFormData }
+        next.world = {
+          ...editFormData,
+          sourceTitle: editFormData.sourceTitle ?? prev.world?.sourceTitle,
+          sourceAuthor: editFormData.sourceAuthor ?? prev.world?.sourceAuthor,
+          sourceScope: editFormData.sourceScope ?? prev.world?.sourceScope,
+        }
       } else if (key === 'protagonist') {
         next.protagonist = { ...editFormData }
       } else if (key.startsWith('region_')) {
@@ -516,6 +545,11 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
   }
 
   function startManualWorld() {
+    const existingSource = {
+      sourceTitle: accumulated.world?.sourceTitle,
+      sourceAuthor: accumulated.world?.sourceAuthor,
+      sourceScope: accumulated.world?.sourceScope,
+    }
     const defaultWorld = {
       name: 'A Custom Realm',
       genreTone: 'Dark Fantasy',
@@ -524,6 +558,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
       eraTechLevel: 'Late Medieval',
       keyFactions: '',
       background: '',
+      ...existingSource,
     }
     setAccumulated((prev) => ({ ...prev, world: defaultWorld }))
     startEditing('world', defaultWorld)
@@ -556,7 +591,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
   async function handleGenerate() {
     if (busy) return
 
-    if (phase.id === 'world' && accumulated.world) {
+    if (phase.id === 'world' && hasPhaseContent('world', accumulated)) {
       if (!(await confirm('Discard your current World Foundation draft and generate a new one?'))) return
     }
     if (phase.id === 'protagonist' && accumulated.protagonist) {
@@ -644,6 +679,29 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
   }
 
   function clearSingle(category: 'world' | 'protagonist') {
+    if (category === 'world') {
+      setAccumulated((prev) => {
+        const hasSource = prev.world?.sourceTitle || prev.world?.sourceAuthor || prev.world?.sourceScope
+        return {
+          ...prev,
+          world: hasSource
+            ? {
+                name: '',
+                genreTone: '',
+                conflict: '',
+                powerSystem: '',
+                eraTechLevel: '',
+                keyFactions: '',
+                background: '',
+                sourceTitle: prev.world?.sourceTitle,
+                sourceAuthor: prev.world?.sourceAuthor,
+                sourceScope: prev.world?.sourceScope,
+              }
+            : undefined,
+        }
+      })
+      return
+    }
     setAccumulated((prev) => ({ ...prev, [category]: undefined }))
   }
 
@@ -715,216 +773,256 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
     switch (phase.id) {
       case 'world': {
         const w = accumulated.world
-        if (!w) {
-          return (
-            <div className="flex justify-center pt-2">
-              <button
-                type="button"
-                onClick={startManualWorld}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/15 text-gold-primary text-xs font-display transition-colors"
-              >
-                <Plus size={14} />
-                <span>Create World Foundation Manually</span>
-              </button>
-            </div>
-          )
-        }
-
-        if (editingKey === 'world') {
-          return (
-            <div className="rounded-xl border border-gold-primary/60 bg-[#161a28] p-4 flex flex-col gap-3">
-              <div className="flex items-center justify-between border-b border-gold-accent/20 pb-2">
-                <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary font-bold">Edit World Foundation</span>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => saveEditing('world')}
-                    className="px-2.5 py-1 rounded-lg bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1 hover:bg-gold-primary/90 transition-colors"
-                  >
-                    <Save size={13} /> Save
-                  </button>
-                  <button
-                    type="button"
-                    onClick={cancelEditing}
-                    className="px-2 py-1 rounded-lg border border-gold-accent/30 text-ink-muted font-display text-xs hover:text-ink transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div className="flex flex-col gap-1">
-                  <label className="font-mono text-[10px] uppercase text-gold-primary/70">World Name</label>
-                  <input
-                    type="text"
-                    value={editFormData.name || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                    className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="font-mono text-[10px] uppercase text-gold-primary/70">Genre & Tone</label>
-                  <input
-                    type="text"
-                    value={editFormData.genreTone || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, genreTone: e.target.value })}
-                    className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="font-mono text-[10px] uppercase text-gold-primary/70">Era & Technology</label>
-                  <input
-                    type="text"
-                    value={editFormData.eraTechLevel || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, eraTechLevel: e.target.value })}
-                    className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="font-mono text-[10px] uppercase text-gold-primary/70">Power & Magic System</label>
-                  <input
-                    type="text"
-                    value={editFormData.powerSystem || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, powerSystem: e.target.value })}
-                    className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
-                  />
-                </div>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="font-mono text-[10px] uppercase text-gold-primary/70">Key Factions Summary</label>
-                <input
-                  type="text"
-                  value={editFormData.keyFactions || ''}
-                  onChange={(e) => setEditFormData({ ...editFormData, keyFactions: e.target.value })}
-                  className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="font-mono text-[10px] uppercase text-gold-primary/70">Central Conflict</label>
-                <textarea
-                  rows={2}
-                  value={editFormData.conflict || ''}
-                  onChange={(e) => setEditFormData({ ...editFormData, conflict: e.target.value })}
-                  className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary resize-none"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="font-mono text-[10px] uppercase text-gold-primary/70">World Background / Lore</label>
-                <textarea
-                  rows={3}
-                  value={editFormData.background || ''}
-                  onChange={(e) => setEditFormData({ ...editFormData, background: e.target.value })}
-                  className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary resize-none"
-                />
-              </div>
-              <div className="flex flex-col gap-2 border-t border-gold-accent/20 pt-3">
-                <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">Source Material (optional)</span>
-                <p className="font-narrative text-[11px] text-ink-muted/80 -mt-1">
-                  Naming a real novel here asks the narrator to stay accurate to its canon — characters, places, and established
-                  facts — instead of treating it as loose inspiration. Set a Canon Scope Boundary to stop it from referencing or
-                  spoiling anything past the point you've read.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div className="flex flex-col gap-1">
-                    <label className="font-mono text-[10px] uppercase text-gold-primary/70">Novel Inspiration</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Fourth Wing"
-                      value={editFormData.sourceTitle || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, sourceTitle: e.target.value })}
-                      className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="font-mono text-[10px] uppercase text-gold-primary/70">Author</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Rebecca Yarros"
-                      value={editFormData.sourceAuthor || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, sourceAuthor: e.target.value })}
-                      className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="font-mono text-[10px] uppercase text-gold-primary/70">Canon Scope Boundary</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Prologue only, Book 1, through Chapter 12 — leave blank if unsure"
-                    value={editFormData.sourceScope || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, sourceScope: e.target.value })}
-                    className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
-                  />
-                </div>
-              </div>
-            </div>
-          )
-        }
+        const hasWorldContent = Boolean(
+          w && (w.name || w.genreTone || w.conflict || w.powerSystem || w.eraTechLevel || w.keyFactions || w.background)
+        )
 
         return (
-          <div className="rounded-xl border border-gold-accent/35 bg-[#161a28] p-4 flex flex-col gap-3">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">World Foundation</span>
-                <h3 className="font-display font-bold text-base text-gold-primary">{w.name || 'Untitled World'}</h3>
+          <div className="flex flex-col gap-3">
+            {/* Inspiration Section - First Priority */}
+            <div className="rounded-xl border border-gold-accent/35 bg-[#141824] p-3.5 sm:p-4 flex flex-col gap-3 shadow-sm">
+              <div className="flex items-center justify-between gap-2 border-b border-gold-accent/15 pb-2">
+                <div className="flex items-center gap-2">
+                  <BookOpen size={15} className="text-gold-primary" />
+                  <span className="font-display font-bold text-xs text-gold-primary uppercase tracking-wider">
+                    Novel Inspiration & Canon Scope
+                  </span>
+                </div>
+                <span className="font-mono text-[10px] text-gold-accent uppercase px-2 py-0.5 rounded bg-gold-accent/10 border border-gold-accent/20 font-medium">
+                  Priority Anchor
+                </span>
               </div>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => startEditing('world', w)}
-                  className="text-gold-primary/70 hover:text-gold-primary p-1 rounded hover:bg-gold-accent/10 transition-colors"
-                  title="Edit World Foundation"
-                >
-                  <Pencil size={15} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => clearSingle('world')}
-                  className="text-red-400/70 hover:text-red-300 p-1 rounded hover:bg-red-400/10 transition-colors"
-                  title="Clear world"
-                >
-                  <X size={15} />
-                </button>
+
+              <div className="rounded-lg bg-[#0d1017]/70 border border-gold-accent/20 p-2.5 flex items-start gap-2">
+                <Info size={14} className="text-gold-primary shrink-0 mt-0.5" />
+                <p className="font-narrative text-[11px] text-ink/85 leading-relaxed">
+                  The world will try to accurately represent the novel universe from that source, but note that as an LLM there will still be significant difference to the original literature.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                <div className="flex flex-col gap-1">
+                  <label className="font-mono text-[10px] uppercase text-gold-accent font-medium flex items-center justify-between">
+                    <span>Novel Title</span>
+                    <span className="text-ink-muted/70 text-[9px] font-normal lowercase">priority source</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Fourth Wing, Dune, Lord of the Mysteries"
+                    value={w?.sourceTitle || ''}
+                    onChange={(e) => updateSourceMaterial('sourceTitle', e.target.value)}
+                    className="px-3 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink placeholder:text-ink-muted/40 outline-none focus:border-gold-primary transition-colors"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="font-mono text-[10px] uppercase text-gold-accent font-medium flex items-center justify-between">
+                    <span>Author</span>
+                    <span className="text-ink-muted/70 text-[9px] font-normal lowercase">optional</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Rebecca Yarros, Frank Herbert"
+                    value={w?.sourceAuthor || ''}
+                    onChange={(e) => updateSourceMaterial('sourceAuthor', e.target.value)}
+                    className="px-3 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink placeholder:text-ink-muted/40 outline-none focus:border-gold-primary transition-colors"
+                  />
+                </div>
+                <div className="flex flex-col gap-1 sm:col-span-2 lg:col-span-1">
+                  <label className="font-mono text-[10px] uppercase text-gold-accent font-medium flex items-center justify-between">
+                    <span>Canon Scope Boundary</span>
+                    <span className="text-ink-muted/70 text-[9px] font-normal lowercase">spoiler limit</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Book 1 only, through Ch. 12, or leave blank"
+                    value={w?.sourceScope || ''}
+                    onChange={(e) => updateSourceMaterial('sourceScope', e.target.value)}
+                    className="px-3 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink placeholder:text-ink-muted/40 outline-none focus:border-gold-primary transition-colors"
+                  />
+                </div>
               </div>
             </div>
-            {w.genreTone && (
-              <div>
-                <span className="font-mono text-[10px] uppercase text-ink-muted/80">Genre & Tone</span>
-                <p className="font-narrative text-xs text-ink">{w.genreTone}</p>
+
+            {/* World Foundation Entity Area */}
+            {editingKey === 'world' ? (
+              <div className="rounded-xl border border-gold-primary/60 bg-[#161a28] p-4 flex flex-col gap-3">
+                <div className="flex items-center justify-between border-b border-gold-accent/20 pb-2">
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary font-bold">Edit World Foundation</span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => saveEditing('world')}
+                      className="px-2.5 py-1 rounded-lg bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1 hover:bg-gold-primary/90 transition-colors"
+                    >
+                      <Save size={13} /> Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelEditing}
+                      className="px-2 py-1 rounded-lg border border-gold-accent/30 text-ink-muted font-display text-xs hover:text-ink transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="flex flex-col gap-1">
+                    <label className="font-mono text-[10px] uppercase text-gold-primary/70">World Name</label>
+                    <input
+                      type="text"
+                      value={editFormData.name || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                      className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="font-mono text-[10px] uppercase text-gold-primary/70">Genre & Tone</label>
+                    <input
+                      type="text"
+                      value={editFormData.genreTone || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, genreTone: e.target.value })}
+                      className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="font-mono text-[10px] uppercase text-gold-primary/70">Era & Technology</label>
+                    <input
+                      type="text"
+                      value={editFormData.eraTechLevel || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, eraTechLevel: e.target.value })}
+                      className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="font-mono text-[10px] uppercase text-gold-primary/70">Power & Magic System</label>
+                    <input
+                      type="text"
+                      value={editFormData.powerSystem || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, powerSystem: e.target.value })}
+                      className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="font-mono text-[10px] uppercase text-gold-primary/70">Key Factions Summary</label>
+                  <input
+                    type="text"
+                    value={editFormData.keyFactions || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, keyFactions: e.target.value })}
+                    className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="font-mono text-[10px] uppercase text-gold-primary/70">Central Conflict</label>
+                  <textarea
+                    rows={2}
+                    value={editFormData.conflict || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, conflict: e.target.value })}
+                    className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary resize-none"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="font-mono text-[10px] uppercase text-gold-primary/70">World Background / Lore</label>
+                  <textarea
+                    rows={3}
+                    value={editFormData.background || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, background: e.target.value })}
+                    className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary resize-none"
+                  />
+                </div>
               </div>
-            )}
-            {w.conflict && (
-              <div>
-                <span className="font-mono text-[10px] uppercase text-ink-muted/80">Central Conflict</span>
-                <p className="font-narrative text-xs text-ink">{w.conflict}</p>
+            ) : hasWorldContent && w ? (
+              <div className="rounded-xl border border-gold-accent/35 bg-[#161a28] p-4 flex flex-col gap-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">World Foundation</span>
+                    <h3 className="font-display font-bold text-base text-gold-primary">{w.name || 'Untitled World'}</h3>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => startEditing('world', w)}
+                      className="text-gold-primary/70 hover:text-gold-primary p-1 rounded hover:bg-gold-accent/10 transition-colors"
+                      title="Edit World Foundation"
+                    >
+                      <Pencil size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => clearSingle('world')}
+                      className="text-red-400/70 hover:text-red-300 p-1 rounded hover:bg-red-400/10 transition-colors"
+                      title="Clear world"
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
+                </div>
+                {w.genreTone && (
+                  <div>
+                    <span className="font-mono text-[10px] uppercase text-ink-muted/80">Genre & Tone</span>
+                    <p className="font-narrative text-xs text-ink">{w.genreTone}</p>
+                  </div>
+                )}
+                {w.conflict && (
+                  <div>
+                    <span className="font-mono text-[10px] uppercase text-ink-muted/80">Central Conflict</span>
+                    <p className="font-narrative text-xs text-ink">{w.conflict}</p>
+                  </div>
+                )}
+                {w.powerSystem && (
+                  <div>
+                    <span className="font-mono text-[10px] uppercase text-ink-muted/80">Power & Magic System</span>
+                    <p className="font-narrative text-xs text-ink">{w.powerSystem}</p>
+                  </div>
+                )}
+                {w.eraTechLevel && (
+                  <div>
+                    <span className="font-mono text-[10px] uppercase text-ink-muted/80">Era & Technology</span>
+                    <p className="font-narrative text-xs text-ink">{w.eraTechLevel}</p>
+                  </div>
+                )}
+                {w.background && (
+                  <div>
+                    <span className="font-mono text-[10px] uppercase text-ink-muted/80">Background & History</span>
+                    <p className="font-narrative text-xs text-ink/80">{w.background}</p>
+                  </div>
+                )}
               </div>
-            )}
-            {w.powerSystem && (
-              <div>
-                <span className="font-mono text-[10px] uppercase text-ink-muted/80">Power & Magic System</span>
-                <p className="font-narrative text-xs text-ink">{w.powerSystem}</p>
-              </div>
-            )}
-            {w.eraTechLevel && (
-              <div>
-                <span className="font-mono text-[10px] uppercase text-ink-muted/80">Era & Technology</span>
-                <p className="font-narrative text-xs text-ink">{w.eraTechLevel}</p>
-              </div>
-            )}
-            {w.background && (
-              <div>
-                <span className="font-mono text-[10px] uppercase text-ink-muted/80">Background & History</span>
-                <p className="font-narrative text-xs text-ink/80">{w.background}</p>
-              </div>
-            )}
-            {w.sourceTitle && (
-              <div className="rounded-lg border border-gold-accent/25 bg-gold-accent/5 px-2.5 py-2">
-                <span className="font-mono text-[10px] uppercase text-gold-primary/80">
-                  Lore-Accurate to "{w.sourceTitle}"{w.sourceAuthor ? ` by ${w.sourceAuthor}` : ''}
-                </span>
-                <p className="font-narrative text-[11px] text-ink-muted mt-0.5">
-                  {w.sourceScope ? `Canon scope: ${w.sourceScope}` : 'No canon scope set — narrator will stay to broad, widely-known facts only.'}
-                </p>
+            ) : (
+              <div className="rounded-xl border border-gold-accent/20 bg-[#161a28]/60 p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 text-center sm:text-left">
+                  <div className="p-2 rounded-lg bg-gold-accent/10 border border-gold-accent/20 text-gold-primary shrink-0 hidden sm:flex">
+                    <Sparkles size={16} />
+                  </div>
+                  <div>
+                    <p className="font-display font-semibold text-xs text-gold-primary">
+                      World Foundation Draft Pending
+                    </p>
+                    <p className="font-narrative text-[11.5px] text-ink-muted">
+                      Add direction below and weave, or establish the realm manually.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={handleGenerate}
+                    disabled={busy}
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold-accent/25 hover:bg-gold-accent/35 border border-gold-accent/40 text-gold-primary font-display font-semibold text-xs transition-colors"
+                  >
+                    <Sparkles size={13} />
+                    <span>Auto-Weave</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={startManualWorld}
+                    disabled={busy}
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/25 bg-[#161a28] hover:bg-gold-accent/15 text-ink-muted hover:text-ink font-display text-xs transition-colors"
+                  >
+                    <Plus size={13} />
+                    <span>Manual Entry</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -935,15 +1033,40 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
         const p = accumulated.protagonist
         if (!p) {
           return (
-            <div className="flex justify-center pt-2">
-              <button
-                type="button"
-                onClick={startManualProtagonist}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/15 text-gold-primary text-xs font-display transition-colors"
-              >
-                <Plus size={14} />
-                <span>Create Protagonist Manually</span>
-              </button>
+            <div className="rounded-xl border border-gold-accent/20 bg-[#161a28]/60 p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 text-center sm:text-left">
+                <div className="p-2 rounded-lg bg-gold-accent/10 border border-gold-accent/20 text-gold-primary shrink-0 hidden sm:flex">
+                  <Sparkles size={16} />
+                </div>
+                <div>
+                  <p className="font-display font-semibold text-xs text-gold-primary">
+                    Protagonist Draft Pending
+                  </p>
+                  <p className="font-narrative text-[11.5px] text-ink-muted">
+                    Provide character details below to auto-weave, or craft your hero manually.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={handleGenerate}
+                  disabled={busy}
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold-accent/25 hover:bg-gold-accent/35 border border-gold-accent/40 text-gold-primary font-display font-semibold text-xs transition-colors"
+                >
+                  <Sparkles size={13} />
+                  <span>Auto-Weave Hero</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={startManualProtagonist}
+                  disabled={busy}
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/25 bg-[#161a28] hover:bg-gold-accent/15 text-ink-muted hover:text-ink font-display text-xs transition-colors"
+                >
+                  <Plus size={13} />
+                  <span>Manual Entry</span>
+                </button>
+              </div>
             </div>
           )
         }
@@ -1098,23 +1221,40 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
         const hasLocations = accumulated.locations.length > 0
         if (!hasRegions && !hasLocations) {
           return (
-            <div className="flex items-center justify-center gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => addCustomItem('regions')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/15 text-gold-primary text-xs font-display transition-colors"
-              >
-                <Plus size={14} />
-                <span>Add Region</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => addCustomItem('locations')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/15 text-gold-primary text-xs font-display transition-colors"
-              >
-                <Plus size={14} />
-                <span>Add Location</span>
-              </button>
+            <div className="rounded-xl border border-gold-accent/20 bg-[#161a28]/60 p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 text-center sm:text-left">
+                <div className="p-2 rounded-lg bg-gold-accent/10 border border-gold-accent/20 text-gold-primary shrink-0 hidden sm:flex">
+                  <Sparkles size={16} />
+                </div>
+                <div>
+                  <p className="font-display font-semibold text-xs text-gold-primary">
+                    Geography & Key Sites Pending
+                  </p>
+                  <p className="font-narrative text-[11.5px] text-ink-muted">
+                    Weave starting provinces and key landmarks, or define them manually.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={handleGenerate}
+                  disabled={busy}
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold-accent/25 hover:bg-gold-accent/35 border border-gold-accent/40 text-gold-primary font-display font-semibold text-xs transition-colors"
+                >
+                  <Sparkles size={13} />
+                  <span>Auto-Weave</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addCustomItem('regions')}
+                  disabled={busy}
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/25 bg-[#161a28] hover:bg-gold-accent/15 text-ink-muted hover:text-ink font-display text-xs transition-colors"
+                >
+                  <Plus size={13} />
+                  <span>Add Region</span>
+                </button>
+              </div>
             </div>
           )
         }
@@ -1344,15 +1484,40 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
               </button>
             </div>
             {!accumulated.factions.length ? (
-              <div className="flex justify-center pt-2">
-                <button
-                  type="button"
-                  onClick={() => addCustomItem('factions')}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/15 text-gold-primary text-xs font-display transition-colors"
-                >
-                  <Plus size={14} />
-                  <span>Add Faction Manually</span>
-                </button>
+              <div className="rounded-xl border border-gold-accent/20 bg-[#161a28]/60 p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 text-center sm:text-left">
+                  <div className="p-2 rounded-lg bg-gold-accent/10 border border-gold-accent/20 text-gold-primary shrink-0 hidden sm:flex">
+                    <Sparkles size={16} />
+                  </div>
+                  <div>
+                    <p className="font-display font-semibold text-xs text-gold-primary">
+                      Factions & Powers Pending
+                    </p>
+                    <p className="font-narrative text-[11.5px] text-ink-muted">
+                      Weave influential factions and power struggles, or add one manually.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={handleGenerate}
+                    disabled={busy}
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold-accent/25 hover:bg-gold-accent/35 border border-gold-accent/40 text-gold-primary font-display font-semibold text-xs transition-colors"
+                  >
+                    <Sparkles size={13} />
+                    <span>Auto-Weave</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => addCustomItem('factions')}
+                    disabled={busy}
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/25 bg-[#161a28] hover:bg-gold-accent/15 text-ink-muted hover:text-ink font-display text-xs transition-colors"
+                  >
+                    <Plus size={13} />
+                    <span>Add Faction</span>
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -1467,15 +1632,40 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
               </button>
             </div>
             {!accumulated.npcs.length ? (
-              <div className="flex justify-center pt-2">
-                <button
-                  type="button"
-                  onClick={() => addCustomItem('npcs')}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/15 text-gold-primary text-xs font-display transition-colors"
-                >
-                  <Plus size={14} />
-                  <span>Add Character Manually</span>
-                </button>
+              <div className="rounded-xl border border-gold-accent/20 bg-[#161a28]/60 p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 text-center sm:text-left">
+                  <div className="p-2 rounded-lg bg-gold-accent/10 border border-gold-accent/20 text-gold-primary shrink-0 hidden sm:flex">
+                    <Sparkles size={16} />
+                  </div>
+                  <div>
+                    <p className="font-display font-semibold text-xs text-gold-primary">
+                      Characters & Allies Pending
+                    </p>
+                    <p className="font-narrative text-[11.5px] text-ink-muted">
+                      Weave key NPCs, mentors, and rivals, or add one manually.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={handleGenerate}
+                    disabled={busy}
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold-accent/25 hover:bg-gold-accent/35 border border-gold-accent/40 text-gold-primary font-display font-semibold text-xs transition-colors"
+                  >
+                    <Sparkles size={13} />
+                    <span>Auto-Weave</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => addCustomItem('npcs')}
+                    disabled={busy}
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/25 bg-[#161a28] hover:bg-gold-accent/15 text-ink-muted hover:text-ink font-display text-xs transition-colors"
+                  >
+                    <Plus size={13} />
+                    <span>Add Character</span>
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -1620,15 +1810,40 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
               </button>
             </div>
             {!accumulated.lore.length ? (
-              <div className="flex justify-center pt-2">
-                <button
-                  type="button"
-                  onClick={() => addCustomItem('lore')}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/15 text-gold-primary text-xs font-display transition-colors"
-                >
-                  <Plus size={14} />
-                  <span>Add Lore Manually</span>
-                </button>
+              <div className="rounded-xl border border-gold-accent/20 bg-[#161a28]/60 p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 text-center sm:text-left">
+                  <div className="p-2 rounded-lg bg-gold-accent/10 border border-gold-accent/20 text-gold-primary shrink-0 hidden sm:flex">
+                    <Sparkles size={16} />
+                  </div>
+                  <div>
+                    <p className="font-display font-semibold text-xs text-gold-primary">
+                      Lore & Secrets Pending
+                    </p>
+                    <p className="font-narrative text-[11.5px] text-ink-muted">
+                      Weave myths, ancient history, and hidden truths, or add an entry manually.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={handleGenerate}
+                    disabled={busy}
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold-accent/25 hover:bg-gold-accent/35 border border-gold-accent/40 text-gold-primary font-display font-semibold text-xs transition-colors"
+                  >
+                    <Sparkles size={13} />
+                    <span>Auto-Weave</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => addCustomItem('lore')}
+                    disabled={busy}
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/25 bg-[#161a28] hover:bg-gold-accent/15 text-ink-muted hover:text-ink font-display text-xs transition-colors"
+                  >
+                    <Plus size={13} />
+                    <span>Add Lore</span>
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -1731,6 +1946,46 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
         const hasBeats = accumulated.beats.length > 0
         const hasEvents = (accumulated.narrativeEvents?.length ?? 0) > 0
         const hasStakes = Boolean(accumulated.deathRule || accumulated.endGameRules)
+
+        if (!hasBeats && !hasEvents && !hasStakes) {
+          return (
+            <div className="rounded-xl border border-gold-accent/20 bg-[#161a28]/60 p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 text-center sm:text-left">
+                <div className="p-2 rounded-lg bg-gold-accent/10 border border-gold-accent/20 text-gold-primary shrink-0 hidden sm:flex">
+                  <Sparkles size={16} />
+                </div>
+                <div>
+                  <p className="font-display font-semibold text-xs text-gold-primary">
+                    Narrative Arc & Climax Pending
+                  </p>
+                  <p className="font-narrative text-[11.5px] text-ink-muted">
+                    Weave central story beats, complications, and stakes, or draft them manually.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={handleGenerate}
+                  disabled={busy}
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold-accent/25 hover:bg-gold-accent/35 border border-gold-accent/40 text-gold-primary font-display font-semibold text-xs transition-colors"
+                >
+                  <Sparkles size={13} />
+                  <span>Auto-Weave</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addCustomItem('beats')}
+                  disabled={busy}
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/25 bg-[#161a28] hover:bg-gold-accent/15 text-ink-muted hover:text-ink font-display text-xs transition-colors"
+                >
+                  <Plus size={13} />
+                  <span>Add Beat</span>
+                </button>
+              </div>
+            </div>
+          )
+        }
 
         return (
           <div className="flex flex-col gap-4">
@@ -2191,18 +2446,18 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
 
         {/* Main Content Area */}
         <div ref={contentAreaRef} className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 py-2 pr-1">
-          {/* Phase Goal Banner */}
-          <div className="rounded-xl border border-gold-accent/30 bg-[#161a28]/80 p-3.5 flex flex-col gap-1 shadow-md">
-            <div className="flex items-center justify-between gap-2 border-b border-gold-accent/15 pb-1.5">
-              <span className="font-display font-bold text-xs text-gold-primary uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles size={13} className="text-gold-accent" />
+          {/* Phase Header & Description */}
+          <div className="px-1 py-1 flex flex-col gap-1 shrink-0">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="font-display font-semibold text-xs sm:text-sm text-gold-primary tracking-wide flex items-center gap-1.5">
+                <Sparkles size={13} className="text-gold-accent shrink-0" />
                 Phase {phaseIdx + 1}: {phase.label}
-              </span>
+              </h2>
               <span className="font-mono text-[10.5px] text-gold-accent/80 font-medium">
-                {currentHasContent ? `${getPhaseCount(phase.id, accumulated)} established` : 'Not yet woven'}
+                {currentHasContent ? `${getPhaseCount(phase.id, accumulated)} established` : 'Draft pending'}
               </span>
             </div>
-            <p className="font-narrative text-xs text-ink/90 leading-relaxed pt-1">
+            <p className="font-narrative text-xs text-ink-muted leading-relaxed">
               {phase.prompt}
             </p>
           </div>
@@ -2224,33 +2479,8 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
             </div>
           )}
 
-          {/* Active Phase Content Cards */}
+          {/* Active Phase Content */}
           {renderActivePhaseContent()}
-
-          {/* Empty State */}
-          {!currentHasContent && !busy && (
-            <div className="rounded-xl border border-dashed border-gold-accent/25 bg-black/30 p-8 flex flex-col items-center justify-center text-center gap-3 my-auto max-w-lg mx-auto w-full">
-              <div className="p-3 rounded-full bg-gold-accent/10 border border-gold-accent/20 text-gold-primary">
-                <Sparkles size={24} />
-              </div>
-              <div className="flex flex-col gap-1">
-                <p className="font-display font-bold text-sm text-gold-primary">
-                  No {phase.label.toLowerCase()} established yet
-                </p>
-                <p className="font-narrative text-xs text-ink-muted leading-relaxed">
-                  Type your specific vision in the guidance box below, or leave it blank to let the narrator craft it for you.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleGenerate}
-                className="mt-1 px-4 py-2 rounded-xl bg-gold-accent/25 hover:bg-gold-accent/40 border border-gold-accent/50 text-gold-primary font-display font-semibold text-xs flex items-center gap-1.5 transition-colors shadow-md"
-              >
-                <Sparkles size={14} />
-                <span>Auto-Weave {phase.label}</span>
-              </button>
-            </div>
-          )}
 
           {/* Busy Indicator */}
           {busy && (
@@ -2267,71 +2497,74 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
         </div>
 
         {/* Bottom Control Deck */}
-        <div className="shrink-0 flex flex-col gap-2.5 pt-2.5 border-t border-gold-accent/20 bg-[#121520]/60 p-3 rounded-2xl">
+        <div className="shrink-0 flex flex-col gap-2 pt-2 border-t border-gold-accent/20 bg-[#121520]/80 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl">
           {/* Guidance Input & Weave Trigger */}
-          <div className="flex items-stretch gap-2.5">
-            <div className="flex-1 relative">
-              <textarea
-                value={guidance}
-                onChange={(e) => setGuidance(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    handleGenerate()
-                  }
-                }}
-                placeholder={`Guide this phase (e.g. tone, names, themes), or leave blank for a surprise...`}
-                rows={2}
-                disabled={busy}
-                className="w-full block px-3.5 py-2.5 rounded-xl bg-[#161a28] border border-gold-accent/35 text-xs text-ink placeholder:text-ink-muted/50 outline-none resize-none disabled:opacity-50 focus:border-gold-primary transition-colors shadow-inner"
-              />
-            </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={guidance}
+              onChange={(e) => setGuidance(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  handleGenerate()
+                }
+              }}
+              placeholder={`Guide this phase (e.g. tone, names, themes), or leave blank...`}
+              disabled={busy}
+              className="flex-1 px-3 py-2 rounded-xl bg-[#161a28] border border-gold-accent/30 text-xs text-ink placeholder:text-ink-muted/50 outline-none disabled:opacity-50 focus:border-gold-primary transition-colors h-10"
+            />
             <button
               type="button"
               onClick={handleGenerate}
               disabled={busy}
-              className="shrink-0 px-4 py-2.5 rounded-xl bg-gradient-to-b from-gold-accent/35 to-gold-accent/20 hover:from-gold-accent/50 hover:to-gold-accent/30 border border-gold-accent/60 text-gold-primary font-display font-bold text-xs flex flex-col items-center justify-center gap-1 disabled:opacity-40 transition-all shadow-md min-w-[90px]"
+              className="shrink-0 px-3.5 sm:px-4 h-10 rounded-xl bg-gold-accent/20 hover:bg-gold-accent/30 border border-gold-accent/40 text-gold-primary font-display font-semibold text-xs flex items-center justify-center gap-1.5 disabled:opacity-40 transition-colors shadow-sm"
+              title={currentHasContent ? 'Weave more entries for this phase' : 'Auto-weave this phase'}
             >
-              <Sparkles size={16} className={busy ? 'animate-spin' : ''} />
-              <span>{currentHasContent ? 'Add More' : 'Weave'}</span>
+              <Sparkles size={14} className={busy ? 'animate-spin' : ''} />
+              <span className="hidden xs:inline">{currentHasContent ? 'Weave More' : 'Weave'}</span>
             </button>
           </div>
 
-          {/* Navigation Actions (Previous vs Next) */}
-          <div className="flex items-center justify-between gap-3">
+          {/* Navigation Actions (Back vs Next) */}
+          <div className="flex items-center justify-between gap-2">
             {phaseIdx > 0 ? (
               <button
                 type="button"
                 onClick={handlePreviousPhase}
                 disabled={busy}
-                className="flex-1 max-w-[180px] flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/20 text-gold-primary/90 font-display font-medium text-xs disabled:opacity-40 transition-colors"
+                className="flex items-center justify-center gap-1.5 px-3.5 sm:px-4 h-9 sm:h-10 rounded-xl border border-gold-accent/25 bg-[#161a28] hover:bg-gold-accent/15 text-gold-primary/90 font-display font-medium text-xs disabled:opacity-40 transition-colors"
               >
                 <ChevronLeft size={15} />
-                <span>Previous Phase</span>
+                <span>Back</span>
               </button>
             ) : (
               <button
                 type="button"
                 onClick={handleSafeExit}
                 disabled={busy}
-                className="flex-1 max-w-[180px] flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-gold-accent/20 bg-black/30 hover:bg-gold-accent/10 text-ink-muted font-display text-xs disabled:opacity-40 transition-colors"
+                className="flex items-center justify-center gap-1 px-3 sm:px-4 h-9 sm:h-10 rounded-xl border border-gold-accent/15 bg-black/20 hover:bg-gold-accent/10 text-ink-muted hover:text-ink font-display text-xs disabled:opacity-40 transition-colors"
               >
-                <span>Cancel</span>
+                <span>Exit</span>
               </button>
             )}
+
+            <span className="font-mono text-[11px] text-ink-muted/70 hidden sm:inline">
+              Step {phaseIdx + 1} of {TALE_WEAVER_PHASES.length}
+            </span>
 
             <button
               type="button"
               onClick={handleNext}
               disabled={busy}
-              className={`flex-1 max-w-sm flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-display font-bold text-xs sm:text-sm transition-all ${
+              className={`flex items-center justify-center gap-1.5 px-4 sm:px-5 h-9 sm:h-10 rounded-xl font-display font-semibold text-xs sm:text-sm transition-all ${
                 isLastPhase
-                  ? 'bg-gold-primary hover:bg-gold-primary/90 text-black shadow-[0_0_18px_rgba(212,175,55,0.35)]'
-                  : 'bg-gold-accent/25 hover:bg-gold-accent/35 border border-gold-accent/50 text-gold-primary'
+                  ? 'bg-gold-primary hover:bg-gold-primary/90 text-black shadow-[0_0_14px_rgba(212,175,55,0.3)]'
+                  : 'bg-gold-primary text-black hover:bg-gold-primary/90 shadow-sm'
               } disabled:opacity-40`}
             >
-              <span>{isLastPhase ? 'Review Tale Overview' : 'Next Phase'}</span>
-              <ChevronRight size={16} />
+              <span>{isLastPhase ? 'Review Tale' : 'Next'}</span>
+              <ChevronRight size={15} />
             </button>
           </div>
         </div>

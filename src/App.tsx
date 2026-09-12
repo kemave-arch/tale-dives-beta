@@ -2495,7 +2495,7 @@ export default function App() {
 
       {promptLabOpen && (
        <Suspense fallback={null}>
-        <PromptLab apiSettings={apiSettings} onBack={closePromptLab} />
+        <PromptLab apiSettings={apiSettings} activeWorld={game?.world} onBack={closePromptLab} />
        </Suspense>
       )}
 

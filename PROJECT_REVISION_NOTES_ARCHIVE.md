@@ -3578,3 +3578,18 @@ Ports Voyage's "Narrative Events"/`death`/`endGame` Mechanics concepts into Tale
 - # Tale Dives — Project Revision Notes
 
 
+- **Last updated:** 2026-09-12 — Fixed Location/Region-Map Image Aspect Ratios (`src/screens/Codex.tsx`, `src/screens/TaleWeaver.tsx`, `src/screens/PromptLab.tsx`):
+- **What changed**:
+  1. Location art renders in `Chronicle.tsx` as a full-screen `background-size: cover` backdrop behind the narration panel on a portrait mobile viewport — a 16:9 landscape source was getting heavily center-cropped there. Switched Location image generation to `9:16` at all three generation call sites (`Codex.tsx`, `TaleWeaver.tsx`, `PromptLab.tsx`) so cover-crop stays minimal on mobile/tablet.
+  2. Found `TaleWeaver.tsx` and `Codex.tsx` disagreed on Region Map's aspect ratio (`16:9` vs `4:3`) for the same `mapImageKey` field — maps render in a bounded card, not a background, so landscape is still correct there; unified both to `4:3` and matched `PromptLab.tsx`'s dev-tool mirror to it.
+- **Verification**: `npx tsc --noEmit` and `npm run build` clean.
+
+
+- **Last updated:** 2026-09-12 — Lore Accuracy System: Switched Image Generation to Direct Canon References (`src/lib/canonDescription.ts`, `src/lib/imageGeneration.ts`, `src/screens/Codex.tsx`, `src/screens/PromptLab.tsx`, `src/types.ts`):
+- **What changed**:
+  1. The prior design resolved a name-redacted, paraphrased canon description (Stage 1) and also stripped the real name out of the final image prompt itself (Stage 2), to reduce refusal risk on named copyrighted characters. Live user testing (AI Studio directly, and via the Image Prompt Lab) showed this backfired: `gemini-3.1-flash-lite-image` doesn't refuse direct references to real novels/characters at all, and the redacted/paraphrased prompt produced portraits noticeably far from actual canon — the image model's own trained visual association with a named, real work was being thrown away for no benefit.
+  2. Reversed course entirely: `buildNpcPortraitPrompt`/`buildLocationImagePrompt`/`buildRegionMapPrompt` (`imageGeneration.ts`) now always receive the real entity name, and a new `canonReferenceLine()` helper appends a direct "Canon Reference" citation (real title/author/scope) to all three prompts whenever `world.sourceTitle`+`sourceScope` are set — worded assertively ("the real, existing subject... not an original reinterpretation... prioritize canon accuracy over invention") per explicit instruction to drop the IP-caution hedging.
+  3. `canonDescription.ts`'s Stage 1 system instructions dropped every "never write the proper name/title" constraint — that step's job is now purely extracting concrete canon visual detail and preserving cross-regeneration continuity, not redaction.
+- **Verification**: `tsc --noEmit` and `npm run build` clean; live Playwright pass via the Image Prompt Lab confirmed a prompt built with Fourth Wing/Rebecca Yarros/Book 1 set now shows the real character name in the opening line plus a full Canon Reference block citing the book and author directly.
+
+

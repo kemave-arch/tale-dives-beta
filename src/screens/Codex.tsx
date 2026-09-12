@@ -3256,7 +3256,7 @@ export default function Codex({
                   )}
                   apiSettings={apiSettings}
                   onSaveKey={(key) => onUpdateLocation(entryId, { imageKey: key })}
-                  aspectRatio="16:9"
+                  aspectRatio="9:16"
                   canonResolve={world?.sourceTitle && world?.sourceScope ? {
                     hasExisting: Boolean(locations[entryId].canonDescription),
                     resolve: async (developmentNote) => {

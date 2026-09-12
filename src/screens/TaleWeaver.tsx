@@ -2499,7 +2499,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                           imageKey={l.imageKey}
                           prompt={buildLocationImagePrompt(l.name, l.desc, accumulated.world)}
                           apiSettings={apiSettings}
-                          aspectRatio="16:9"
+                          aspectRatio="9:16"
                           label="Illustrate Location"
                           onSaveKey={(key) => {
                             setAccumulated((prev) => ({
@@ -2526,7 +2526,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                             accumulated.world,
                           )}
                           apiSettings={apiSettings}
-                          aspectRatio="16:9"
+                          aspectRatio="4:3"
                           label="Illustrate Region Map"
                           onSaveKey={(key) => {
                             setAccumulated((prev) => ({

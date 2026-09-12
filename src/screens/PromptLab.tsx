@@ -21,8 +21,8 @@ type EntityKind = 'character' | 'location' | 'map'
 
 const ASPECT_BY_KIND: Record<EntityKind, ImageAspectRatio> = {
   character: '1:1',
-  location: '16:9',
-  map: '16:9',
+  location: '9:16',
+  map: '4:3',
 }
 
 function Field({ label, value, onChange, textarea, placeholder }: { label: string; value: string; onChange: (v: string) => void; textarea?: boolean; placeholder?: string }) {

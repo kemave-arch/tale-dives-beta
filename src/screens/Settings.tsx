@@ -3,7 +3,7 @@ import {
   Cpu, SlidersHorizontal, HardDrive, Cloud, X, Download, Upload, RotateCcw,
   FolderOpen, FolderX, Maximize, Minimize, Trash2, Volume2, VolumeX, Music,
   CloudUpload, CloudDownload, Loader2, Check, RefreshCw, KeyRound, Bot, Server,
-  Dice5, Layers, Monitor, Bug, UserCircle, History, AlertTriangle, LogOut, Gauge,
+  Dice5, Layers, Monitor, Bug, UserCircle, History, AlertTriangle, LogOut, Gauge, FlaskConical,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { PROSE_DEPTHS } from '../api/turnContract.ts'
@@ -48,6 +48,7 @@ interface SettingsProps {
   onToggleMusicMute?: () => void
   onBackupCloud?: () => Promise<boolean>
   onRestoreCloud?: (fileId?: string) => Promise<boolean>
+  onOpenPromptLab?: () => void
 }
 
 // A field's label row: an icon (the "prefer icons" ask) + text, with an
@@ -92,6 +93,7 @@ export default function Settings({
   onToggleMusicMute,
   onBackupCloud,
   onRestoreCloud,
+  onOpenPromptLab,
 }: SettingsProps) {
   const [tab, setTab] = useState<(typeof TABS)[number]['id']>('model')
   const [provider, setProvider] = useState(apiSettings.provider)
@@ -409,6 +411,16 @@ export default function Settings({
                   className={`${FIELD_CLASS} font-mono mt-1.5`}
                 />
               </div>
+
+              {onOpenPromptLab && (
+                <button
+                  type="button"
+                  onClick={onOpenPromptLab}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/10 text-gold-primary text-xs font-display font-semibold self-start"
+                >
+                  <FlaskConical size={14} /> Open Image Prompt Lab
+                </button>
+              )}
 
               <div>
                 <div className="flex items-baseline justify-between">

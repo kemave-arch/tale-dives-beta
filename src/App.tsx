@@ -22,6 +22,7 @@ const SlashCommandManager = lazy(() => import('./screens/SlashCommandManager.tsx
 const TaleDiveWeaver = lazy(() => import('./screens/TaleDiveWeaver.tsx'))
 const TaleWeaver = lazy(() => import('./screens/TaleWeaver.tsx'))
 const WeaverCalibrator = lazy(() => import('./components/seedweaver/WeaverCalibrator.tsx'))
+const PromptLab = lazy(() => import('./screens/PromptLab.tsx'))
 import { getClassById, findClassById, PRESET_CLASSES } from './data/classes.ts'
 import { FOURTH_WING_WORLD, VIOLET_SORRENGAIL } from './data/starterTemplates.ts'
 import { buildContextSlice } from './lib/jitContext.ts'
@@ -124,6 +125,7 @@ export default function App() {
   })
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [slashManagerOpen, setSlashManagerOpen] = useState(false)
+  const [promptLabOpen, setPromptLabOpen] = useState(false)
   const historyDepthRef = useRef(0)
 
   // Navigate to screen and sync with browser history so mobile hardware back-key works
@@ -194,6 +196,12 @@ export default function App() {
         return
       }
 
+      // Close Image Prompt Lab if open
+      if (promptLabOpen) {
+        setPromptLabOpen(false)
+        return
+      }
+
       let nextScreen = event.state?.screen as Screen | undefined
 
       // Never pop back into transient loading/review steps via browser history
@@ -214,7 +222,7 @@ export default function App() {
 
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
-  }, [settingsOpen, slashManagerOpen])
+  }, [settingsOpen, slashManagerOpen, promptLabOpen])
 
   const [apiSettings, setApiSettings] = useState(store.loadApiSettings)
   const [uiPrefs, setUiPrefs] = useState(store.loadUiPrefs)
@@ -1878,6 +1886,18 @@ export default function App() {
     setSettingsOpen(false)
   }
 
+  function openPromptLab() {
+    window.history.pushState({ modal: 'prompt_lab' }, '')
+    setPromptLabOpen(true)
+  }
+
+  function closePromptLab() {
+    if (window.history.state?.modal === 'prompt_lab') {
+      window.history.back()
+    }
+    setPromptLabOpen(false)
+  }
+
   function openSlashManager() {
     window.history.pushState({ modal: 'slash_manager' }, '')
     setSlashManagerOpen(true)
@@ -2465,7 +2485,17 @@ export default function App() {
             sessionStorage.clear()
             window.location.reload()
           }}
+          onOpenPromptLab={() => {
+            setSettingsOpen(false)
+            openPromptLab()
+          }}
         />
+       </Suspense>
+      )}
+
+      {promptLabOpen && (
+       <Suspense fallback={null}>
+        <PromptLab apiSettings={apiSettings} onBack={closePromptLab} />
        </Suspense>
       )}
 

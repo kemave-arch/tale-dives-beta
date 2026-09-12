@@ -116,6 +116,18 @@ export type WorldStyleData = {
   genreTone?: string
   eraTechLevel?: string
   powerSystem?: string
+  // Lore Accuracy System (see lib/canonDescription.ts) — when both are set,
+  // buildLocationImagePrompt/buildNpcPortraitPrompt/buildRegionMapPrompt cite
+  // this source material directly (real title/author, not a redacted
+  // paraphrase) in the final prompt sent to the image model. Live testing
+  // against gemini-3.1-flash-lite-image showed direct named references to
+  // existing novels/characters are not refused, and produce far more
+  // canon-accurate results than a name-stripped description does — the model
+  // has its own trained visual association with the named work that a
+  // redacted prompt throws away.
+  sourceTitle?: string
+  sourceAuthor?: string
+  sourceScope?: string
 }
 
 function worldDirective(world?: WorldStyleData): string {
@@ -128,6 +140,23 @@ function worldDirective(world?: WorldStyleData): string {
     world.eraTechLevel && `technology/era: ${world.eraTechLevel}`,
     world.powerSystem && `power system: ${world.powerSystem}`,
   ].filter(Boolean).join('; ')
+}
+
+// Appended to every image prompt when the world names real source material
+// with a scope boundary set — see WorldStyleData's own comment above for why
+// this is a direct citation rather than a redacted paraphrase.
+function canonReferenceLine(world?: WorldStyleData): string {
+  if (!world?.sourceTitle?.trim() || !world?.sourceScope?.trim()) return ''
+  const attribution = world.sourceAuthor?.trim()
+    ? `"${world.sourceTitle.trim()}" by ${world.sourceAuthor.trim()}`
+    : `"${world.sourceTitle.trim()}"`
+  return `
+
+Canon Reference:
+This is the real, existing subject from ${attribution} — not an original reinterpretation. Depict it
+exactly as established in canon: actual design, physical appearance, and defining visual traits, as
+depicted up to: ${world.sourceScope.trim()}. Prioritize canon accuracy over invention in every detail
+canon actually establishes.`
 }
 
 export function buildLocationImagePrompt(
@@ -156,7 +185,7 @@ Composition:
 Art direction:
 Cinematic fantasy realism — painterly, richly detailed illustration with grounded lighting and
 materials. Not photorealistic, not a 3D game render, not a photo. Evocative concept-art quality,
-strong composition, cohesive color and lighting, detailed environment.
+strong composition, cohesive color and lighting, detailed environment.${canonReferenceLine(world)}
 
 Do not place readable text, labels, or logos in the artwork. No UI, captions, borders, or decorative interface elements.
 `.trim()
@@ -198,7 +227,7 @@ Character presentation:
 Art direction:
 Cinematic fantasy realism — painterly, richly detailed illustration with grounded lighting and
 materials. Not photorealistic, not a 3D game render, not a photo. Expressive face, strong
-silhouette.
+silhouette.${canonReferenceLine(world)}
 
 Do not place readable text, labels, or logos in the artwork. No nameplates, UI, borders, or decorative interface elements.
 `.trim()
@@ -234,7 +263,7 @@ Map design:
 - Each required location should have a visually distinct landmark or geographic feature.
 - Keep the geography coherent and believable.
 - Make the map readable as an exploration map.
-- Use an elegant illustrated map aesthetic appropriate to the world.
+- Use an elegant illustrated map aesthetic appropriate to the world.${canonReferenceLine(world)}
 
 Important:
 Do not generate readable text labels.

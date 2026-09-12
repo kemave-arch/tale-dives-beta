@@ -238,12 +238,15 @@ export interface LocationEntry {
   imageHistory?: string[]
   // §7 Image Generation, Lore Accuracy — only populated when the campaign's
   // world has sourceTitle+sourceScope set (lib/canonDescription.ts). A
-  // canon-accurate, name-free environmental description used as the image
-  // prompt's basis instead of `description` directly, so the copyrighted
-  // location's proper name/title never reaches the image model. Persisted so
-  // a later regeneration (reflecting in-story change to the place) starts
-  // from this same description and only layers the requested change, rather
-  // than re-deriving a different-looking place each time.
+  // canon-accurate environmental description used as the image prompt's
+  // basis instead of `description` directly — the real name AND the source
+  // title/author/scope are also cited directly in the final image prompt
+  // (see imageGeneration.ts's canonReferenceLine); this field is not about
+  // hiding either, it's about pulling out concrete canon visual detail and
+  // preserving continuity. Persisted so a later regeneration (reflecting
+  // in-story change to the place) starts from this same description and only
+  // layers the requested change, rather than re-deriving a different-looking
+  // place each time.
   canonDescription?: string
 }
 
@@ -300,13 +303,17 @@ export interface NpcEntry {
   partyStatus?: PartyStatus // §7 — set/revised by the LLM via npc_mem_up.party_status when this NPC actively joins/leaves the protagonist's travelling party; absent means they've never been a companion
   portraitKey?: string
   imageHistory?: string[]
-  // Same mechanism as LocationEntry.canonDescription — a canon-accurate,
-  // name-free physical description used as the portrait prompt's basis
-  // instead of `appearance` directly, only populated when the world has
-  // sourceTitle+sourceScope set. Persisted so a later portrait (reflecting
-  // in-story growth/change) starts from this same description and only
-  // layers the requested change, keeping the character visually consistent
-  // across regenerations instead of drifting to a different-looking render.
+  // Same mechanism as LocationEntry.canonDescription — a canon-accurate
+  // physical description used as the portrait prompt's basis instead of
+  // `appearance` directly, only populated when the world has sourceTitle+
+  // sourceScope set. The character's real name and the source title/author/
+  // scope are cited directly in the final image prompt too (see
+  // imageGeneration.ts's canonReferenceLine) — this field isn't for hiding
+  // that, it's for concrete canon visual detail and cross-regeneration
+  // continuity. Persisted so a later portrait (reflecting in-story growth/
+  // change) starts from this same description and only layers the requested
+  // change, keeping the character visually consistent across regenerations
+  // instead of drifting to a different-looking render.
   canonAppearance?: string
   firstSeenTime?: GameTime // set once, at stub creation — same anti-drift anchor as LocationEntry's
   lastSeenTime?: GameTime // updated on every npc_mem_up touch

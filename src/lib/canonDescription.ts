@@ -2,19 +2,27 @@ import type { ApiSettings } from '../types.ts'
 import { getProvider } from '../api/providers/index.ts'
 import { parseXmlBlock, str, XmlParseError } from './xmlHelpers.ts'
 
-// §7 Image Generation, Lore Accuracy — resolves a copyrighted-name-free,
+// §7 Image Generation, Lore Accuracy — resolves a canon-accurate,
 // image-prompt-ready description for an NPC portrait or location image, when
 // the campaign's world names real source material (WorldData.sourceTitle +
 // sourceScope — see types.ts's own comment on why sourceScope specifically
 // is the gate). This is a text-only call through the existing one-shot
 // runSeed provider method (same call shape as worldSeedContract.ts/
-// taleWeaverContract.ts), never the image model itself: the character or
-// location's proper name and the source work's title are deliberately never
-// passed to image generation — only the physical/environmental description
-// this produces is, since a bare name is both a more likely automated-filter
-// trigger and adds nothing an image model can reliably render from a book
-// character anyway (unlike a screen adaptation, there's no consistent visual
-// training data tied to the name).
+// taleWeaverContract.ts), never the image model itself.
+//
+// This resolution step is NOT about hiding the character/location's real
+// name or the source title from the image model — quite the opposite: the
+// real name and a direct citation of the source material (title/author/
+// scope) are deliberately passed straight into the final image prompt
+// (see imageGeneration.ts's canonReferenceLine), because live testing showed
+// gemini-3.1-flash-lite-image doesn't refuse direct references to existing
+// novels/characters, and a name-redacted description produced portraits that
+// were noticeably far from actual canon — the image model has its own
+// trained visual association with a named, real work that a paraphrased
+// description throws away. What THIS step is for is (a) pulling out the
+// specific canon visual facts (build, coloring, features, attire) so the
+// image prompt has concrete detail to work from instead of just a name, and
+// (b) continuity across regenerations — see below.
 //
 // Continuity matters as much as accuracy here: a second call for the same
 // entity (a later portrait after in-story development) passes the entity's
@@ -100,9 +108,8 @@ it and carry that value across UNCHANGED unless the "What's changed" note specif
 different value in that exact slot. Do not redesign the character; a reader comparing the old and
 new fields should see the same person, with only the requested change applied.
 
-Never write this character's proper name or the source work's title into any attribute value — the
-output must stand on its own as pure visual detail, never as something that names who or what it's
-describing.
+This character's real name is given below — use it to ground your search for the actual canon
+appearance; nothing here needs to be redacted or paraphrased.
 `.trim()
 }
 
@@ -113,7 +120,7 @@ function buildNpcVisualPrompt(input: ResolveCanonDescriptionInput): string {
   if (input.currentNotes?.trim()) lines.push(`Existing freeform notes (may be incomplete or non-visual): ${input.currentNotes.trim()}`)
   if (input.existingDescription?.trim()) lines.push(`Established description (preserve this, changing only what's below): ${input.existingDescription.trim()}`)
   lines.push(`What's changed (optional, only apply if given): ${input.developmentNote?.trim() || '(nothing specified — describe as currently established)'}`)
-  lines.push(`(Context only, do not repeat in your output) Name: ${input.name}`)
+  lines.push(`Name: ${input.name}`)
   return lines.join('\n')
 }
 
@@ -172,11 +179,6 @@ features — of a location for a Tale Dives campaign, written so it can be fed d
 generator. Output ONLY the description paragraph itself — no preamble, no headers, no markdown, no
 quotation marks around it.
 
-Never include this location's proper name, and never name or quote the title of the source
-material, anywhere in your output — the description must stand on its own as pure visual detail.
-This is deliberate: the name and title are known to you only as context for accuracy, never as
-something to pass on to whatever reads your output next.
-
 If an "Established description" is given below, that is this same location's own prior resolved
 description — preserve it almost entirely (same architecture, palette, defining visual traits) and
 change ONLY what the "What's changed" note specifically asks for. Do not redesign the place from
@@ -190,6 +192,9 @@ wrong, and never let an invented detail contradict something the source actually
 this location does not actually correspond to anything in the named source (an original addition
 to the campaign), simply write a clean, vivid description from the given notes instead — do not
 force a false canon connection.
+
+You may name this location and reference the source material directly if it helps ground a
+specific canon detail — this description is not stripped of names before use.
 `.trim()
 }
 
@@ -200,7 +205,7 @@ function buildLocationPrompt(input: ResolveCanonDescriptionInput): string {
   if (input.currentNotes?.trim()) lines.push(`Existing freeform notes (may be incomplete or non-visual): ${input.currentNotes.trim()}`)
   if (input.existingDescription?.trim()) lines.push(`Established description (preserve this, changing only what's below): ${input.existingDescription.trim()}`)
   lines.push(`What's changed (optional, only apply if given): ${input.developmentNote?.trim() || '(nothing specified — describe as currently established)'}`)
-  lines.push(`(Context only, do not repeat in your output) Name: ${input.name}`)
+  lines.push(`Name: ${input.name}`)
   return lines.join('\n')
 }
 

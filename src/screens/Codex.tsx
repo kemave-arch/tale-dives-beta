@@ -2903,7 +2903,7 @@ export default function Codex({
                 <EntityImagePanel
                   imageKey={npcs[entryId].portraitKey}
                   prompt={buildNpcPortraitPrompt(
-                    world?.sourceTitle && world?.sourceScope ? 'this character' : npcs[entryId].name,
+                    npcs[entryId].name,
                     npcs[entryId].canonAppearance || npcs[entryId].appearance,
                     npcs[entryId].role,
                     world,
@@ -2924,11 +2924,12 @@ export default function Codex({
                         developmentNote,
                         source: { title: world.sourceTitle, author: world.sourceAuthor, scope: world.sourceScope },
                       })
-                      // "this character" — never the real name — is what actually
-                      // reaches the image model whenever canon mode is active; Stage
-                      // 1 keeping the resolved description name-free is pointless if
-                      // Stage 2's own template still spells the name out.
-                      return { canonText, prompt: buildNpcPortraitPrompt('this character', canonText, npcs[entryId].role, world) }
+                      // The real name AND the source title/author/scope (via `world`,
+                      // see canonReferenceLine in imageGeneration.ts) reach the image
+                      // model directly — live testing showed direct references aren't
+                      // refused and land far closer to actual canon than a redacted
+                      // description does.
+                      return { canonText, prompt: buildNpcPortraitPrompt(npcs[entryId].name, canonText, npcs[entryId].role, world) }
                     },
                     onResolved: (canonText) => onUpdateNpc(entryId, { canonAppearance: canonText }),
                   } : undefined}
@@ -3250,7 +3251,7 @@ export default function Codex({
                 <EntityImagePanel
                   imageKey={locations[entryId].imageKey}
                   prompt={buildLocationImagePrompt(
-                    world?.sourceTitle && world?.sourceScope ? 'this location' : locations[entryId].name,
+                    locations[entryId].name,
                     locations[entryId].canonDescription || locations[entryId].description,
                     world,
                   )}
@@ -3269,9 +3270,9 @@ export default function Codex({
                         developmentNote,
                         source: { title: world.sourceTitle, author: world.sourceAuthor, scope: world.sourceScope },
                       })
-                      // Same reasoning as the NPC portrait site: "this location", never
-                      // the real name, is what actually reaches the image model.
-                      return { canonText, prompt: buildLocationImagePrompt('this location', canonText, world) }
+                      // Same reasoning as the NPC portrait site: the real name and the
+                      // source citation both reach the image model directly now.
+                      return { canonText, prompt: buildLocationImagePrompt(locations[entryId].name, canonText, world) }
                     },
                     onResolved: (canonText) => onUpdateLocation(entryId, { canonDescription: canonText }),
                   } : undefined}
@@ -3352,10 +3353,12 @@ export default function Codex({
             <div className="flex flex-col gap-3">
               <EntryHeroHeader accent={CATEGORY_ACCENTS.regions} title={regions[entryId].name} badges={<AutoBadge shown={regions[entryId].autoLogged} />} />
               <SectionCard accent={CATEGORY_ACCENTS.regions} icon={ImagePlus} title="Map">
-                {/* Known gap: unlike NPC/Location, region maps are not redacted in
-                    lore-accuracy mode (no canonResolve prop here either) — a map's
-                    job is to depict several distinctly-named places, so blanket
-                    name redaction would just produce a useless prompt. */}
+                {/* No canonResolve here — region maps depict several distinctly-named
+                    places at once, so there's no single entity description to resolve
+                    the way NPC/Location do. Real location names always reach the image
+                    model directly (matches the direct-reference approach used
+                    everywhere now), and buildRegionMapPrompt cites the source material
+                    directly too whenever world.sourceTitle+sourceScope are set. */}
                 <EntityImagePanel
                   imageKey={regions[entryId].mapImageKey}
                   prompt={buildRegionMapPrompt(

@@ -97,7 +97,7 @@ export default function PromptLab({ apiSettings, onBack }: PromptLabProps) {
   const [busy, setBusy] = useState<'resolve' | 'image' | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const world = { genreTone, eraTechLevel, powerSystem }
+  const world = { genreTone, eraTechLevel, powerSystem, sourceTitle, sourceAuthor, sourceScope }
   const loreAccuracyActive = Boolean(sourceTitle.trim() && sourceScope.trim())
 
   async function handleResolve() {
@@ -124,21 +124,17 @@ export default function PromptLab({ apiSettings, onBack }: PromptLabProps) {
 
   function handleBuildPrompt() {
     const description = resolvedDescription || notes
-    // Mirrors the real Codex.tsx call sites: in lore-accuracy mode, the real
-    // proper name is never embedded in the final image prompt — only the
-    // resolved, name-free description is. Stage 1 keeping the description
-    // name-free is pointless if Stage 2's own template still spells the name
-    // out, so the redaction has to happen here too, not just in Stage 1.
+    // Mirrors the real Codex.tsx call sites: the real name always reaches the
+    // image prompt, and whenever loreAccuracyActive, buildXPrompt's own
+    // canonReferenceLine (imageGeneration.ts) appends a direct citation of the
+    // source title/author/scope too — live testing showed direct references
+    // to real novels/characters aren't refused and land far closer to canon
+    // than a name-redacted description does.
     if (kind === 'character') {
-      setFinalPrompt(buildNpcPortraitPrompt(loreAccuracyActive ? 'this character' : name, description, role, world))
+      setFinalPrompt(buildNpcPortraitPrompt(name, description, role, world))
     } else if (kind === 'location') {
-      setFinalPrompt(buildLocationImagePrompt(loreAccuracyActive ? 'this location' : name, description, world))
+      setFinalPrompt(buildLocationImagePrompt(name, description, world))
     } else {
-      // Region maps are NOT redacted, even in lore-accuracy mode: a map's
-      // job is to depict several distinctly-named places, so blanket name
-      // redaction here would just produce a useless prompt. This is a real,
-      // currently-unresolved gap in lore-accuracy coverage for maps — see
-      // the in-game Codex.tsx comment at the same call site.
       const names = locationNames.split(',').map((n) => n.trim()).filter(Boolean)
       setFinalPrompt(buildRegionMapPrompt(name, description, names, world))
     }

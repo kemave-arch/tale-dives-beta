@@ -31,6 +31,7 @@ An immersive, LLM-driven fantasy novel game. The protagonist's actions and the w
 - **JIT Context:** Slices the massive Codex into a small ~40-80 token header (`jitContext.ts`) injected into the prompt each turn, based on who is present or relevant.
 - **Codex & Discovery:** Tracks Lore, NPCs, Factions, Locations, Items, Quests, Skills, Projects, and Bestiary. Items are gated by `DiscoveryState` (Known vs. Hidden).
 - **Client-Side Image Generation:** Generates UI assets (character portraits, realm art) on the fly via Gemini (`lib/imageGeneration.ts`), storing them in IndexedDB.
+- **Lore Accuracy System:** Optional, Tale-Weaving-only "Novel Inspiration / Author / Canon Scope Boundary" fields (`WorldData.sourceScope` gates this — a bare `sourceTitle` stays attribution-only, unaffected). When set, injects a lore-accuracy + spoiler-boundary contract into Tale Weaving's phase calls and every turn's JIT context (`jitContext.ts`), and resolves canon-accurate, name-free physical/environmental descriptions for NPC portraits and Location images (`lib/canonDescription.ts`) — the entity's real name/source title never reaches the image model, only the resolved description does, with continuity preserved across regenerations via `NpcEntry.canonAppearance`/`LocationEntry.canonDescription`.
 - **Background Music:** Context-aware soundtrack crossfading based on turn states.
 - **Data Persistence:** Client-side `localStorage` with multiple campaign slots and optional Google Drive backup/restore.
 

@@ -885,6 +885,9 @@ export default function App() {
       powerSystem: w?.powerSystem,
       eraTechLevel: w?.eraTechLevel,
       keyFactions: w?.keyFactions,
+      sourceTitle: w?.sourceTitle?.trim() || undefined,
+      sourceAuthor: w?.sourceAuthor?.trim() || undefined,
+      sourceScope: w?.sourceScope?.trim() || undefined,
     }
 
     const regions: Dict<RegionEntry> = {}

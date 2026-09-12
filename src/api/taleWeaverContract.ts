@@ -77,6 +77,37 @@ Rules:
 - Every id is a short snake_case slug derived from the entry's own name (e.g. "Elana Voss" -> "elana_voss") — never invent a numbered or generic id.
 - Escape literal & as &amp; inside attribute values.`.trim()
 
-export function buildTaleWeaverSystemInstructions(): string {
-  return `${TALE_WEAVER_SYSTEM_INSTRUCTIONS}\n\n${TALE_WEAVER_GRAMMAR}`
+// Set only when the player named real source material (World Foundation's
+// optional Novel Inspiration/Author/Scope Boundary fields) — see WorldData's
+// sourceScope comment in types.ts for why sourceScope specifically is the
+// gate, not sourceTitle alone. When present, every phase from here on
+// (regions/factions/npcs/lore/arc, not just World Foundation) gets this
+// appended, since Cast of Characters/Regions/Lore all need to draw on canon
+// too, not just the initial world description.
+export interface TaleWeaverSourceMaterial {
+  title?: string
+  author?: string
+  scope?: string
+}
+
+function buildLoreAccuracyContract(source?: TaleWeaverSourceMaterial): string {
+  if (!source?.title?.trim()) return ''
+  const attribution = source.author?.trim() ? `"${source.title.trim()}" by ${source.author.trim()}` : `"${source.title.trim()}"`
+  const scope = source.scope?.trim()
+
+  return `
+
+LORE ACCURACY CONTRACT: This tale draws on ${attribution}. Any character, location, faction, or
+lore entry that corresponds to something from that source must be accurate to it — correct names,
+personalities, relationships, appearance, and established history. Do not invent a false version
+of a canon element to fill a gap in your own knowledge; if you are not confident about a genuine
+detail, either omit it or add an original element that does not contradict known canon, and never
+let an invented detail overwrite something the source actually establishes. Original characters,
+locations, and factions not from the source are unaffected by this and can be created freely.
+
+STRICT SPOILER BOUNDARY: ${scope ? `The player has scoped canon knowledge to: "${scope}".` : 'No scope boundary was given — treat only broad, widely-known public facts about the source as safe ground, and avoid deep-cut or late-story specifics.'} Only treat events, relationships, revelations, or character knowledge that occur at or before that point as established fact. Never reference, foreshadow, or draw on anything that happens after it in the source material — if you are unsure whether something falls after the boundary, leave it out rather than risk a spoiler or an anachronistic reference.`
+}
+
+export function buildTaleWeaverSystemInstructions(source?: TaleWeaverSourceMaterial): string {
+  return `${TALE_WEAVER_SYSTEM_INSTRUCTIONS}${buildLoreAccuracyContract(source)}\n\n${TALE_WEAVER_GRAMMAR}`
 }

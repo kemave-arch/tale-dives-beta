@@ -138,7 +138,7 @@ export function buildLocationImagePrompt(
   const style = worldDirective(world)
 
   return `
-Create a single high-quality environmental illustration for the RPG location "${name}".
+Create a single high-quality environmental illustration of the location "${name}".
 
 World:
 ${style || "an original fictional setting"}
@@ -154,9 +154,9 @@ Composition:
 - Avoid generic stock scenery.
 
 Art direction:
-Cinematic RPG concept art, polished game illustration,
-strong composition, cohesive color and lighting,
-detailed environment.
+Cinematic fantasy realism — painterly, richly detailed illustration with grounded lighting and
+materials. Not photorealistic, not a 3D game render, not a photo. Evocative concept-art quality,
+strong composition, cohesive color and lighting, detailed environment.
 
 Do not place readable text, labels, or logos in the artwork. No UI, captions, borders, or decorative interface elements.
 `.trim()
@@ -171,13 +171,13 @@ export function buildNpcPortraitPrompt(
   const style = worldDirective(world)
 
   return `
-Create a single character portrait illustration for the RPG character "${name}".
+Create a single character portrait illustration of "${name}".
 
 World:
 ${style || "an original fictional setting"}
 
 Role:
-${role?.trim() || "important RPG character"}
+${role?.trim() || "a notable character in this world"}
 
 Appearance:
 ${appearance?.trim() || "Create a distinctive original character with memorable visual identity."}
@@ -189,12 +189,16 @@ Character presentation:
 - Give the character a strong personality and presence.
 - Use a simple atmospheric background that supports the character without distracting from them.
 - Preserve coherent anatomy and believable proportions.
-- Clothing and equipment should fit the stated world, era, role, and power system.
+- Do not alter the character's stated anatomy or species. If the appearance describes a dragon,
+  beast, monster, or other non-humanoid creature, render it as fully non-human — do not add human
+  clothing, armor, or a humanoid posture unless the appearance text explicitly describes that.
+- When the character is humanoid, clothing and equipment should fit the stated world, era, role,
+  and power system.
 
 Art direction:
-High-quality RPG character concept art,
-cinematic lighting, polished illustration,
-expressive face, strong silhouette.
+Cinematic fantasy realism — painterly, richly detailed illustration with grounded lighting and
+materials. Not photorealistic, not a 3D game render, not a photo. Expressive face, strong
+silhouette.
 
 Do not place readable text, labels, or logos in the artwork. No nameplates, UI, borders, or decorative interface elements.
 `.trim()
@@ -213,7 +217,7 @@ export function buildRegionMapPrompt(
     : "No specific locations provided."
 
   return `
-Create a top-down illustrated regional map for the RPG region "${name}".
+Create a top-down illustrated regional map for the region "${name}".
 
 World:
 ${style || "an original fictional setting"}
@@ -229,8 +233,8 @@ Map design:
 - Clearly distinguish terrain, settlements, roads, rivers, mountains, forests, ruins, coastlines, and other appropriate features.
 - Each required location should have a visually distinct landmark or geographic feature.
 - Keep the geography coherent and believable.
-- Make the map readable as a game-world exploration map.
-- Use an elegant illustrated RPG map aesthetic appropriate to the world.
+- Make the map readable as an exploration map.
+- Use an elegant illustrated map aesthetic appropriate to the world.
 
 Important:
 Do not generate readable text labels.

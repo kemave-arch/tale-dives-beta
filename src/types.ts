@@ -236,6 +236,15 @@ export interface LocationEntry {
   // falls back to the existing flat parchment treatment, not an error.
   imageKey?: string
   imageHistory?: string[]
+  // §7 Image Generation, Lore Accuracy — only populated when the campaign's
+  // world has sourceTitle+sourceScope set (lib/canonDescription.ts). A
+  // canon-accurate, name-free environmental description used as the image
+  // prompt's basis instead of `description` directly, so the copyrighted
+  // location's proper name/title never reaches the image model. Persisted so
+  // a later regeneration (reflecting in-story change to the place) starts
+  // from this same description and only layers the requested change, rather
+  // than re-deriving a different-looking place each time.
+  canonDescription?: string
 }
 
 export interface AreaEntry {
@@ -291,6 +300,14 @@ export interface NpcEntry {
   partyStatus?: PartyStatus // §7 — set/revised by the LLM via npc_mem_up.party_status when this NPC actively joins/leaves the protagonist's travelling party; absent means they've never been a companion
   portraitKey?: string
   imageHistory?: string[]
+  // Same mechanism as LocationEntry.canonDescription — a canon-accurate,
+  // name-free physical description used as the portrait prompt's basis
+  // instead of `appearance` directly, only populated when the world has
+  // sourceTitle+sourceScope set. Persisted so a later portrait (reflecting
+  // in-story growth/change) starts from this same description and only
+  // layers the requested change, keeping the character visually consistent
+  // across regenerations instead of drifting to a different-looking render.
+  canonAppearance?: string
   firstSeenTime?: GameTime // set once, at stub creation — same anti-drift anchor as LocationEntry's
   lastSeenTime?: GameTime // updated on every npc_mem_up touch
   tags?: string[]
@@ -488,8 +505,9 @@ export interface WorldData {
   keyFactions?: string // 1-2 named factions/nations up front — context only, not yet auto-seeded into the Faction Codex
   factionsList?: WorldFaction[] // Structured factions list for fast CRUD & direct Codex seeding
   locationsList?: WorldLocation[] // Structured locations list for fast CRUD & direct Codex seeding
-  sourceTitle?: string // Appendix A.1 "Title" — attribution only when adapted from existing work; never sent to the model
+  sourceTitle?: string // Appendix A.1 "Title" — attribution when adapted from existing work. Original-Mode/Library worlds (e.g. starterTemplates.ts) leave sourceScope unset, so this stays attribution-only and is never sent to the model. Tale Weaving's World Foundation phase can set sourceTitle + sourceScope together to opt into lore-accuracy enforcement (see sourceScope) — presence of sourceScope is what gates that, not sourceTitle alone.
   sourceAuthor?: string // Appendix A.1 "Author" — same caveat as sourceTitle
+  sourceScope?: string // Tale Weaving-only: player-declared canon boundary (e.g. "Prologue only", "through Book 1, Chapter 12") when sourceTitle names existing published work. When set alongside sourceTitle, both ARE sent to the model — as a lore-accuracy contract (stay faithful to canon facts up to this point) plus a strict spoiler boundary (never reference or foreshadow anything past it). Absence of this field is what keeps a bare sourceTitle attribution-only.
   isDefault?: boolean
   isMaster?: boolean // Immutable master preset (cannot be deleted)
   savedAt?: number // Timestamp when saved/updated in the library

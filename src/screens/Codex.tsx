@@ -27,6 +27,7 @@ import { useEntityImage } from '../lib/useEntityImage.ts'
 import { generateAndStoreEntityImage } from '../lib/entityImages.ts'
 import { buildLocationImagePrompt, buildNpcPortraitPrompt, buildRegionMapPrompt, getPremiumApiKey } from '../lib/imageGeneration.ts'
 import { useImageCooldown } from "../lib/imageCooldown.ts"
+import { resolveCanonDescription } from '../lib/canonDescription.ts'
 import { deleteImageBlob } from "../lib/imageStore.ts"
 import { trustWord } from '../lib/npcs.ts'
 
@@ -1010,7 +1011,7 @@ function TagPills({ tags, accent }: { tags: string[] | undefined; accent: Catego
 // onUpdateX handler the caller already has — this never touches the
 // edit-form draft state, since generating art isn't part of the Save flow.
 function EntityImagePanel({
-  imageKey, imageHistory, prompt: initialPrompt, apiSettings, onSaveKey, aspectRatio,
+  imageKey, imageHistory, prompt: initialPrompt, apiSettings, onSaveKey, aspectRatio, canonResolve,
 }: {
   imageKey?: string
   imageHistory?: string[]
@@ -1018,6 +1019,15 @@ function EntityImagePanel({
   apiSettings: ApiSettings
   onSaveKey: (key: string, history?: string[]) => void
   aspectRatio?: '1:1' | '16:9' | '9:16' | '4:3' | '3:2'
+  // Only passed when the campaign's world names real source material (see
+  // lib/canonDescription.ts). Resolving happens right when the player opens
+  // the prompt editor, so they always see and can hand-edit the final
+  // canon-grounded prompt before it's actually sent to the image model.
+  canonResolve?: {
+    hasExisting: boolean
+    resolve: (developmentNote: string) => Promise<{ canonText: string; prompt: string }>
+    onResolved: (canonText: string) => void
+  }
 }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -1076,7 +1086,29 @@ function EntityImagePanel({
     }
   }
 
-  function handleButtonClick() {
+  async function handleButtonClick() {
+    if (canonResolve) {
+      const note = window.prompt(
+        canonResolve.hasExisting
+          ? "What's changed about their appearance since the last portrait? Leave blank to regenerate as currently established."
+          : 'Optional: any specific detail to emphasize? Leave blank to let the narrator work out an accurate, spoiler-safe look.',
+      )
+      if (note === null) return // cancelled
+      setBusy(true)
+      setError(null)
+      try {
+        const { canonText, prompt: resolvedPrompt } = await canonResolve.resolve(note)
+        canonResolve.onResolved(canonText)
+        setLastUsedPrompt(resolvedPrompt)
+        setCustomPrompt(resolvedPrompt)
+        setShowPromptEdit(true)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err))
+      } finally {
+        setBusy(false)
+      }
+      return
+    }
     setCustomPrompt(lastUsedPrompt)
     setShowPromptEdit(true)
   }
@@ -1217,10 +1249,7 @@ function EntityImagePanel({
             </button>
             <button
               type="button"
-              onClick={() => {
-                setCustomPrompt(lastUsedPrompt)
-                setShowPromptEdit(true)
-              }}
+              onClick={handleButtonClick}
               disabled={busy || isCooldownActive}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#f7e7ce] via-[#e8ca8a] to-[#d4af37] text-zinc-950 text-xs font-display font-bold border border-[#fff5e1] hover:brightness-110 shadow-[0_0_12px_rgba(247,231,206,0.35)] transition-all disabled:opacity-50"
               title="Generate using paid API tokens"
@@ -1238,6 +1267,11 @@ function EntityImagePanel({
           <p className="text-[10px] text-amber-200/70 font-mono">
             ⚡ Note: 'Premium' generation uses paid API tokens.
           </p>
+          {canonResolve && (
+            <p className="text-[10px] text-ink-muted/80 font-mono">
+              📖 Lore-accurate mode: resolves a spoiler-safe, name-free canon description before generating — you'll review it in the prompt editor first.
+            </p>
+          )}
         </div>
       )}
 
@@ -2868,10 +2902,27 @@ export default function Codex({
               <SectionCard accent={CATEGORY_ACCENTS.npcs} icon={ImagePlus} title="Portrait">
                 <EntityImagePanel
                   imageKey={npcs[entryId].portraitKey}
-                  prompt={buildNpcPortraitPrompt(npcs[entryId].name, npcs[entryId].appearance, npcs[entryId].role, world)}
+                  prompt={buildNpcPortraitPrompt(npcs[entryId].name, npcs[entryId].canonAppearance || npcs[entryId].appearance, npcs[entryId].role, world)}
                   apiSettings={apiSettings}
                   onSaveKey={(key) => onUpdateNpc(entryId, { portraitKey: key })}
                   aspectRatio="1:1"
+                  canonResolve={world?.sourceTitle && world?.sourceScope ? {
+                    hasExisting: Boolean(npcs[entryId].canonAppearance),
+                    resolve: async (developmentNote) => {
+                      const canonText = await resolveCanonDescription({
+                        apiSettings,
+                        kind: 'character',
+                        name: npcs[entryId].name,
+                        role: npcs[entryId].role,
+                        currentNotes: npcs[entryId].appearance,
+                        existingDescription: npcs[entryId].canonAppearance,
+                        developmentNote,
+                        source: { title: world.sourceTitle, author: world.sourceAuthor, scope: world.sourceScope },
+                      })
+                      return { canonText, prompt: buildNpcPortraitPrompt(npcs[entryId].name, canonText, npcs[entryId].role, world) }
+                    },
+                    onResolved: (canonText) => onUpdateNpc(entryId, { canonAppearance: canonText }),
+                  } : undefined}
                 />
               </SectionCard>
               <SectionCard accent={CATEGORY_ACCENTS.npcs} icon={Heart} title="Bond & Status">
@@ -3189,10 +3240,26 @@ export default function Codex({
               <SectionCard accent={CATEGORY_ACCENTS.locations} icon={ImagePlus} title="Image">
                 <EntityImagePanel
                   imageKey={locations[entryId].imageKey}
-                  prompt={buildLocationImagePrompt(locations[entryId].name, locations[entryId].description, world)}
+                  prompt={buildLocationImagePrompt(locations[entryId].name, locations[entryId].canonDescription || locations[entryId].description, world)}
                   apiSettings={apiSettings}
                   onSaveKey={(key) => onUpdateLocation(entryId, { imageKey: key })}
                   aspectRatio="16:9"
+                  canonResolve={world?.sourceTitle && world?.sourceScope ? {
+                    hasExisting: Boolean(locations[entryId].canonDescription),
+                    resolve: async (developmentNote) => {
+                      const canonText = await resolveCanonDescription({
+                        apiSettings,
+                        kind: 'location',
+                        name: locations[entryId].name,
+                        currentNotes: locations[entryId].description,
+                        existingDescription: locations[entryId].canonDescription,
+                        developmentNote,
+                        source: { title: world.sourceTitle, author: world.sourceAuthor, scope: world.sourceScope },
+                      })
+                      return { canonText, prompt: buildLocationImagePrompt(locations[entryId].name, canonText, world) }
+                    },
+                    onResolved: (canonText) => onUpdateLocation(entryId, { canonDescription: canonText }),
+                  } : undefined}
                 />
               </SectionCard>
               <SectionCard accent={CATEGORY_ACCENTS.locations} icon={MapPin} title="Geography">

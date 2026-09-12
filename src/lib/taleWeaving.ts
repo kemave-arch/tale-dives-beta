@@ -70,6 +70,11 @@ function buildPhasePrompt(phase: TaleWeaverPhaseDef, accumulated: TaleWeaverAccu
     lines.push(
       `Confirmed World: ${[w.name, w.genreTone, w.conflict, w.powerSystem, w.eraTechLevel, w.keyFactions, w.background].filter(Boolean).join(' | ')}`,
     )
+    if (w.sourceTitle?.trim()) {
+      lines.push(
+        `Source Material: "${w.sourceTitle.trim()}"${w.sourceAuthor?.trim() ? ` by ${w.sourceAuthor.trim()}` : ''}${w.sourceScope?.trim() ? ` — canon scope: ${w.sourceScope.trim()}` : ' — no canon scope given, treat only broad public facts as safe'}`,
+      )
+    }
   }
   if (accumulated.protagonist) {
     const p = accumulated.protagonist
@@ -121,7 +126,15 @@ export async function runTaleWeaverPhase(input: RunTaleWeaverPhaseInput): Promis
       model: input.apiSettings.model,
       temperature: input.apiSettings.temperature,
       maxOutputTokens: MAX_OUTPUT_TOKENS_CEILING,
-      systemInstructions: buildTaleWeaverSystemInstructions(),
+      systemInstructions: buildTaleWeaverSystemInstructions(
+        input.accumulated.world?.sourceTitle
+          ? {
+              title: input.accumulated.world.sourceTitle,
+              author: input.accumulated.world.sourceAuthor,
+              scope: input.accumulated.world.sourceScope,
+            }
+          : undefined,
+      ),
       prompt,
     })
     return { ok: true, draft: parseTaleWeaverResponse(raw) }

@@ -56,6 +56,14 @@ export interface TaleWeaverWorldDraft {
   eraTechLevel?: string
   keyFactions?: string
   background?: string
+  // Player-typed, not model-produced — TaleWeaver.tsx's World Foundation phase
+  // sets these directly from its own form fields and merges them onto
+  // whatever draft.world the phase call returns, the same way it already
+  // owns `name` as an editable field post-generation. See WorldData's own
+  // sourceScope comment (types.ts) for the lore-accuracy contract this gates.
+  sourceTitle?: string
+  sourceAuthor?: string
+  sourceScope?: string
 }
 
 export interface TaleWeaverProtagonistDraft {

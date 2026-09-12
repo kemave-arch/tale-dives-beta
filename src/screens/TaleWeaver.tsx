@@ -579,7 +579,18 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
     setGuidance('')
 
     if (phase.id === 'world' && draft.world) {
-      setAccumulated((prev) => ({ ...prev, world: draft.world }))
+      // Source Material fields are player-typed, never model-produced (see
+      // TaleWeaverWorldDraft's own comment) — a regenerated draft.world
+      // would otherwise silently wipe out whatever was already typed here.
+      setAccumulated((prev) => ({
+        ...prev,
+        world: {
+          ...draft.world,
+          sourceTitle: prev.world?.sourceTitle,
+          sourceAuthor: prev.world?.sourceAuthor,
+          sourceScope: prev.world?.sourceScope,
+        },
+      }))
       return
     }
     if (phase.id === 'protagonist' && draft.protagonist) {
@@ -806,6 +817,46 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                   className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary resize-none"
                 />
               </div>
+              <div className="flex flex-col gap-2 border-t border-gold-accent/20 pt-3">
+                <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">Source Material (optional)</span>
+                <p className="font-narrative text-[11px] text-ink-muted/80 -mt-1">
+                  Naming a real novel here asks the narrator to stay accurate to its canon — characters, places, and established
+                  facts — instead of treating it as loose inspiration. Set a Canon Scope Boundary to stop it from referencing or
+                  spoiling anything past the point you've read.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="flex flex-col gap-1">
+                    <label className="font-mono text-[10px] uppercase text-gold-primary/70">Novel Inspiration</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Fourth Wing"
+                      value={editFormData.sourceTitle || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, sourceTitle: e.target.value })}
+                      className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="font-mono text-[10px] uppercase text-gold-primary/70">Author</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Rebecca Yarros"
+                      value={editFormData.sourceAuthor || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, sourceAuthor: e.target.value })}
+                      className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="font-mono text-[10px] uppercase text-gold-primary/70">Canon Scope Boundary</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Prologue only, Book 1, through Chapter 12 — leave blank if unsure"
+                    value={editFormData.sourceScope || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, sourceScope: e.target.value })}
+                    className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                  />
+                </div>
+              </div>
             </div>
           )
         }
@@ -864,6 +915,16 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
               <div>
                 <span className="font-mono text-[10px] uppercase text-ink-muted/80">Background & History</span>
                 <p className="font-narrative text-xs text-ink/80">{w.background}</p>
+              </div>
+            )}
+            {w.sourceTitle && (
+              <div className="rounded-lg border border-gold-accent/25 bg-gold-accent/5 px-2.5 py-2">
+                <span className="font-mono text-[10px] uppercase text-gold-primary/80">
+                  Lore-Accurate to "{w.sourceTitle}"{w.sourceAuthor ? ` by ${w.sourceAuthor}` : ''}
+                </span>
+                <p className="font-narrative text-[11px] text-ink-muted mt-0.5">
+                  {w.sourceScope ? `Canon scope: ${w.sourceScope}` : 'No canon scope set — narrator will stay to broad, widely-known facts only.'}
+                </p>
               </div>
             )}
           </div>

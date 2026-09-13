@@ -95,6 +95,8 @@ export interface TaleWeaverLocation {
   desc?: string
   areas?: string
   imageKey?: string
+  hidden?: boolean
+  teaser?: string
 }
 
 export interface TaleWeaverFaction {
@@ -103,6 +105,8 @@ export interface TaleWeaverFaction {
   attitude?: string
   territory?: string
   desc?: string
+  hidden?: boolean
+  teaser?: string
 }
 
 export interface TaleWeaverNpc {
@@ -114,6 +118,8 @@ export interface TaleWeaverNpc {
   aff?: string
   trust?: string
   portraitKey?: string
+  hidden?: boolean
+  teaser?: string
 }
 
 export interface TaleWeaverLore {
@@ -218,6 +224,8 @@ export function parseTaleWeaverResponse(raw: string): TaleWeaverDraft {
       danger: str(el.getAttribute('danger')),
       desc: str(el.getAttribute('desc')),
       areas: str(el.getAttribute('areas')),
+      hidden: el.getAttribute('hidden') === '1' && !!str(el.getAttribute('tease')),
+      teaser: str(el.getAttribute('tease')),
     })
   }
 
@@ -232,6 +240,8 @@ export function parseTaleWeaverResponse(raw: string): TaleWeaverDraft {
       attitude: str(el.getAttribute('attitude')),
       territory: str(el.getAttribute('territory')),
       desc: str(el.getAttribute('desc')),
+      hidden: el.getAttribute('hidden') === '1' && !!str(el.getAttribute('tease')),
+      teaser: str(el.getAttribute('tease')),
     })
   }
 
@@ -248,6 +258,8 @@ export function parseTaleWeaverResponse(raw: string): TaleWeaverDraft {
       appearance: str(el.getAttribute('appearance')),
       aff: str(el.getAttribute('aff')),
       trust: str(el.getAttribute('trust')),
+      hidden: el.getAttribute('hidden') === '1' && !!str(el.getAttribute('tease')),
+      teaser: str(el.getAttribute('tease')),
     })
   }
 

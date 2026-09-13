@@ -45,7 +45,13 @@ narrator once that beat is actually reached in play), never a vague
 restatement of the title. Additionally, propose 2-3 dormant Narrative Events
 (<narrative_event>) as dynamic complications or encounters, an optional
 Death Rule (<death_rule>), and optional End Game Guidance (<end_game>) to define
-what victory, defeat, and bittersweet outcomes look like for this tale.
+what victory, defeat, and bittersweet outcomes look like for this tale. When
+this tale draws on real source material with a known chapter or arc
+structure (see the Lore Accuracy Contract below, if present) and the player's
+own guidance asks for a beat/event per chapter or similarly granular
+coverage, scale well past the usual 3-6/2-3 counts to actually match that
+structure — dozens of beats and events across a full novel's chapter count is
+correct in that case, not a violation of the usual range.
 `.trim()
 
 export const TALE_WEAVER_GRAMMAR = `
@@ -55,9 +61,9 @@ OUTPUT FORMAT (read carefully — respond with exactly this, nothing else, no ma
   <world name="NAME" genre_tone="GENRE_TONE" conflict="CORE_CONFLICT" power_system="POWER_SYSTEM" era_tech="ERA_TECH_LEVEL" key_factions="KEY_FACTIONS" background="WORLD_BACKGROUND" />
   <protagonist name="NAME" background="BACKGROUND" personality="PERSONALITY" motivation="MOTIVATION" physical_trait="PHYSICAL_TRAIT" secret="SECRET" opening="OPENING_SCENE" />
   <region id="REGION_ID" name="NAME" desc="DESC" />
-  <location id="LOC_ID" name="NAME" region_id="REGION_ID" map_x="N" map_y="N" type="LOCATION_TYPE" danger="DANGER_LEVEL" desc="DESC" areas="AREA_1, AREA_2" />
-  <faction id="FACTION_ID" name="NAME" attitude="allied|friendly|neutral|hostile|rival" territory="TERRITORY" desc="DESC" />
-  <npc id="NPC_ID" name="NAME" role="ROLE" personality="TRAIT_SUMMARY" appearance="PHYSICAL_DESC" aff="Stranger|Acquaintance|Friend|Confidant|Beloved" trust="Distrustful|Wary|Reliable|Trusted|Devoted" />
+  <location id="LOC_ID" name="NAME" region_id="REGION_ID" map_x="N" map_y="N" type="LOCATION_TYPE" danger="DANGER_LEVEL" desc="DESC" areas="AREA_1, AREA_2" hidden="1" tease="TEASER_TEXT" />
+  <faction id="FACTION_ID" name="NAME" attitude="allied|friendly|neutral|hostile|rival" territory="TERRITORY" desc="DESC" hidden="1" tease="TEASER_TEXT" />
+  <npc id="NPC_ID" name="NAME" role="ROLE" personality="TRAIT_SUMMARY" appearance="PHYSICAL_DESC" aff="Stranger|Acquaintance|Friend|Confidant|Beloved" trust="Distrustful|Wary|Reliable|Trusted|Devoted" hidden="1" tease="TEASER_TEXT" />
   <lore id="LORE_ID" name="NAME" category="CATEGORY" content="CONTENT" era="ERA" hidden="1" tease="TEASER_TEXT" />
   <beat id="BEAT_ID" title="TITLE" summary="SPOILER_PREMISE" />
   <narrative_event id="EVENT_ID" title="TITLE" trigger="flag|location_visit|npc_met|quest_complete|story" cond="TARGET_OR_CONDITION" guide="GUIDANCE_TEXT" />
@@ -69,11 +75,11 @@ Rules:
 - Emit ONLY the tag(s) belonging to the Active Phase named in the prompt — never any tag from a different phase, and never more than one <world> or <protagonist> tag.
 - World Foundation phase: exactly one <world> tag with EVERY attribute filled with rich, specific content. Always include era_tech specifying the historical era and technology level (e.g. "Late Medieval / Iron Age", "Victorian Gaslamp / Steampunk", "Far-Future Spacefaring"), power_system, genre_tone, conflict, key_factions, and background.
 - Protagonist phase: exactly one <protagonist> tag with every attribute populated.
-- Regions & Locations phase: 1-4 <region> tags and, for each, 1-4 <location> tags with region_id set to one of them — map_x/map_y (integers 0-100) are optional but encouraged, spaced out sensibly per region; "areas" is an optional comma-separated list of named sub-zones within that one location, only when it genuinely has distinct internal zones worth naming.
-- Factions phase: 1-4 <faction> tags.
-- Cast of Characters phase: 1-4 <npc> tags. aff/trust are each one of their exact canonical words, omitted entirely for a neutral/unestablished relationship.
+- Regions & Locations phase: 1-4 <region> tags and, for each, 1-4 <location> tags with region_id set to one of them — map_x/map_y (integers 0-100) are optional but encouraged, spaced out sensibly per region; "areas" is an optional comma-separated list of named sub-zones within that one location, only when it genuinely has distinct internal zones worth naming. hidden/tease are optional — omit both for a normal, immediately-known location, include both only for the rare one meant to stay undiscovered until the player finds it in play (a hidden sanctuary, a secret vault) — regions themselves are never hidden, only individual locations within them.
+- Factions phase: 1-4 <faction> tags. hidden/tease are optional — omit both for a normal, publicly-known faction, include both only for the rare one meant to stay concealed until discovered in play (a secret society, a hidden cabal).
+- Cast of Characters phase: 1-4 <npc> tags. aff/trust are each one of their exact canonical words, omitted entirely for a neutral/unestablished relationship. hidden/tease are optional — omit both for a normal NPC the protagonist already knows of or will plainly meet, include both only for the rare one meant to stay concealed until discovered in play (a hidden mentor, a masked antagonist).
 - Lore & Secrets phase: 2-5 <lore> tags. hidden/tease are optional — omit both for a normal entry, include both only for the rare deliberately-hidden one.
-- Story Arc phase: 3-6 <beat> tags in the order they should occur, each a distinct escalating movement of the story toward a real ending — title short and evocative, summary the full spoiler-bearing premise (see the system instructions above on how each is used). Also include 2-3 <narrative_event> tags for dormant complications/encounters (trigger="flag|location_visit|npc_met|quest_complete|story", cond="target", guide="steering guidance"), an optional <death_rule mode="soft_fail|permadeath" instructions="..." />, and an optional <end_game win="..." lose="..." neutral="..." /> for story conclusion guidance.
+- Story Arc phase: 3-6 <beat> tags in the order they should occur, each a distinct escalating movement of the story toward a real ending — title short and evocative, summary the full spoiler-bearing premise (see the system instructions above on how each is used); when the player's guidance calls for chapter-level granularity against known source material, use as many <beat>/<narrative_event> tags as that structure actually needs (potentially dozens) rather than compressing it down to the usual range — see the system instructions above. Also include 2-3 <narrative_event> tags (more when scaled per the above) for dormant complications/encounters (trigger="flag|location_visit|npc_met|quest_complete|story", cond="target", guide="steering guidance"), an optional <death_rule mode="soft_fail|permadeath" instructions="..." />, and an optional <end_game win="..." lose="..." neutral="..." /> for story conclusion guidance.
 - Every id is a short snake_case slug derived from the entry's own name (e.g. "Elana Voss" -> "elana_voss") — never invent a numbered or generic id.
 - Escape literal & as &amp; inside attribute values.`.trim()
 

@@ -129,10 +129,20 @@ export function parseXmlTurnResponse(raw: string): TurnResponse {
 
   const QUEST_STATS = ['advanced', 'completed', 'failed'] as const
   const questEl = doc.querySelector('quest')
+  // A brand-new quest's first-ever stat is "advanced" too (there's no
+  // separate "just introduced" word) — but the model sometimes reaches for
+  // "active" instead, borrowing <beat>'s vocabulary (active/completed/
+  // skipped) for what reads in English as an obviously correct word for a
+  // freshly-started quest. Normalize that one specific mix-up rather than
+  // silently dropping the entire <sync> block over it (a live QC pass
+  // caught this exact case discarding a prologue turn's NPC/faction/beat
+  // updates along with the quest).
+  const questStatRaw = questEl?.getAttribute('stat') ?? null
+  const questStatNormalized = questStatRaw === 'active' ? 'advanced' : questStatRaw
   const quest_update: QuestUpdate | undefined = questEl
     ? {
         quest_id: reqStr(questEl.getAttribute('id'), 'quest.id'),
-        status: reqTierWord(questEl.getAttribute('stat'), 'quest.stat', QUEST_STATS),
+        status: reqTierWord(questStatNormalized, 'quest.stat', QUEST_STATS),
         type: str(questEl.getAttribute('type')) as QuestUpdate['type'],
         note: str(questEl.getAttribute('note')),
         description: str(questEl.getAttribute('desc')),

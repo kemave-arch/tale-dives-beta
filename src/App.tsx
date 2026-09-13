@@ -915,7 +915,9 @@ export default function App() {
         factionOwner: null,
         standing: 'neutral',
         locationType: l.locationType || 'Landmark',
-        discovery: { state: 'known' },
+        discovery: l.hidden
+          ? validateDiscovery({ state: 'hidden', revealTrigger: 'manual', teaser: l.teaser }, { locations, npcs: {}, quests: {} })
+          : { state: 'known' },
         imageKey: l.imageKey,
         ...(regionId ? { regionId } : {}),
         ...(l.mapX !== undefined ? { mapX: l.mapX } : {}),
@@ -932,7 +934,9 @@ export default function App() {
         description: f.desc?.trim() || undefined,
         territory: f.territory?.trim() || undefined,
         tags: f.attitude ? [f.attitude] : undefined,
-        discovery: { state: 'known' },
+        discovery: f.hidden
+          ? validateDiscovery({ state: 'hidden', revealTrigger: 'manual', teaser: f.teaser }, { locations, npcs: {}, quests: {} })
+          : { state: 'known' },
       }
     }
 
@@ -950,6 +954,9 @@ export default function App() {
         memSummary: '',
         lastSeenLocId: null,
         portraitKey: n.portraitKey,
+        discovery: n.hidden
+          ? validateDiscovery({ state: 'hidden', revealTrigger: 'manual', teaser: n.teaser }, { locations, npcs: {}, quests: {} })
+          : undefined,
       }
     }
 

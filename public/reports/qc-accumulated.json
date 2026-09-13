@@ -1,0 +1,105 @@
+{
+  "regions": [],
+  "locations": [],
+  "factions": [],
+  "npcs": [],
+  "lore": [],
+  "beats": [
+    {
+      "id": "beat_01_conscription_day",
+      "title": "Conscription Day and the Parapet",
+      "summary": "Violet is forced into the Riders Quadrant by her mother, faces the terrifying walk across the narrow, rain-slicked stone Parapet to enter Basgiath, and survives despite the murderous intentions of Jack Barlowe, earning her place in the quadrant."
+    },
+    {
+      "id": "beat_02_squad_assignment",
+      "title": "The First Wing and Squad Honor",
+      "summary": "Violet is assigned to the Second Squad, Flame Section of the Second Wing under the command of Dain Aetos. She immediately faces the hostility of the rebellion relics, including Xaden Riorson, whose father was executed by Violet's mother."
+    },
+    {
+      "id": "beat_03_the_gauntlet_training",
+      "title": "Survival of the Fittest",
+      "summary": "As classes begin in the academic and physical arenas, Violet must use her scribe-trained mind to survive brutal combat challenges and poison-laced sparring sessions, learning to adapt her fragile body with daggers and speed."
+    },
+    {
+      "id": "beat_04_the_presentation",
+      "title": "The Presentation of Dragons",
+      "summary": "The cadets are presented to the dragons of Basgiath. Violet comes face-to-face with the massive, terrifying beasts, realizing that dragons do not tolerate weakness and will incinerate anyone they deem unworthy of bonding."
+    },
+    {
+      "id": "beat_05_the_gauntlet",
+      "title": "Running the Gauntlet",
+      "summary": "Violet faces the lethal physical obstacle course of the Gauntlet. Despite Jack Barlowe's attempts to sabotage and kill her on the high obstacles, she uses her agility, customized boots, and quick thinking to pass the deadly trial."
+    },
+    {
+      "id": "beat_06_threshing",
+      "title": "Threshing: The Bond of Two",
+      "summary": "During Threshing, Violet defends a rare, small Golden One dragon (Andarna) from cadets seeking to kill it. In doing so, she attracts the legendary Black Morningstar, Tairn, who bonds with her alongside Andarna, making her the first rider in history to bond two dragons."
+    },
+    {
+      "id": "beat_07_the_signet_manifests",
+      "title": "Chilling Storms and Lightning",
+      "summary": "As Violet struggles to withstand the physical toll of channeling magic from Tairn, her signet power finally manifests during a high-stakes combat trial: she can command raw lightning, a devastatingly powerful and rare offensive ability."
+    },
+    {
+      "id": "beat_08_the_war_games",
+      "title": "The Trap at Athebyne",
+      "summary": "During the annual War Games, Violet, Xaden, and their squad are sent on a routine patrol to Athebyne, only to find the outpost abandoned and a trap waiting. Violet discovers the horrifying truth: venin and wyvern are real, and Navarre leadership is actively letting border villages burn to protect the wards."
+    },
+    {
+      "id": "beat_09_the_battle_of_resson",
+      "title": "The Battle of Resson and the Brother's Return",
+      "summary": "Violet fights for her life against deadly venin in a ruined town, using her lightning to destroy them but sustaining a near-fatal poison wound. She wakes up days later in a secret stronghold in Aretia, only to find her supposedly deceased brother, Brennan, alive and leading the rebellion."
+    }
+  ],
+  "narrativeEvents": [
+    {
+      "id": "event_jack_barlowe_feud",
+      "title": "Jack's Cruelty",
+      "trigger": "story",
+      "condition": "beat_03_the_gauntlet_training",
+      "guidance": "Jack Barlowe corners Violet in the sparring ring or the corridors, seeking to break her bones or poison her water skin to eliminate her before Threshing."
+    },
+    {
+      "id": "event_dain_overprotection",
+      "title": "Dain's Memory Reading",
+      "trigger": "npc_met",
+      "condition": "dain_aetos",
+      "guidance": "Dain attempts to touch Violet's face to read her recent memories, forcing her to actively guard her thoughts about Xaden, the rebellion relics, or her father's forbidden research."
+    },
+    {
+      "id": "event_tairn_telepathic_chide",
+      "title": "Tairn's Mental Roar",
+      "trigger": "flag",
+      "condition": "combat_struggle",
+      "guidance": "When Violet's physical joints dislocate or she falters in combat, Tairn speaks directly into her mind, demanding she get up and reminding her that a dragon without a rider is a tragedy, but a rider without a dragon is dead."
+    }
+  ],
+  "world": {
+    "name": "Basgiath War College",
+    "genreTone": "Dark Military Fantasy, High-Stakes, Romance, and Grim Realism",
+    "conflict": "The brutal, high-mortality training at Basgiath War College, set against Navarre's desperate, secret war against the venin and their wyvern forces, while the leadership actively censors the truth from its own citizens.",
+    "powerSystem": "Signet powers channeled through bonded dragons from the sky, paired with physical combat, runes, and the deadly, life-draining magic of the dark-channeling venin.",
+    "eraTechLevel": "Pseudo-Medieval / Early Renaissance with localized magical advancements, featuring massive stone fortresses, swords, crossbows, and armor, but lacking gunpowder.",
+    "keyFactions": "The Riders Quadrant, the Scribes Quadrant, the Navarre Military Leadership (General Sorrengail's faction), and the secret revolution/Aretia survivors.",
+    "background": "For four hundred years, Navarre has been protected by its magical wards, fueled by the dragons of the Basgiath mountains. While the Scribes rewrite history to hide the existence of the dark-magic-wielding venin and their flying wyvern, cadets at Basgiath War College are forced through a deadly curriculum where failure means death. With the wards beginning to fail and the truth leaking to the edges of the kingdom, the college has become a pressure cooker of political tension, lethal training, and forbidden knowledge.",
+    "sourceTitle": "Fourth Wing",
+    "sourceAuthor": "Rebecca Yarros",
+    "sourceScope": "Book 1 (Fourth Wing) only, through the ending"
+  },
+  "protagonist": {
+    "name": "Violet Sorrengail",
+    "background": "Trained her entire life by her father to become a Scribe, Violet has spent her years surrounded by books, history, and quiet archives. She suffers from a chronic, unnamed connective tissue condition that makes her joints easily dislocate and her bones brittle, rendering her physically fragile in a world that values raw strength. Her mother, the cold and formidable General Lilith Sorrengail, has suddenly decreed that Violet will not enter the safety of the Scribe Quadrant, but must instead face Conscription Day for the lethal Riders Quadrant, just as her siblings Mira and the late Brennan did.",
+    "personality": "Quietly stubborn, highly analytical, and fiercely resilient. Violet possesses a sharp, brilliant mind that weaponizes historical knowledge and tactical observation to compensate for her physical limitations. She is deeply loyal, possesses a quiet courage, and refuses to let her physical fragility define her capability.",
+    "motivation": "To survive the brutal, high-mortality training of the Riders Quadrant without letting her physical limitations get her killed, while desperately trying to prove she belongs in this world on her own terms despite her mother's harsh mandate.",
+    "physicalTrait": "Slight of build, with pale skin and distinctive hair that starts dark brown but fades to a metallic silver-white at the ends. She possesses fragile joints wrapped in protective bindings and a delicate stature that contrasts sharply with the armored cadets around her.",
+    "secret": "She carries a deep, forbidden knowledge of Navarian history and military tactics passed down from her late father—information that the Scribe Quadrant actively censors and that could make her a target if she speaks it aloud.",
+    "opening": "It's finally Conscription Day. Violet Sorrengail, an aspiring apprentice scribe, is currently struggling carrying her bag filled with books and scrolls, but extremely excited to the prospect being an official scribe under the Scribe Quadrant. She got summoned to her mother's office. Her hopes and dreams were about to be upturned as she approaches the door to her mom's office. She overhears the conversation between her older sister, Mira, and Lilith Sorrengail, their mother, and general commander of the forces of Navarre, is sure that Violet can survive the trial for the Rider's Quadrant instead. This day, her life will change forever..."
+  },
+  "deathRule": "soft_fail",
+  "deathInstructions": "If Violet is physically broken or defeated in a trial, she does not instantly die; instead, she sustains a severe injury (e.g., a dislocated shoulder or a deep blade wound) that she must bind, treat with mending magic, or compensate for using her poisons and wits in the subsequent scenes, raising the stakes and difficulty of her next challenges.",
+  "endGameRules": {
+    "win": "Violet survives the Battle of Resson, masters her lightning signet, protects her bonded dragons, and joins the secret revolution in Aretia alongside Xaden and her resurrected brother Brennan.",
+    "lose": "Violet is killed during the trials of Basgiath, assassinated by hostile cadets, or drained of her life force by a venin during the battle at Resson.",
+    "neutral": "Violet survives the trials but complies with the Scribes' censorship, turning her back on the rebellion and Xaden to remain a safe, quiet instrument of Navarre's military lies."
+  }
+}

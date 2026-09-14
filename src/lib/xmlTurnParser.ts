@@ -219,6 +219,7 @@ export function parseXmlTurnResponse(raw: string): TurnResponse {
       held_weapon: str(el.getAttribute('wld')),
       worn_armor: str(el.getAttribute('armor')),
       personality: str(el.getAttribute('personality')),
+      appearance: str(el.getAttribute('appearance')),
       faction_id: str(el.getAttribute('faction')),
       secret_truth: str(el.getAttribute('secret')),
       kinship: optTierWord(el.getAttribute('kin'), 'npc.kin', KINSHIP_VALUES) as KinshipType | undefined,

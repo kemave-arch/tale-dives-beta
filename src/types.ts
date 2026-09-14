@@ -926,6 +926,7 @@ export interface NpcMemoryUpdate {
   held_weapon?: string // only sent when first established or visibly changed — see NpcEntry.heldWeapon
   worn_armor?: string // only sent when first established or visibly changed — see NpcEntry.wornArmor
   personality?: string // sets/revises NpcEntry.personality — only on introduction or a genuine change, restated every turn thereafter as ground truth (lib/npcs.ts describePresentNpc)
+  appearance?: string // sets/revises NpcEntry.appearance — same discipline as personality: a concrete physical anchor (build, coloring, a distinguishing feature) set once on introduction and restated every turn thereafter, so a cast of several NPCs doesn't blur into the same generic descriptors
   faction_id?: string | null // sets/revises NpcEntry.factionId
   secret_truth?: string // sets/revises NpcEntry.secretTruth — known to the model as ground truth, never player-visible, never to be recited as exposition until the story itself earns the reveal
   kinship?: KinshipType // sets/revises NpcEntry.kinship — structural anchor: parent|sibling|child hard-gates against intimacy escalation (Rule 5a)

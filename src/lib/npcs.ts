@@ -78,6 +78,7 @@ export function applyNpcUpdates(
         heldWeapon: u.held_weapon || prev.heldWeapon,
         wornArmor: u.worn_armor || prev.wornArmor,
         personality: u.personality || prev.personality,
+        appearance: u.appearance || prev.appearance,
         factionId: u.faction_id ?? prev.factionId,
         secretTruth: u.secret_truth || prev.secretTruth,
         kinship: u.kinship ?? prev.kinship,
@@ -131,11 +132,16 @@ export function describePresentNpc(id: string, entry: NpcEntry): string {
   // Hidden Truths rule (turnContract.ts §2c) right where it's used, not just
   // stated once far away in the system prompt.
   const personality = entry.personality ? ` | Personality: ${entry.personality}` : ''
+  // Appearance is restated the same way personality is — a stable, specific
+  // physical anchor so a cast of several NPCs doesn't default to the same
+  // generic descriptor turn to turn (the "every NPC has golden eyes"
+  // failure mode a live comparison against another engine's output caught).
+  const appearance = entry.appearance ? ` | Appearance: ${entry.appearance}` : ''
   const secret = entry.secretTruth ? ` | Secret (never reveal directly): "${entry.secretTruth}"` : ''
   // Party status only shown when set at all — an NPC who's never joined
   // costs 0 extra context, same economy as every other optional field here.
   const party = entry.partyStatus ? ` | Party: ${entry.partyStatus === 'companion' ? 'Travelling companion' : 'Departed companion'}` : ''
-  return `NPC: ${entry.name} (id: ${id})${identity ? ` | ${identity}` : ''} | Stage: ${entry.stage} | Trust: ${trustWord(entry.trust)}${gear ? ` | ${gear}` : ''}${personality}${party}${firstSeen} | Mem: "${entry.memSummary}"${secret}`
+  return `NPC: ${entry.name} (id: ${id})${identity ? ` | ${identity}` : ''} | Stage: ${entry.stage} | Trust: ${trustWord(entry.trust)}${gear ? ` | ${gear}` : ''}${personality}${appearance}${party}${firstSeen} | Mem: "${entry.memSummary}"${secret}`
 }
 
 // Trust's own parallel word ladder — kept separate from affection's Stranger

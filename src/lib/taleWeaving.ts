@@ -44,6 +44,10 @@ export const TALE_WEAVER_PHASES: TaleWeaverPhaseDef[] = [
 // earlier work (same "no chat history, client resends what matters"
 // design as worldSeedContract.ts's own one-shot call).
 export interface TaleWeaverAccumulated {
+  // Player-set Tale title, editable from the very first phase (header field).
+  // Falls back to "${player.name}'s Tale" at creation time (App.tsx's
+  // beginInspiredTale) when left blank, same as before this field existed.
+  title?: string
   world?: TaleWeaverDraft['world']
   protagonist?: TaleWeaverDraft['protagonist']
   regions: TaleWeaverDraft['regions']

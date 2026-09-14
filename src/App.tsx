@@ -1064,7 +1064,7 @@ export default function App() {
     const campaign: Campaign = {
       id: campaignId,
       schemaVersion: CURRENT_SCHEMA_VERSION,
-      title: `${player.name}'s Tale`,
+      title: accumulated.title?.trim() || `${player.name}'s Tale`,
       synopsis: (protagonistData.opening || world.background || '').slice(0, 140),
       worldId: worldEntry.id!,
       protagonistId: protagonistEntry.id!,

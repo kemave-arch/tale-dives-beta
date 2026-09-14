@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, type CSSProperties } from 'react'
 import {
   X, ChevronRight, ChevronLeft, Sparkles, Lock, Unlock,
-  BookOpen, AlertCircle, Check, ArrowRight, Pencil, Plus, Save,
-  ImagePlus, RotateCw, FolderOpen, Trash2, Bookmark, CheckCircle2, Clock, Info
+  BookOpen, AlertCircle, Check, ArrowRight, ArrowLeft, Pencil, Plus, Save,
+  ImagePlus, RotateCw, FolderOpen, Trash2, Bookmark, CheckCircle2, Clock, Info,
 } from 'lucide-react'
-import { GlassScreen, GlassHeader, GlassSegmented } from '../lib/glassChrome.tsx'
+import { GlassScreen } from '../lib/glassChrome.tsx'
 import { useConfirm } from '../lib/useConfirm.tsx'
 import type { ApiSettings, NarrationMode, Pov, RevealTrigger, TaleDifficultyKey } from '../types.ts'
 import { TALE_DIFFICULTIES } from '../api/turnContract.ts'
@@ -98,6 +98,54 @@ function getTotalEntityCount(acc: TaleWeaverAccumulated): number {
   count += acc.beats.length
   count += acc.narrativeEvents?.length ?? 0
   return count
+}
+
+// Light-vellum equivalent of glassChrome.tsx's GlassSegmented (which is
+// hard-coded to the app's dark chrome and reused by many other still-dark
+// screens) — same button-group behavior/props, recolored locally so this
+// screen's own reskin never touches that shared file.
+function VellumSegmented<T extends string>({
+  options,
+  value,
+  onChange,
+  className = '',
+}: {
+  options: { id: T; label: string }[]
+  value: T
+  onChange: (id: T) => void
+  className?: string
+}) {
+  return (
+    <div className={`flex gap-2 ${className}`}>
+      {options.map(({ id, label }) => (
+        <button
+          key={id}
+          type="button"
+          onClick={() => onChange(id)}
+          className={`flex-1 rounded-xl border px-2 py-2 font-display text-xs transition-colors duration-150 ${
+            value === id
+              ? 'border-gold-primary bg-gold-accent/15 text-gold-primary font-semibold'
+              : 'border-gold-accent/25 bg-white text-ink-muted hover:border-gold-accent/50 hover:text-ink'
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// Mockup-style section divider for a multi-field edit form — a hairline
+// rule (skipped on the very first field) + a small gold dot + mono label,
+// so a long stacked form reads as organized field groups rather than one
+// undifferentiated column of inputs.
+function FieldSectionHeader({ label, first = false }: { label: string; first?: boolean }) {
+  return (
+    <div className={`flex items-center gap-2 ${first ? '' : 'pt-3 mt-1 border-t border-gold-accent/15'}`}>
+      <span className="w-1.5 h-1.5 rounded-full bg-gold-accent shrink-0" />
+      <span className="font-mono text-[10px] uppercase tracking-wider text-ink font-bold">{label}</span>
+    </div>
+  )
 }
 
 function TaleWeaverImageGenerator({
@@ -254,17 +302,17 @@ function TaleWeaverImageGenerator({
       )}
 
       {showPromptEdit ? (
-        <div className="flex flex-col gap-2 p-2.5 rounded-lg bg-black/80 border border-gold-accent/40 shadow-inner text-xs animate-fade-in">
+        <div className="flex flex-col gap-2 p-2.5 rounded-lg bg-[#faf8f4] border border-gold-accent/40 shadow-sm text-xs animate-fade-in">
           <div className="flex items-center justify-between text-[11px] font-display text-gold-primary">
             <span className="flex items-center gap-1 font-semibold">
               <Sparkles size={12} className="text-gold-accent" />
-              Edit Image Generation Prompt
+              Image Prompt
             </span>
             {customPrompt !== initialPrompt && (
               <button
                 type="button"
                 onClick={() => setCustomPrompt(initialPrompt)}
-                className="text-[10px] text-zinc-400 hover:text-amber-200 underline"
+                className="text-[10px] text-ink-muted hover:text-gold-primary underline"
               >
                 Reset to default
               </button>
@@ -275,14 +323,14 @@ function TaleWeaverImageGenerator({
             onChange={(e) => setCustomPrompt(e.target.value)}
             rows={3}
             placeholder="Describe the image..."
-            className="w-full p-2 rounded bg-zinc-950/90 border border-zinc-700/60 text-amber-100 text-xs font-narrative focus:outline-none focus:border-gold-accent resize-y"
+            className="w-full p-2 rounded bg-white border border-gold-accent/25 text-ink text-xs font-narrative focus:outline-none focus:border-gold-primary resize-y"
           />
           <div className="flex items-center gap-2 justify-end flex-wrap">
             <button
               type="button"
               onClick={() => setShowPromptEdit(false)}
               disabled={busy}
-              className="px-2.5 py-1 rounded text-[11px] text-zinc-400 hover:text-zinc-200 transition-colors"
+              className="px-2.5 py-1 rounded text-[11px] text-ink-muted hover:text-ink transition-colors"
             >
               Cancel
             </button>
@@ -290,24 +338,24 @@ function TaleWeaverImageGenerator({
               type="button"
               onClick={() => handleGenerate(customPrompt, false)}
               disabled={busy || isCooldownActive || !customPrompt.trim()}
-              className="flex items-center gap-1.5 px-3 py-1 rounded bg-gold-accent/25 border border-gold-accent/60 text-gold-primary text-[11px] font-display font-semibold hover:bg-gold-accent/40 transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1 rounded bg-gold-accent/20 border border-gold-accent/60 text-gold-primary text-[11px] font-display font-semibold hover:bg-gold-accent/30 transition-colors disabled:opacity-50"
             >
               {busy ? <RotateCw size={12} className="animate-spin" /> : isCooldownActive ? <Clock size={12} className="animate-pulse" /> : <Sparkles size={12} />}
-              {busy ? 'Weaving Image...' : isCooldownActive ? `Cooldown (${cooldownRemaining}s)` : 'Confirm & Weave'}
+              {busy ? 'Generating...' : isCooldownActive ? `Cooldown (${cooldownRemaining}s)` : 'Confirm & Generate'}
             </button>
             <button
               type="button"
               onClick={() => handleGenerate(customPrompt, true)}
               disabled={busy || isCooldownActive || !customPrompt.trim()}
-              className="flex items-center gap-1.5 px-3 py-1 rounded bg-gradient-to-r from-[#f7e7ce] via-[#e8ca8a] to-[#d4af37] text-zinc-950 font-display font-bold text-[11px] border border-[#fff5e1] hover:brightness-110 shadow-[0_0_12px_rgba(247,231,206,0.35)] transition-all disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1 rounded bg-gradient-to-r from-[#f7e7ce] via-[#e8ca8a] to-[#d4af37] text-[#3a2c0e] font-display font-bold text-[11px] border border-[#dec48e] hover:brightness-105 shadow-sm transition-all disabled:opacity-50"
               title="Generate with premium paid tokens"
             >
-              {busy ? <RotateCw size={12} className="animate-spin" /> : <Sparkles size={12} className="text-zinc-900" />}
-              <span>{busy ? 'Weaving...' : 'Premium'}</span>
+              {busy ? <RotateCw size={12} className="animate-spin" /> : <Sparkles size={12} className="text-[#3a2c0e]" />}
+              <span>{busy ? 'Generating...' : 'Premium'}</span>
             </button>
           </div>
-          <p className="text-[10px] text-amber-200/80 font-mono text-right mt-0.5">
-            ⚡ Warning: 'Premium' uses paid API tokens (Gemini_Prem_Key quota).
+          <p className="text-[10px] text-ink-muted font-mono text-right mt-0.5">
+            Note: 'Premium' uses paid API tokens (Gemini_Prem_Key quota).
           </p>
         </div>
       ) : (
@@ -320,7 +368,7 @@ function TaleWeaverImageGenerator({
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gold-accent/15 border border-gold-accent/40 text-gold-primary text-[11px] font-display font-semibold hover:bg-gold-accent/25 transition-colors disabled:opacity-50"
             >
               {busy ? <RotateCw size={12} className="animate-spin" /> : isCooldownActive ? <Clock size={12} className="animate-pulse" /> : url ? <RotateCw size={12} /> : <ImagePlus size={12} />}
-              {busy ? 'Weaving image...' : isCooldownActive ? `Cooldown (${cooldownRemaining}s)` : url ? 'Retry Image' : label}
+              {busy ? 'Generating image...' : isCooldownActive ? `Cooldown (${cooldownRemaining}s)` : url ? 'Retry Image' : label}
             </button>
             <button
               type="button"
@@ -329,39 +377,39 @@ function TaleWeaverImageGenerator({
                 setShowPromptEdit(true)
               }}
               disabled={busy || isCooldownActive}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gradient-to-r from-[#f7e7ce] via-[#e8ca8a] to-[#d4af37] text-zinc-950 font-display font-bold text-[11px] border border-[#fff5e1] hover:brightness-110 shadow-[0_0_12px_rgba(247,231,206,0.35)] transition-all disabled:opacity-50"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gradient-to-r from-[#f7e7ce] via-[#e8ca8a] to-[#d4af37] text-[#3a2c0e] font-display font-bold text-[11px] border border-[#dec48e] hover:brightness-105 shadow-sm transition-all disabled:opacity-50"
               title="Generate using paid API tokens"
             >
-              <Sparkles size={12} className="text-zinc-900" />
+              <Sparkles size={12} className="text-[#3a2c0e]" />
               <span>Premium</span>
             </button>
             {modelUsed && !busy && (
-              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 text-[10.5px] font-mono animate-fade-in shadow-sm">
-                <CheckCircle2 size={12} className="text-emerald-400 shrink-0" />
-                <span>Generated using <strong className="text-emerald-200 font-semibold">{modelUsed}</strong></span>
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#eef7f0] border border-[#0f5132]/25 text-[#0f5132] text-[10.5px] font-mono animate-fade-in">
+                <CheckCircle2 size={12} className="text-[#0f5132] shrink-0" />
+                <span>Generated using <strong className="font-semibold">{modelUsed}</strong></span>
               </div>
             )}
           </div>
-          <p className="text-[10px] text-amber-200/70 font-mono">
-            ⚡ Note: 'Premium' generation uses paid API tokens.
+          <p className="text-[10px] text-ink-muted font-mono">
+            Note: 'Premium' generation uses paid API tokens.
           </p>
         </div>
       )}
 
       {isCooldownActive && !busy && (
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-950/70 border border-amber-500/40 text-amber-300 text-[10.5px] font-mono animate-fade-in shadow-sm">
-          <Clock size={12} className="text-amber-400 shrink-0 animate-pulse" />
-          <span>Nanobanana 2 Cooldown: Retry available in <strong>{cooldownRemaining}s</strong></span>
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#fdf6e8] border border-[#8a6a24]/30 text-[#8a6a24] text-[10.5px] font-mono animate-fade-in">
+          <Clock size={12} className="text-[#8a6a24] shrink-0 animate-pulse" />
+          <span>Cooldown: retry available in <strong>{cooldownRemaining}s</strong></span>
         </div>
       )}
 
       {error && (
-        <div className="rounded-lg bg-red-950/50 border border-red-500/30 p-2 text-[11px] font-narrative flex flex-col gap-1 text-red-300">
-          <div className="flex items-center gap-1.5 font-semibold text-red-200">
-            <AlertCircle size={13} className="shrink-0 text-red-400" />
+        <div className="rounded-lg bg-[#fdecec] border border-[#e5a3a3] p-2 text-[11px] font-narrative flex flex-col gap-1 text-[#8a2020]">
+          <div className="flex items-center gap-1.5 font-semibold">
+            <AlertCircle size={13} className="shrink-0" />
             <span>Image Generation Failed</span>
           </div>
-          <p className="text-red-300/90 text-[10.5px] leading-snug">
+          <p className="text-[#8a2020]/90 text-[10.5px] leading-snug">
             {error}
           </p>
         </div>
@@ -790,10 +838,10 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
     return (
       <div className="flex flex-col gap-2">
         <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">Narrative Settings</span>
-        <div className="rounded-xl border border-gold-accent/25 bg-[#161a28]/70 p-3 flex flex-col gap-3">
+        <div className="rounded-xl border border-gold-accent/25 bg-white/70 p-3 flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
             <label className="font-mono text-[10px] uppercase text-gold-primary/70">Point of View</label>
-            <GlassSegmented
+            <VellumSegmented
               options={[
                 { id: 'third', label: 'Third Person' },
                 { id: 'first', label: 'First Person' },
@@ -804,7 +852,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="font-mono text-[10px] uppercase text-gold-primary/70">Narration Mode</label>
-            <GlassSegmented
+            <VellumSegmented
               options={[
                 { id: 'reactive', label: 'Reactive' },
                 { id: 'immersive', label: 'Immersive' },
@@ -815,7 +863,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="font-mono text-[10px] uppercase text-gold-primary/70">Tale Difficulty</label>
-            <GlassSegmented
+            <VellumSegmented
               options={(Object.keys(TALE_DIFFICULTIES) as TaleDifficultyKey[]).map((key) => ({
                 id: key,
                 label: key === 'EXTREME' ? `${TALE_DIFFICULTIES[key].label} ★` : TALE_DIFFICULTIES[key].label,
@@ -844,7 +892,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
         return (
           <div className="flex flex-col gap-3">
             {/* Inspiration Section - First Priority */}
-            <div className="rounded-xl border border-gold-accent/35 bg-[#141824] p-3.5 sm:p-4 flex flex-col gap-3 shadow-sm">
+            <div className="rounded-xl border border-gold-accent/35 bg-white p-3.5 sm:p-4 flex flex-col gap-3 shadow-sm">
               <div className="flex items-center gap-2 border-b border-gold-accent/15 pb-2">
                 <BookOpen size={15} className="text-gold-primary" />
                 <span className="font-display font-bold text-xs text-gold-primary uppercase tracking-wider">
@@ -852,7 +900,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 </span>
               </div>
 
-              <div className="rounded-lg bg-[#0d1017]/70 border border-gold-accent/20 p-2.5 flex items-start gap-2">
+              <div className="rounded-lg bg-[#faf8f4]/70 border border-gold-accent/20 p-2.5 flex items-start gap-2">
                 <Info size={14} className="text-gold-primary shrink-0 mt-0.5" />
                 <p className="font-narrative text-[11px] text-ink/85 leading-relaxed">
                   The world will try to accurately represent the novel universe from that source, but note that as an LLM there will still be significant difference to the original literature.
@@ -870,7 +918,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     placeholder="e.g. Fourth Wing, Dune, Lord of the Mysteries"
                     value={w?.sourceTitle || ''}
                     onChange={(e) => updateSourceMaterial('sourceTitle', e.target.value)}
-                    className="px-3 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink placeholder:text-ink-muted/40 outline-none focus:border-gold-primary transition-colors"
+                    className="px-3 py-1.5 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink placeholder:text-ink-muted/40 outline-none focus:border-gold-primary transition-colors"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
@@ -883,7 +931,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     placeholder="e.g. Rebecca Yarros, Frank Herbert"
                     value={w?.sourceAuthor || ''}
                     onChange={(e) => updateSourceMaterial('sourceAuthor', e.target.value)}
-                    className="px-3 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink placeholder:text-ink-muted/40 outline-none focus:border-gold-primary transition-colors"
+                    className="px-3 py-1.5 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink placeholder:text-ink-muted/40 outline-none focus:border-gold-primary transition-colors"
                   />
                 </div>
                 <div className="flex flex-col gap-1 sm:col-span-2 lg:col-span-1">
@@ -896,7 +944,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     placeholder="e.g. Book 1 only, through Ch. 12, or leave blank"
                     value={w?.sourceScope || ''}
                     onChange={(e) => updateSourceMaterial('sourceScope', e.target.value)}
-                    className="px-3 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink placeholder:text-ink-muted/40 outline-none focus:border-gold-primary transition-colors"
+                    className="px-3 py-1.5 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink placeholder:text-ink-muted/40 outline-none focus:border-gold-primary transition-colors"
                   />
                 </div>
               </div>
@@ -904,14 +952,14 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
 
             {/* World Foundation Entity Area */}
             {editingKey === 'world' ? (
-              <div className="rounded-xl border border-gold-primary/60 bg-[#161a28] p-4 flex flex-col gap-3">
+              <div className="rounded-xl border border-gold-primary/60 bg-white p-4 flex flex-col gap-3">
                 <div className="flex items-center justify-between border-b border-gold-accent/20 pb-2">
                   <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary font-bold">Edit World Foundation</span>
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => saveEditing('world')}
-                      className="px-2.5 py-1 rounded-lg bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1 hover:bg-gold-primary/90 transition-colors"
+                      className="px-2.5 py-1 rounded-lg bg-[#b08830] text-white font-display font-bold text-xs flex items-center gap-1 hover:bg-[#8d6b1d] transition-colors"
                     >
                       <Save size={13} /> Save
                     </button>
@@ -924,6 +972,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     </button>
                   </div>
                 </div>
+                <FieldSectionHeader label="World Identity" first />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div className="flex flex-col gap-1">
                     <label className="font-mono text-[10px] uppercase text-gold-primary/70">World Name</label>
@@ -931,7 +980,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                       type="text"
                       value={editFormData.name || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                      className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                      className="px-2.5 py-1.5 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
@@ -940,7 +989,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                       type="text"
                       value={editFormData.genreTone || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, genreTone: e.target.value })}
-                      className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                      className="px-2.5 py-1.5 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
@@ -949,7 +998,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                       type="text"
                       value={editFormData.eraTechLevel || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, eraTechLevel: e.target.value })}
-                      className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                      className="px-2.5 py-1.5 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
@@ -958,40 +1007,40 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                       type="text"
                       value={editFormData.powerSystem || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, powerSystem: e.target.value })}
-                      className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                      className="px-2.5 py-1.5 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
                     />
                   </div>
                 </div>
+                <FieldSectionHeader label="Key Factions Summary" />
                 <div className="flex flex-col gap-1">
-                  <label className="font-mono text-[10px] uppercase text-gold-primary/70">Key Factions Summary</label>
                   <input
                     type="text"
                     value={editFormData.keyFactions || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, keyFactions: e.target.value })}
-                    className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                    className="px-2.5 py-1.5 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
                   />
                 </div>
+                <FieldSectionHeader label="Central Conflict" />
                 <div className="flex flex-col gap-1">
-                  <label className="font-mono text-[10px] uppercase text-gold-primary/70">Central Conflict</label>
                   <textarea
                     rows={2}
                     value={editFormData.conflict || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, conflict: e.target.value })}
-                    className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary resize-none"
+                    className="px-2.5 py-1.5 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary resize-none"
                   />
                 </div>
+                <FieldSectionHeader label="World Background / Lore" />
                 <div className="flex flex-col gap-1">
-                  <label className="font-mono text-[10px] uppercase text-gold-primary/70">World Background / Lore</label>
                   <textarea
                     rows={3}
                     value={editFormData.background || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, background: e.target.value })}
-                    className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary resize-none"
+                    className="px-2.5 py-1.5 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary resize-none"
                   />
                 </div>
               </div>
             ) : hasWorldContent && w ? (
-              <div className="rounded-xl border border-gold-accent/35 bg-[#161a28] p-4 flex flex-col gap-3">
+              <div className="rounded-xl border border-gold-accent/35 bg-white p-4 flex flex-col gap-3">
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">World Foundation</span>
@@ -1009,7 +1058,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     <button
                       type="button"
                       onClick={() => clearSingle('world')}
-                      className="text-red-400/70 hover:text-red-300 p-1 rounded hover:bg-red-400/10 transition-colors"
+                      className="text-[#b91c1c]/70 hover:text-[#b91c1c] p-1 rounded hover:bg-[#fdecec] transition-colors"
                       title="Clear world"
                     >
                       <X size={15} />
@@ -1048,7 +1097,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 )}
               </div>
             ) : (
-              <div className="rounded-xl border border-gold-accent/20 bg-[#161a28]/60 p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="rounded-xl border border-gold-accent/20 bg-white/60 p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5 text-center sm:text-left">
                   <div className="p-2 rounded-lg bg-gold-accent/10 border border-gold-accent/20 text-gold-primary shrink-0 hidden sm:flex">
                     <Sparkles size={16} />
@@ -1076,7 +1125,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     type="button"
                     onClick={startManualWorld}
                     disabled={busy}
-                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/25 bg-[#161a28] hover:bg-gold-accent/15 text-ink-muted hover:text-ink font-display text-xs transition-colors"
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/25 bg-white hover:bg-gold-accent/15 text-ink-muted hover:text-ink font-display text-xs transition-colors"
                   >
                     <Plus size={13} />
                     <span>Manual Entry</span>
@@ -1092,7 +1141,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
         const p = accumulated.protagonist
         if (!p) {
           return (
-            <div className="rounded-xl border border-gold-accent/20 bg-[#161a28]/60 p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="rounded-xl border border-gold-accent/20 bg-white/60 p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 text-center sm:text-left">
                 <div className="p-2 rounded-lg bg-gold-accent/10 border border-gold-accent/20 text-gold-primary shrink-0 hidden sm:flex">
                   <Sparkles size={16} />
@@ -1120,7 +1169,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                   type="button"
                   onClick={startManualProtagonist}
                   disabled={busy}
-                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/25 bg-[#161a28] hover:bg-gold-accent/15 text-ink-muted hover:text-ink font-display text-xs transition-colors"
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/25 bg-white hover:bg-gold-accent/15 text-ink-muted hover:text-ink font-display text-xs transition-colors"
                 >
                   <Plus size={13} />
                   <span>Manual Entry</span>
@@ -1132,14 +1181,14 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
 
         if (editingKey === 'protagonist') {
           return (
-            <div className="rounded-xl border border-gold-primary/60 bg-[#161a28] p-4 flex flex-col gap-3">
+            <div className="rounded-xl border border-gold-primary/60 bg-white p-4 flex flex-col gap-3">
               <div className="flex items-center justify-between border-b border-gold-accent/20 pb-2">
                 <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary font-bold">Edit Protagonist</span>
                 <div className="flex items-center gap-1.5">
                   <button
                     type="button"
                     onClick={() => saveEditing('protagonist')}
-                    className="px-2.5 py-1 rounded-lg bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1 hover:bg-gold-primary/90 transition-colors"
+                    className="px-2.5 py-1 rounded-lg bg-[#b08830] text-white font-display font-bold text-xs flex items-center gap-1 hover:bg-[#8d6b1d] transition-colors"
                   >
                     <Save size={13} /> Save
                   </button>
@@ -1152,6 +1201,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                   </button>
                 </div>
               </div>
+              <FieldSectionHeader label="Character Identity" first />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div className="flex flex-col gap-1">
                   <label className="font-mono text-[10px] uppercase text-gold-primary/70">Name</label>
@@ -1159,7 +1209,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     type="text"
                     value={editFormData.name || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                    className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                    className="px-2.5 py-1.5 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
@@ -1168,7 +1218,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     type="text"
                     value={editFormData.personality || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, personality: e.target.value })}
-                    className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                    className="px-2.5 py-1.5 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
@@ -1177,7 +1227,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     type="text"
                     value={editFormData.motivation || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, motivation: e.target.value })}
-                    className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                    className="px-2.5 py-1.5 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
@@ -1186,7 +1236,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     type="text"
                     value={editFormData.physicalTrait || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, physicalTrait: e.target.value })}
-                    className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                    className="px-2.5 py-1.5 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
@@ -1196,35 +1246,35 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     value={editFormData.classHint || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, classHint: e.target.value })}
                     placeholder="e.g. Warrior, Mage, Dragon Rider"
-                    className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                    className="px-2.5 py-1.5 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
                   />
                 </div>
               </div>
+              <FieldSectionHeader label="Origin & Background" />
               <div className="flex flex-col gap-1">
-                <label className="font-mono text-[10px] uppercase text-gold-primary/70">Origin & Background</label>
                 <textarea
                   rows={2}
                   value={editFormData.background || ''}
                   onChange={(e) => setEditFormData({ ...editFormData, background: e.target.value })}
-                  className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary resize-none"
+                  className="px-2.5 py-1.5 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary resize-none"
                 />
               </div>
+              <FieldSectionHeader label="Hidden Secret" />
               <div className="flex flex-col gap-1">
-                <label className="font-mono text-[10px] uppercase text-gold-primary/70">Hidden Secret</label>
                 <input
                   type="text"
                   value={editFormData.secret || ''}
                   onChange={(e) => setEditFormData({ ...editFormData, secret: e.target.value })}
-                  className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                  className="px-2.5 py-1.5 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
                 />
               </div>
+              <FieldSectionHeader label="Opening Scene Setup" />
               <div className="flex flex-col gap-1">
-                <label className="font-mono text-[10px] uppercase text-gold-primary/70">Opening Scene Setup</label>
                 <textarea
                   rows={2}
                   value={editFormData.opening || ''}
                   onChange={(e) => setEditFormData({ ...editFormData, opening: e.target.value })}
-                  className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary resize-none"
+                  className="px-2.5 py-1.5 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary resize-none"
                 />
               </div>
             </div>
@@ -1232,7 +1282,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
         }
 
         return (
-          <div className="rounded-xl border border-gold-accent/35 bg-[#161a28] p-4 flex flex-col gap-3">
+          <div className="rounded-xl border border-gold-accent/35 bg-white p-4 flex flex-col gap-3">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">Protagonist</span>
@@ -1257,7 +1307,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 <button
                   type="button"
                   onClick={() => clearSingle('protagonist')}
-                  className="text-red-400/70 hover:text-red-300 p-1 rounded hover:bg-red-400/10 transition-colors"
+                  className="text-[#b91c1c]/70 hover:text-[#b91c1c] p-1 rounded hover:bg-[#fdecec] transition-colors"
                   title="Clear protagonist"
                 >
                   <X size={15} />
@@ -1307,19 +1357,19 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     const isEditing = editingKey === `skill_${s.id}`
                     if (isEditing) {
                       return (
-                        <div key={s.id} className="rounded-lg border border-gold-primary/60 bg-[#0d1017] p-2.5 flex flex-col gap-2">
+                        <div key={s.id} className="rounded-lg border border-gold-primary/60 bg-[#faf8f4] p-2.5 flex flex-col gap-2">
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                             <input
                               type="text"
                               value={editFormData.name || ''}
                               onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
                               placeholder="Skill Name"
-                              className="px-2.5 py-1 rounded-lg bg-[#161a28] border border-gold-accent/30 text-xs text-ink outline-none"
+                              className="px-2.5 py-1 rounded-lg bg-white border border-gold-accent/30 text-xs text-ink outline-none"
                             />
                             <select
                               value={editFormData.effort || 'minor'}
                               onChange={(e) => setEditFormData({ ...editFormData, effort: e.target.value })}
-                              className="px-2.5 py-1 rounded-lg bg-[#161a28] border border-gold-accent/30 text-xs text-ink outline-none"
+                              className="px-2.5 py-1 rounded-lg bg-white border border-gold-accent/30 text-xs text-ink outline-none"
                             >
                               <option value="minor">Minor</option>
                               <option value="focused">Focused</option>
@@ -1328,7 +1378,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                             <select
                               value={editFormData.tier || 'Novice'}
                               onChange={(e) => setEditFormData({ ...editFormData, tier: e.target.value })}
-                              className="px-2.5 py-1 rounded-lg bg-[#161a28] border border-gold-accent/30 text-xs text-ink outline-none"
+                              className="px-2.5 py-1 rounded-lg bg-white border border-gold-accent/30 text-xs text-ink outline-none"
                             >
                               {['Untrained', 'Novice', 'Adept', 'Expert', 'Master'].map((t) => (
                                 <option key={t} value={t}>{t}</option>
@@ -1340,13 +1390,13 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                             value={editFormData.desc || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, desc: e.target.value })}
                             placeholder="What it does"
-                            className="px-2.5 py-1 rounded-lg bg-[#161a28] border border-gold-accent/30 text-xs text-ink outline-none"
+                            className="px-2.5 py-1 rounded-lg bg-white border border-gold-accent/30 text-xs text-ink outline-none"
                           />
                           <div className="flex items-center gap-1.5 self-end">
                             <button
                               type="button"
                               onClick={() => saveEditing(`skill_${s.id}`)}
-                              className="px-2 py-0.5 rounded bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1"
+                              className="px-2 py-0.5 rounded bg-[#b08830] text-white font-display font-bold text-xs flex items-center gap-1"
                             >
                               <Save size={12} /> Save
                             </button>
@@ -1358,7 +1408,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                       )
                     }
                     return (
-                      <div key={s.id} className="rounded-lg border border-gold-accent/25 bg-[#0d1017]/60 px-2.5 py-1.5 flex items-center justify-between gap-2">
+                      <div key={s.id} className="rounded-lg border border-gold-accent/25 bg-[#faf8f4]/60 px-2.5 py-1.5 flex items-center justify-between gap-2">
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="font-display font-semibold text-xs text-gold-primary">{s.name}</span>
@@ -1371,7 +1421,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                           <button type="button" onClick={() => startEditing(`skill_${s.id}`, s)} className="text-gold-primary/70 hover:text-gold-primary p-1">
                             <Pencil size={12} />
                           </button>
-                          <button type="button" onClick={() => removeItem('skills', s.id)} className="text-red-400/70 hover:text-red-300 p-1">
+                          <button type="button" onClick={() => removeItem('skills', s.id)} className="text-[#b91c1c]/70 hover:text-[#b91c1c] p-1">
                             <X size={13} />
                           </button>
                         </div>
@@ -1390,7 +1440,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
         const hasLocations = accumulated.locations.length > 0
         if (!hasRegions && !hasLocations) {
           return (
-            <div className="rounded-xl border border-gold-accent/20 bg-[#161a28]/60 p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="rounded-xl border border-gold-accent/20 bg-white/60 p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 text-center sm:text-left">
                 <div className="p-2 rounded-lg bg-gold-accent/10 border border-gold-accent/20 text-gold-primary shrink-0 hidden sm:flex">
                   <Sparkles size={16} />
@@ -1418,7 +1468,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                   type="button"
                   onClick={() => addCustomItem('regions')}
                   disabled={busy}
-                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/25 bg-[#161a28] hover:bg-gold-accent/15 text-ink-muted hover:text-ink font-display text-xs transition-colors"
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/25 bg-white hover:bg-gold-accent/15 text-ink-muted hover:text-ink font-display text-xs transition-colors"
                 >
                   <Plus size={13} />
                   <span>Add Region</span>
@@ -1444,14 +1494,14 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
           const isEditing = editingKey === `location_${l.id}`
           if (isEditing) {
             return (
-              <div key={l.id} className="rounded-xl border border-gold-primary/60 bg-[#161a28] p-3 flex flex-col gap-2 col-span-1 sm:col-span-2">
+              <div key={l.id} className="rounded-xl border border-gold-primary/60 bg-white p-3 flex flex-col gap-2 col-span-1 sm:col-span-2">
                 <div className="flex items-center justify-between border-b border-gold-accent/20 pb-1.5">
                   <span className="font-mono text-[10px] uppercase text-gold-primary font-bold">Edit Location</span>
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => saveEditing(`location_${l.id}`)}
-                      className="px-2 py-0.5 rounded bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1"
+                      className="px-2 py-0.5 rounded bg-[#b08830] text-white font-display font-bold text-xs flex items-center gap-1"
                     >
                       <Save size={12} /> Save
                     </button>
@@ -1466,12 +1516,12 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     value={editFormData.name || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
                     placeholder="Location Name"
-                    className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                    className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none"
                   />
                   <select
                     value={editFormData.regionId || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, regionId: e.target.value })}
-                    className="px-2 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                    className="px-2 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none"
                   >
                     <option value="">No Specific Region</option>
                     {accumulated.regions.map((r) => (
@@ -1485,7 +1535,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     value={editFormData.locationType || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, locationType: e.target.value })}
                     placeholder="Type (e.g. Landmark, Settlement)"
-                    className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                    className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none"
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1494,14 +1544,14 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     value={editFormData.danger || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, danger: e.target.value })}
                     placeholder="Danger Level (e.g. Safe, Perilous)"
-                    className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                    className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none"
                   />
                   <input
                     type="text"
                     value={editFormData.areas || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, areas: e.target.value })}
                     placeholder="Sub-areas (comma separated)"
-                    className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                    className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none"
                   />
                 </div>
                 <textarea
@@ -1509,13 +1559,13 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                   value={editFormData.desc || ''}
                   onChange={(e) => setEditFormData({ ...editFormData, desc: e.target.value })}
                   placeholder="Location Description"
-                  className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none resize-none"
+                  className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none resize-none"
                 />
               </div>
             )
           }
           return (
-            <div key={l.id} className="rounded-xl border border-gold-accent/30 bg-[#161a28] p-3 flex items-start justify-between gap-2">
+            <div key={l.id} className="rounded-xl border border-gold-accent/30 bg-white p-3 flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
                 <p className="font-display font-semibold text-sm text-gold-primary truncate">{l.name}</p>
                 <p className="font-narrative text-xs text-ink-muted">
@@ -1543,7 +1593,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 <button
                   type="button"
                   onClick={() => removeItem('locations', l.id)}
-                  className="text-red-400/70 hover:text-red-300 p-1"
+                  className="text-[#b91c1c]/70 hover:text-[#b91c1c] p-1"
                 >
                   <X size={14} />
                 </button>
@@ -1569,7 +1619,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
               const isEditingRegion = editingKey === `region_${r.id}`
               const childLocs = accumulated.locations.filter((l) => l.regionId === r.id)
               return (
-                <div key={r.id} className="rounded-xl border border-gold-accent/30 bg-[#12151f] overflow-hidden">
+                <div key={r.id} className="rounded-xl border border-gold-accent/30 bg-white overflow-hidden">
                   {isEditingRegion ? (
                     <div className="p-3 flex flex-col gap-2">
                       <div className="flex items-center justify-between border-b border-gold-accent/20 pb-1.5">
@@ -1578,7 +1628,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                           <button
                             type="button"
                             onClick={() => saveEditing(`region_${r.id}`)}
-                            className="px-2 py-0.5 rounded bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1"
+                            className="px-2 py-0.5 rounded bg-[#b08830] text-white font-display font-bold text-xs flex items-center gap-1"
                           >
                             <Save size={12} /> Save
                           </button>
@@ -1592,14 +1642,14 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                         value={editFormData.name || ''}
                         onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
                         placeholder="Region Name"
-                        className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                        className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
                       />
                       <textarea
                         rows={2}
                         value={editFormData.desc || ''}
                         onChange={(e) => setEditFormData({ ...editFormData, desc: e.target.value })}
                         placeholder="Region Description"
-                        className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary resize-none"
+                        className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary resize-none"
                       />
                     </div>
                   ) : (
@@ -1624,7 +1674,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                         <button
                           type="button"
                           onClick={() => removeItem('regions', r.id)}
-                          className="text-red-400/70 hover:text-red-300 p-1"
+                          className="text-[#b91c1c]/70 hover:text-[#b91c1c] p-1"
                         >
                           <X size={14} />
                         </button>
@@ -1633,7 +1683,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                   )}
 
                   {/* Child Locations — indented under their parent Region */}
-                  <div className="border-t border-gold-accent/15 bg-[#0d1017]/40 p-3 pl-4 sm:pl-5 flex flex-col gap-2">
+                  <div className="border-t border-gold-accent/15 bg-[#faf8f4]/40 p-3 pl-4 sm:pl-5 flex flex-col gap-2">
                     <div className="flex items-center justify-between">
                       <span className="font-mono text-[9px] uppercase tracking-wider text-ink-muted">Locations in {r.name}</span>
                       <button
@@ -1659,7 +1709,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 surprising) so an orphaned location is never silently
                 invisible. */}
             {(unassignedLocations.length > 0 || accumulated.regions.length === 0) && (
-              <div className="rounded-xl border border-dashed border-gold-accent/25 bg-[#161a28]/40 p-3 flex flex-col gap-2">
+              <div className="rounded-xl border border-dashed border-gold-accent/25 bg-white/40 p-3 flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">
                     Unassigned Locations {unassignedLocations.length > 0 ? `(${unassignedLocations.length})` : ''}
@@ -1697,7 +1747,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
               </button>
             </div>
             {!accumulated.factions.length ? (
-              <div className="rounded-xl border border-gold-accent/20 bg-[#161a28]/60 p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="rounded-xl border border-gold-accent/20 bg-white/60 p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5 text-center sm:text-left">
                   <div className="p-2 rounded-lg bg-gold-accent/10 border border-gold-accent/20 text-gold-primary shrink-0 hidden sm:flex">
                     <Sparkles size={16} />
@@ -1725,7 +1775,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     type="button"
                     onClick={() => addCustomItem('factions')}
                     disabled={busy}
-                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/25 bg-[#161a28] hover:bg-gold-accent/15 text-ink-muted hover:text-ink font-display text-xs transition-colors"
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/25 bg-white hover:bg-gold-accent/15 text-ink-muted hover:text-ink font-display text-xs transition-colors"
                   >
                     <Plus size={13} />
                     <span>Add Faction</span>
@@ -1738,14 +1788,14 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                   const isEditing = editingKey === `faction_${f.id}`
                   if (isEditing) {
                     return (
-                      <div key={f.id} className="rounded-xl border border-gold-primary/60 bg-[#161a28] p-3 flex flex-col gap-2 col-span-1 sm:col-span-2">
+                      <div key={f.id} className="rounded-xl border border-gold-primary/60 bg-white p-3 flex flex-col gap-2 col-span-1 sm:col-span-2">
                         <div className="flex items-center justify-between border-b border-gold-accent/20 pb-1.5">
                           <span className="font-mono text-[10px] uppercase text-gold-primary font-bold">Edit Faction</span>
                           <div className="flex items-center gap-1.5">
                             <button
                               type="button"
                               onClick={() => saveEditing(`faction_${f.id}`)}
-                              className="px-2 py-0.5 rounded bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1"
+                              className="px-2 py-0.5 rounded bg-[#b08830] text-white font-display font-bold text-xs flex items-center gap-1"
                             >
                               <Save size={12} /> Save
                             </button>
@@ -1760,12 +1810,12 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                             value={editFormData.name || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
                             placeholder="Faction Name"
-                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                            className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none"
                           />
                           <select
                             value={editFormData.attitude || 'neutral'}
                             onChange={(e) => setEditFormData({ ...editFormData, attitude: e.target.value })}
-                            className="px-2 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                            className="px-2 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none"
                           >
                             <option value="allied">Allied</option>
                             <option value="friendly">Friendly</option>
@@ -1778,7 +1828,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                             value={editFormData.territory || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, territory: e.target.value })}
                             placeholder="Territory / Domain"
-                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                            className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none"
                           />
                         </div>
                         <textarea
@@ -1786,14 +1836,14 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                           value={editFormData.desc || ''}
                           onChange={(e) => setEditFormData({ ...editFormData, desc: e.target.value })}
                           placeholder="Faction Description"
-                          className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none resize-none"
+                          className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none resize-none"
                         />
                       </div>
                     )
                   }
 
                   return (
-                    <div key={f.id} className="rounded-xl border border-gold-accent/30 bg-[#161a28] p-3 flex items-start justify-between gap-2">
+                    <div key={f.id} className="rounded-xl border border-gold-accent/30 bg-white p-3 flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <p className="font-display font-semibold text-sm text-gold-primary truncate">{f.name}</p>
@@ -1817,7 +1867,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                         <button
                           type="button"
                           onClick={() => removeItem('factions', f.id)}
-                          className="text-red-400/70 hover:text-red-300 p-1"
+                          className="text-[#b91c1c]/70 hover:text-[#b91c1c] p-1"
                         >
                           <X size={14} />
                         </button>
@@ -1845,7 +1895,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
               </button>
             </div>
             {!accumulated.npcs.length ? (
-              <div className="rounded-xl border border-gold-accent/20 bg-[#161a28]/60 p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="rounded-xl border border-gold-accent/20 bg-white/60 p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5 text-center sm:text-left">
                   <div className="p-2 rounded-lg bg-gold-accent/10 border border-gold-accent/20 text-gold-primary shrink-0 hidden sm:flex">
                     <Sparkles size={16} />
@@ -1873,7 +1923,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     type="button"
                     onClick={() => addCustomItem('npcs')}
                     disabled={busy}
-                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/25 bg-[#161a28] hover:bg-gold-accent/15 text-ink-muted hover:text-ink font-display text-xs transition-colors"
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/25 bg-white hover:bg-gold-accent/15 text-ink-muted hover:text-ink font-display text-xs transition-colors"
                   >
                     <Plus size={13} />
                     <span>Add Character</span>
@@ -1886,14 +1936,14 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                   const isEditing = editingKey === `npc_${n.id}`
                   if (isEditing) {
                     return (
-                      <div key={n.id} className="rounded-xl border border-gold-primary/60 bg-[#161a28] p-3 flex flex-col gap-2 col-span-1 sm:col-span-2">
+                      <div key={n.id} className="rounded-xl border border-gold-primary/60 bg-white p-3 flex flex-col gap-2 col-span-1 sm:col-span-2">
                         <div className="flex items-center justify-between border-b border-gold-accent/20 pb-1.5">
                           <span className="font-mono text-[10px] uppercase text-gold-primary font-bold">Edit Character</span>
                           <div className="flex items-center gap-1.5">
                             <button
                               type="button"
                               onClick={() => saveEditing(`npc_${n.id}`)}
-                              className="px-2 py-0.5 rounded bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1"
+                              className="px-2 py-0.5 rounded bg-[#b08830] text-white font-display font-bold text-xs flex items-center gap-1"
                             >
                               <Save size={12} /> Save
                             </button>
@@ -1908,21 +1958,21 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                             value={editFormData.name || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
                             placeholder="Character Name"
-                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                            className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none"
                           />
                           <input
                             type="text"
                             value={editFormData.role || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value })}
                             placeholder="Role / Title"
-                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                            className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none"
                           />
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <select
                             value={editFormData.aff || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, aff: e.target.value })}
-                            className="px-2 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                            className="px-2 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none"
                           >
                             <option value="">Affection (Default: Neutral)</option>
                             <option value="Stranger">Stranger</option>
@@ -1934,7 +1984,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                           <select
                             value={editFormData.trust || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, trust: e.target.value })}
-                            className="px-2 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                            className="px-2 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none"
                           >
                             <option value="">Trust (Default: Neutral)</option>
                             <option value="Distrustful">Distrustful</option>
@@ -1949,21 +1999,21 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                           value={editFormData.personality || ''}
                           onChange={(e) => setEditFormData({ ...editFormData, personality: e.target.value })}
                           placeholder="Personality & Behavior"
-                          className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                          className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none"
                         />
                         <textarea
                           rows={2}
                           value={editFormData.appearance || ''}
                           onChange={(e) => setEditFormData({ ...editFormData, appearance: e.target.value })}
                           placeholder="Physical Appearance & Attire"
-                          className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none resize-none"
+                          className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none resize-none"
                         />
                       </div>
                     )
                   }
 
                   return (
-                    <div key={n.id} className="rounded-xl border border-gold-accent/30 bg-[#161a28] p-3 flex items-start justify-between gap-2">
+                    <div key={n.id} className="rounded-xl border border-gold-accent/30 bg-white p-3 flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <p className="font-display font-semibold text-sm text-gold-primary truncate">{n.name}</p>
@@ -1995,7 +2045,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                         <button
                           type="button"
                           onClick={() => removeItem('npcs', n.id)}
-                          className="text-red-400/70 hover:text-red-300 p-1"
+                          className="text-[#b91c1c]/70 hover:text-[#b91c1c] p-1"
                         >
                           <X size={14} />
                         </button>
@@ -2023,7 +2073,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
               </button>
             </div>
             {!accumulated.lore.length ? (
-              <div className="rounded-xl border border-gold-accent/20 bg-[#161a28]/60 p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="rounded-xl border border-gold-accent/20 bg-white/60 p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5 text-center sm:text-left">
                   <div className="p-2 rounded-lg bg-gold-accent/10 border border-gold-accent/20 text-gold-primary shrink-0 hidden sm:flex">
                     <Sparkles size={16} />
@@ -2051,7 +2101,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     type="button"
                     onClick={() => addCustomItem('lore')}
                     disabled={busy}
-                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/25 bg-[#161a28] hover:bg-gold-accent/15 text-ink-muted hover:text-ink font-display text-xs transition-colors"
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/25 bg-white hover:bg-gold-accent/15 text-ink-muted hover:text-ink font-display text-xs transition-colors"
                   >
                     <Plus size={13} />
                     <span>Add Lore</span>
@@ -2064,14 +2114,14 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                   const isEditing = editingKey === `lore_${l.id}`
                   if (isEditing) {
                     return (
-                      <div key={l.id} className="rounded-xl border border-gold-primary/60 bg-[#161a28] p-3 flex flex-col gap-2 col-span-1 sm:col-span-2">
+                      <div key={l.id} className="rounded-xl border border-gold-primary/60 bg-white p-3 flex flex-col gap-2 col-span-1 sm:col-span-2">
                         <div className="flex items-center justify-between border-b border-gold-accent/20 pb-1.5">
                           <span className="font-mono text-[10px] uppercase text-gold-primary font-bold">Edit Lore</span>
                           <div className="flex items-center gap-1.5">
                             <button
                               type="button"
                               onClick={() => saveEditing(`lore_${l.id}`)}
-                              className="px-2 py-0.5 rounded bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1"
+                              className="px-2 py-0.5 rounded bg-[#b08830] text-white font-display font-bold text-xs flex items-center gap-1"
                             >
                               <Save size={12} /> Save
                             </button>
@@ -2086,21 +2136,21 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                             value={editFormData.name || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
                             placeholder="Lore Name"
-                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                            className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none"
                           />
                           <input
                             type="text"
                             value={editFormData.category || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value })}
                             placeholder="Category (e.g. History, Myth)"
-                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                            className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none"
                           />
                           <input
                             type="text"
                             value={editFormData.era || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, era: e.target.value })}
                             placeholder="Era / Period"
-                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                            className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none"
                           />
                         </div>
                         <textarea
@@ -2108,14 +2158,14 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                           value={editFormData.content || ''}
                           onChange={(e) => setEditFormData({ ...editFormData, content: e.target.value })}
                           placeholder="Lore Content"
-                          className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none resize-none"
+                          className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none resize-none"
                         />
                       </div>
                     )
                   }
 
                   return (
-                    <div key={l.id} className="rounded-xl border border-gold-accent/30 bg-[#161a28] p-3 flex items-start justify-between gap-2">
+                    <div key={l.id} className="rounded-xl border border-gold-accent/30 bg-white p-3 flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <p className="font-display font-semibold text-sm text-gold-primary truncate">
@@ -2141,7 +2191,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                         <button
                           type="button"
                           onClick={() => removeItem('lore', l.id)}
-                          className="text-red-400/70 hover:text-red-300 p-1"
+                          className="text-[#b91c1c]/70 hover:text-[#b91c1c] p-1"
                         >
                           <X size={14} />
                         </button>
@@ -2169,7 +2219,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
         if (!hasBeats && !hasEvents && !hasStakes) {
           return (
             <div className="flex flex-col gap-4">
-              <div className="rounded-xl border border-gold-accent/20 bg-[#161a28]/60 p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="rounded-xl border border-gold-accent/20 bg-white/60 p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5 text-center sm:text-left">
                   <div className="p-2 rounded-lg bg-gold-accent/10 border border-gold-accent/20 text-gold-primary shrink-0 hidden sm:flex">
                     <Sparkles size={16} />
@@ -2197,7 +2247,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     type="button"
                     onClick={() => addCustomItem('beats')}
                     disabled={busy}
-                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/25 bg-[#161a28] hover:bg-gold-accent/15 text-ink-muted hover:text-ink font-display text-xs transition-colors"
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/25 bg-white hover:bg-gold-accent/15 text-ink-muted hover:text-ink font-display text-xs transition-colors"
                   >
                     <Plus size={13} />
                     <span>Add Beat</span>
@@ -2228,7 +2278,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                   <button
                     type="button"
                     onClick={() => addCustomItem('beats')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/15 text-gold-primary text-xs font-display transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/30 bg-white hover:bg-gold-accent/15 text-gold-primary text-xs font-display transition-colors"
                   >
                     <Plus size={14} />
                     <span>Add Story Beat Manually</span>
@@ -2241,14 +2291,14 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     const isEditing = editingKey === `beat_${b.id}`
                     if (isEditing) {
                       return (
-                        <div key={b.id} className="rounded-xl border border-gold-primary/60 bg-[#161a28] p-3 flex flex-col gap-2">
+                        <div key={b.id} className="rounded-xl border border-gold-primary/60 bg-white p-3 flex flex-col gap-2">
                           <div className="flex items-center justify-between border-b border-gold-accent/20 pb-1.5">
                             <span className="font-mono text-[10px] uppercase text-gold-primary font-bold">Edit Story Beat #{i + 1}</span>
                             <div className="flex items-center gap-1.5">
                               <button
                                 type="button"
                                 onClick={() => saveEditing(`beat_${b.id}`)}
-                                className="px-2 py-0.5 rounded bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1"
+                                className="px-2 py-0.5 rounded bg-[#b08830] text-white font-display font-bold text-xs flex items-center gap-1"
                               >
                                 <Save size={12} /> Save
                               </button>
@@ -2262,21 +2312,21 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                             value={editFormData.title || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
                             placeholder="Beat Title"
-                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                            className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none"
                           />
                           <textarea
                             rows={2}
                             value={editFormData.summary || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, summary: e.target.value })}
                             placeholder="Beat Summary / Spoiler Premise"
-                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none resize-none"
+                            className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none resize-none"
                           />
                         </div>
                       )
                     }
 
                     return (
-                      <div key={b.id} className="rounded-xl border border-gold-accent/30 bg-[#161a28] p-3 flex flex-col gap-1.5">
+                      <div key={b.id} className="rounded-xl border border-gold-accent/30 bg-white p-3 flex flex-col gap-1.5">
                         <div className="flex items-center justify-between gap-2">
                           <span className="font-display font-semibold text-sm text-gold-primary">
                             {i + 1}. {b.title}
@@ -2301,14 +2351,14 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                             <button
                               type="button"
                               onClick={() => removeItem('beats', b.id)}
-                              className="text-red-400/70 hover:text-red-300 p-1 shrink-0"
+                              className="text-[#b91c1c]/70 hover:text-[#b91c1c] p-1 shrink-0"
                             >
                               <X size={14} />
                             </button>
                           </div>
                         </div>
                         {revealed && b.summary && (
-                          <p className="font-narrative text-xs italic text-ink-muted bg-black/30 p-2 rounded-lg border border-gold-accent/10">
+                          <p className="font-narrative text-xs italic text-ink-muted bg-[#f5f0e6] p-2 rounded-lg border border-gold-accent/15">
                             {b.summary}
                           </p>
                         )}
@@ -2339,14 +2389,14 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     const isEditing = editingKey === `event_${e.id}`
                     if (isEditing) {
                       return (
-                        <div key={e.id} className="rounded-xl border border-gold-primary/60 bg-[#161a28] p-3 flex flex-col gap-2 col-span-1 sm:col-span-2">
+                        <div key={e.id} className="rounded-xl border border-gold-primary/60 bg-white p-3 flex flex-col gap-2 col-span-1 sm:col-span-2">
                           <div className="flex items-center justify-between border-b border-gold-accent/20 pb-1.5">
                             <span className="font-mono text-[10px] uppercase text-gold-primary font-bold">Edit Complication</span>
                             <div className="flex items-center gap-1.5">
                               <button
                                 type="button"
                                 onClick={() => saveEditing(`event_${e.id}`)}
-                                className="px-2 py-0.5 rounded bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1"
+                                className="px-2 py-0.5 rounded bg-[#b08830] text-white font-display font-bold text-xs flex items-center gap-1"
                               >
                                 <Save size={12} /> Save
                               </button>
@@ -2361,14 +2411,14 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                               value={editFormData.title || ''}
                               onChange={(ev) => setEditFormData({ ...editFormData, title: ev.target.value })}
                               placeholder="Event Title"
-                              className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                              className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none"
                             />
                             <input
                               type="text"
                               value={editFormData.trigger || ''}
                               onChange={(ev) => setEditFormData({ ...editFormData, trigger: ev.target.value })}
                               placeholder="Trigger Type (story, location_visit, etc.)"
-                              className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                              className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none"
                             />
                           </div>
                           <input
@@ -2376,21 +2426,21 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                             value={editFormData.condition || ''}
                             onChange={(ev) => setEditFormData({ ...editFormData, condition: ev.target.value })}
                             placeholder="Condition / Target"
-                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                            className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none"
                           />
                           <textarea
                             rows={2}
                             value={editFormData.guidance || ''}
                             onChange={(ev) => setEditFormData({ ...editFormData, guidance: ev.target.value })}
                             placeholder="Steering Guidance"
-                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none resize-none"
+                            className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none resize-none"
                           />
                         </div>
                       )
                     }
 
                     return (
-                      <div key={e.id} className="rounded-xl border border-gold-accent/30 bg-[#161a28] p-3 flex items-start justify-between gap-2">
+                      <div key={e.id} className="rounded-xl border border-gold-accent/30 bg-white p-3 flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
                           <p className="font-display font-semibold text-sm text-gold-primary truncate">{e.title}</p>
                           <p className="font-mono text-[10px] text-ink-muted">
@@ -2409,7 +2459,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                           <button
                             type="button"
                             onClick={() => removeItem('narrativeEvents', e.id)}
-                            className="text-red-400/70 hover:text-red-300 p-1 shrink-0"
+                            className="text-[#b91c1c]/70 hover:text-[#b91c1c] p-1 shrink-0"
                           >
                             <X size={14} />
                           </button>
@@ -2443,14 +2493,14 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
               </div>
 
               {editingKey === 'stakes' ? (
-                <div className="rounded-xl border border-gold-primary/60 bg-[#161a28] p-3 flex flex-col gap-2.5">
+                <div className="rounded-xl border border-gold-primary/60 bg-white p-3 flex flex-col gap-2.5">
                   <div className="flex items-center justify-between border-b border-gold-accent/20 pb-1.5">
                     <span className="font-mono text-[10px] uppercase text-gold-primary font-bold">Edit Death & Stakes</span>
                     <div className="flex items-center gap-1.5">
                       <button
                         type="button"
                         onClick={() => saveEditing('stakes')}
-                        className="px-2 py-0.5 rounded bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1"
+                        className="px-2 py-0.5 rounded bg-[#b08830] text-white font-display font-bold text-xs flex items-center gap-1"
                       >
                         <Save size={12} /> Save
                       </button>
@@ -2465,7 +2515,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                       <select
                         value={editFormData.deathRule || 'soft_fail'}
                         onChange={(e) => setEditFormData({ ...editFormData, deathRule: e.target.value })}
-                        className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                        className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none"
                       >
                         <option value="soft_fail">Soft Fail (Knockout / Retreat / Rescue)</option>
                         <option value="permadeath">Permadeath (Permanent End)</option>
@@ -2478,7 +2528,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                         value={editFormData.deathInstructions || ''}
                         onChange={(e) => setEditFormData({ ...editFormData, deathInstructions: e.target.value })}
                         placeholder="Instructions upon defeat..."
-                        className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                        className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none"
                       />
                     </div>
                   </div>
@@ -2494,7 +2544,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                         })
                       }
                       placeholder="Victory Outcome Guidance..."
-                      className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                      className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none"
                     />
                     <input
                       type="text"
@@ -2506,7 +2556,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                         })
                       }
                       placeholder="Defeat Outcome Guidance..."
-                      className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                      className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none"
                     />
                     <input
                       type="text"
@@ -2518,13 +2568,13 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                         })
                       }
                       placeholder="Bittersweet / Neutral Outcome Guidance..."
-                      className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                      className="px-2.5 py-1 rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-xs text-ink outline-none"
                     />
                   </div>
                 </div>
               ) : (
                 hasStakes && (
-                  <div className="rounded-xl border border-gold-accent/25 bg-[#161a28]/70 p-3 flex flex-col gap-1.5 text-xs relative">
+                  <div className="rounded-xl border border-gold-accent/25 bg-white/70 p-3 flex flex-col gap-1.5 text-xs relative">
                     <button
                       type="button"
                       onClick={() =>
@@ -2550,8 +2600,8 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                       <div className="flex flex-col gap-0.5 mt-0.5 pr-6">
                         <span className="font-mono text-[10px] uppercase text-gold-primary font-bold">End Game Guidance:</span>
                         {accumulated.endGameRules.win && (
-                          <p className="font-narrative text-ink-muted pl-2 border-l border-emerald-500/40">
-                            <span className="text-emerald-400 font-medium">Victory:</span> {accumulated.endGameRules.win}
+                          <p className="font-narrative text-ink-muted pl-2 border-l border-[#0f5132]/40">
+                            <span className="text-[#0f5132] font-medium">Victory:</span> {accumulated.endGameRules.win}
                           </p>
                         )}
                         {accumulated.endGameRules.lose && (
@@ -2582,17 +2632,47 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
   }
 
   return (
-    <GlassScreen ground="dark" className="px-3 sm:px-6 pb-4 pt-2 flex flex-col h-full overflow-hidden">
+    <GlassScreen ground="dark" className="parchment-surface !bg-[#fbf8f3] px-3 sm:px-6 pb-4 pt-2 flex flex-col h-full overflow-hidden">
       <div className="max-w-4xl lg:max-w-5xl mx-auto w-full flex flex-col h-full overflow-hidden gap-2">
         {/* Top Header */}
-        <GlassHeader
-          title="Tale Weaving"
-          subtitle={`Phase ${phaseIdx + 1} of ${TALE_WEAVER_PHASES.length} — ${phase.label}`}
-          onBack={handleSafeExit}
-        />
+        <header className="shrink-0 flex flex-col gap-2 pt-1">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <button
+                type="button"
+                onClick={handleSafeExit}
+                aria-label="Back"
+                className="w-8 h-8 shrink-0 rounded-full border border-gold-accent/30 bg-white text-gold-primary hover:bg-gold-accent/10 flex items-center justify-center transition-colors"
+              >
+                <ArrowLeft size={15} />
+              </button>
+              <div className="flex items-center gap-1.5 min-w-0 text-xs">
+                <span className="font-display font-bold tracking-wider text-gold-primary uppercase truncate">Tale Dives</span>
+                <span className="text-gold-accent/40">/</span>
+                <span className="text-ink-muted font-medium truncate">Weaver Studio</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Tale Title — player-set, falls back to "{Name}'s Tale" at creation */}
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-gold-accent shrink-0" />
+            <label htmlFor="tale-title-input" className="font-display text-[11px] font-bold uppercase tracking-wider text-ink shrink-0">
+              Tale Title
+            </label>
+            <input
+              id="tale-title-input"
+              type="text"
+              value={accumulated.title ?? ''}
+              onChange={(e) => setAccumulated((prev) => ({ ...prev, title: e.target.value }))}
+              placeholder={accumulated.protagonist?.name ? `${accumulated.protagonist.name}'s Tale` : 'Name your tale...'}
+              className="flex-1 min-w-0 bg-white border border-gold-accent/25 rounded-md text-xs font-semibold text-ink px-2.5 py-1.5 focus:border-gold-primary focus:outline-none transition-colors"
+            />
+          </div>
+        </header>
 
         {/* Stepper Bar & Overview Trigger */}
-        <div className="shrink-0 flex items-center justify-between gap-2 py-1.5 px-2 rounded-xl bg-[#121520]/80 border border-gold-accent/20">
+        <div className="shrink-0 flex items-center justify-between gap-2 py-1.5 px-2 rounded-xl bg-[#fbf8f3]/80 border border-gold-accent/20">
           <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-0.5 flex-1 justify-start md:justify-center">
             {TALE_WEAVER_PHASES.map((p, idx) => {
               const isActive = idx === phaseIdx
@@ -2608,11 +2688,11 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                       ? 'bg-gold-primary/20 border border-gold-primary text-gold-primary font-semibold shadow-[0_0_12px_rgba(212,175,55,0.2)]'
                       : isCompleted
                       ? 'bg-gold-accent/10 border border-gold-accent/35 text-gold-primary/85 hover:border-gold-accent/60'
-                      : 'bg-black/30 border border-gold-accent/15 text-ink-muted/50 hover:text-ink-muted hover:border-gold-accent/30'
+                      : 'bg-[#f5f0e6] border border-gold-accent/15 text-ink-muted/60 hover:text-ink-muted hover:border-gold-accent/30'
                   }`}
                   title={`Phase ${idx + 1}: ${p.label}`}
                 >
-                  <span className="font-mono text-[10px] w-4 h-4 rounded-full flex items-center justify-center bg-black/50 border border-current shrink-0">
+                  <span className="font-mono text-[10px] w-4 h-4 rounded-full flex items-center justify-center bg-white/60 border border-current shrink-0">
                     {isCompleted && !isActive ? <Check size={10} /> : idx + 1}
                   </span>
                   <span className="hidden sm:inline font-medium">{PHASE_SHORT_LABELS[idx]}</span>
@@ -2633,7 +2713,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 setShowSaveModal(true)
               }}
               disabled={!hasAnyContent(accumulated)}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/20 text-gold-primary text-xs font-display transition-colors disabled:opacity-40"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-gold-accent/30 bg-white hover:bg-gold-accent/20 text-gold-primary text-xs font-display transition-colors disabled:opacity-40"
               title="Save current settings as a World & Character Preset"
             >
               <Save size={13} />
@@ -2643,7 +2723,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
             <button
               type="button"
               onClick={handleOpenLoadModal}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-gold-accent/30 bg-[#161a28] hover:bg-gold-accent/20 text-gold-primary text-xs font-display transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-gold-accent/30 bg-white hover:bg-gold-accent/20 text-gold-primary text-xs font-display transition-colors"
               title="Load a saved World & Character Preset"
             >
               <FolderOpen size={13} />
@@ -2688,15 +2768,15 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
 
           {/* Error Alert */}
           {errorMessage && (
-            <div className="rounded-xl border border-red-500/40 bg-red-950/30 p-3 flex items-start gap-2 text-red-300 text-xs">
-              <AlertCircle size={15} className="shrink-0 text-red-400 mt-0.5" />
+            <div className="rounded-xl border border-[#e5a3a3] bg-[#fdecec] p-3 flex items-start gap-2 text-[#8a2020] text-xs">
+              <AlertCircle size={15} className="shrink-0 text-[#8a2020] mt-0.5" />
               <div className="flex-1">
                 <p className="font-narrative">{errorMessage}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setErrorMessage(null)}
-                className="text-red-400 hover:text-red-200 p-0.5 shrink-0"
+                className="text-[#8a2020]/70 hover:text-[#8a2020] p-0.5 shrink-0"
               >
                 <X size={13} />
               </button>
@@ -2708,7 +2788,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
 
           {/* Busy Indicator */}
           {busy && (
-            <div className="rounded-xl border border-gold-accent/30 bg-[#161a28]/90 p-8 flex flex-col items-center justify-center gap-3 my-auto max-w-lg mx-auto w-full shadow-lg">
+            <div className="rounded-xl border border-gold-accent/30 bg-white/90 p-8 flex flex-col items-center justify-center gap-3 my-auto max-w-lg mx-auto w-full shadow-lg">
               <Sparkles size={24} className="text-gold-primary animate-spin" />
               <div className="text-center flex flex-col gap-1">
                 <p className="font-narrative italic text-base text-gold-primary font-medium">
@@ -2721,7 +2801,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
         </div>
 
         {/* Bottom Control Deck */}
-        <div className="shrink-0 flex flex-col gap-2 pt-2 border-t border-gold-accent/20 bg-[#121520]/80 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl">
+        <div className="shrink-0 flex flex-col gap-2 pt-2 border-t border-gold-accent/20 bg-[#fbf8f3]/80 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl">
           {/* Guidance Input & Weave Trigger */}
           <div className="flex items-center gap-2">
             <input
@@ -2736,7 +2816,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
               }}
               placeholder={`Guide this phase (e.g. tone, names, themes), or leave blank...`}
               disabled={busy}
-              className="flex-1 px-3 py-2 rounded-xl bg-[#161a28] border border-gold-accent/30 text-xs text-ink placeholder:text-ink-muted/50 outline-none disabled:opacity-50 focus:border-gold-primary transition-colors h-10"
+              className="flex-1 px-3 py-2 rounded-xl bg-white border border-gold-accent/30 text-xs text-ink placeholder:text-ink-muted/50 outline-none disabled:opacity-50 focus:border-gold-primary transition-colors h-10"
             />
             <button
               type="button"
@@ -2757,7 +2837,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 type="button"
                 onClick={handlePreviousPhase}
                 disabled={busy}
-                className="flex items-center justify-center gap-1.5 px-3.5 sm:px-4 h-9 sm:h-10 rounded-xl border border-gold-accent/25 bg-[#161a28] hover:bg-gold-accent/15 text-gold-primary/90 font-display font-medium text-xs disabled:opacity-40 transition-colors"
+                className="flex items-center justify-center gap-1.5 px-3.5 sm:px-4 h-9 sm:h-10 rounded-xl border border-gold-accent/25 bg-white hover:bg-gold-accent/15 text-gold-primary/90 font-display font-medium text-xs disabled:opacity-40 transition-colors"
               >
                 <ChevronLeft size={15} />
                 <span>Back</span>
@@ -2767,7 +2847,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 type="button"
                 onClick={handleSafeExit}
                 disabled={busy}
-                className="flex items-center justify-center gap-1 px-3 sm:px-4 h-9 sm:h-10 rounded-xl border border-gold-accent/15 bg-black/20 hover:bg-gold-accent/10 text-ink-muted hover:text-ink font-display text-xs disabled:opacity-40 transition-colors"
+                className="flex items-center justify-center gap-1 px-3 sm:px-4 h-9 sm:h-10 rounded-xl border border-gold-accent/20 bg-[#f5f0e6] hover:bg-gold-accent/10 text-ink-muted hover:text-ink font-display text-xs disabled:opacity-40 transition-colors"
               >
                 <span>Exit</span>
               </button>
@@ -2783,8 +2863,8 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
               disabled={busy}
               className={`flex items-center justify-center gap-1.5 px-4 sm:px-5 h-9 sm:h-10 rounded-xl font-display font-semibold text-xs sm:text-sm transition-all ${
                 isLastPhase
-                  ? 'bg-gold-primary hover:bg-gold-primary/90 text-black shadow-[0_0_14px_rgba(212,175,55,0.3)]'
-                  : 'bg-gold-primary text-black hover:bg-gold-primary/90 shadow-sm'
+                  ? 'bg-[#b08830] hover:bg-[#8d6b1d] text-white shadow-[0_0_14px_rgba(212,175,55,0.3)]'
+                  : 'bg-[#b08830] text-white hover:bg-[#8d6b1d] shadow-sm'
               } disabled:opacity-40`}
             >
               <span>{isLastPhase ? 'Review Tale' : 'Next'}</span>
@@ -2796,8 +2876,8 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
 
       {/* Tale Overview Modal */}
       {showOverview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4">
-          <div className="w-full max-w-2xl max-h-[85vh] rounded-2xl border border-gold-accent/40 bg-[#121520] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4">
+          <div className="w-full max-w-2xl max-h-[85vh] rounded-2xl border border-gold-accent/40 bg-[#fbf8f3] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
             <div className="px-4 py-3 border-b border-gold-accent/20 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
@@ -2826,7 +2906,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 <button
                   type="button"
                   onClick={handleOpenLoadModal}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#161a28] border border-gold-accent/30 text-gold-primary text-xs font-display font-semibold hover:bg-gold-accent/15 transition-colors"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-gold-accent/30 text-gold-primary text-xs font-display font-semibold hover:bg-gold-accent/15 transition-colors"
                   title="Load a saved World & Character Preset"
                 >
                   <FolderOpen size={13} />
@@ -2845,11 +2925,11 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
             {/* Modal Body */}
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3.5">
               {!hasAnyContent(accumulated) && (
-                <div className="rounded-xl border border-amber-500/40 bg-amber-950/30 p-3 flex items-start gap-2.5 text-amber-200 text-xs">
-                  <AlertCircle size={16} className="shrink-0 text-amber-400 mt-0.5" />
+                <div className="rounded-xl border border-[#8a6a24]/30 bg-[#fdf6e8] p-3 flex items-start gap-2.5 text-[#6b5420] text-xs">
+                  <AlertCircle size={16} className="shrink-0 text-[#8a6a24] mt-0.5" />
                   <div className="flex flex-col gap-0.5">
-                    <p className="font-display font-semibold text-amber-300">All 7 phases are currently blank</p>
-                    <p className="font-narrative text-amber-200/80 leading-relaxed">
+                    <p className="font-display font-semibold text-[#6b5420]">All 7 phases are currently blank</p>
+                    <p className="font-narrative text-[#6b5420]/80 leading-relaxed">
                       Please weave or manually create elements in at least one phase before diving in.
                     </p>
                   </div>
@@ -2857,7 +2937,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
               )}
 
               {/* World */}
-              <div className="rounded-xl border border-gold-accent/25 bg-[#161a28] p-3 flex flex-col gap-1.5">
+              <div className="rounded-xl border border-gold-accent/25 bg-white p-3 flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-[10px] uppercase text-gold-primary/70">1. World Foundation</span>
                   <button
@@ -2882,7 +2962,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
               </div>
 
               {/* Protagonist */}
-              <div className="rounded-xl border border-gold-accent/25 bg-[#161a28] p-3 flex flex-col gap-1.5">
+              <div className="rounded-xl border border-gold-accent/25 bg-white p-3 flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-[10px] uppercase text-gold-primary/70">2. Protagonist</span>
                   <button
@@ -2927,7 +3007,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
               </div>
 
               {/* Regions & Locations */}
-              <div className="rounded-xl border border-gold-accent/25 bg-[#161a28] p-3 flex flex-col gap-2">
+              <div className="rounded-xl border border-gold-accent/25 bg-white p-3 flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-[10px] uppercase text-gold-primary/70">
                     3. Places ({accumulated.regions.length} regions, {accumulated.locations.length} locations)
@@ -2946,7 +3026,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 {accumulated.locations.length > 0 || accumulated.regions.length > 0 ? (
                   <div className="flex flex-col gap-2.5">
                     {accumulated.locations.map((l, idx) => (
-                      <div key={l.id} className="rounded-lg bg-black/40 border border-gold-accent/20 p-2 flex flex-col gap-1">
+                      <div key={l.id} className="rounded-lg bg-[#f5f0e6] border border-gold-accent/20 p-2 flex flex-col gap-1">
                         <div className="flex items-center justify-between text-xs">
                           <span className="font-display font-semibold text-gold-primary">{l.name}</span>
                           <span className="font-mono text-[10px] text-ink-muted">{l.locationType || 'Landmark'}</span>
@@ -2969,7 +3049,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     ))}
 
                     {accumulated.regions.map((r, idx) => (
-                      <div key={r.id} className="rounded-lg bg-black/40 border border-gold-accent/20 p-2 flex flex-col gap-1">
+                      <div key={r.id} className="rounded-lg bg-[#f5f0e6] border border-gold-accent/20 p-2 flex flex-col gap-1">
                         <div className="flex items-center justify-between text-xs">
                           <span className="font-display font-semibold text-gold-primary">Region: {r.name}</span>
                         </div>
@@ -3001,7 +3081,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
               </div>
 
               {/* Factions */}
-              <div className="rounded-xl border border-gold-accent/25 bg-[#161a28] p-3 flex flex-col gap-1.5">
+              <div className="rounded-xl border border-gold-accent/25 bg-white p-3 flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-[10px] uppercase text-gold-primary/70">
                     4. Factions ({accumulated.factions.length})
@@ -3020,7 +3100,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 {accumulated.factions.length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
                     {accumulated.factions.map((f) => (
-                      <span key={f.id} className="font-narrative text-xs px-2 py-0.5 rounded bg-black/40 border border-gold-accent/20 text-ink">
+                      <span key={f.id} className="font-narrative text-xs px-2 py-0.5 rounded bg-[#f5f0e6] border border-gold-accent/20 text-ink">
                         {f.name} {f.attitude && `(${f.attitude})`}
                       </span>
                     ))}
@@ -3031,7 +3111,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
               </div>
 
               {/* NPCs */}
-              <div className="rounded-xl border border-gold-accent/25 bg-[#161a28] p-3 flex flex-col gap-2">
+              <div className="rounded-xl border border-gold-accent/25 bg-white p-3 flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-[10px] uppercase text-gold-primary/70">
                     5. Cast of Characters ({accumulated.npcs.length})
@@ -3050,7 +3130,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 {accumulated.npcs.length > 0 ? (
                   <div className="flex flex-col gap-2">
                     {accumulated.npcs.map((n, idx) => (
-                      <div key={n.id} className="rounded-lg bg-black/40 border border-gold-accent/20 p-2 flex flex-col gap-1">
+                      <div key={n.id} className="rounded-lg bg-[#f5f0e6] border border-gold-accent/20 p-2 flex flex-col gap-1">
                         <div className="flex items-center justify-between text-xs">
                           <span className="font-display font-semibold text-gold-primary">{n.name}</span>
                           {n.role && <span className="font-mono text-[10px] text-ink-muted">{n.role}</span>}
@@ -3078,7 +3158,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
               </div>
 
               {/* Lore */}
-              <div className="rounded-xl border border-gold-accent/25 bg-[#161a28] p-3 flex flex-col gap-1.5">
+              <div className="rounded-xl border border-gold-accent/25 bg-white p-3 flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-[10px] uppercase text-gold-primary/70">
                     6. Lore & Secrets ({accumulated.lore.length})
@@ -3097,7 +3177,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 {accumulated.lore.length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
                     {accumulated.lore.map((l) => (
-                      <span key={l.id} className="font-narrative text-xs px-2 py-0.5 rounded bg-black/40 border border-gold-accent/20 text-ink">
+                      <span key={l.id} className="font-narrative text-xs px-2 py-0.5 rounded bg-[#f5f0e6] border border-gold-accent/20 text-ink">
                         {l.name}
                       </span>
                     ))}
@@ -3108,7 +3188,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
               </div>
 
               {/* Arc */}
-              <div className="rounded-xl border border-gold-accent/25 bg-[#161a28] p-3 flex flex-col gap-1.5">
+              <div className="rounded-xl border border-gold-accent/25 bg-white p-3 flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-[10px] uppercase text-gold-primary/70">
                     7. Story Arc ({accumulated.beats.length} beats, {accumulated.narrativeEvents?.length ?? 0} events)
@@ -3148,7 +3228,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
             </div>
 
             {/* Modal Footer */}
-            <div className="px-4 py-3 border-t border-gold-accent/20 flex justify-between items-center bg-[#0d1017]">
+            <div className="px-4 py-3 border-t border-gold-accent/20 flex justify-between items-center bg-[#faf8f4]">
               <button
                 type="button"
                 onClick={() => setShowOverview(false)}
@@ -3164,7 +3244,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                   onBeginTale(accumulated)
                 }}
                 disabled={busy || !hasAnyContent(accumulated)}
-                className="px-6 py-2 rounded-xl bg-gold-primary hover:bg-gold-primary/90 text-black shadow-[0_0_15px_rgba(212,175,55,0.3)] font-display text-sm font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gold-primary disabled:shadow-none"
+                className="px-6 py-2 rounded-xl bg-[#b08830] hover:bg-[#8d6b1d] text-white shadow-[0_0_15px_rgba(212,175,55,0.3)] font-display text-sm font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#b08830] disabled:shadow-none"
                 title={!hasAnyContent(accumulated) ? 'Weave at least one phase before diving in' : 'Begin campaign'}
               >
                 Dive in
@@ -3176,7 +3256,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
 
       {/* Toast Notice Banner */}
       {presetToast && (
-        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gold-primary text-black font-display font-bold text-xs shadow-2xl animate-in fade-in slide-in-from-top-3 duration-200">
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#b08830] text-white font-display font-bold text-xs shadow-2xl animate-in fade-in slide-in-from-top-3 duration-200">
           <CheckCircle2 size={15} />
           <span>{presetToast}</span>
         </div>
@@ -3184,8 +3264,8 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
 
       {/* Save Preset Modal */}
       {showSaveModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-gold-accent/40 bg-[#121520] p-4 shadow-2xl flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-gold-accent/40 bg-[#fbf8f3] p-4 shadow-2xl flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-gold-accent/20 pb-2">
               <div className="flex items-center gap-2">
                 <Save size={16} className="text-gold-primary" />
@@ -3211,7 +3291,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 value={presetNameInput}
                 onChange={(e) => setPresetNameInput(e.target.value)}
                 placeholder="e.g. Fourth Wing - Navarre & Basgiath"
-                className="w-full px-3 py-2 rounded-xl bg-[#161a28] border border-gold-accent/30 text-xs text-ink placeholder:text-ink-muted/50 outline-none focus:border-gold-primary transition-colors font-display"
+                className="w-full px-3 py-2 rounded-xl bg-white border border-gold-accent/30 text-xs text-ink placeholder:text-ink-muted/50 outline-none focus:border-gold-primary transition-colors font-display"
                 autoFocus
               />
             </div>
@@ -3220,7 +3300,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
               <button
                 type="button"
                 onClick={() => setShowSaveModal(false)}
-                className="px-3 py-1.5 rounded-xl border border-gold-accent/20 bg-black/20 text-ink-muted font-display text-xs hover:bg-white/5 transition-colors"
+                className="px-3 py-1.5 rounded-xl border border-gold-accent/20 bg-white text-ink-muted font-display text-xs hover:bg-gold-accent/10 transition-colors"
               >
                 Cancel
               </button>
@@ -3228,7 +3308,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 type="button"
                 onClick={handleSavePreset}
                 disabled={!presetNameInput.trim()}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-gold-primary text-black font-display font-semibold text-xs hover:bg-gold-primary/90 transition-colors disabled:opacity-40"
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#b08830] text-white font-display font-semibold text-xs hover:bg-[#8d6b1d] transition-colors disabled:opacity-40"
               >
                 <Save size={13} />
                 <span>Save Preset</span>
@@ -3240,8 +3320,8 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
 
       {/* Load Preset Modal */}
       {showLoadModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg max-h-[80vh] rounded-2xl border border-gold-accent/40 bg-[#121520] p-4 shadow-2xl flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg max-h-[80vh] rounded-2xl border border-gold-accent/40 bg-[#fbf8f3] p-4 shadow-2xl flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-gold-accent/20 pb-2">
               <div className="flex items-center gap-2">
                 <FolderOpen size={16} className="text-gold-primary" />
@@ -3280,7 +3360,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                   return (
                     <div
                       key={preset.id}
-                      className="rounded-xl border border-gold-accent/25 bg-[#161a28] p-3 flex flex-col gap-2 hover:border-gold-accent/50 transition-colors"
+                      className="rounded-xl border border-gold-accent/25 bg-white p-3 flex flex-col gap-2 hover:border-gold-accent/50 transition-colors"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div>
@@ -3290,7 +3370,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                         <button
                           type="button"
                           onClick={() => handleDeletePreset(preset.id)}
-                          className="p-1 rounded text-red-400 hover:text-red-200 hover:bg-red-950/40 transition-colors shrink-0"
+                          className="p-1 rounded text-[#b91c1c]/70 hover:text-[#b91c1c] hover:bg-[#fdecec] transition-colors shrink-0"
                           title="Delete preset"
                         >
                           <Trash2 size={13} />
@@ -3305,7 +3385,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                           </span>
                         )}
                         {acc.protagonist?.name && (
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
+                          <span className="px-2 py-0.5 rounded-full bg-[#eef7f0] border border-[#0f5132]/30 text-[#0f5132]">
                             Hero: {acc.protagonist.name}
                           </span>
                         )}
@@ -3338,8 +3418,35 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
         </div>
       )}
 
-      {/* Confirmation Dialog (Modal) */}
-      {confirmDialog}
+      {/* Confirmation Dialog (Modal) — useConfirm.tsx's shared dialog is built
+          for the app's default dark chrome (dark scrim, near-transparent gold
+          panel, light ink text) and is reused by several still-dark screens,
+          so it can't be recolored for light mode without breaking those.
+          Re-pinning the ink/gold tokens back to their dark-chrome values for
+          just this one subtree keeps it legible inside this screen's light
+          .parchment-surface scope without touching the shared hook. */}
+      <div
+        style={
+          {
+            '--td-ink': '#f0e3c4',
+            '--td-ink-muted': '#d3c1a0',
+            '--td-gold-primary': '#f0ca65',
+            '--td-gold-accent': '#e8ca8a',
+            '--td-rose': '#f87171',
+            // Tailwind's generated color utilities (.text-ink, .border-gold-accent,
+            // .bg-rose, ...) read the once-resolved --color-* variable from
+            // @theme, not --td-* directly — same reason .parchment-surface
+            // itself has to redeclare both; see that class's own comment.
+            '--color-ink': 'var(--td-ink)',
+            '--color-ink-muted': 'var(--td-ink-muted)',
+            '--color-gold-primary': 'var(--td-gold-primary)',
+            '--color-gold-accent': 'var(--td-gold-accent)',
+            '--color-rose': 'var(--td-rose)',
+          } as CSSProperties
+        }
+      >
+        {confirmDialog}
+      </div>
     </GlassScreen>
   )
 }

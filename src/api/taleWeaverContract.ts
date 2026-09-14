@@ -107,13 +107,24 @@ function buildLoreAccuracyContract(source?: TaleWeaverSourceMaterial): string {
 
   return `
 
-LORE ACCURACY CONTRACT: This tale draws on ${attribution}. Any character, location, faction, or
-lore entry that corresponds to something from that source must be accurate to it — correct names,
-personalities, relationships, appearance, and established history. Do not invent a false version
-of a canon element to fill a gap in your own knowledge; if you are not confident about a genuine
-detail, either omit it or add an original element that does not contradict known canon, and never
-let an invented detail overwrite something the source actually establishes. Original characters,
-locations, and factions not from the source are unaffected by this and can be created freely.
+LORE ACCURACY CONTRACT: This tale draws on ${attribution}. Prefer the real cast, places, and
+factions of that source over inventing new ones — when a phase asks for entries and the source has
+real ones that fit (within the spoiler boundary below), draw on those by their real, correctly
+spelled names first, and only invent original entries to fill whatever slots genuine canon can't
+cover. Never invent a new name, character, or place that only sounds like it could be from the
+source — an invented entity must read as clearly original, not as a plausible-but-fake canon one,
+since a player who knows the source will take anything named like canon as canon and be misled by
+it being fabricated.
+
+For anything you do draw from the source, every stated detail — name spelling, personality,
+relationships, appearance, role, affiliation, and history — must be accurate to it. State only
+what you are genuinely confident is accurate; for a real entity, if you are not confident about one
+specific detail (a relationship, a minor trait, an exact event), leave that particular detail out
+or phrase it generally rather than asserting a specific-sounding but invented one — a gap is
+honest, a confident wrong detail is not. Never let an invented detail overwrite or contradict
+something the source actually establishes. Original characters, locations, and factions not from
+the source are unaffected by any of this and can be created freely, provided they read as
+original rather than imitation canon per the paragraph above.
 
 STRICT SPOILER BOUNDARY: ${scope ? `The player has scoped canon knowledge to: "${scope}".` : 'No scope boundary was given — treat only broad, widely-known public facts about the source as safe ground, and avoid deep-cut or late-story specifics.'} Only treat events, relationships, revelations, or character knowledge that occur at or before that point as established fact. Never reference, foreshadow, or draw on anything that happens after it in the source material — if you are unsure whether something falls after the boundary, leave it out rather than risk a spoiler or an anachronistic reference.`
 }

@@ -1,10 +1,10 @@
 import { ensureEntry } from './autoRegister.ts'
 import { slugify } from './slug.ts'
-import { parseKeywordLinks } from './keywordLinks.ts'
+import { parseKeywordLinks, parseItemMentions } from './keywordLinks.ts'
 import { ensureLocation } from './locations.ts'
 import { emptyNpc } from './npcs.ts'
 import { emptySkill } from './skills.ts'
-import type { BestiaryEntry, Dict, EnrichUpdate, FactionEntry, LocationEntry, LoreEntry, NpcEntry, QuestEntry, RegionEntry, SkillEntry } from '../types.ts'
+import type { BestiaryEntry, Dict, EnrichUpdate, FactionEntry, ItemEntry, LocationEntry, LoreEntry, NpcEntry, QuestEntry, RegionEntry, SkillEntry } from '../types.ts'
 
 function ensureStub<T extends { autoLogged?: boolean; loggedAt?: string }>(
   dict: Dict<T> | undefined,
@@ -137,6 +137,25 @@ export function applyKeywordLinks(codex: CodexDicts, nar: string | undefined, tu
   }
 
   return { locations, npcs, factions, lore, quests, bestiary, skills }
+}
+
+// A [[Double Bracket]] item mention gives this a reference-only stub — same
+// "known about" shape as a {{Term|loc}}/{{Term|npc}} stub, never an
+// inventory grant (Campaign.items is a Codex reference dict, decoupled from
+// Player.inventory's own item id -> quantity map; see keywordLinks.ts's
+// parseItemMentions comment for why items don't already flow through
+// applyKeywordLinks above). `type: 'material'` is the closest thing to a
+// neutral "uncategorized reference" ItemType has — never load-bearing,
+// purely a default until a real inv_add/<item> grant (or manual Codex edit)
+// gives it a real one.
+export function applyItemMentions(items: Dict<ItemEntry> | undefined, nar: string | undefined, turnRef?: string): Dict<ItemEntry> {
+  let dict = items ?? {}
+  for (const term of parseItemMentions(nar)) {
+    const id = slugify(term)
+    if (!id || isKnownByName(dict, term)) continue
+    dict = ensureStub(dict, id, () => ({ name: term, type: 'material' as const }), turnRef)
+  }
+  return dict
 }
 
 // §Narrative-First Overhaul — applies this turn's <enrich lore/beast> tags,

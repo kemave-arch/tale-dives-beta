@@ -29,7 +29,7 @@ import { buildContextSlice } from './lib/jitContext.ts'
 import { applyTurn } from './lib/shadowReferee.ts'
 import { ensureLocation, type LocationRegionInfo } from './lib/locations.ts'
 import { applyNpcUpdates, AFFECTION_STAGES, TRUST_WORDS } from './lib/npcs.ts'
-import { applyKeywordLinks, applyEnrichUpdates, dedupLocationsWithRegions } from './lib/codex.ts'
+import { applyKeywordLinks, applyEnrichUpdates, applyItemMentions, dedupLocationsWithRegions } from './lib/codex.ts'
 import { applyQuestUpdate } from './lib/quests.ts'
 import { applyProjectUpdate } from './lib/projects.ts'
 import { applyBeatUpdate } from './lib/beats.ts'
@@ -593,7 +593,6 @@ export default function App() {
     setHistory([])
     setLoadingGender(target.player?.gender)
     navigateTo('chronicle')
-    onPlayTrack('TempestDive_ost03.opus')
   }
 
   // Title's "Continue" shortcut and Main Menu's Tales tab both want the same
@@ -1344,7 +1343,14 @@ export default function App() {
       // output lands in inventory as the base applyInventoryChanges below
       // layers this turn's own inv_add/inv_rem on top of.
       const craftResolution = resolveCraftingJobs(current.crafting ?? [], current.inventory, nextPlayer.time)
-      const invResult = applyInventoryChanges(craftResolution.inventory, current.items, turn.inv_add, turn.inv_rem, turnRef)
+      // A [[Double Bracket]] item mention this turn's own inv_add never
+      // granted (e.g. a strapped-on dagger only ever narrated, never
+      // formally added) still gets a reference-only Codex stub here, same
+      // spirit as linked.skills above — closes the "tap a narrated item,
+      // nothing happens" gap since applyInventoryChanges below now always
+      // has *something* to find for any item the prose actually named.
+      const itemsWithMentions = applyItemMentions(current.items, turn.nar, turnRef)
+      const invResult = applyInventoryChanges(craftResolution.inventory, itemsWithMentions, turn.inv_add, turn.inv_rem, turnRef)
 
       // Narrative-First Overhaul — combat is fully narrative-adjudicated now
       // (TACTICAL mode is gone); the only client-owned combat bookkeeping

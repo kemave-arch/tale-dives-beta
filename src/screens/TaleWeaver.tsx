@@ -512,14 +512,14 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
     setEditFormData({})
   }
 
-  function addCustomItem(category: 'regions' | 'locations' | 'factions' | 'npcs' | 'lore' | 'skills' | 'beats' | 'narrativeEvents') {
+  function addCustomItem(category: 'regions' | 'locations' | 'factions' | 'npcs' | 'lore' | 'skills' | 'beats' | 'narrativeEvents', presetRegionId?: string) {
     const timeId = `${category.slice(0, 3)}_${Date.now().toString(36)}`
     if (category === 'regions') {
       const newRegion = { id: timeId, name: 'New Region', desc: '' }
       setAccumulated((prev) => ({ ...prev, regions: [...prev.regions, newRegion] }))
       startEditing(`region_${timeId}`, newRegion)
     } else if (category === 'locations') {
-      const newLoc = { id: timeId, name: 'New Location', locationType: 'Landmark', danger: 'Safe', desc: '', regionId: accumulated.regions[0]?.id }
+      const newLoc = { id: timeId, name: 'New Location', locationType: 'Landmark', danger: 'Safe', desc: '', regionId: presetRegionId ?? accumulated.regions[0]?.id }
       setAccumulated((prev) => ({ ...prev, locations: [...prev.locations, newLoc] }))
       startEditing(`location_${timeId}`, newLoc)
     } else if (category === 'factions') {
@@ -1433,63 +1433,190 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
           )
         }
 
-        return (
-          <div className="flex flex-col gap-4">
-            {/* Regions Section */}
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">Regions</span>
+        // Locations rendered nested under their owning Region (not as a
+        // second flat list) so the parent-child relationship is actually
+        // visible at a glance instead of buried in each card's small
+        // "region name" text fragment — the gap a live user report flagged.
+        // Grouping is recomputed from accumulated.locations/regions on every
+        // render, so re-parenting a location via its own edit form's Region
+        // <select> below moves its card into the new group automatically.
+        const unassignedLocations = accumulated.locations.filter(
+          (l) => !l.regionId || !accumulated.regions.some((r) => r.id === l.regionId),
+        )
+
+        const renderLocationCard = (l: (typeof accumulated.locations)[number]) => {
+          const region = accumulated.regions.find((r) => r.id === l.regionId)
+          const isEditing = editingKey === `location_${l.id}`
+          if (isEditing) {
+            return (
+              <div key={l.id} className="rounded-xl border border-gold-primary/60 bg-[#161a28] p-3 flex flex-col gap-2 col-span-1 sm:col-span-2">
+                <div className="flex items-center justify-between border-b border-gold-accent/20 pb-1.5">
+                  <span className="font-mono text-[10px] uppercase text-gold-primary font-bold">Edit Location</span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => saveEditing(`location_${l.id}`)}
+                      className="px-2 py-0.5 rounded bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1"
+                    >
+                      <Save size={12} /> Save
+                    </button>
+                    <button type="button" onClick={cancelEditing} className="px-2 py-0.5 rounded border border-gold-accent/30 text-xs">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <input
+                    type="text"
+                    value={editFormData.name || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                    placeholder="Location Name"
+                    className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                  />
+                  <select
+                    value={editFormData.regionId || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, regionId: e.target.value })}
+                    className="px-2 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                  >
+                    <option value="">No Specific Region</option>
+                    {accumulated.regions.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    value={editFormData.locationType || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, locationType: e.target.value })}
+                    placeholder="Type (e.g. Landmark, Settlement)"
+                    className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    value={editFormData.danger || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, danger: e.target.value })}
+                    placeholder="Danger Level (e.g. Safe, Perilous)"
+                    className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                  />
+                  <input
+                    type="text"
+                    value={editFormData.areas || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, areas: e.target.value })}
+                    placeholder="Sub-areas (comma separated)"
+                    className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
+                  />
+                </div>
+                <textarea
+                  rows={2}
+                  value={editFormData.desc || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, desc: e.target.value })}
+                  placeholder="Location Description"
+                  className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none resize-none"
+                />
+              </div>
+            )
+          }
+          return (
+            <div key={l.id} className="rounded-xl border border-gold-accent/30 bg-[#161a28] p-3 flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="font-display font-semibold text-sm text-gold-primary truncate">{l.name}</p>
+                <p className="font-narrative text-xs text-ink-muted">
+                  {fieldSummary([region?.name, l.locationType, l.danger ? `Danger: ${l.danger}` : undefined])}
+                </p>
+                {l.desc && <p className="font-narrative text-xs text-ink/80 mt-1 line-clamp-2">{l.desc}</p>}
+                {l.areas && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {l.areas.split(',').map((a, i) => (
+                      <span key={i} className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-gold-accent/15 text-gold-primary/80 border border-gold-accent/25">
+                        {a.trim()}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
                 <button
                   type="button"
-                  onClick={() => addCustomItem('regions')}
-                  className="flex items-center gap-1 font-mono text-[10px] text-gold-primary hover:underline"
+                  onClick={() => startEditing(`location_${l.id}`, l)}
+                  className="text-gold-primary/70 hover:text-gold-primary p-1"
                 >
-                  <Plus size={12} /> Add Region
+                  <Pencil size={13} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeItem('locations', l.id)}
+                  className="text-red-400/70 hover:text-red-300 p-1"
+                >
+                  <X size={14} />
                 </button>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {accumulated.regions.map((r) => {
-                  const isEditing = editingKey === `region_${r.id}`
-                  if (isEditing) {
-                    return (
-                      <div key={r.id} className="rounded-xl border border-gold-primary/60 bg-[#161a28] p-3 flex flex-col gap-2 col-span-1 sm:col-span-2">
-                        <div className="flex items-center justify-between border-b border-gold-accent/20 pb-1.5">
-                          <span className="font-mono text-[10px] uppercase text-gold-primary font-bold">Edit Region</span>
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => saveEditing(`region_${r.id}`)}
-                              className="px-2 py-0.5 rounded bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1"
-                            >
-                              <Save size={12} /> Save
-                            </button>
-                            <button type="button" onClick={cancelEditing} className="px-2 py-0.5 rounded border border-gold-accent/30 text-xs">
-                              Cancel
-                            </button>
-                          </div>
+            </div>
+          )
+        }
+
+        return (
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">Regions & Locations</span>
+              <button
+                type="button"
+                onClick={() => addCustomItem('regions')}
+                className="flex items-center gap-1 font-mono text-[10px] text-gold-primary hover:underline"
+              >
+                <Plus size={12} /> Add Region
+              </button>
+            </div>
+
+            {accumulated.regions.map((r) => {
+              const isEditingRegion = editingKey === `region_${r.id}`
+              const childLocs = accumulated.locations.filter((l) => l.regionId === r.id)
+              return (
+                <div key={r.id} className="rounded-xl border border-gold-accent/30 bg-[#12151f] overflow-hidden">
+                  {isEditingRegion ? (
+                    <div className="p-3 flex flex-col gap-2">
+                      <div className="flex items-center justify-between border-b border-gold-accent/20 pb-1.5">
+                        <span className="font-mono text-[10px] uppercase text-gold-primary font-bold">Edit Region</span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => saveEditing(`region_${r.id}`)}
+                            className="px-2 py-0.5 rounded bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1"
+                          >
+                            <Save size={12} /> Save
+                          </button>
+                          <button type="button" onClick={cancelEditing} className="px-2 py-0.5 rounded border border-gold-accent/30 text-xs">
+                            Cancel
+                          </button>
                         </div>
-                        <input
-                          type="text"
-                          value={editFormData.name || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                          placeholder="Region Name"
-                          className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
-                        />
-                        <textarea
-                          rows={2}
-                          value={editFormData.desc || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, desc: e.target.value })}
-                          placeholder="Region Description"
-                          className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary resize-none"
-                        />
                       </div>
-                    )
-                  }
-                  return (
-                    <div key={r.id} className="rounded-xl border border-gold-accent/30 bg-[#161a28] p-3 flex items-start justify-between gap-2">
+                      <input
+                        type="text"
+                        value={editFormData.name || ''}
+                        onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                        placeholder="Region Name"
+                        className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                      />
+                      <textarea
+                        rows={2}
+                        value={editFormData.desc || ''}
+                        onChange={(e) => setEditFormData({ ...editFormData, desc: e.target.value })}
+                        placeholder="Region Description"
+                        className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary resize-none"
+                      />
+                    </div>
+                  ) : (
+                    <div className="p-3 flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <p className="font-display font-semibold text-sm text-gold-primary truncate">{r.name}</p>
-                        {r.desc && <p className="font-narrative text-xs text-ink-muted line-clamp-2">{r.desc}</p>}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="font-display font-semibold text-sm text-gold-primary truncate">{r.name}</p>
+                          <span className="font-mono text-[9px] px-1.5 py-0.5 rounded-full bg-gold-accent/15 text-gold-primary/80 border border-gold-accent/25 shrink-0">
+                            {childLocs.length} {childLocs.length === 1 ? 'location' : 'locations'}
+                          </span>
+                        </div>
+                        {r.desc && <p className="font-narrative text-xs text-ink-muted line-clamp-2 mt-0.5">{r.desc}</p>}
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         <button
@@ -1508,138 +1635,55 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                         </button>
                       </div>
                     </div>
-                  )
-                })}
-              </div>
-            </div>
+                  )}
 
-            {/* Locations Section */}
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">Locations</span>
-                <button
-                  type="button"
-                  onClick={() => addCustomItem('locations')}
-                  className="flex items-center gap-1 font-mono text-[10px] text-gold-primary hover:underline"
-                >
-                  <Plus size={12} /> Add Location
-                </button>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {accumulated.locations.map((l) => {
-                  const region = accumulated.regions.find((r) => r.id === l.regionId)
-                  const isEditing = editingKey === `location_${l.id}`
-                  if (isEditing) {
-                    return (
-                      <div key={l.id} className="rounded-xl border border-gold-primary/60 bg-[#161a28] p-3 flex flex-col gap-2 col-span-1 sm:col-span-2">
-                        <div className="flex items-center justify-between border-b border-gold-accent/20 pb-1.5">
-                          <span className="font-mono text-[10px] uppercase text-gold-primary font-bold">Edit Location</span>
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => saveEditing(`location_${l.id}`)}
-                              className="px-2 py-0.5 rounded bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1"
-                            >
-                              <Save size={12} /> Save
-                            </button>
-                            <button type="button" onClick={cancelEditing} className="px-2 py-0.5 rounded border border-gold-accent/30 text-xs">
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                          <input
-                            type="text"
-                            value={editFormData.name || ''}
-                            onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                            placeholder="Location Name"
-                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
-                          />
-                          <select
-                            value={editFormData.regionId || ''}
-                            onChange={(e) => setEditFormData({ ...editFormData, regionId: e.target.value })}
-                            className="px-2 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
-                          >
-                            <option value="">No Specific Region</option>
-                            {accumulated.regions.map((r) => (
-                              <option key={r.id} value={r.id}>
-                                {r.name}
-                              </option>
-                            ))}
-                          </select>
-                          <input
-                            type="text"
-                            value={editFormData.locationType || ''}
-                            onChange={(e) => setEditFormData({ ...editFormData, locationType: e.target.value })}
-                            placeholder="Type (e.g. Landmark, Settlement)"
-                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
-                          />
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          <input
-                            type="text"
-                            value={editFormData.danger || ''}
-                            onChange={(e) => setEditFormData({ ...editFormData, danger: e.target.value })}
-                            placeholder="Danger Level (e.g. Safe, Perilous)"
-                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
-                          />
-                          <input
-                            type="text"
-                            value={editFormData.areas || ''}
-                            onChange={(e) => setEditFormData({ ...editFormData, areas: e.target.value })}
-                            placeholder="Sub-areas (comma separated)"
-                            className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none"
-                          />
-                        </div>
-                        <textarea
-                          rows={2}
-                          value={editFormData.desc || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, desc: e.target.value })}
-                          placeholder="Location Description"
-                          className="px-2.5 py-1 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none resize-none"
-                        />
-                      </div>
-                    )
-                  }
-                  return (
-                    <div key={l.id} className="rounded-xl border border-gold-accent/30 bg-[#161a28] p-3 flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-display font-semibold text-sm text-gold-primary truncate">{l.name}</p>
-                        <p className="font-narrative text-xs text-ink-muted">
-                          {fieldSummary([region?.name, l.locationType, l.danger ? `Danger: ${l.danger}` : undefined])}
-                        </p>
-                        {l.desc && <p className="font-narrative text-xs text-ink/80 mt-1 line-clamp-2">{l.desc}</p>}
-                        {l.areas && (
-                          <div className="flex flex-wrap gap-1 mt-1.5">
-                            {l.areas.split(',').map((a, i) => (
-                              <span key={i} className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-gold-accent/15 text-gold-primary/80 border border-gold-accent/25">
-                                {a.trim()}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => startEditing(`location_${l.id}`, l)}
-                          className="text-gold-primary/70 hover:text-gold-primary p-1"
-                        >
-                          <Pencil size={13} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => removeItem('locations', l.id)}
-                          className="text-red-400/70 hover:text-red-300 p-1"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
+                  {/* Child Locations — indented under their parent Region */}
+                  <div className="border-t border-gold-accent/15 bg-[#0d1017]/40 p-3 pl-4 sm:pl-5 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-[9px] uppercase tracking-wider text-ink-muted">Locations in {r.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => addCustomItem('locations', r.id)}
+                        className="flex items-center gap-1 font-mono text-[9px] text-gold-primary hover:underline"
+                      >
+                        <Plus size={11} /> Add Location
+                      </button>
                     </div>
-                  )
-                })}
+                    {childLocs.length === 0 ? (
+                      <p className="font-narrative text-[11px] text-ink-muted/70 italic">No locations placed in this region yet.</p>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">{childLocs.map(renderLocationCard)}</div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+
+            {/* Locations whose regionId is empty or points at a region that
+                no longer exists — always shown (not just when non-empty is
+                surprising) so an orphaned location is never silently
+                invisible. */}
+            {(unassignedLocations.length > 0 || accumulated.regions.length === 0) && (
+              <div className="rounded-xl border border-dashed border-gold-accent/25 bg-[#161a28]/40 p-3 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">
+                    Unassigned Locations {unassignedLocations.length > 0 ? `(${unassignedLocations.length})` : ''}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => addCustomItem('locations')}
+                    className="flex items-center gap-1 font-mono text-[10px] text-gold-primary hover:underline"
+                  >
+                    <Plus size={12} /> Add Location
+                  </button>
+                </div>
+                {unassignedLocations.length === 0 ? (
+                  <p className="font-narrative text-[11px] text-ink-muted/70 italic">No unassigned locations.</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">{unassignedLocations.map(renderLocationCard)}</div>
+                )}
               </div>
-            </div>
+            )}
           </div>
         )
       }

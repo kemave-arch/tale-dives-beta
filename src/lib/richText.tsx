@@ -226,12 +226,22 @@ export function renderNarrative(
       // and silently omitted if nothing matches — decoration only, never load-bearing.
       // [[Item]] carries no category code (unlike {{Term|category}}), but a
       // model occasionally conflates the two markers and writes
-      // [[Item|item]] anyway — strip a trailing "|word" defensively so a
-      // stray one doesn't render as literal "Item|item" text or break the
-      // icon lookup below.
-      const cleanItem = item.replace(/\|\w+$/, '').trim()
+      // [[Term|loc]] / [[Term|npc]] / etc. anyway — strip a trailing
+      // "|word" defensively so a stray one doesn't render as literal
+      // "Term|loc" text or break the icon lookup below. When that trailing
+      // word is itself a known KeywordLink category, honor it (the model's
+      // intent was that category, not "item") instead of always tapping
+      // through as an item — the bug a real "unclickable" report traced
+      // back to: a [[Scribe Quadrant Archives|loc]] mention taps through as
+      // category 'item', finds no such item in the Codex, and silently
+      // no-ops.
+      const KNOWN_CATEGORIES = new Set(['npc', 'loc', 'faction', 'lore', 'quest', 'beast', 'skill', 'item'])
+      const stripMatch = item.match(/\|(\w+)$/)
+      const impliedCategory = stripMatch && KNOWN_CATEGORIES.has(stripMatch[1]) ? (stripMatch[1] as KeywordLink['category']) : 'item'
+      const cleanItem = (stripMatch ? item.slice(0, -stripMatch[0].length) : item).trim()
       const matchedItemType = itemsByName.get(cleanItem.toLowerCase())?.type
-      const itemIcon = matchedItemType ? ITEM_TYPE_ICONS[matchedItemType] : undefined
+      const itemIcon = impliedCategory === 'item' && matchedItemType ? ITEM_TYPE_ICONS[matchedItemType] : undefined
+      const locIcon = impliedCategory === 'loc' ? locationIcon(locationsByName?.get(cleanItem.toLowerCase())?.locationType) : null
       // Same tap affordance as skills above — a [[Item]] mention has no
       // {{Term|category}} tag of its own to carry onTapTerm, so it needs its
       // own click handler right on this outer span or it renders decorative-
@@ -240,10 +250,11 @@ export function renderNarrative(
       nodes.push(
         <em
           key={`i${key}`}
-          onClick={onTapTerm ? (e) => { e.stopPropagation(); onTapTerm(cleanItem, 'item') } : undefined}
+          onClick={onTapTerm ? (e) => { e.stopPropagation(); onTapTerm(cleanItem, impliedCategory) } : undefined}
           className={`font-semibold italic text-gold-primary ${onTapTerm ? 'underline decoration-dotted decoration-gold-accent/50 underline-offset-2 cursor-pointer hover:text-gold-primary/80' : ''}`}
         >
           {itemIcon ? `${itemIcon} ` : ''}
+          {locIcon ? `${locIcon} ` : ''}
           {renderTags(cleanItem, `i${key}`, onTapTerm, locationsByName)}
         </em>,
       )

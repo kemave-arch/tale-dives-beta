@@ -34,6 +34,23 @@ function isKnownByName<T extends { name: string }>(dict: Dict<T> | undefined, te
   })
 }
 
+// §7 — the same fork isKnownByName guards against, one level down: a
+// {{Term|loc}} tag naming an already-known LOCATION's own named sub-AREA
+// (e.g. "The Mess Hall" inside "Riders Quadrant") lives in a completely
+// separate name space from top-level Location entries, so isKnownByName
+// alone never catches it — live-caught forking a duplicate top-level
+// "the_mess_hall" location stub for a place that already exists as an area.
+function isKnownAreaName(locations: Dict<LocationEntry> | undefined, term: string): boolean {
+  const needle = term.trim().toLowerCase()
+  if (!needle || !locations) return false
+  return Object.values(locations).some((loc) =>
+    loc.areas?.some((a) => {
+      const name = a.name.trim().toLowerCase()
+      return name.includes(needle) || needle.includes(name)
+    }),
+  )
+}
+
 export interface CodexDicts {
   locations: Dict<LocationEntry>
   regions?: Dict<RegionEntry>
@@ -93,7 +110,7 @@ export function applyKeywordLinks(codex: CodexDicts, nar: string | undefined, tu
 
     switch (category) {
       case 'loc':
-        if (!isKnownByName(locations, term) && !isKnownByName(regions, term)) {
+        if (!isKnownByName(locations, term) && !isKnownByName(regions, term) && !isKnownAreaName(locations, term)) {
           locations = ensureLocation(locations, id, term, undefined, undefined, turnRef).dict
         }
         break

@@ -142,6 +142,13 @@ export interface Player {
   locDisp: string
   time: GameTime
   equipped?: Partial<Record<EquipSlot, string>> // §5.9 — slot -> equipped item id
+  // §7 local sub-area tracking — which of the current location's own
+  // LocationEntry.areas (if any) the player is presently in, set via
+  // <turn>'s optional area="" attribute. Always cleared the instant locId
+  // itself changes (a fresh location starts with no assumed sub-area) —
+  // App.tsx's turn loop is the only place that clears or sets it, never
+  // restated by the model on an ordinary turn that doesn't move the player.
+  areaId?: string
 }
 
 // §5.9 Item Type Taxonomy — a closed set; only these three occupy an equip
@@ -935,6 +942,29 @@ export interface TurnResponse {
   // (App.tsx) when it's omitted on an ordinary same-location turn.
   loc_disp?: string
   loc_desc?: string // only sent when loc_id is first visited or its description genuinely changes — see lib/locations.ts
+  // §7 local sub-area tracking — moves the player between (or discovers a
+  // new) named sub-zone within the CURRENT loc_id's own areas, via <turn>'s
+  // optional area attribute. undefined = no signal this turn (area, if any,
+  // stays whatever it was); null = the parser's resolved form of the "none"
+  // sentinel, explicitly stepping back to the location's general space
+  // without leaving it; a real string = move to (or, paired with area_disp,
+  // newly register) that area id. See lib/xmlTurnParser.ts for how the wire
+  // format's literal "none" string becomes this null.
+  area_id?: string | null
+  area_disp?: string // only sent alongside a genuinely NEW area_id, same "first time only" economy as loc_disp
+  area_desc?: string // optional flavor text for a newly-discovered area
+  // §7 Region Map Pins, turn-time — only sent the turn a genuinely NEW loc_id
+  // (not shown anywhere in context yet) is first introduced, so the client
+  // can place it sensibly instead of always defaulting to region:'Unmapped'
+  // (lib/locations.ts's ensureLocation). region_id is either an
+  // already-established region's id, or a brand-new one paired with
+  // region_disp (its display name). map_x/map_y are 0-100 coordinates within
+  // that region's own local map — see xmlTurnContract.ts's rule text for how
+  // the model is asked to ground these in a real sense of scale.
+  region_id?: string
+  region_disp?: string
+  map_x?: number
+  map_y?: number
   mood?: string
   copper_delta?: number // currency delta only — the numeric HP/MP/ST deltas this used to ride alongside are gone, replaced by cond_updates
   cond_updates?: ConditionUpdate[]

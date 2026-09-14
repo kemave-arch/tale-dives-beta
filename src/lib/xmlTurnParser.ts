@@ -73,6 +73,21 @@ export function parseXmlTurnResponse(raw: string): TurnResponse {
   const mood = str(turnEl.getAttribute('mood'))
   const copper_delta = num(turnEl.getAttribute('c'))
 
+  // §7 local sub-area tracking — "none" is a reserved literal (not a real
+  // area id) that explicitly clears the player's current area; omitted
+  // entirely means "no change" (App.tsx leaves whatever was already set).
+  const areaRaw = str(turnEl.getAttribute('area'))
+  const area_id = areaRaw === undefined ? undefined : areaRaw.trim().toLowerCase() === 'none' ? null : areaRaw.trim()
+  const area_disp = str(turnEl.getAttribute('areadisp'))
+  const area_desc = str(turnEl.getAttribute('areadesc'))
+
+  // §7 Region Map Pins, turn-time — only meaningful the turn a genuinely new
+  // loc_id is introduced; App.tsx ignores these on an ordinary revisit turn.
+  const region_id = str(turnEl.getAttribute('region'))
+  const region_disp = str(turnEl.getAttribute('regiondisp'))
+  const map_x = num(turnEl.getAttribute('mapx'))
+  const map_y = num(turnEl.getAttribute('mapy'))
+
   // <cond> — Condition Tag adds/removes, player by default or the current
   // combat opponent via id="enemy" (the only other valid value for "id").
   const cond_updates: ConditionUpdate[] = []
@@ -257,6 +272,13 @@ export function parseXmlTurnResponse(raw: string): TurnResponse {
     loc_id,
     loc_disp,
     loc_desc,
+    area_id,
+    area_disp,
+    area_desc,
+    region_id,
+    region_disp,
+    map_x,
+    map_y,
     mood,
     copper_delta,
     cond_updates: cond_updates.length ? cond_updates : undefined,

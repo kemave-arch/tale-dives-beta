@@ -65,7 +65,7 @@ function lastNarratedTurnState(log: LogEntry[] | undefined): string | undefined 
 // Builds the compact per-turn header re-sent alongside the player's action;
 // this (not model memory) is what keeps state consistent turn to turn.
 export function buildContextSlice(state: Campaign, craftReadyLine?: string | null): string {
-  const { player, proseDepth, narrationStyle, pov, narrationMode, difficulty, locations, npcs, factions, lore, world, flags, quests, log, items, combat, bestiary, projects, beats, narrativeEvents, deathInstructions, endGameRules } = state
+  const { player, proseDepth, narrationStyle, pov, narrationMode, difficulty, locations, regions, npcs, factions, lore, world, flags, quests, log, items, combat, bestiary, projects, beats, narrativeEvents, deathInstructions, endGameRules } = state
 
   const playerIdentity = [player.gender && `Gender: ${player.gender}`, player.age !== undefined && `Age: ${player.age}`]
     .filter(Boolean)
@@ -115,6 +115,14 @@ export function buildContextSlice(state: Campaign, craftReadyLine?: string | nul
     lines.push(describeKnownLocation(known, factions))
     const hostileLine = territoryHostileLine(known, factions)
     if (hostileLine) lines.push(hostileLine)
+    // §7 local sub-area graph — 0 tokens for the (typical) location with no
+    // named sub-zones; only the current location's own areas are shown,
+    // never the whole campaign's, matching Proximity Slicing's own economy.
+    if (known.areas?.length) {
+      lines.push(`Areas within ${known.name}: ${known.areas.map((a) => `${a.name} (id: ${a.id})`).join(', ')}`)
+      const currentArea = player.areaId ? known.areas.find((a) => a.id === player.areaId) : undefined
+      if (currentArea) lines.push(`Current Area: ${currentArea.name}`)
+    }
   }
 
   // §5.5 Proximity Slicing — an NPC not currently here costs 0 context tokens.
@@ -186,9 +194,19 @@ export function buildContextSlice(state: Campaign, craftReadyLine?: string | nul
   // regardless of whether the player has actually discovered it yet, which
   // both spoils the tease and invites the narrator to reference a place the
   // player has no in-fiction way of knowing about.
+  // §7 — region/xy ride along here (never their own line) so a turn
+  // introducing a genuinely new location has something concrete to place it
+  // relative to; only shown for a location that actually has them (most
+  // auto-logged stubs won't) — 0 extra tokens otherwise.
   const otherLocationNames = Object.entries(locations ?? {})
     .filter(([id, l]) => id !== player.locId && !isHidden(l))
-    .map(([id, l]) => `${l.name} (id: ${id})`)
+    .map(([id, l]) => {
+      const geo = l.regionId ? `, region: ${l.regionId}${l.mapX !== undefined && l.mapY !== undefined ? `, xy: ${l.mapX},${l.mapY}` : ''}` : ''
+      return `${l.name} (id: ${id}${geo})`
+    })
+    .slice(-MAX_KNOWN_NAMES)
+  const regionNames = Object.entries(regions ?? {})
+    .map(([id, r]) => `${r.name} (id: ${id})`)
     .slice(-MAX_KNOWN_NAMES)
   const elsewhereNpcNames = Object.entries(npcs ?? {})
     .filter(([, n]) => n.lastSeenLocId !== player.locId && !isHidden(n))
@@ -204,6 +222,7 @@ export function buildContextSlice(state: Campaign, craftReadyLine?: string | nul
     .slice(-MAX_KNOWN_NAMES)
 
   const knownSegments = [
+    regionNames.length && `Regions: ${regionNames.join(', ')}`,
     otherLocationNames.length && `Locations: ${otherLocationNames.join(', ')}`,
     elsewhereNpcNames.length && `NPCs: ${elsewhereNpcNames.join(', ')}`,
     factionNames.length && `Factions: ${factionNames.join(', ')}`,

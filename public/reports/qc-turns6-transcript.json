@@ -1,0 +1,544 @@
+[
+  {
+    "ts": "2026-09-14T06:16:01.044Z",
+    "model": "gemini-3.5-flash-lite",
+    "stage": "test-a2-move-into-existing-area-start",
+    "campaignSnapshotBefore": {
+      "locId": "riders_quadrant",
+      "regionCount": 2,
+      "locationCount": 6
+    }
+  },
+  {
+    "ts": "2026-09-14T06:16:05.664Z",
+    "model": "gemini-3.5-flash-lite",
+    "stage": "test-a2-move-into-existing-area",
+    "actionText": "I follow the smell of food and head toward the mess hall to grab something to eat before the day gets worse.",
+    "contextSlice": "[ACTIVE CONTEXT SLICE]\nPlayer: Violet Sorrengail (Scribe Cadet) | Level: 1 | Conditions: none\nLocation Node: riders_quadrant | Time: Day 1 10:05\nProtagonist Identity: Background: Trained her entire life by her father to become a Scribe, Violet has spent her years surrounded by books, history, and quiet archives. She suffers from a chronic, unnamed connective tissue condition that makes her joints easily dislocate and her bones brittle, rendering her physically fragile in a world that values raw strength. Her mother, the cold and formidable General Lilith Sorrengail, has suddenly decreed that Violet will not enter the safety of the Scribe Quadrant, but must instead face Conscription Day for the lethal Riders Quadrant, just as her siblings Mira and the late Brennan did. | Personality: Quietly stubborn, highly analytical, and fiercely resilient. Violet possesses a sharp, brilliant mind that weaponizes historical knowledge and tactical observation to compensate for her physical limitations. She is deeply loyal, possesses a quiet courage, and refuses to let her physical fragility define her capability. | Motivation: To survive the brutal, high-mortality training of the Riders Quadrant without letting her physical limitations get her killed, while desperately trying to prove she belongs in this world on her own terms despite her mother's harsh mandate. | Physical Trait: Slight of build, with pale skin and distinctive hair that starts dark brown but fades to a metallic silver-white at the ends. She possesses fragile joints wrapped in protective bindings and a delicate stature that contrasts sharply with the armored cadets around her. | Secret: She carries a deep, forbidden knowledge of Navarian history and military tactics passed down from her late father—information that the Scribe Quadrant actively censors and that could make her a target if she speaks it aloud.\nSkills: Iron Grip (focused)\nKnown Location: Riders Quadrant | Danger: High | Standing: neutral\nAreas within Riders Quadrant: The Rotunda (id: the_rotunda), Cadet Barracks (id: cadet_barracks), The Mess Hall (id: the_mess_hall)\nNPC: Dain Aetos (id: dain_aetos) | Role: Second-Year Squad Leader and Childhood Friend | Stage: Stranger | Trust: Trusted | Personality: Rule-abiding, protective to a fault, traditional, and deeply structured | Mem: \"\"\nKnown Entities (already exist — do not reintroduce under a new name) — Regions: Basgiath War College (id: basgiath_war_college), The Outskirts &amp; Borders (id: the_outskirts) | Locations: The Parapet (id: the_parapet, region: basgiath_war_college), Scribes Quadrant (id: scribes_quadrant, region: basgiath_war_college), The Gauntlet (id: the_gauntlet, region: basgiath_war_college), The Flight Field &amp; Bowl (id: the_flight_field, region: basgiath_war_college), Athebyne (id: athebyne, region: the_outskirts) | NPCs: Mira Sorrengail (id: mira_sorrengail), Xaden Riorson (id: xaden_riorson), General Lilith Sorrengail (id: lilith_sorrengail) | Factions: Navarre Military Leadership (id: navarre_military_leadership), Riders Quadrant Leadership (id: riders_quadrant_leadership), Griffin Flyers of Poromiel (id: griffin_flyers_of_poromiel) | Lore: The Dragon-Rider Bond, The Culling of Basgiath, The Border War of Navarre and Poromiel\nWorld Premise: For four hundred years, Navarre has been protected by its magical wards, fueled by the dragons of the Basgiath mountains. While the Scribes rewrite history to hide the existence of the dark-magic-wielding venin and their flying wyvern, cadets at Basgiath War College are forced through a deadly curriculum where failure means death. With the wards beginning to fail and the truth leaking to the edges of the kingdom, the college has become a pressure cooker of political tension, lethal training, and forbidden knowledge. | Genre & Tone: Dark Military Fantasy, High-Stakes, Romance, and Grim Realism | Core Regional Conflict: The brutal, high-mortality training at Basgiath War College, set against Navarre's desperate, secret war against the venin and their wyvern forces, while the leadership actively censors the truth from its own citizens. | Power System: Signet powers channeled through bonded dragons from the sky, paired with physical combat, runes, and the deadly, life-draining magic of the dark-channeling venin. | Era/Tech Level: Pseudo-Medieval / Early Renaissance with localized magical advancements, featuring massive stone fortresses, swords, crossbows, and armor, but lacking gunpowder. | Key Factions: The Riders Quadrant, the Scribes Quadrant, the Navarre Military Leadership (General Sorrengail's faction), and the secret revolution/Aretia survivors.\nSource Material: This tale draws on \"Fourth Wing\" by Rebecca Yarros. Stay accurate to established canon — names, personalities, relationships, appearance, history — for anything corresponding to it; never invent a false version to fill a gap. Canon knowledge boundary: Book 1 (Fourth Wing) only, through the ending — never reference, foreshadow, or draw on anything past this point in the source. The player's own choices may diverge freely from here on; only canon facts already established by the boundary must stay accurate.\nActive Objectives: \nStory Arc: 1. Chapter 1: The General's Mandate [completed] | 2. Chapter 2: The Deadly Crossing [completed] | 3. Chapter 3: Eyes of the Wingleader [completed] | 4. Chapter 4: Sleepless and Marked [pending] | 5. Chapter 5: The Sparring Ring [pending] | 6. Chapter 6: Whispers in the Scribe Archives [pending] | 7. Chapter 7: A Lesson in Mortality [pending] | 8. Chapter 8: Sizing Up the Obstacles [pending] | 9. Chapter 9: Brewing the Solution [pending] | 10. Chapter 10: Under the Wingleader's Watch [pending] | 11. Chapter 11: Scaling the Impossible [pending] | 12. Chapter 12: Facing the Dragons [pending] | 13. Chapter 13: Whispers of the Unbonded [pending] | 14. Chapter 14: Into the Valley [pending] | 15. Chapter 15: Standing Against the Pack [pending] | 16. Chapter 16: Chosen by the Legends [pending] | 17. Chapter 17: Shockwaves in the Quadrant [pending] | 18. Chapter 18: Finding a Grip [pending] | 19. Chapter 19: Bound to the Sky [pending] | 20. Chapter 20: Channelling the Unseen [pending] | 21. Chapter 21: Training the Tail [pending] | 22. Chapter 22: Slashing in the Dark [pending] | 23. Chapter 23: Dain's Touch [pending] | 24. Chapter 24: Manifesting the Storm [pending] | 25. Chapter 25: Grounding the Spark [pending] | 26. Chapter 26: Midnight Negotiations [pending] | 27. Chapter 27: Strategizing the Board [pending] | 28. Chapter 28: Scribes vs. Riders [pending] | 29. Chapter 29: Igniting the Spark [pending] | 30. Chapter 30: Broken Trust [pending] | 31. Chapter 31: Deployed to the Outposts [pending] | 32. Chapter 32: The Desolation of Athebyne [pending] | 33. Chapter 33: The Gryphon's Shadow [pending] | 34. Chapter 34: The Real Enemy [pending] | 35. Chapter 35: The Skies Burn [pending] | 36. Chapter 36: Standing Against the Dark [pending] | 37. Chapter 37: Poisoned Veins [pending] | 38. Chapter 38: Awakening in Aretia [pending] | 39. Chapter 39: The Ghost of the Past [pending]\nDormant Story Watches: [event_ch1_mira_parting]: beat_ch1_conscription | [event_ch2_meyer_fall]: beat_ch2_parapet | [event_ch3_xaden_glance]: beat_ch3_first_meeting\nOn Defeat: If Violet is defeated or fails a lethal trial, she does not permanently die. Instead, she suffers a severe physical injury (such as a dislocated joint or a broken bone) that imposes a permanent physical penalty on her future rolls, or her dragons must sacrifice a portion of their own energy to shield her, straining her bond and increasing the difficulty of channeling her signet.\nEnding Guidance: win: Violet successfully survives the Battle of Resson, uncovers the truth about the venin, reunites with her brother Brennan in Aretia, and commits herself to the secret revolution alongside Xaden. | lose: Violet is captured by Navarre's leadership or killed by the venin during the battle of Resson, leaving the secrets of the revolution buried and her dragons unbonded once more. | neutral: Violet survives the trials and the battle but is forced to flee into hiding alone, distrustful of both the corrupt Navarre military and Xaden's rebels, becoming a rogue rider in the borderlands.\nProse Depth: BALANCED (~1,100-1,400 tokens)\nNarration Style: Third person, close POV on the protagonist, grounded and cinematic.\nPoint of View: Third Person (\"they\") — apply this consistently to every sentence of narration this turn.\nNarration Mode: Reactive — the player's own typed words stand as-is; narrate only the world's reaction to them.\nTale Difficulty: Balanced — Let outcomes follow believably from the choice and the stakes at hand — no thumb on the scale either way.\nCopper: 10000",
+    "ok": true,
+    "raw": "<plan>\ntwist: Dain intercepts Violet before she reaches the food, bringing unwelcome rules and public scrutiny that remind her she is being watched.\ndistinct: Dain's protection feels less like comfort and more like a cage, his hand heavy on her shoulder as he tries to enforce Scribe-level caution in a rider's killing floor.\n</plan>\n<nar>\nThe stone corridors of {{Basgiath War College|loc}} smell of old sweat, scorched fat, and the damp iron dampness of unwashed wool. \n\nViolet navigates the press of bodies in the shadowed hallway, keeping her left shoulder turned slightly away from a towering second-year who lacks the decency to check his stride. \n\nHer leather-bound protective wraps strain against her wrists with every step, the leather stiff and dry against skin that bruises far too easily. \n\nFollowing the heavy, savory reek of salted mutton and stale ale, she slips past the arched stone lintel into {{The Mess Hall|loc}}.\n\nLong oak tables run the length of the hall, scarred by decades of carved initials, spilled wine, and frantic knife-fights. \n\nCadets in black leathers crowd the benches, shouting across the din, plates clattering against wood like falling shale. \n\nBefore Violet can locate the food barrels or find an empty corner to steady her breathing, a heavy, familiar hand settles squarely between her shoulder blades.\n\n'Violet. You shouldn't be wandering the halls alone,' {{Dain Aetos|npc}} says, his voice cutting through the ambient roar with the practiced authority of a squad leader.\n\nHe steps around to block her path, his dark eyes sweeping over her slight frame with that familiar, maddening blend of anxiety and disapproval. \n\nHis uniform is immaculate, not a speck of soot or blood marring his leathers, a sharp contrast to the bruised and limping first-years stumbling past them.\n\n\"The second-years are already taking bets on who doesn't survive the first week of combat drills,\" Dain continues, his jaw tightening as he lowers his voice, leaning in close enough for her to catch the scent of cedar and vinegar. \n\n\"I can't keep pulling you out of the line of fire if you keep wandering off, Violet. Mother—General Sorrengail—expects me to keep you alive, but you're making it impossible.\"\n</nar>\n<sync>\n  <turn state=\"PEACH\" d=\"1\" h=\"10:05\" loc=\"riders_quadrant\" area=\"the_mess_hall\" />\n  <beat id=\"beat_ch4_sleepless_and_marked\" stat=\"active\" />\n  <npc id=\"dain_aetos\" kin=\"mentor\" aff=\"-\" trust=\"+\" resolve=\"Adept\" deed=\"Attempted to restrict Violet's movement in the mess hall out of misplaced protection.\" mem=\"Warned Violet about survival odds and her mother's expectations.\" wld=\"Standard rider's broadsword\" armor=\"Second-year officer leathers\" personality=\"Rule-abiding, protective to a fault, traditional, and deeply structured\" faction=\"riders_quadrant_leadership\" />\n  <act>Tell Dain to stop treating you like glass and brush past him toward the food.</act>\n  <act>Ignore Dain's warning, grab a piece of bread, and find a seat away from his squad.</act>\n  <act>Remind Dain that your mother's orders brought you here, and you don't need his permission to eat.</act>\n</sync>",
+    "finishReason": "STOP",
+    "parsed": {
+      "nar": "The stone corridors of {{Basgiath War College|loc}} smell of old sweat, scorched fat, and the damp iron dampness of unwashed wool. \n\nViolet navigates the press of bodies in the shadowed hallway, keeping her left shoulder turned slightly away from a towering second-year who lacks the decency to check his stride. \n\nHer leather-bound protective wraps strain against her wrists with every step, the leather stiff and dry against skin that bruises far too easily. \n\nFollowing the heavy, savory reek of salted mutton and stale ale, she slips past the arched stone lintel into {{The Mess Hall|loc}}.\n\nLong oak tables run the length of the hall, scarred by decades of carved initials, spilled wine, and frantic knife-fights. \n\nCadets in black leathers crowd the benches, shouting across the din, plates clattering against wood like falling shale. \n\nBefore Violet can locate the food barrels or find an empty corner to steady her breathing, a heavy, familiar hand settles squarely between her shoulder blades.\n\n'Violet. You shouldn't be wandering the halls alone,' {{Dain Aetos|npc}} says, his voice cutting through the ambient roar with the practiced authority of a squad leader.\n\nHe steps around to block her path, his dark eyes sweeping over her slight frame with that familiar, maddening blend of anxiety and disapproval. \n\nHis uniform is immaculate, not a speck of soot or blood marring his leathers, a sharp contrast to the bruised and limping first-years stumbling past them.\n\n\"The second-years are already taking bets on who doesn't survive the first week of combat drills,\" Dain continues, his jaw tightening as he lowers his voice, leaning in close enough for her to catch the scent of cedar and vinegar. \n\n\"I can't keep pulling you out of the line of fire if you keep wandering off, Violet. Mother—General Sorrengail—expects me to keep you alive, but you're making it impossible.\"",
+      "turn_state": "PEACH",
+      "time": {
+        "d": 1,
+        "h": "10:05"
+      },
+      "loc_id": "riders_quadrant",
+      "area_id": "the_mess_hall",
+      "act": [
+        "Tell Dain to stop treating you like glass and brush past him toward the food.",
+        "Ignore Dain's warning, grab a piece of bread, and find a seat away from his squad.",
+        "Remind Dain that your mother's orders brought you here, and you don't need his permission to eat."
+      ],
+      "beat_update": {
+        "beat_id": "beat_ch4_sleepless_and_marked",
+        "status": "active"
+      },
+      "npc_mem_up": [
+        {
+          "npc_id": "dain_aetos",
+          "aff_delta": -1,
+          "trust_delta": 1,
+          "resolve": 3,
+          "deed": "Attempted to restrict Violet's movement in the mess hall out of misplaced protection.",
+          "mem_summary": "Warned Violet about survival odds and her mother's expectations.",
+          "held_weapon": "Standard rider's broadsword",
+          "worn_armor": "Second-year officer leathers",
+          "personality": "Rule-abiding, protective to a fault, traditional, and deeply structured",
+          "faction_id": "riders_quadrant_leadership",
+          "kinship": "mentor"
+        }
+      ]
+    }
+  },
+  {
+    "ts": "2026-09-14T06:16:05.666Z",
+    "model": "gemini-3.5-flash-lite",
+    "stage": "test-a2-move-into-existing-area-applied",
+    "campaignSnapshotAfter": {
+      "locId": "riders_quadrant",
+      "areaId": "the_mess_hall",
+      "regions": {
+        "basgiath_war_college": {
+          "name": "Basgiath War College",
+          "description": "A colossal, ancient stone fortress carved directly into the rugged peaks of the Blackwood Mountains. It is divided into distinct, highly competitive quadrants, designed to forge the defenders of Navarre or kill them in the attempt."
+        },
+        "the_outskirts": {
+          "name": "The Outskirts &amp; Borders",
+          "description": "The treacherous mountainous terrain surrounding the college and the wider, ward-protected kingdom of Navarre, where the illusion of safety begins to wear thin."
+        }
+      },
+      "locationsSummary": {
+        "the_parapet": {
+          "name": "The Parapet",
+          "regionId": "basgiath_war_college",
+          "areas": [
+            {
+              "id": "the_turret",
+              "name": "The Turret"
+            },
+            {
+              "id": "the_death_toll_ledger",
+              "name": "The Death Toll Ledger"
+            }
+          ]
+        },
+        "riders_quadrant": {
+          "name": "Riders Quadrant",
+          "regionId": "basgiath_war_college",
+          "areas": [
+            {
+              "id": "the_rotunda",
+              "name": "The Rotunda"
+            },
+            {
+              "id": "cadet_barracks",
+              "name": "Cadet Barracks"
+            },
+            {
+              "id": "the_mess_hall",
+              "name": "The Mess Hall"
+            }
+          ]
+        },
+        "scribes_quadrant": {
+          "name": "Scribes Quadrant",
+          "regionId": "basgiath_war_college",
+          "areas": [
+            {
+              "id": "the_archives",
+              "name": "The Archives"
+            },
+            {
+              "id": "scribe_offices",
+              "name": "Scribe Offices"
+            },
+            {
+              "id": "the_vaults",
+              "name": "The Vaults"
+            }
+          ]
+        },
+        "the_gauntlet": {
+          "name": "The Gauntlet",
+          "regionId": "basgiath_war_college",
+          "areas": [
+            {
+              "id": "the_first_platform",
+              "name": "The First Platform"
+            },
+            {
+              "id": "the_chimney",
+              "name": "The Chimney"
+            },
+            {
+              "id": "the_summit",
+              "name": "The Summit"
+            }
+          ]
+        },
+        "the_flight_field": {
+          "name": "The Flight Field &amp; Bowl",
+          "regionId": "basgiath_war_college",
+          "areas": [
+            {
+              "id": "the_presentation_dais",
+              "name": "The Presentation Dais"
+            },
+            {
+              "id": "the_dragon_pens",
+              "name": "The Dragon Pens"
+            },
+            {
+              "id": "the_burn_scars",
+              "name": "The Burn Scars"
+            }
+          ]
+        },
+        "athebyne": {
+          "name": "Athebyne",
+          "regionId": "the_outskirts",
+          "areas": [
+            {
+              "id": "the_watchtower",
+              "name": "The Watchtower"
+            },
+            {
+              "id": "the_supply_depot",
+              "name": "The Supply Depot"
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "ts": "2026-09-14T06:16:15.674Z",
+    "model": "gemini-3.5-flash-lite",
+    "stage": "test-c2-new-location-region-coords-start",
+    "campaignSnapshotBefore": {
+      "locId": "riders_quadrant",
+      "areaId": "the_mess_hall",
+      "regionCount": 2,
+      "locationCount": 6
+    }
+  },
+  {
+    "ts": "2026-09-14T06:16:20.193Z",
+    "model": "gemini-3.5-flash-lite",
+    "stage": "test-c2-new-location-region-coords",
+    "actionText": "*I have already secretly traveled overnight and am now standing at Zenithal Watch, a remote outpost days away in the far eastern mountains beyond Athebyne*",
+    "contextSlice": "[ACTIVE CONTEXT SLICE]\nPlayer: Violet Sorrengail (Scribe Cadet) | Level: 1 | Conditions: none\nLocation Node: riders_quadrant | Time: Day 1 10:05\nProtagonist Identity: Background: Trained her entire life by her father to become a Scribe, Violet has spent her years surrounded by books, history, and quiet archives. She suffers from a chronic, unnamed connective tissue condition that makes her joints easily dislocate and her bones brittle, rendering her physically fragile in a world that values raw strength. Her mother, the cold and formidable General Lilith Sorrengail, has suddenly decreed that Violet will not enter the safety of the Scribe Quadrant, but must instead face Conscription Day for the lethal Riders Quadrant, just as her siblings Mira and the late Brennan did. | Personality: Quietly stubborn, highly analytical, and fiercely resilient. Violet possesses a sharp, brilliant mind that weaponizes historical knowledge and tactical observation to compensate for her physical limitations. She is deeply loyal, possesses a quiet courage, and refuses to let her physical fragility define her capability. | Motivation: To survive the brutal, high-mortality training of the Riders Quadrant without letting her physical limitations get her killed, while desperately trying to prove she belongs in this world on her own terms despite her mother's harsh mandate. | Physical Trait: Slight of build, with pale skin and distinctive hair that starts dark brown but fades to a metallic silver-white at the ends. She possesses fragile joints wrapped in protective bindings and a delicate stature that contrasts sharply with the armored cadets around her. | Secret: She carries a deep, forbidden knowledge of Navarian history and military tactics passed down from her late father—information that the Scribe Quadrant actively censors and that could make her a target if she speaks it aloud.\nSkills: Iron Grip (focused)\nKnown Location: Riders Quadrant | Danger: High | Standing: neutral\nAreas within Riders Quadrant: The Rotunda (id: the_rotunda), Cadet Barracks (id: cadet_barracks), The Mess Hall (id: the_mess_hall)\nCurrent Area: The Mess Hall\nNPC: Dain Aetos (id: dain_aetos) | Role: Second-Year Squad Leader and Childhood Friend | Stage: Stranger | Trust: Trusted | Personality: Rule-abiding, protective to a fault, traditional, and deeply structured | Mem: \"\"\nKnown Entities (already exist — do not reintroduce under a new name) — Regions: Basgiath War College (id: basgiath_war_college), The Outskirts &amp; Borders (id: the_outskirts) | Locations: The Parapet (id: the_parapet, region: basgiath_war_college), Scribes Quadrant (id: scribes_quadrant, region: basgiath_war_college), The Gauntlet (id: the_gauntlet, region: basgiath_war_college), The Flight Field &amp; Bowl (id: the_flight_field, region: basgiath_war_college), Athebyne (id: athebyne, region: the_outskirts) | NPCs: Mira Sorrengail (id: mira_sorrengail), Xaden Riorson (id: xaden_riorson), General Lilith Sorrengail (id: lilith_sorrengail) | Factions: Navarre Military Leadership (id: navarre_military_leadership), Riders Quadrant Leadership (id: riders_quadrant_leadership), Griffin Flyers of Poromiel (id: griffin_flyers_of_poromiel) | Lore: The Dragon-Rider Bond, The Culling of Basgiath, The Border War of Navarre and Poromiel\nWorld Premise: For four hundred years, Navarre has been protected by its magical wards, fueled by the dragons of the Basgiath mountains. While the Scribes rewrite history to hide the existence of the dark-magic-wielding venin and their flying wyvern, cadets at Basgiath War College are forced through a deadly curriculum where failure means death. With the wards beginning to fail and the truth leaking to the edges of the kingdom, the college has become a pressure cooker of political tension, lethal training, and forbidden knowledge. | Genre & Tone: Dark Military Fantasy, High-Stakes, Romance, and Grim Realism | Core Regional Conflict: The brutal, high-mortality training at Basgiath War College, set against Navarre's desperate, secret war against the venin and their wyvern forces, while the leadership actively censors the truth from its own citizens. | Power System: Signet powers channeled through bonded dragons from the sky, paired with physical combat, runes, and the deadly, life-draining magic of the dark-channeling venin. | Era/Tech Level: Pseudo-Medieval / Early Renaissance with localized magical advancements, featuring massive stone fortresses, swords, crossbows, and armor, but lacking gunpowder. | Key Factions: The Riders Quadrant, the Scribes Quadrant, the Navarre Military Leadership (General Sorrengail's faction), and the secret revolution/Aretia survivors.\nSource Material: This tale draws on \"Fourth Wing\" by Rebecca Yarros. Stay accurate to established canon — names, personalities, relationships, appearance, history — for anything corresponding to it; never invent a false version to fill a gap. Canon knowledge boundary: Book 1 (Fourth Wing) only, through the ending — never reference, foreshadow, or draw on anything past this point in the source. The player's own choices may diverge freely from here on; only canon facts already established by the boundary must stay accurate.\nActive Objectives: \nStory Arc: 1. Chapter 1: The General's Mandate [completed] | 2. Chapter 2: The Deadly Crossing [completed] | 3. Chapter 3: Eyes of the Wingleader [completed] | 4. Chapter 4: Sleepless and Marked [pending] | 5. Chapter 5: The Sparring Ring [pending] | 6. Chapter 6: Whispers in the Scribe Archives [pending] | 7. Chapter 7: A Lesson in Mortality [pending] | 8. Chapter 8: Sizing Up the Obstacles [pending] | 9. Chapter 9: Brewing the Solution [pending] | 10. Chapter 10: Under the Wingleader's Watch [pending] | 11. Chapter 11: Scaling the Impossible [pending] | 12. Chapter 12: Facing the Dragons [pending] | 13. Chapter 13: Whispers of the Unbonded [pending] | 14. Chapter 14: Into the Valley [pending] | 15. Chapter 15: Standing Against the Pack [pending] | 16. Chapter 16: Chosen by the Legends [pending] | 17. Chapter 17: Shockwaves in the Quadrant [pending] | 18. Chapter 18: Finding a Grip [pending] | 19. Chapter 19: Bound to the Sky [pending] | 20. Chapter 20: Channelling the Unseen [pending] | 21. Chapter 21: Training the Tail [pending] | 22. Chapter 22: Slashing in the Dark [pending] | 23. Chapter 23: Dain's Touch [pending] | 24. Chapter 24: Manifesting the Storm [pending] | 25. Chapter 25: Grounding the Spark [pending] | 26. Chapter 26: Midnight Negotiations [pending] | 27. Chapter 27: Strategizing the Board [pending] | 28. Chapter 28: Scribes vs. Riders [pending] | 29. Chapter 29: Igniting the Spark [pending] | 30. Chapter 30: Broken Trust [pending] | 31. Chapter 31: Deployed to the Outposts [pending] | 32. Chapter 32: The Desolation of Athebyne [pending] | 33. Chapter 33: The Gryphon's Shadow [pending] | 34. Chapter 34: The Real Enemy [pending] | 35. Chapter 35: The Skies Burn [pending] | 36. Chapter 36: Standing Against the Dark [pending] | 37. Chapter 37: Poisoned Veins [pending] | 38. Chapter 38: Awakening in Aretia [pending] | 39. Chapter 39: The Ghost of the Past [pending]\nDormant Story Watches: [event_ch1_mira_parting]: beat_ch1_conscription | [event_ch2_meyer_fall]: beat_ch2_parapet | [event_ch3_xaden_glance]: beat_ch3_first_meeting\nOn Defeat: If Violet is defeated or fails a lethal trial, she does not permanently die. Instead, she suffers a severe physical injury (such as a dislocated joint or a broken bone) that imposes a permanent physical penalty on her future rolls, or her dragons must sacrifice a portion of their own energy to shield her, straining her bond and increasing the difficulty of channeling her signet.\nEnding Guidance: win: Violet successfully survives the Battle of Resson, uncovers the truth about the venin, reunites with her brother Brennan in Aretia, and commits herself to the secret revolution alongside Xaden. | lose: Violet is captured by Navarre's leadership or killed by the venin during the battle of Resson, leaving the secrets of the revolution buried and her dragons unbonded once more. | neutral: Violet survives the trials and the battle but is forced to flee into hiding alone, distrustful of both the corrupt Navarre military and Xaden's rebels, becoming a rogue rider in the borderlands.\nProse Depth: BALANCED (~1,100-1,400 tokens)\nNarration Style: Third person, close POV on the protagonist, grounded and cinematic.\nPoint of View: Third Person (\"they\") — apply this consistently to every sentence of narration this turn.\nNarration Mode: Reactive — the player's own typed words stand as-is; narrate only the world's reaction to them.\nTale Difficulty: Balanced — Let outcomes follow believably from the choice and the stakes at hand — no thumb on the scale either way.\nCopper: 10000",
+    "ok": true,
+    "raw": "<plan>\ntwist: Skip the Mess Hall entirely and respect the player's bold spatial override by snapping the scene directly to the freezing stone ramparts of Zenithal Watch, letting the harsh isolation of the eastern mountains hit without transition.\ndistinct: Describe the outpost not through generic snow, but through the biting, thin air and the silent, watchful hostility of the stationed border riders who view an unaccompanied Scribe cadet as either a ghost or a suicide.\n</plan>\n<nar>\nThe heavy air of the mess hall dissolves instantly, replaced by the thin, razor-sharp gale of the high eastern peaks. \n\nViolet stands upon the frost-rimed stone ramparts of {{Zenithal Watch|loc}}, miles beyond the safety of {{Athebyne|loc}} and days away from the stone corridors of {{Basgiath War College|loc}}. \n\nHer lungs burn with every breath of the freezing altitude, the air so thin it makes her temples throb as the wind catches the silver-tipped strands of her hair and whips them across her face. \n\nThe protective leather wraps on her wrists stiffen instantly in the sub-zero frost, biting into skin that has grown raw from the unexpected overnight journey through unforgiving terrain.\n\nAround her, the jagged peaks of the eastern mountains rise like frozen teeth against a pale, bruised sky, entirely devoid of the warmth or relative safety of the valleys below. \n\nA pair of border guards, clad in heavy bear-fur cloaks and scarred leather, turn from the parapet's windbreak, their eyes narrowing as they spot her solitary, slight figure standing exposed against the open drop. \n\nOne of them, a grizzled rider with a jagged scar splitting his left eyebrow, rests a heavy hand on the hilt of a broadsword, his expression curdling into a mixture of disbelief and lethal annoyance.\n\n\"What in the name of the wards is a Scribe cadet doing out here alone at the edge of the world?\" the guard barks, his voice roughened by years of wind and shouting against gales. \n\n\"If the wyvern patrols don't pick your bones clean before nightfall, the cold will finish the job. State your business or turn right back around, girl—we don't babysit strays.\"\n</nar>\n<sync>\n  <turn state=\"PEACE\" d=\"Day 2\" h=\"06:30\" loc=\"zenithal_watch\" locdisp=\"Zenithal Watch\" desc=\"A remote, wind-scourged stone watchtower clinging to the jagged eastern mountains far beyond Athebyne, manned by hardy border guards.\" mood=\"Desolate and freezing\" region=\"the_outskirts\" regiondisp=\"The Outskirts &amp; Borders\" mapx=\"88\" mapy=\"15\" />\n  <act>Demand answers from the guards about recent wyvern sightings near the border.</act>\n  <act>Pull your cloak tighter against the freezing wind and ask for shelter near the hearth.</act>\n  <act>Quietly assess the watchtower's defensive layout and escape routes using your tactical training.</act>\n  <npc id=\"dain_aetos\" party=\"departed\" />\n  <npc id=\"zenithal_guard\" kin=\"clan\" aff=\"-\" trust=\"-\" resolve=\"Novice\" deed=\"Challenged Violet's unexpected arrival at the remote outpost.\" mem=\"Met Violet standing alone on the frozen ramparts of Zenithal Watch.\" wld=\"Broadsword\" armor=\"Bear-fur trimmed leather\" personality=\"Suspicious, battle-worn, intolerant of outsiders\" faction=\"navarre_military_leadership\" secret=\"The garrison has been ordered to keep quiet about rising wyvern activity across the ridge.\" />\n</sync>",
+    "finishReason": "STOP",
+    "parsed": {
+      "nar": "The heavy air of the mess hall dissolves instantly, replaced by the thin, razor-sharp gale of the high eastern peaks. \n\nViolet stands upon the frost-rimed stone ramparts of {{Zenithal Watch|loc}}, miles beyond the safety of {{Athebyne|loc}} and days away from the stone corridors of {{Basgiath War College|loc}}. \n\nHer lungs burn with every breath of the freezing altitude, the air so thin it makes her temples throb as the wind catches the silver-tipped strands of her hair and whips them across her face. \n\nThe protective leather wraps on her wrists stiffen instantly in the sub-zero frost, biting into skin that has grown raw from the unexpected overnight journey through unforgiving terrain.\n\nAround her, the jagged peaks of the eastern mountains rise like frozen teeth against a pale, bruised sky, entirely devoid of the warmth or relative safety of the valleys below. \n\nA pair of border guards, clad in heavy bear-fur cloaks and scarred leather, turn from the parapet's windbreak, their eyes narrowing as they spot her solitary, slight figure standing exposed against the open drop. \n\nOne of them, a grizzled rider with a jagged scar splitting his left eyebrow, rests a heavy hand on the hilt of a broadsword, his expression curdling into a mixture of disbelief and lethal annoyance.\n\n\"What in the name of the wards is a Scribe cadet doing out here alone at the edge of the world?\" the guard barks, his voice roughened by years of wind and shouting against gales. \n\n\"If the wyvern patrols don't pick your bones clean before nightfall, the cold will finish the job. State your business or turn right back around, girl—we don't babysit strays.\"",
+      "turn_state": "PEACE",
+      "time": {
+        "d": 2,
+        "h": "06:30"
+      },
+      "loc_id": "zenithal_watch",
+      "loc_disp": "Zenithal Watch",
+      "loc_desc": "A remote, wind-scourged stone watchtower clinging to the jagged eastern mountains far beyond Athebyne, manned by hardy border guards.",
+      "region_id": "the_outskirts",
+      "region_disp": "The Outskirts &amp; Borders",
+      "map_x": 88,
+      "map_y": 15,
+      "mood": "Desolate and freezing",
+      "act": [
+        "Demand answers from the guards about recent wyvern sightings near the border.",
+        "Pull your cloak tighter against the freezing wind and ask for shelter near the hearth.",
+        "Quietly assess the watchtower's defensive layout and escape routes using your tactical training."
+      ],
+      "npc_mem_up": [
+        {
+          "npc_id": "dain_aetos",
+          "party_status": "departed"
+        },
+        {
+          "npc_id": "zenithal_guard",
+          "aff_delta": -1,
+          "trust_delta": -1,
+          "resolve": 2,
+          "deed": "Challenged Violet's unexpected arrival at the remote outpost.",
+          "mem_summary": "Met Violet standing alone on the frozen ramparts of Zenithal Watch.",
+          "held_weapon": "Broadsword",
+          "worn_armor": "Bear-fur trimmed leather",
+          "personality": "Suspicious, battle-worn, intolerant of outsiders",
+          "faction_id": "navarre_military_leadership",
+          "secret_truth": "The garrison has been ordered to keep quiet about rising wyvern activity across the ridge.",
+          "kinship": "clan"
+        }
+      ]
+    }
+  },
+  {
+    "ts": "2026-09-14T06:16:20.194Z",
+    "model": "gemini-3.5-flash-lite",
+    "stage": "test-c2-new-location-region-coords-applied",
+    "campaignSnapshotAfter": {
+      "locId": "zenithal_watch",
+      "regions": {
+        "basgiath_war_college": {
+          "name": "Basgiath War College",
+          "description": "A colossal, ancient stone fortress carved directly into the rugged peaks of the Blackwood Mountains. It is divided into distinct, highly competitive quadrants, designed to forge the defenders of Navarre or kill them in the attempt."
+        },
+        "the_outskirts": {
+          "name": "The Outskirts &amp; Borders",
+          "description": "The treacherous mountainous terrain surrounding the college and the wider, ward-protected kingdom of Navarre, where the illusion of safety begins to wear thin."
+        }
+      },
+      "locationsSummary": {
+        "the_parapet": {
+          "name": "The Parapet",
+          "regionId": "basgiath_war_college",
+          "areas": [
+            {
+              "id": "the_turret",
+              "name": "The Turret"
+            },
+            {
+              "id": "the_death_toll_ledger",
+              "name": "The Death Toll Ledger"
+            }
+          ]
+        },
+        "riders_quadrant": {
+          "name": "Riders Quadrant",
+          "regionId": "basgiath_war_college",
+          "areas": [
+            {
+              "id": "the_rotunda",
+              "name": "The Rotunda"
+            },
+            {
+              "id": "cadet_barracks",
+              "name": "Cadet Barracks"
+            },
+            {
+              "id": "the_mess_hall",
+              "name": "The Mess Hall"
+            }
+          ]
+        },
+        "scribes_quadrant": {
+          "name": "Scribes Quadrant",
+          "regionId": "basgiath_war_college",
+          "areas": [
+            {
+              "id": "the_archives",
+              "name": "The Archives"
+            },
+            {
+              "id": "scribe_offices",
+              "name": "Scribe Offices"
+            },
+            {
+              "id": "the_vaults",
+              "name": "The Vaults"
+            }
+          ]
+        },
+        "the_gauntlet": {
+          "name": "The Gauntlet",
+          "regionId": "basgiath_war_college",
+          "areas": [
+            {
+              "id": "the_first_platform",
+              "name": "The First Platform"
+            },
+            {
+              "id": "the_chimney",
+              "name": "The Chimney"
+            },
+            {
+              "id": "the_summit",
+              "name": "The Summit"
+            }
+          ]
+        },
+        "the_flight_field": {
+          "name": "The Flight Field &amp; Bowl",
+          "regionId": "basgiath_war_college",
+          "areas": [
+            {
+              "id": "the_presentation_dais",
+              "name": "The Presentation Dais"
+            },
+            {
+              "id": "the_dragon_pens",
+              "name": "The Dragon Pens"
+            },
+            {
+              "id": "the_burn_scars",
+              "name": "The Burn Scars"
+            }
+          ]
+        },
+        "athebyne": {
+          "name": "Athebyne",
+          "regionId": "the_outskirts",
+          "areas": [
+            {
+              "id": "the_watchtower",
+              "name": "The Watchtower"
+            },
+            {
+              "id": "the_supply_depot",
+              "name": "The Supply Depot"
+            }
+          ]
+        },
+        "zenithal_watch": {
+          "name": "Zenithal Watch",
+          "regionId": "the_outskirts",
+          "mapX": 88,
+          "mapY": 15
+        }
+      }
+    }
+  },
+  {
+    "ts": "2026-09-14T06:16:30.203Z",
+    "model": "gemini-3.5-flash-lite",
+    "stage": "test-d2-dedup-check-start",
+    "campaignSnapshotBefore": {
+      "locId": "zenithal_watch",
+      "regionCount": 2,
+      "locationCount": 7
+    }
+  },
+  {
+    "ts": "2026-09-14T06:16:34.652Z",
+    "model": "gemini-3.5-flash-lite",
+    "stage": "test-d2-dedup-check",
+    "actionText": "I look around Zenithal Watch and ask the first person I see whether Athebyne still sends supply runs out this far.",
+    "contextSlice": "[ACTIVE CONTEXT SLICE]\nPlayer: Violet Sorrengail (Scribe Cadet) | Level: 1 | Conditions: none\nLocation Node: zenithal_watch | Time: Day 2 06:30\nProtagonist Identity: Background: Trained her entire life by her father to become a Scribe, Violet has spent her years surrounded by books, history, and quiet archives. She suffers from a chronic, unnamed connective tissue condition that makes her joints easily dislocate and her bones brittle, rendering her physically fragile in a world that values raw strength. Her mother, the cold and formidable General Lilith Sorrengail, has suddenly decreed that Violet will not enter the safety of the Scribe Quadrant, but must instead face Conscription Day for the lethal Riders Quadrant, just as her siblings Mira and the late Brennan did. | Personality: Quietly stubborn, highly analytical, and fiercely resilient. Violet possesses a sharp, brilliant mind that weaponizes historical knowledge and tactical observation to compensate for her physical limitations. She is deeply loyal, possesses a quiet courage, and refuses to let her physical fragility define her capability. | Motivation: To survive the brutal, high-mortality training of the Riders Quadrant without letting her physical limitations get her killed, while desperately trying to prove she belongs in this world on her own terms despite her mother's harsh mandate. | Physical Trait: Slight of build, with pale skin and distinctive hair that starts dark brown but fades to a metallic silver-white at the ends. She possesses fragile joints wrapped in protective bindings and a delicate stature that contrasts sharply with the armored cadets around her. | Secret: She carries a deep, forbidden knowledge of Navarian history and military tactics passed down from her late father—information that the Scribe Quadrant actively censors and that could make her a target if she speaks it aloud.\nSkills: Iron Grip (focused)\nKnown Location: Zenithal Watch | Danger: Unknown | Standing: neutral | First Seen: Day 1 10:05\nKnown Entities (already exist — do not reintroduce under a new name) — Regions: Basgiath War College (id: basgiath_war_college), The Outskirts &amp; Borders (id: the_outskirts) | Locations: The Parapet (id: the_parapet, region: basgiath_war_college), Riders Quadrant (id: riders_quadrant, region: basgiath_war_college), Scribes Quadrant (id: scribes_quadrant, region: basgiath_war_college), The Gauntlet (id: the_gauntlet, region: basgiath_war_college), The Flight Field &amp; Bowl (id: the_flight_field, region: basgiath_war_college), Athebyne (id: athebyne, region: the_outskirts) | NPCs: Mira Sorrengail (id: mira_sorrengail), Xaden Riorson (id: xaden_riorson), Dain Aetos (id: dain_aetos), General Lilith Sorrengail (id: lilith_sorrengail) | Factions: Navarre Military Leadership (id: navarre_military_leadership), Riders Quadrant Leadership (id: riders_quadrant_leadership), Griffin Flyers of Poromiel (id: griffin_flyers_of_poromiel) | Lore: The Dragon-Rider Bond, The Culling of Basgiath, The Border War of Navarre and Poromiel\nWorld Premise: For four hundred years, Navarre has been protected by its magical wards, fueled by the dragons of the Basgiath mountains. While the Scribes rewrite history to hide the existence of the dark-magic-wielding venin and their flying wyvern, cadets at Basgiath War College are forced through a deadly curriculum where failure means death. With the wards beginning to fail and the truth leaking to the edges of the kingdom, the college has become a pressure cooker of political tension, lethal training, and forbidden knowledge. | Genre & Tone: Dark Military Fantasy, High-Stakes, Romance, and Grim Realism | Core Regional Conflict: The brutal, high-mortality training at Basgiath War College, set against Navarre's desperate, secret war against the venin and their wyvern forces, while the leadership actively censors the truth from its own citizens. | Power System: Signet powers channeled through bonded dragons from the sky, paired with physical combat, runes, and the deadly, life-draining magic of the dark-channeling venin. | Era/Tech Level: Pseudo-Medieval / Early Renaissance with localized magical advancements, featuring massive stone fortresses, swords, crossbows, and armor, but lacking gunpowder. | Key Factions: The Riders Quadrant, the Scribes Quadrant, the Navarre Military Leadership (General Sorrengail's faction), and the secret revolution/Aretia survivors.\nSource Material: This tale draws on \"Fourth Wing\" by Rebecca Yarros. Stay accurate to established canon — names, personalities, relationships, appearance, history — for anything corresponding to it; never invent a false version to fill a gap. Canon knowledge boundary: Book 1 (Fourth Wing) only, through the ending — never reference, foreshadow, or draw on anything past this point in the source. The player's own choices may diverge freely from here on; only canon facts already established by the boundary must stay accurate.\nActive Objectives: \nStory Arc: 1. Chapter 1: The General's Mandate [completed] | 2. Chapter 2: The Deadly Crossing [completed] | 3. Chapter 3: Eyes of the Wingleader [completed] | 4. Chapter 4: Sleepless and Marked [pending] | 5. Chapter 5: The Sparring Ring [pending] | 6. Chapter 6: Whispers in the Scribe Archives [pending] | 7. Chapter 7: A Lesson in Mortality [pending] | 8. Chapter 8: Sizing Up the Obstacles [pending] | 9. Chapter 9: Brewing the Solution [pending] | 10. Chapter 10: Under the Wingleader's Watch [pending] | 11. Chapter 11: Scaling the Impossible [pending] | 12. Chapter 12: Facing the Dragons [pending] | 13. Chapter 13: Whispers of the Unbonded [pending] | 14. Chapter 14: Into the Valley [pending] | 15. Chapter 15: Standing Against the Pack [pending] | 16. Chapter 16: Chosen by the Legends [pending] | 17. Chapter 17: Shockwaves in the Quadrant [pending] | 18. Chapter 18: Finding a Grip [pending] | 19. Chapter 19: Bound to the Sky [pending] | 20. Chapter 20: Channelling the Unseen [pending] | 21. Chapter 21: Training the Tail [pending] | 22. Chapter 22: Slashing in the Dark [pending] | 23. Chapter 23: Dain's Touch [pending] | 24. Chapter 24: Manifesting the Storm [pending] | 25. Chapter 25: Grounding the Spark [pending] | 26. Chapter 26: Midnight Negotiations [pending] | 27. Chapter 27: Strategizing the Board [pending] | 28. Chapter 28: Scribes vs. Riders [pending] | 29. Chapter 29: Igniting the Spark [pending] | 30. Chapter 30: Broken Trust [pending] | 31. Chapter 31: Deployed to the Outposts [pending] | 32. Chapter 32: The Desolation of Athebyne [pending] | 33. Chapter 33: The Gryphon's Shadow [pending] | 34. Chapter 34: The Real Enemy [pending] | 35. Chapter 35: The Skies Burn [pending] | 36. Chapter 36: Standing Against the Dark [pending] | 37. Chapter 37: Poisoned Veins [pending] | 38. Chapter 38: Awakening in Aretia [pending] | 39. Chapter 39: The Ghost of the Past [pending]\nDormant Story Watches: [event_ch1_mira_parting]: beat_ch1_conscription | [event_ch2_meyer_fall]: beat_ch2_parapet | [event_ch3_xaden_glance]: beat_ch3_first_meeting\nOn Defeat: If Violet is defeated or fails a lethal trial, she does not permanently die. Instead, she suffers a severe physical injury (such as a dislocated joint or a broken bone) that imposes a permanent physical penalty on her future rolls, or her dragons must sacrifice a portion of their own energy to shield her, straining her bond and increasing the difficulty of channeling her signet.\nEnding Guidance: win: Violet successfully survives the Battle of Resson, uncovers the truth about the venin, reunites with her brother Brennan in Aretia, and commits herself to the secret revolution alongside Xaden. | lose: Violet is captured by Navarre's leadership or killed by the venin during the battle of Resson, leaving the secrets of the revolution buried and her dragons unbonded once more. | neutral: Violet survives the trials and the battle but is forced to flee into hiding alone, distrustful of both the corrupt Navarre military and Xaden's rebels, becoming a rogue rider in the borderlands.\nProse Depth: BALANCED (~1,100-1,400 tokens)\nNarration Style: Third person, close POV on the protagonist, grounded and cinematic.\nPoint of View: Third Person (\"they\") — apply this consistently to every sentence of narration this turn.\nNarration Mode: Reactive — the player's own typed words stand as-is; narrate only the world's reaction to them.\nTale Difficulty: Balanced — Let outcomes follow believably from the choice and the stakes at hand — no thumb on the scale either way.\nCopper: 10000",
+    "ok": true,
+    "raw": "<plan>\ntwist: The outpost guards don't answer with routine logistics; they reveal that the last supply run from Athebyne was ambushed, leaving them isolated and paranoid.\ndistinct: The grizzled guard reacts not with pity or immediate suspicion of a spy, but with brutal, weathered exhaustion—he's starving, freezing, and lacks the men to care about protocol.\n</plan>\n<nar>\nThe wind screeches across the stone parapet, carrying the metallic tang of frozen sleet and old dust. \n\nViolet refuses to shrink beneath the guard's hostile glare, keeping her jaw set as she forces her aching fingers to curl tighter inside her leather bindings. \n\n'I didn't come here to play cadet games,' she says, her voice steady despite the rattling chill in her chest. \n\nShe holds her ground against the biting draft, her dark-to-silver hair whipping across her pale cheeks as she looks past the scarred sentry toward the interior courtyard of the watchtower.\n\nThe grizzled guard lets out a harsh, barking laugh that sounds like grinding stone. \n\nHe drops his hand from his sword hilt just an inch, though his eyes remain narrowed with bitter suspicion.\n\n\"Supply runs?\" the guard spits, shaking his head as he gestures toward the empty horizon where the mountain trail snakes down toward the valley. \n\n\"The last wagon from {{Athebyne|loc}} was supposed to reach us three days ago, before the snows choked the pass. It never arrived. We've been chewing on salted leather and melting snow for forty-eight hours.\"\n\nA second guard steps out from the shadowed doorway of the watchtower, pulling a heavy wool blanket tighter around his broad shoulders. \n\n\"If you've got a death wish, girl, you picked the right mountain,\" the second man mutters, his gaze drifting from Violet's slight frame to the empty trail below. \n\n\"Either those supply carts are rotting at the bottom of a ravine, or something out in the passes took them. And judging by the strange shadows we've seen flickering over the ridge since dawn, it wasn't an ordinary avalanche.\"\n</nar>\n<sync>\n  <turn state=\"PEACE\" d=\"2\" h=\"06:30\" loc=\"zenithal_watch\" locdisp=\"Zenithal Watch\" desc=\"A remote, wind-scoured stone watchtower perched on the razor edge of the eastern mountains, battered by sub-zero gales.\" mood=\"tense\" region=\"the_outskirts\" regiondisp=\"The Outskirts &amp; Borders\" mapx=\"78.5\" mapy=\"22.0\" />\n  <act>Press the guards for details on the strange shadows seen over the ridge.</act>\n  <act>Inspect the watchtower's interior for maps, supplies, or communication logs.</act>\n  <act>Turn back toward the mountain trail before the weather worsens entirely.</act>\n  <npc id=\"outpost_guard_alpha\" kin=\"\" aff=\"\" trust=\"-\" resolve=\"Novice\" deed=\"Questioned a mysterious Scribe cadet arriving unannounced at the remote eastern outpost.\" mem=\"Impressed by her resilience against the cold, but deeply suspicious of her presence.\" personality=\"Weary, cynical, fiercely pragmatic\" faction=\"navarre_military_leadership\" secret=\"The outpost's warning horns were broken during a skirmish two nights ago, leaving them deaf to approaching threats.\" />\n</sync>",
+    "finishReason": "STOP",
+    "parsed": {
+      "nar": "The wind screeches across the stone parapet, carrying the metallic tang of frozen sleet and old dust. \n\nViolet refuses to shrink beneath the guard's hostile glare, keeping her jaw set as she forces her aching fingers to curl tighter inside her leather bindings. \n\n'I didn't come here to play cadet games,' she says, her voice steady despite the rattling chill in her chest. \n\nShe holds her ground against the biting draft, her dark-to-silver hair whipping across her pale cheeks as she looks past the scarred sentry toward the interior courtyard of the watchtower.\n\nThe grizzled guard lets out a harsh, barking laugh that sounds like grinding stone. \n\nHe drops his hand from his sword hilt just an inch, though his eyes remain narrowed with bitter suspicion.\n\n\"Supply runs?\" the guard spits, shaking his head as he gestures toward the empty horizon where the mountain trail snakes down toward the valley. \n\n\"The last wagon from {{Athebyne|loc}} was supposed to reach us three days ago, before the snows choked the pass. It never arrived. We've been chewing on salted leather and melting snow for forty-eight hours.\"\n\nA second guard steps out from the shadowed doorway of the watchtower, pulling a heavy wool blanket tighter around his broad shoulders. \n\n\"If you've got a death wish, girl, you picked the right mountain,\" the second man mutters, his gaze drifting from Violet's slight frame to the empty trail below. \n\n\"Either those supply carts are rotting at the bottom of a ravine, or something out in the passes took them. And judging by the strange shadows we've seen flickering over the ridge since dawn, it wasn't an ordinary avalanche.\"",
+      "turn_state": "PEACE",
+      "time": {
+        "d": 2,
+        "h": "06:30"
+      },
+      "loc_id": "zenithal_watch",
+      "loc_disp": "Zenithal Watch",
+      "loc_desc": "A remote, wind-scoured stone watchtower perched on the razor edge of the eastern mountains, battered by sub-zero gales.",
+      "region_id": "the_outskirts",
+      "region_disp": "The Outskirts &amp; Borders",
+      "map_x": 78.5,
+      "map_y": 22,
+      "mood": "tense",
+      "act": [
+        "Press the guards for details on the strange shadows seen over the ridge.",
+        "Inspect the watchtower's interior for maps, supplies, or communication logs.",
+        "Turn back toward the mountain trail before the weather worsens entirely."
+      ],
+      "npc_mem_up": [
+        {
+          "npc_id": "outpost_guard_alpha",
+          "trust_delta": -1,
+          "resolve": 2,
+          "deed": "Questioned a mysterious Scribe cadet arriving unannounced at the remote eastern outpost.",
+          "mem_summary": "Impressed by her resilience against the cold, but deeply suspicious of her presence.",
+          "personality": "Weary, cynical, fiercely pragmatic",
+          "faction_id": "navarre_military_leadership",
+          "secret_truth": "The outpost's warning horns were broken during a skirmish two nights ago, leaving them deaf to approaching threats."
+        }
+      ]
+    }
+  },
+  {
+    "ts": "2026-09-14T06:16:34.656Z",
+    "model": "gemini-3.5-flash-lite",
+    "stage": "test-d2-dedup-check-applied",
+    "campaignSnapshotAfter": {
+      "locId": "zenithal_watch",
+      "regions": {
+        "basgiath_war_college": {
+          "name": "Basgiath War College",
+          "description": "A colossal, ancient stone fortress carved directly into the rugged peaks of the Blackwood Mountains. It is divided into distinct, highly competitive quadrants, designed to forge the defenders of Navarre or kill them in the attempt."
+        },
+        "the_outskirts": {
+          "name": "The Outskirts &amp; Borders",
+          "description": "The treacherous mountainous terrain surrounding the college and the wider, ward-protected kingdom of Navarre, where the illusion of safety begins to wear thin."
+        }
+      },
+      "locationsSummary": {
+        "the_parapet": {
+          "name": "The Parapet",
+          "regionId": "basgiath_war_college",
+          "areas": [
+            {
+              "id": "the_turret",
+              "name": "The Turret"
+            },
+            {
+              "id": "the_death_toll_ledger",
+              "name": "The Death Toll Ledger"
+            }
+          ]
+        },
+        "riders_quadrant": {
+          "name": "Riders Quadrant",
+          "regionId": "basgiath_war_college",
+          "areas": [
+            {
+              "id": "the_rotunda",
+              "name": "The Rotunda"
+            },
+            {
+              "id": "cadet_barracks",
+              "name": "Cadet Barracks"
+            },
+            {
+              "id": "the_mess_hall",
+              "name": "The Mess Hall"
+            }
+          ]
+        },
+        "scribes_quadrant": {
+          "name": "Scribes Quadrant",
+          "regionId": "basgiath_war_college",
+          "areas": [
+            {
+              "id": "the_archives",
+              "name": "The Archives"
+            },
+            {
+              "id": "scribe_offices",
+              "name": "Scribe Offices"
+            },
+            {
+              "id": "the_vaults",
+              "name": "The Vaults"
+            }
+          ]
+        },
+        "the_gauntlet": {
+          "name": "The Gauntlet",
+          "regionId": "basgiath_war_college",
+          "areas": [
+            {
+              "id": "the_first_platform",
+              "name": "The First Platform"
+            },
+            {
+              "id": "the_chimney",
+              "name": "The Chimney"
+            },
+            {
+              "id": "the_summit",
+              "name": "The Summit"
+            }
+          ]
+        },
+        "the_flight_field": {
+          "name": "The Flight Field &amp; Bowl",
+          "regionId": "basgiath_war_college",
+          "areas": [
+            {
+              "id": "the_presentation_dais",
+              "name": "The Presentation Dais"
+            },
+            {
+              "id": "the_dragon_pens",
+              "name": "The Dragon Pens"
+            },
+            {
+              "id": "the_burn_scars",
+              "name": "The Burn Scars"
+            }
+          ]
+        },
+        "athebyne": {
+          "name": "Athebyne",
+          "regionId": "the_outskirts",
+          "areas": [
+            {
+              "id": "the_watchtower",
+              "name": "The Watchtower"
+            },
+            {
+              "id": "the_supply_depot",
+              "name": "The Supply Depot"
+            }
+          ]
+        },
+        "zenithal_watch": {
+          "name": "Zenithal Watch",
+          "regionId": "the_outskirts",
+          "mapX": 88,
+          "mapY": 15
+        }
+      }
+    }
+  }
+]

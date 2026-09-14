@@ -153,11 +153,13 @@ function DesktopLeftSidebar({
   items,
   combat,
   locationName,
+  areaName,
 }: {
   player: Player
   items?: Record<string, ItemEntry>
   combat?: CombatState
   locationName?: string
+  areaName?: string
 }) {
   const equippedWeapon = player.equipped?.weapon ? items?.[player.equipped.weapon] : null
   const equippedArmor = player.equipped?.armor ? items?.[player.equipped.armor] : null
@@ -214,7 +216,10 @@ function DesktopLeftSidebar({
         {(player.locDisp || locationName) && (
           <div className="pt-2 border-t border-[#c89d51]/20 flex items-center gap-2 text-xs text-[#c8b8a2] font-serif">
             <MapIcon size={14} className="text-[#d4af37] shrink-0" />
-            <span className="truncate">{player.locDisp || locationName}</span>
+            <span className="truncate">
+              {player.locDisp || locationName}
+              {areaName && <span className="text-[#a89575]"> — {areaName}</span>}
+            </span>
             {player.time && (
               <span className="ml-auto font-mono text-[11px] text-[#a89575] shrink-0">
                 D{player.time.d} {player.time.h}
@@ -1413,6 +1418,7 @@ export default function Chronicle({
         items={items}
         combat={combat}
         locationName={locations[player.locId]?.name || player.locDisp || 'Unknown'}
+        areaName={player.areaId ? locations[player.locId]?.areas?.find((a) => a.id === player.areaId)?.name : undefined}
       />
 
       {/* Main Story Container */}

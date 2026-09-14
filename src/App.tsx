@@ -27,7 +27,7 @@ import { getClassById, findClassById, PRESET_CLASSES } from './data/classes.ts'
 import { FOURTH_WING_WORLD, VIOLET_SORRENGAIL } from './data/starterTemplates.ts'
 import { buildContextSlice } from './lib/jitContext.ts'
 import { applyTurn } from './lib/shadowReferee.ts'
-import { ensureLocation } from './lib/locations.ts'
+import { ensureLocation, type LocationRegionInfo } from './lib/locations.ts'
 import { applyNpcUpdates, AFFECTION_STAGES, TRUST_WORDS } from './lib/npcs.ts'
 import { applyKeywordLinks, applyEnrichUpdates, dedupLocationsWithRegions } from './lib/codex.ts'
 import { applyQuestUpdate } from './lib/quests.ts'
@@ -1175,13 +1175,35 @@ export default function App() {
       const turnNumber = (current.turnCount ?? 0) + 1 // ?? tolerates saves from before turnCount existed
       const turnRef = turnRefFor(turnNumber)
 
+      // §7 — a live QC pass caught the model reaching for a brand-new loc_id
+      // instead of area="" when the player actually just moved into one of
+      // the CURRENT location's own pre-authored areas (e.g. moving from
+      // "Riders Quadrant" into its own "The Mess Hall" area got emitted as
+      // loc="the_mess_hall" instead of area="the_mess_hall") — the area
+      // channel is new and a mess hall reads as "a place" to the model just
+      // as readily as a location does. Self-heal rather than fork a
+      // duplicate top-level Location: if this turn's own loc_id isn't
+      // already a known location but exactly matches one of the player's
+      // CURRENT location's own area ids, treat it as an area move within
+      // that same location instead. Every turn.loc_id/area_id/etc. below
+      // reads through these effective_* values, never the raw turn fields
+      // directly, so the redirect applies uniformly.
+      const currentLocEntry = current.locations[current.player.locId]
+      const misfiledAsLoc = !current.locations[turn.loc_id] ? currentLocEntry?.areas?.find((a) => a.id === turn.loc_id) : undefined
+      const effectiveLocId = misfiledAsLoc ? current.player.locId : turn.loc_id
+      const effectiveLocDisp = misfiledAsLoc ? undefined : turn.loc_disp
+      const effectiveLocDesc = misfiledAsLoc ? undefined : turn.loc_desc
+      const effectiveAreaId = misfiledAsLoc ? misfiledAsLoc.id : turn.area_id
+      const effectiveAreaDisp = misfiledAsLoc ? undefined : turn.area_disp
+      const effectiveAreaDesc = misfiledAsLoc ? undefined : turn.area_desc
+
       // loc_disp is optional now (like loc_desc already was) — omitted on an
       // ordinary same-location turn. Falls back to the Locations registry's
       // own stored name for this loc_id, or the player's current display
       // name as a last resort, rather than requiring the model restate it
       // every turn.
-      const locDisp = turn.loc_disp ?? current.locations[turn.loc_id]?.name ?? current.player.locDisp
-      nextPlayer = { ...nextPlayer, locId: turn.loc_id, locDisp }
+      const locDisp = effectiveLocDisp ?? current.locations[effectiveLocId]?.name ?? current.player.locDisp
+      nextPlayer = { ...nextPlayer, locId: effectiveLocId, locDisp }
 
       // The current turn's own loc_id/loc_disp registers FIRST, unlike every
       // other category — its name always comes straight from the model's
@@ -1192,14 +1214,35 @@ export default function App() {
       // for "Ironheart - Outer Gates") has something to fuzzy-match against
       // (lib/codex.ts's isKnownByName) instead of forking a duplicate stub
       // before the "real" entry even exists yet.
-      const { dict: locationsWithCurrent } = ensureLocation(current.locations, turn.loc_id, locDisp, turn.loc_desc, nextPlayer.time, turnRef)
+      //
+      // §7 turn-time region placement — only meaningful the turn a genuinely
+      // new loc_id (current.locations doesn't already have it) is
+      // introduced; region/regiondisp/mapx/mapy on an ordinary revisit turn
+      // are ignored the same way a restated loc_desc already is. region_id
+      // either names an already-established region (used as-is) or, paired
+      // with region_disp, a brand-new one — auto-registered here the same
+      // "story reveals it, client stores it" way a new NPC/Faction stub
+      // already is. A region_id with no matching region and no region_disp
+      // to register it under is ignored rather than left dangling.
+      let regionsWithNew = current.regions ?? {}
+      let regionInfo: LocationRegionInfo | undefined
+      if (!misfiledAsLoc && !current.locations[effectiveLocId] && turn.region_id) {
+        const existingRegion = regionsWithNew[turn.region_id]
+        if (existingRegion) {
+          regionInfo = { regionId: turn.region_id, regionName: existingRegion.name, mapX: turn.map_x, mapY: turn.map_y }
+        } else if (turn.region_disp) {
+          regionsWithNew = { ...regionsWithNew, [turn.region_id]: { name: turn.region_disp, autoLogged: true, loggedAt: turnRef } }
+          regionInfo = { regionId: turn.region_id, regionName: turn.region_disp, mapX: turn.map_x, mapY: turn.map_y }
+        }
+      }
+      const { dict: locationsWithCurrent } = ensureLocation(current.locations, effectiveLocId, locDisp, effectiveLocDesc, nextPlayer.time, turnRef, regionInfo)
 
       // Keyword links run first for every other category so a {{Term|npc}}
       // tag's real name wins over the plainer fallback npc_id-derived stub name.
       const linked = applyKeywordLinks(
         {
           locations: locationsWithCurrent,
-          regions: current.regions,
+          regions: regionsWithNew,
           npcs: current.npcs,
           factions: current.factions,
           lore: current.lore,
@@ -1211,8 +1254,33 @@ export default function App() {
         turnRef,
         current.player.name,
       )
-      const nextLocations = dedupLocationsWithRegions(linked.locations, current.regions)
-      const nextNpcs = applyNpcUpdates(linked.npcs, turn.npc_mem_up, turn.loc_id, nextPlayer.time, turnRef)
+      const locationsAfterDedup = dedupLocationsWithRegions(linked.locations, regionsWithNew)
+
+      // §7 local sub-area tracking — clear the player's area the instant
+      // locId itself changes (a fresh location starts with no assumed
+      // sub-area), then apply this turn's own area signal, if any. An
+      // unrecognized area id with no area_disp to register it under is
+      // ignored rather than left as a dangling reference (self-healing over
+      // silent corruption, same spirit as lib/inventory.ts's id-drift fix).
+      let nextAreaId: string | undefined = effectiveLocId === current.player.locId ? current.player.areaId : undefined
+      let nextLocations = locationsAfterDedup
+      if (effectiveAreaId !== undefined) {
+        if (effectiveAreaId === null) {
+          nextAreaId = undefined
+        } else {
+          const activeLoc = nextLocations[effectiveLocId]
+          const existingArea = activeLoc?.areas?.find((a) => a.id === effectiveAreaId)
+          if (existingArea) {
+            nextAreaId = effectiveAreaId
+          } else if (activeLoc && effectiveAreaDisp) {
+            const newArea = { id: effectiveAreaId, name: effectiveAreaDisp, description: effectiveAreaDesc }
+            nextLocations = { ...nextLocations, [effectiveLocId]: { ...activeLoc, areas: [...(activeLoc.areas ?? []), newArea] } }
+            nextAreaId = effectiveAreaId
+          }
+        }
+      }
+      nextPlayer = { ...nextPlayer, areaId: nextAreaId }
+      const nextNpcs = applyNpcUpdates(linked.npcs, turn.npc_mem_up, effectiveLocId, nextPlayer.time, turnRef)
       const nextQuests = applyQuestUpdate(linked.quests, turn.quest_update, turnRef)
       const nextProjects = applyProjectUpdate(current.projects, turn.project_update, turnRef)
       const nextBeats = applyBeatUpdate(current.beats, turn.beat_update)
@@ -1394,6 +1462,7 @@ export default function App() {
         projects: nextProjects,
         beats: nextBeats,
         narrativeEvents: nextNarrativeEvents,
+        regions: regionsWithNew,
         locations: reveals.locations,
         npcs: reveals.npcs,
         factions: reveals.factions,

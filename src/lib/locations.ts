@@ -2,13 +2,30 @@ import { ensureEntry } from './autoRegister.ts'
 import { deriveStanding, effectiveStanding } from './factions.ts'
 import type { Dict, EnsureResult, FactionEntry, GameTime, LocationEntry } from '../types.ts'
 
+// §7 turn-time region placement — the region/coordinate info a <turn> can
+// optionally supply the FIRST turn it introduces a genuinely new location
+// (see xmlTurnContract.ts's region/regiondisp/mapx/mapy rule text). Kept as
+// its own small type since App.tsx resolves it (an existing region by id,
+// or a brand-new one it auto-registers) before ensureLocation ever runs —
+// this function only ever stamps whatever it's handed, never resolves an id
+// itself, matching every other "auto-register a stub" path in this codebase.
+export interface LocationRegionInfo {
+  regionId?: string
+  regionName?: string
+  mapX?: number
+  mapY?: number
+}
+
 // §5.10 Location Auto-Registration — stub defaults for a place the model
 // named (loc_id/loc_disp) that the Locations Codex doesn't have yet. Closes
 // the "visited but can't look up later" gap without a new schema field or
 // extra API call. `description`/`time` are optional so callers that only
 // have loc_id/loc_disp (e.g. a keyword-tag alias, see lib/codex.ts) still
 // work — a stub without a real description falls back to the placeholder,
-// same as before this field existed.
+// same as before this field existed. `regionInfo` (when given) replaces the
+// old always-'Unmapped' default — stamped only at creation time, exactly
+// like every other field below; a later revisit never overwrites a
+// location's already-settled region/coordinates.
 export function ensureLocation(
   locations: Dict<LocationEntry> | undefined,
   locId: string | undefined,
@@ -16,19 +33,23 @@ export function ensureLocation(
   description?: string,
   time?: GameTime,
   turnRef?: string,
+  regionInfo?: LocationRegionInfo,
 ): EnsureResult<LocationEntry> {
   const result = ensureEntry(
     locations,
     locId,
     () => ({
       name: locDisp,
-      region: 'Unmapped',
+      region: regionInfo?.regionName ?? 'Unmapped',
       description: description || '(Auto-logged — visit again or add detail manually.)',
       dangerLevel: 'Unknown',
       factionOwner: null,
       standing: 'neutral',
       firstVisitedTime: time,
       lastVisitedTime: time,
+      ...(regionInfo?.regionId ? { regionId: regionInfo.regionId } : {}),
+      ...(regionInfo?.mapX !== undefined ? { mapX: regionInfo.mapX } : {}),
+      ...(regionInfo?.mapY !== undefined ? { mapY: regionInfo.mapY } : {}),
     }),
     turnRef,
   )

@@ -203,9 +203,18 @@ export function renderNarrative(
     if (skill !== undefined) {
       // Bold + the skill token color, like a webnovel's inline ability name —
       // not a rounded UI badge, which read as an app chip sitting on the
-      // parchment rather than part of the printed page.
+      // parchment rather than part of the printed page. Tappable straight off
+      // this outer span (not just a nested {{Term|category}} tag, which a
+      // bare [Skill] mention never carries) — mirrors renderTags' own link
+      // affordance so a known skill name opens its Codex popup just like a
+      // keyword-tagged one does.
+      const cleanSkill = skill.trim()
       nodes.push(
-        <strong key={`s${key}`} className="font-semibold text-skill">
+        <strong
+          key={`s${key}`}
+          onClick={onTapTerm ? (e) => { e.stopPropagation(); onTapTerm(cleanSkill, 'skill') } : undefined}
+          className={`font-semibold text-skill ${onTapTerm ? 'underline decoration-dotted decoration-skill/50 underline-offset-2 cursor-pointer hover:opacity-80' : ''}`}
+        >
           {renderTags(skill, `s${key}`, onTapTerm, locationsByName)}
         </strong>,
       )
@@ -223,8 +232,17 @@ export function renderNarrative(
       const cleanItem = item.replace(/\|\w+$/, '').trim()
       const matchedItemType = itemsByName.get(cleanItem.toLowerCase())?.type
       const itemIcon = matchedItemType ? ITEM_TYPE_ICONS[matchedItemType] : undefined
+      // Same tap affordance as skills above — a [[Item]] mention has no
+      // {{Term|category}} tag of its own to carry onTapTerm, so it needs its
+      // own click handler right on this outer span or it renders decorative-
+      // only forever (the bug this comment is fixing: items/places with no
+      // clickable link into the Codex popup).
       nodes.push(
-        <em key={`i${key}`} className="font-semibold italic text-gold-primary">
+        <em
+          key={`i${key}`}
+          onClick={onTapTerm ? (e) => { e.stopPropagation(); onTapTerm(cleanItem, 'item') } : undefined}
+          className={`font-semibold italic text-gold-primary ${onTapTerm ? 'underline decoration-dotted decoration-gold-accent/50 underline-offset-2 cursor-pointer hover:text-gold-primary/80' : ''}`}
+        >
           {itemIcon ? `${itemIcon} ` : ''}
           {renderTags(cleanItem, `i${key}`, onTapTerm, locationsByName)}
         </em>,

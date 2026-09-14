@@ -1371,6 +1371,24 @@ export default function Chronicle({
           return
         }
       }
+
+      // A location's own named sub-area (e.g. "The Mess Hall" inside "Riders
+      // Quadrant") lives nested in that location's own `areas` array, not as
+      // a top-level Location/Region entry — the lookups above never find it,
+      // so a {{Term|loc}} tag naming one used to silently do nothing. Areas
+      // have no Codex card of their own (deliberately thin, no popup
+      // rendering path), so the closest useful thing to show is the parent
+      // location that actually contains it.
+      if (category === 'loc' && locations) {
+        const needle = term.trim().toLowerCase()
+        const parent = Object.entries(locations).find(([, entry]) =>
+          entry.areas?.some((a) => a.name.trim().toLowerCase() === needle || a.id === slugify(term)),
+        )
+        if (parent) {
+          setPopup({ category: 'loc', id: parent[0] })
+          return
+        }
+      }
     },
     [npcs, locations, regions, factions, lore, quests, bestiary, skills, items],
   )

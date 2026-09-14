@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo, memo, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Home, Settings as SettingsIcon, Send, Star, BookOpen, Library, Sparkle, X, ExternalLink,
@@ -606,6 +606,120 @@ function TurnActionsRow({ entry, debugMode, onEdit, onRetry, onDelete }: TurnAct
   )
 }
 
+// §Editorial Vellum "End of Turn Recap" — a collapsed-by-default accordion
+// folding every mechanical delta a turn produced (Codex reveals, Narrative
+// Events, crafting, minion losses, level-ups, class evolutions) behind one
+// toggle, so the reading surface stays tidy but the detail is still one tap
+// away. Deliberately NOT the reference mockup's fixed 2-column grid of
+// always-shown categories (Narrative State / Companion Bond / Dragon
+// Attunement / Codex Catalogued) — those are fixed slots that would have to
+// be padded with filler on a turn that didn't actually produce four kinds of
+// news. This is a single-column dossier list instead: one row per kind of
+// delta, built only from what this turn's own LogEntry actually carries, so
+// it's never longer or emptier than the truth. Returns null (no divider, no
+// empty affordance) when a turn produced nothing worth recapping.
+interface RecapRow {
+  icon: LucideIcon
+  label: string
+  content: ReactNode
+}
+
+function buildRecapRows(entry: LogEntry, onTapTerm: TapTermHandler): RecapRow[] {
+  const rows: RecapRow[] = []
+  if (entry.levelUp) {
+    rows.push({ icon: Star, label: 'Level Up', content: `Level ${entry.levelUp}` })
+  }
+  if (entry.classEvolution) {
+    rows.push({ icon: Repeat, label: 'Class Evolution', content: `Now a ${entry.classEvolution.className}` })
+  }
+  if (entry.discoveries?.length) {
+    rows.push({
+      icon: Unlock,
+      label: `Codex Updated${entry.discoveries.length > 1 ? ` (${entry.discoveries.length})` : ''}`,
+      content: (
+        <div className="flex flex-wrap gap-x-2.5 gap-y-1">
+          {entry.discoveries.map((d) => (
+            <button
+              key={`${d.category}_${d.id}`}
+              onClick={() => onTapTerm(d.name, d.category)}
+              className="underline decoration-dotted decoration-[#b08830]/50 hover:text-[#8d6b1d] cursor-pointer"
+            >
+              {d.name}
+            </button>
+          ))}
+        </div>
+      ),
+    })
+  }
+  if (entry.eventsActivated?.length) {
+    rows.push({
+      icon: Sparkles,
+      label: `Narrative Event${entry.eventsActivated.length > 1 ? 's' : ''}`,
+      content: entry.eventsActivated.join(', '),
+    })
+  }
+  if (entry.craftReady?.length) {
+    rows.push({
+      icon: Hammer,
+      label: `Crafting Ready${entry.craftReady.length > 1 ? ` (${entry.craftReady.length})` : ''}`,
+      content: entry.craftReady.map((c) => `${c.recipeName}${c.outputQty > 1 ? ` ×${c.outputQty}` : ''}`).join(', '),
+    })
+  }
+  if (entry.minionsDissipated?.length) {
+    rows.push({
+      icon: Ghost,
+      label: `Minion${entry.minionsDissipated.length > 1 ? 's' : ''} Lost`,
+      content: `${entry.minionsDissipated.join(', ')} — unpaid upkeep`,
+    })
+  }
+  return rows
+}
+
+function TurnRecapAccordion({
+  entry,
+  turnRefMatch,
+  onTapTerm,
+}: {
+  entry: LogEntry
+  turnRefMatch: RegExpExecArray | null
+  onTapTerm: TapTermHandler
+}) {
+  const [open, setOpen] = useState(false)
+  const rows = useMemo(() => buildRecapRows(entry, onTapTerm), [entry, onTapTerm])
+  if (rows.length === 0) return null
+
+  const turnLabel = turnRefMatch ? `Turn ${turnRefMatch[2]}` : 'This Turn'
+
+  return (
+    <div className="w-full flex flex-col items-center gap-2 pt-1">
+      <div className="w-full flex items-center gap-3">
+        <div className="flex-1 h-px bg-[#ede7dd]" />
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="px-3 py-1 rounded-full bg-[#f5f0e6] hover:bg-[#ebdcb8]/40 border border-[#ede7dd] text-[#6c665e] hover:text-[#1a1917] flex items-center gap-1.5 font-sans text-[10px] uppercase tracking-widest font-semibold transition-colors cursor-pointer"
+        >
+          <span>End of {turnLabel} · Recap</span>
+          {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+        </button>
+        <div className="flex-1 h-px bg-[#ede7dd]" />
+      </div>
+      {open && (
+        <div className="w-full bg-[#fbf8f3] border border-[#ede7dd] rounded-xl divide-y divide-[#ede7dd] overflow-hidden">
+          {rows.map((row, i) => (
+            <div key={i} className="flex items-start gap-3 px-3 py-2">
+              <row.icon size={13} className="text-[#b08830] shrink-0 mt-0.5" />
+              <div className="flex flex-col gap-0.5 min-w-0">
+                <span className="font-sans text-[9px] uppercase tracking-wider text-[#9e968b] font-semibold">{row.label}</span>
+                <span className="font-narrative text-[13px] text-[#2c2825] leading-snug">{row.content}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Isolated from `input` state (§9.2 perf fix) — memoized so a keystroke in the
 // input bar doesn't re-render/re-parse rich text for every mounted turn block.
 const TurnBlock = memo(function TurnBlock({
@@ -814,76 +928,18 @@ const TurnBlock = memo(function TurnBlock({
       >
         {renderedNarrative}
       </div>
-      {entry.levelUp && (
-        <p className="inline-flex items-center gap-1.5 rounded-full bg-gold-accent/15 border border-gold-accent/40 px-3 py-1 font-display text-xs text-gold-primary">
-          <Star size={12} /> Level {entry.levelUp}
-        </p>
-      )}
-      {entry.classEvolution && (
-        <p className="inline-flex items-center gap-1.5 rounded-full bg-gold-accent/15 border border-gold-accent/40 px-3 py-1 font-display text-xs text-gold-primary">
-          <Repeat size={12} /> Now a {entry.classEvolution.className}
-        </p>
-      )}
       {entry.ending && (
         <div className="flex flex-col items-center gap-2 py-2">
           <div className="w-full flex items-center gap-3">
-            <div className="flex-1 h-px bg-gold-accent/40" />
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-gold-accent/15 border border-gold-accent/40 px-3 py-1 font-display text-xs uppercase tracking-wide text-gold-primary shrink-0">
+            <div className="flex-1 h-px bg-[#dec48e]" />
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#ebdcb8]/40 border border-[#dec48e] px-3 py-1 font-display text-xs uppercase tracking-wide text-[#8d6b1d] shrink-0">
               <Flag size={12} /> The Tale Concludes — {ENDING_LABELS[entry.ending]}
             </span>
-            <div className="flex-1 h-px bg-gold-accent/40" />
+            <div className="flex-1 h-px bg-[#dec48e]" />
           </div>
         </div>
       )}
-      {entry.discoveries && entry.discoveries.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {entry.discoveries.map((d) => (
-            <button
-              key={`${d.category}_${d.id}`}
-              onClick={() => onTapTerm(d.name, d.category)}
-              className="inline-flex items-center gap-1.5 rounded-full bg-gold-accent/15 border border-gold-accent/40 px-3 py-1 font-display text-xs text-gold-primary"
-            >
-              <Unlock size={12} /> Codex Updated: {d.name}
-            </button>
-          ))}
-        </div>
-      )}
-      {entry.eventsActivated && entry.eventsActivated.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {entry.eventsActivated.map((title, i) => (
-            <span
-              key={i}
-              className="inline-flex items-center gap-1.5 rounded-full bg-gold-accent/15 border border-gold-accent/40 px-3 py-1 font-display text-xs text-gold-primary"
-            >
-              <Sparkles size={12} /> Narrative Event: {title}
-            </span>
-          ))}
-        </div>
-      )}
-      {entry.craftReady && entry.craftReady.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {entry.craftReady.map((c, i) => (
-            <span
-              key={i}
-              className="inline-flex items-center gap-1.5 rounded-full bg-gold-accent/15 border border-gold-accent/40 px-3 py-1 font-display text-xs text-gold-primary"
-            >
-              <Hammer size={12} /> Craft Ready: {c.recipeName}
-            </span>
-          ))}
-        </div>
-      )}
-      {entry.minionsDissipated && entry.minionsDissipated.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {entry.minionsDissipated.map((name, i) => (
-            <span
-              key={i}
-              className="inline-flex items-center gap-1.5 rounded-full bg-[#f5f0e6] border border-[#ede7dd] px-3 py-1 font-display text-xs text-ink-muted"
-            >
-              <Ghost size={12} /> {name} dissipated (unpaid upkeep)
-            </span>
-          ))}
-        </div>
-      )}
+      <TurnRecapAccordion entry={entry} turnRefMatch={turnRefMatch} onTapTerm={onTapTerm} />
       {isLastTurn ? (
         <TurnActionsRow
           entry={entry}

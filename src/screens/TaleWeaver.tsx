@@ -845,15 +845,10 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
           <div className="flex flex-col gap-3">
             {/* Inspiration Section - First Priority */}
             <div className="rounded-xl border border-gold-accent/35 bg-[#141824] p-3.5 sm:p-4 flex flex-col gap-3 shadow-sm">
-              <div className="flex items-center justify-between gap-2 border-b border-gold-accent/15 pb-2">
-                <div className="flex items-center gap-2">
-                  <BookOpen size={15} className="text-gold-primary" />
-                  <span className="font-display font-bold text-xs text-gold-primary uppercase tracking-wider">
-                    Novel Inspiration & Canon Scope
-                  </span>
-                </div>
-                <span className="font-mono text-[10px] text-gold-accent uppercase px-2 py-0.5 rounded bg-gold-accent/10 border border-gold-accent/20 font-medium">
-                  Priority Anchor
+              <div className="flex items-center gap-2 border-b border-gold-accent/15 pb-2">
+                <BookOpen size={15} className="text-gold-primary" />
+                <span className="font-display font-bold text-xs text-gold-primary uppercase tracking-wider">
+                  Novel Inspiration & Canon Scope
                 </span>
               </div>
 

@@ -55,6 +55,12 @@ Every dated session entry through 2026-09-12 has been moved to [`PROJECT_REVISIO
 
 ### New entries below, most recent first.
 
+- **Last updated:** 2026-09-14 — Tale Weaver Badge Cleanup, Player Action Card in Chronicle (`src/screens/TaleWeaver.tsx`, `src/screens/Chronicle.tsx`):
+  - **Removed the "Priority Anchor" badge** from Phase 1's Novel Inspiration card — a static label carrying no information (it never changed, never linked to anything), per direct feedback that it added no useful context.
+  - **Live-audited all 7 Tale Weaver phases** (screenshots of each phase's empty state) looking for further cleanup opportunities — found the phases already consistent with each other (same empty-state card pattern, same list-header/edit-form treatment across World/Protagonist/Regions/Factions/Cast/Lore/Arc), so no further changes were made there rather than manufacturing busywork.
+  - **Beautified the player's action display in Chronicle**: it previously rendered as plain italic gold text flush against the timestamp above it, forced onto the same line as the turn-state badge (which wrapped awkwardly for a short action next to a long badge). Now wrapped in its own soft card (light gold-tinted background, rounded corners, a small feather icon) that reads as a distinct "your voice" beat separate from the narration beneath it, with the turn-state/mood badges moved to their own row below instead of crammed inline.
+  - **Verification**: `npx tsc --noEmit` and `npm run build` clean. Live-verified via Playwright screenshots — before/after comparison of the player-action card, and full-phase screenshots confirming the Tale Weaver badge removal and phase-to-phase consistency.
+
 - **Last updated:** 2026-09-14 — Explicit Blank-Line Paragraph Breaks, New-Turn Scroll-to-Top (`src/api/turnContract.ts`, `src/screens/Chronicle.tsx`):
   - **What changed**: two small UX-craft fixes from direct feedback.
     1. **Rule 1b (Paragraph Breaks)** didn't specify that a break between two narration paragraphs must be a genuine blank line (two newline characters), only that there be "a line break" — ambiguous enough that the model sometimes used a single newline between paragraph-level beats, which renders (under the app's `white-space: pre-wrap` CSS) as a soft continuation rather than a real paragraph gap. Made the double-newline requirement explicit, while clarifying it's specifically about narration-to-narration breaks — rule 1c's own single-newline convention for a run of consecutive thought/dialogue lines is untouched and still correct.

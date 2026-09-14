@@ -4,7 +4,7 @@ import {
   Home, Settings as SettingsIcon, Send, Star, BookOpen, Library, Sparkle, X, ExternalLink,
   ChevronUp, ChevronDown, ChevronsDown, History, Pause, Users, Backpack, Map as MapIcon, ShieldCheck, Target, Skull, HelpCircle,
   Unlock, Lock, Repeat, Hammer, Ghost, ScrollText, Swords, Sparkles, LayoutGrid,
-  AlertTriangle, Copy, Check, RotateCcw, Bug, Pencil, MoreHorizontal, Trash2, Heart, Coins, Flag,
+  AlertTriangle, Copy, Check, RotateCcw, Bug, Pencil, MoreHorizontal, Trash2, Heart, Coins, Flag, Feather,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { renderNarrative, type TapTermHandler } from '../lib/richText.tsx'
@@ -755,23 +755,33 @@ const TurnBlock = memo(function TurnBlock({
           {formatTimestamp(entry.time, entry.locDisp)}
         </p>
       )}
-      <div className="flex items-center gap-2 flex-wrap">
-        {/* The player's own typed action — same narrative serif and italic
-            treatment as everything else on the page (dropped the old
-            font-mono "> " console-prompt prefix, which read like a terminal
-            echo rather than part of the story); gold-primary is what still
-            marks it as a different voice from the narration beneath it. */}
-        {entry.action && <p className="font-narrative italic text-sm text-gold-primary text-left whitespace-pre-wrap">{entry.action}</p>}
-        {StateIcon && stateMeta && (
-          <span className="inline-flex items-center gap-1 text-[10px] font-display" style={{ color: stateMeta.accent }}>
-            <StateIcon size={11} /> {stateMeta.label}
-          </span>
-        )}
-      </div>
-      {entry.mood && (
-        <p className="inline-flex items-center gap-1 text-[11px] italic text-ink-muted text-left">
-          <Sparkle size={10} /> {entry.mood}
-        </p>
+      {/* The player's own typed action — still the same narrative serif and
+          italic treatment as everything else on the page (dropped the old
+          font-mono "> " console-prompt prefix, which read like a terminal
+          echo rather than part of the story), now given its own soft card
+          so it reads as a distinct voice from the narration beneath it
+          instead of blending straight into the timestamp above it — and no
+          longer forced onto the same line as the turn-state badge, which
+          used to wrap awkwardly against a short action. */}
+      {entry.action && (
+        <div className="flex items-start gap-1.5 rounded-lg bg-gold-accent/[0.07] px-2.5 py-1.5">
+          <Feather size={12} className="text-gold-primary/60 shrink-0 mt-0.5" />
+          <p className="font-narrative italic text-sm text-gold-primary leading-snug text-left whitespace-pre-wrap">{entry.action}</p>
+        </div>
+      )}
+      {((StateIcon && stateMeta) || entry.mood) && (
+        <div className="flex items-center gap-3 flex-wrap">
+          {StateIcon && stateMeta && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-display" style={{ color: stateMeta.accent }}>
+              <StateIcon size={11} /> {stateMeta.label}
+            </span>
+          )}
+          {entry.mood && (
+            <span className="inline-flex items-center gap-1 text-[11px] italic text-ink-muted">
+              <Sparkle size={10} /> {entry.mood}
+            </span>
+          )}
+        </div>
       )}
       <div className="font-narrative text-sm leading-relaxed whitespace-pre-wrap text-left">
         {renderedNarrative}

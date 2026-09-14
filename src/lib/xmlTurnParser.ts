@@ -57,7 +57,14 @@ export function parseXmlTurnResponse(raw: string): TurnResponse {
   if (!turnEl) throw new XmlTurnParseError('No <turn> tag found inside <sync>')
 
   const turn_state = reqStr(turnEl.getAttribute('state'), 'turn.state') as TurnState
-  const time = { d: reqNum(turnEl.getAttribute('d'), 'turn.d'), h: reqStr(turnEl.getAttribute('h'), 'turn.h') }
+  // A live QC pass caught the model writing d="Day 1" instead of the plain
+  // integer the grammar asks for (d="DAY_INT") — reqNum's Number("Day 1") is
+  // NaN, which threw away the ENTIRE <sync> block (item/beat/npc updates and
+  // all) over one stray word prefix. Strip a leading "day "/"Day " before
+  // parsing rather than silently discarding the whole turn over it.
+  const dayRaw = turnEl.getAttribute('d')
+  const dayNormalized = dayRaw?.replace(/^\s*day\s+/i, '').trim() ?? dayRaw
+  const time = { d: reqNum(dayNormalized, 'turn.d'), h: reqStr(turnEl.getAttribute('h'), 'turn.h') }
   const loc_id = reqStr(turnEl.getAttribute('loc'), 'turn.loc')
   // loc_disp is now optional — omitted on an ordinary same-location turn;
   // App.tsx falls back to locations[loc_id].name when it's absent.

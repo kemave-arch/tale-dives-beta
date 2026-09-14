@@ -1201,12 +1201,6 @@ export default function Chronicle({
     : 0
 
   useEffect(() => {
-    if (currentBlock === null) {
-      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
-    }
-  }, [log])
-
-  useEffect(() => {
     const el = textareaRef.current
     if (!el) return
     el.style.height = 'auto'
@@ -1246,6 +1240,19 @@ export default function Chronicle({
     },
     [headerHeight],
   )
+
+  // A freshly-generated turn used to jump the view to the very bottom of the
+  // page — landing on the END of the narration the player hasn't read yet,
+  // forcing them to scroll back up to actually start reading it. Landing on
+  // the new block's own top edge instead (same offset math scrollToBlock
+  // already uses for the block navigator) means the player opens on its
+  // first line, exactly where reading should start.
+  useEffect(() => {
+    if (currentBlock === null && log.length > 0) {
+      const el = blockRefs.current.get(log.length - 1)
+      if (el) scrollBlockIntoView(el)
+    }
+  }, [log, currentBlock, scrollBlockIntoView])
 
   useEffect(() => {
     if (pendingScrollTo.current !== null) {

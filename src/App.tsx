@@ -1592,11 +1592,13 @@ export default function App() {
 
       // §2 Phase E Chapter Milestone — same boundary trigger as the
       // chapter-level-up above; the synthetic chapterBeats entry is already
-      // folded into nextCampaign.log above, so this just flushes the sliding
-      // conversation window for the next chapter, same as the old recap call
-      // used to once its (now-removed) LLM round trip succeeded.
+      // folded into nextCampaign.log above. Flushes the sliding conversation
+      // window for the next chapter (same as the old recap call used to,
+      // once its LLM round trip succeeded), and fires the narrated-prose
+      // follow-up in the background — never awaited, never blocks the turn.
       if (chapterLevels > 0) {
         setHistory([])
+        narrateChapter(chapterNumber, updatedChapterLog)
         if (uiPrefs.autoCloudBackup) {
           triggerAutoCloudBackup()
         }
@@ -1605,6 +1607,37 @@ export default function App() {
       setError(`The thread of fate falters... (${errorMessage(err)})`)
     } finally {
       setBusy(false)
+    }
+  }
+
+  // §2 Phase E Chapter Milestone — a single follow-up call, fired once this
+  // chapter's beats have already frozen (never blocks the turn itself, and
+  // never re-fires: chapterNumber uniquely identifies which log entry to
+  // patch). Grounded in the chapter's own short, accurate beats rather than
+  // raw turn history — the model only has to weave already-true facts into
+  // prose, not reconstruct pacing cold, which is what caused the original
+  // "temporal hallucination" bug this whole redesign moved away from. A
+  // missed/failed call costs only flavor (the timeline stays the real
+  // record), so failures are swallowed rather than surfaced.
+  async function narrateChapter(chapterNumber: number, chapterBeats: ChapterBeat[]) {
+    if (!chapterBeats.length) return
+    const beatLines = chapterBeats.map((b) => `- Day ${b.time.d} ${b.time.h}: ${b.text}`).join('\n')
+    const syntheticHistory: HistoryTurn[] = [
+      { role: 'user', parts: [{ text: `Chapter ${chapterNumber} — confirmed events, in order:\n${beatLines}` }] },
+    ]
+    try {
+      const narrative = await getProvider(apiSettings.provider).runSummary({
+        apiKey: apiSettings.apiKey,
+        model: apiSettings.model,
+        temperature: apiSettings.temperature,
+        maxOutputTokens: MAX_OUTPUT_TOKENS_CEILING,
+        history: syntheticHistory,
+        startTime: chapterBeats[0].time,
+        endTime: chapterBeats[chapterBeats.length - 1].time,
+      })
+      setGame((g) => g && { ...g, log: g.log.map((e) => (e.chapterNumber === chapterNumber ? { ...e, chapterNarrative: narrative } : e)) })
+    } catch {
+      // swallowed — see comment above
     }
   }
 
@@ -2406,6 +2439,8 @@ export default function App() {
         player={game.player}
         combat={game.combat}
         log={game.log}
+        lastAcknowledgedChapter={game.lastAcknowledgedChapter}
+        onAcknowledgeChapterStory={(chapterNumber) => setGame((g) => g && { ...g, lastAcknowledgedChapter: chapterNumber })}
         seedDebug={game.seedDebug}
         busy={busy}
         error={error}

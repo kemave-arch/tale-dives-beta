@@ -618,6 +618,14 @@ export interface LogEntry {
   chapterSummary?: string // §2 Phase E — a synthetic entry marking a chapter boundary. Pre-redesign field: a cold multi-paragraph recap generated in one LLM call at the boundary. Kept for backward compat display on a save from before the incremental redesign (chapterBeats absent on those entries); a chapter closed after the redesign carries chapterBeats instead and leaves this unset.
   chapterNumber?: number
   chapterBeats?: ChapterBeat[] // §2 Phase E, incremental redesign — this chapter's beats, frozen at the boundary (see Campaign.currentChapterLog for the live, in-progress list)
+  // A single follow-up call, fired once the beats above freeze, asks the
+  // model to weave them into flowing multi-paragraph prose — the literary
+  // "previously on..." recap the pre-redesign chapterSummary gave, but
+  // grounded in this chapter's own accurate short facts rather than
+  // reconstructed cold from raw turn history (the source of the earlier
+  // temporal-hallucination bug). Arrives asynchronously (undefined until the
+  // call resolves) and is never required for the timeline itself to render.
+  chapterNarrative?: string
   time?: GameTime // per-turn timestamp, absent on entries logged before this field existed
   locDisp?: string // per-turn location display, same caveat as `time`
   bang?: BangCommandEntry // §6.6 — a rendered bang-command result, not real narration
@@ -707,6 +715,11 @@ export interface Campaign {
   // the chapter boundary hits (App.tsx) — this field is always just the
   // in-progress tail end, never a full history (that lives in `log`).
   currentChapterLog?: ChapterBeat[]
+  // The highest chapter number whose "Story So Far" welcome-back memo
+  // (Chronicle.tsx) has already been shown and dismissed — undefined on a
+  // save that's never closed a chapter, or that predates this field. Purely
+  // a display-acknowledgment marker; never sent to the model.
+  lastAcknowledgedChapter?: number
   // One-time World Seeding call's raw request/response (or failure reason) —
   // there's no turn/log entry to attach this to since seeding isn't a turn.
   // Surfaced only under Debug Mode; never re-sent to the model.

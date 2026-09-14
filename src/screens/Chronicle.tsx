@@ -51,6 +51,8 @@ interface ChronicleProps {
   player: Player
   combat?: CombatState
   log: LogEntry[]
+  lastAcknowledgedChapter?: number
+  onAcknowledgeChapterStory?: (chapterNumber: number) => void
   seedDebug?: Campaign['seedDebug']
   busy: boolean
   error: string | null
@@ -699,6 +701,15 @@ const TurnBlock = memo(function TurnBlock({
             "{entry.chapterSummary}"
           </p>
         )}
+        {entry.chapterNarrative && (
+          <div className="w-full max-w-xl border-t border-[#f0ca65]/20 pt-3 flex flex-col gap-2">
+            {entry.chapterNarrative.split('\n\n').map((para, i) => (
+              <p key={i} className="font-narrative italic text-xs sm:text-sm text-[#f5ebd7]/80 leading-relaxed">
+                {para}
+              </p>
+            ))}
+          </div>
+        )}
       </div>
     )
   }
@@ -1049,6 +1060,8 @@ export default function Chronicle({
   player,
   combat,
   log,
+  lastAcknowledgedChapter,
+  onAcknowledgeChapterStory,
   seedDebug,
   busy,
   error,
@@ -1099,6 +1112,22 @@ export default function Chronicle({
   const [navDragPos, setNavDragPos] = useState<{ y: number } | null>(null)
   const [navDragging, setNavDragging] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  // §2 Phase E Chapter Milestone — a one-time "Story So Far" welcome-back
+  // memo, shown when this screen is freshly entered (mount) and the most
+  // recently closed chapter is newer than what's already been acknowledged.
+  // A chapter closing while the player is already IN this screen never
+  // triggers it (no dependency on `log` — checked once, on mount, matching
+  // "the next time the player enters and continues," not live play).
+  const [storySoFar, setStorySoFar] = useState<LogEntry | null>(null)
+
+  useEffect(() => {
+    const closedChapters = log.filter((e) => e.chapterBeats?.length || e.chapterSummary)
+    const latest = closedChapters[closedChapters.length - 1]
+    if (latest?.chapterNumber !== undefined && latest.chapterNumber > (lastAcknowledgedChapter ?? 0)) {
+      setStorySoFar(latest)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const lastLogEntry = useMemo(() => log[log.length - 1], [log])
 
@@ -2070,6 +2099,69 @@ export default function Chronicle({
             >
               <span>Open in Codex</span>
               <ExternalLink size={13} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {storySoFar && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 sm:p-6"
+          onClick={() => {
+            onAcknowledgeChapterStory?.(storySoFar.chapterNumber!)
+            setStorySoFar(null)
+          }}
+        >
+          <div
+            className="relative bg-[#120d1b] border border-[#c89d51]/50 shadow-[0_20px_50px_rgba(0,0,0,0.95),0_0_30px_rgba(200,157,81,0.2)] rounded-xl p-5 sm:p-6 w-full max-w-md overflow-hidden text-left max-h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="absolute -top-16 -right-16 w-36 h-36 bg-[#d4af37]/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="flex items-start justify-between gap-3 pr-1 shrink-0">
+              <h3 className="font-serif text-lg sm:text-xl font-normal text-[#f5ebd7] tracking-wide flex items-center gap-2 drop-shadow-sm">
+                <BookOpen size={18} className="text-[#f0ca65]" />
+                <span>Story So Far</span>
+              </h3>
+              <button
+                onClick={() => {
+                  onAcknowledgeChapterStory?.(storySoFar.chapterNumber!)
+                  setStorySoFar(null)
+                }}
+                aria-label="Close"
+                className="text-[#a89575] hover:text-[#f5ebd7] transition-colors p-1.5 -mr-1.5 -mt-1 rounded-md hover:bg-white/5 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="h-[1.5px] my-3 bg-gradient-to-r from-[#c89d51] via-[#c89d51]/70 to-transparent shrink-0" />
+            <div className="overflow-y-auto flex flex-col gap-2.5 pr-1">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-[#f0ca65]/70">
+                Chapter {storySoFar.chapterNumber}
+              </span>
+              {storySoFar.chapterNarrative ? (
+                storySoFar.chapterNarrative.split('\n\n').map((para, i) => (
+                  <p key={i} className="font-narrative text-sm text-[#f5ebd7]/90 leading-relaxed">
+                    {para}
+                  </p>
+                ))
+              ) : storySoFar.chapterBeats?.length ? (
+                storySoFar.chapterBeats.map((b, i) => (
+                  <p key={i} className="font-narrative text-sm text-[#f5ebd7]/90 leading-relaxed">
+                    {b.text}
+                  </p>
+                ))
+              ) : (
+                <p className="font-narrative italic text-sm text-[#f5ebd7]/90 leading-relaxed">"{storySoFar.chapterSummary}"</p>
+              )}
+            </div>
+            <button
+              onClick={() => {
+                onAcknowledgeChapterStory?.(storySoFar.chapterNumber!)
+                setStorySoFar(null)
+              }}
+              className="mt-4 w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-[#2a1b35] via-[#20142b] to-[#180e22] border border-[#c89d51]/50 hover:border-[#f0ca65] text-[#f0ca65] hover:text-[#fff5dd] font-serif text-xs font-semibold tracking-wider uppercase flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.98] cursor-pointer shrink-0"
+            >
+              <span>Continue the Tale</span>
             </button>
           </div>
         </div>

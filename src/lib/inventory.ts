@@ -1,3 +1,4 @@
+import { EQUIP_SLOT_ITEM_TYPE } from '../types.ts'
 import type { Dict, EquipSlot, InventoryAcquisition, InventoryChange, ItemEntry, Player } from '../types.ts'
 
 export interface InventoryResult {
@@ -76,7 +77,8 @@ export function applyInventoryChanges(
 export function equipItem(player: Player, items: Dict<ItemEntry>, itemId: string, slot: EquipSlot): { player: Player; error?: string } {
   const item = items[itemId]
   if (!item) return { player, error: `No known item "${itemId}".` }
-  if (item.type !== slot) return { player, error: `${item.name} is a ${item.type}, not ${slot === 'weapon' ? 'a' : 'an'} ${slot}.` }
+  const requiredType = EQUIP_SLOT_ITEM_TYPE[slot]
+  if (item.type !== requiredType) return { player, error: `${item.name} is a ${item.type}, not ${requiredType === 'weapon' ? 'a' : 'an'} ${requiredType}.` }
 
   const next: Player = { ...player, equipped: { ...player.equipped, [slot]: itemId } }
   return { player: next }

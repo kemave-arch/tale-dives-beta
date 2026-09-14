@@ -107,7 +107,7 @@ interface CodexProps {
   onUpdateProject: (id: string, patch: Partial<ProjectEntry> | null) => void
   onUpdateSkill: (id: string, entry: Partial<SkillEntry> | null) => void
   onUpdateItem: (id: string, qty: number | null, entry?: Partial<ItemEntry>) => void
-  onEquipItem: (id: string) => void
+  onEquipItem: (id: string, slot?: EquipSlot) => void
   onUnequipSlot: (slot: EquipSlot) => void
   onUpdateWorld: (patch: Partial<WorldData>) => void
   onEvolveClass: (classId: string) => void
@@ -4158,14 +4158,27 @@ export default function Codex({
                 {traitsText(items[entryId]?.traits) && <FieldRow label="Traits" value={traitsText(items[entryId]?.traits)!} icon={Zap} />}
                 {items[entryId]?.description && <FieldRow label="Description" value={items[entryId]!.description!} />}
                 {items[entryId] && EQUIPPABLE_TYPES.includes(items[entryId]!.type) && (
-                  <div className="mt-2 pt-2 border-t border-[#e8ca8a]/15">
+                  <div className="mt-2 pt-2 border-t border-[#e8ca8a]/15 flex flex-wrap gap-2">
                     {equippedSlotFor(entryId) ? (
                       <button
                         onClick={() => onUnequipSlot(equippedSlotFor(entryId)!)}
                         className="rounded-full px-4 py-1.5 font-display text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30"
                       >
-                        Unequip
+                        Unequip ({equippedSlotFor(entryId) === 'offhand' ? 'Off-Hand' : equippedSlotFor(entryId)})
                       </button>
+                    ) : items[entryId]!.type === 'weapon' ? (
+                      // A weapon has two valid slots — offer both rather than
+                      // guessing, so dual-wielding (or weapon + shield) is a
+                      // deliberate choice, not an accident of which button an
+                      // ordinary single-weapon item happens to land on.
+                      <>
+                        <button onClick={() => onEquipItem(entryId, 'weapon')} className="rounded-full px-4 py-1.5 font-display text-xs font-semibold bg-[#e8ca8a] text-[#0e1017]">
+                          Equip as Weapon
+                        </button>
+                        <button onClick={() => onEquipItem(entryId, 'offhand')} className="rounded-full px-4 py-1.5 font-display text-xs font-semibold bg-[#e8ca8a]/20 text-[#e8ca8a] border border-[#e8ca8a]/30">
+                          Equip as Off-Hand
+                        </button>
+                      </>
                     ) : (
                       <button onClick={() => onEquipItem(entryId)} className="rounded-full px-4 py-1.5 font-display text-xs font-semibold bg-[#e8ca8a] text-[#0e1017]">
                         Equip

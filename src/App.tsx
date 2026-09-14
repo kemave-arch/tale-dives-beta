@@ -36,7 +36,7 @@ import { applyBeatUpdate } from './lib/beats.ts'
 import { checkNarrativeEventTriggers, applyEventUpdate } from './lib/narrativeEvents.ts'
 import { applySkillLearn } from './lib/skills.ts'
 import { applyInventoryChanges, equipItem, unequipSlot } from './lib/inventory.ts'
-import { resolveBangCommand, findEntry } from './lib/bangCommands.ts'
+import { resolveBangCommand, findEntry, equipSlotAlias } from './lib/bangCommands.ts'
 import { checkCodexReveals, validateDiscovery } from './lib/discovery.ts'
 import { seedCampaign, seedRelationTier } from './lib/seeding.ts'
 import { parseTaleWeaverDraftAreas } from './lib/taleWeaving.ts'
@@ -1813,12 +1813,15 @@ export default function App() {
   // §5.9 — Codex's own Equip/Unequip buttons reuse the exact same
   // equipItem/unequipSlot logic as the !equip/!unequip bang commands, just
   // invoked directly from a click instead of parsed from typed text.
-  function equipFromCodex(itemId: string) {
+  function equipFromCodex(itemId: string, slot?: EquipSlot) {
     setGame((g) => {
       if (!g) return g
       const item = g.items?.[itemId]
       if (!item || !EQUIPPABLE_TYPES.includes(item.type)) return g
-      const result = equipItem(g.player, g.items ?? {}, itemId, item.type as EquipSlot)
+      // A weapon-type item has two valid slots (Weapon/Off-Hand) — the Codex
+      // UI always passes an explicit slot for those; armor/accessory stay
+      // 1:1 with their item type, so no slot ever needs to be passed for them.
+      const result = equipItem(g.player, g.items ?? {}, itemId, slot ?? (item.type as EquipSlot))
       return result.error ? g : { ...g, player: result.player }
     })
   }
@@ -1931,13 +1934,28 @@ export default function App() {
       const items = g.items ?? {}
 
       if (command === 'equip') {
-        const found = findEntry(items, target)
+        // An optional trailing slot hint ("!equip dagger offhand") picks
+        // which of the two weapon slots to use; everything before it is the
+        // item search text. Absent a hint, a weapon's own type still casts
+        // cleanly to its default 'weapon' slot, matching the old behavior.
+        let explicitSlot: EquipSlot | undefined
+        let searchText = target
+        const words = target.trim().split(/\s+/)
+        if (words.length > 1) {
+          const hinted = equipSlotAlias(words[words.length - 1])
+          if (hinted) {
+            explicitSlot = hinted
+            searchText = words.slice(0, -1).join(' ')
+          }
+        }
+        const found = findEntry(items, searchText)
         if (!found || !EQUIPPABLE_TYPES.includes(found[1].type)) {
           const note = found ? `${found[1].name} can't be equipped.` : `No item matching "${target}" found.`
           return { ...g, lastPlayed: Date.now(), log: [...g.log, { nar: '', bang: { command: 'equip', rows: [], note } }] }
         }
         const [itemId, item] = found
-        const result = equipItem(g.player, items, itemId, item.type as EquipSlot)
+        const slot = explicitSlot ?? (item.type as EquipSlot)
+        const result = equipItem(g.player, items, itemId, slot)
         return {
           ...g,
           player: result.player,
@@ -1948,7 +1966,7 @@ export default function App() {
               nar: '',
               bang: {
                 command: 'equip',
-                rows: result.error ? [] : [{ name: item.name, id: itemId, fields: [`equipped (${item.type})`] }],
+                rows: result.error ? [] : [{ name: item.name, id: itemId, fields: [`equipped (${slot})`] }],
                 note: result.error,
               },
             },
@@ -1956,12 +1974,12 @@ export default function App() {
         }
       }
 
-      const slot = target.trim().toLowerCase() as EquipSlot
-      if (!EQUIPPABLE_TYPES.includes(slot)) {
+      const slot = equipSlotAlias(target)
+      if (!slot) {
         return {
           ...g,
           lastPlayed: Date.now(),
-          log: [...g.log, { nar: '', bang: { command: 'unequip', rows: [], note: 'Usage: !unequip weapon|armor|accessory' } }],
+          log: [...g.log, { nar: '', bang: { command: 'unequip', rows: [], note: 'Usage: !unequip weapon|offhand|armor|accessory' } }],
         }
       }
       const currentId = g.player.equipped?.[slot]

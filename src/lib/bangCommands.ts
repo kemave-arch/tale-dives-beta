@@ -6,7 +6,7 @@ import type {
   BangCommandEntry, BestiaryEntry, Campaign, EquipSlot, FactionEntry, ItemEntry, LocationEntry, LoreEntry, NpcEntry, Player, QuestEntry, SkillEntry,
 } from '../types.ts'
 
-const EQUIP_SLOTS: EquipSlot[] = ['weapon', 'armor', 'accessory']
+const EQUIP_SLOTS: EquipSlot[] = ['weapon', 'offhand', 'armor', 'accessory']
 
 // §6.6 Bang Commands — client-side, 0 API tokens. A bare command ("!npc") is
 // pure player reference and touches nothing else. A targeted command
@@ -25,8 +25,8 @@ export const BANG_COMMANDS: { name: string; usage: string; description: string }
   { name: 'npc', usage: '!npc [name]', description: "NPC roster, or one companion's dossier" },
   { name: 'party', usage: '!party', description: 'Currently travelling companions' },
   { name: 'items', usage: '!items', description: 'Everything currently carried' },
-  { name: 'equip', usage: '!equip [item]', description: 'Equip a weapon, armor, or accessory' },
-  { name: 'unequip', usage: '!unequip [weapon|armor|accessory]', description: 'Unequip a slot' },
+  { name: 'equip', usage: '!equip [item] [offhand]', description: 'Equip a weapon (add "offhand" to dual-wield), armor, or accessory' },
+  { name: 'unequip', usage: '!unequip [weapon|offhand|armor|accessory]', description: 'Unequip a slot' },
   { name: 'location', usage: '!location [name]', description: 'Visited locations, or one in detail' },
   { name: 'faction', usage: '!faction [name]', description: 'Known factions and standing' },
   { name: 'quests', usage: '!quests [name]', description: 'Tracked objectives, or one in detail' },
@@ -42,6 +42,25 @@ export const BANG_COMMANDS: { name: string; usage: string; description: string }
 ]
 
 const RECALL_ROW_CAP = 60
+
+// §5.9 — recognizes a typed slot name/alias for !equip's optional trailing
+// slot hint and !unequip's target, so "offhand"/"off-hand"/"secondary" all
+// resolve to the same 'offhand' EquipSlot without the player needing to
+// know its exact internal key.
+const EQUIP_SLOT_ALIASES: Record<string, EquipSlot> = {
+  weapon: 'weapon',
+  primary: 'weapon',
+  offhand: 'offhand',
+  'off-hand': 'offhand',
+  'off hand': 'offhand',
+  secondary: 'offhand',
+  'secondary weapon': 'offhand',
+  armor: 'armor',
+  accessory: 'accessory',
+}
+export function equipSlotAlias(raw: string): EquipSlot | undefined {
+  return EQUIP_SLOT_ALIASES[raw.trim().toLowerCase()]
+}
 
 // User-typed text is never a safe regex source — this is plain normalized
 // substring matching, not a regex, so there's nothing to escape or exploit.

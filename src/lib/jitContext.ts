@@ -9,7 +9,10 @@ import type { Campaign, ConditionTag, Dict, EquipSlot, ItemEntry, LogEntry, Play
 const RECENT_CHAPTER_DIGEST_COUNT = 3
 const MAX_FLAGS_SHOWN = 20
 const MAX_KNOWN_NAMES = 25 // per category — hard cap so this line's token cost stays flat regardless of how long the campaign runs
-const EQUIP_SLOTS: EquipSlot[] = ['weapon', 'armor', 'accessory']
+const EQUIP_SLOTS: EquipSlot[] = ['weapon', 'offhand', 'armor', 'accessory']
+// Weapon/Off-Hand are both the 'weapon' item type, so unlike Armor/Accessory
+// they need an explicit slot label to tell two equipped weapons apart.
+const EQUIP_SLOT_LABELS: Record<EquipSlot, string> = { weapon: 'Weapon', offhand: 'Off-Hand', armor: 'Armor', accessory: 'Accessory' }
 
 function describeEquipped(equipped: Player['equipped'], items: Dict<ItemEntry> | undefined): string | null {
   if (!equipped) return null
@@ -19,7 +22,7 @@ function describeEquipped(equipped: Player['equipped'], items: Dict<ItemEntry> |
     const item = id ? items?.[id] : undefined
     if (!item) continue
     const traits = item.traits?.length ? item.traits.join(', ') : ''
-    parts.push(`${item.name}${traits ? ` (${traits})` : ''}`)
+    parts.push(`${EQUIP_SLOT_LABELS[slot]}: ${item.name}${traits ? ` (${traits})` : ''}`)
   }
   return parts.length ? `Equipped: ${parts.join(' | ')}` : null
 }

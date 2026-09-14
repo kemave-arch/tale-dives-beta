@@ -152,10 +152,14 @@ export interface Player {
 }
 
 // §5.9 Item Type Taxonomy — a closed set; only these three occupy an equip
-// slot (1:1 with ItemType, one slot each) and can carry `traits`.
+// slot and can carry `traits`. 'weapon' is the one type with two slots
+// (Weapon/Off-Hand — dual-wielding, or a weapon paired with a shield), so
+// EquipSlot isn't 1:1 with ItemType; EQUIP_SLOT_ITEM_TYPE below is the
+// slot -> required-item-type map equipItem validates against.
 export type ItemType = 'weapon' | 'armor' | 'accessory' | 'tool' | 'key' | 'consumable' | 'material'
-export type EquipSlot = 'weapon' | 'armor' | 'accessory'
+export type EquipSlot = 'weapon' | 'offhand' | 'armor' | 'accessory'
 export const EQUIPPABLE_TYPES: ItemType[] = ['weapon', 'armor', 'accessory']
+export const EQUIP_SLOT_ITEM_TYPE: Record<EquipSlot, ItemType> = { weapon: 'weapon', offhand: 'weapon', armor: 'armor', accessory: 'accessory' }
 
 // The item Codex — one entry per item id the player has ever carried.
 // Deliberately not a full "every item in the world" registry (§5.9 scope is

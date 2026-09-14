@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Home, Settings as SettingsIcon, Send, Star, BookOpen, Library, Sparkle, X, ExternalLink,
   ChevronUp, ChevronDown, ChevronsDown, History, Pause, Users, Backpack, Map as MapIcon, ShieldCheck, Target, Skull, HelpCircle,
-  Unlock, Lock, Repeat, Hammer, Ghost, ScrollText, Swords, Sparkles, LayoutGrid, ZoomIn,
+  Unlock, Lock, Repeat, Hammer, Ghost, ScrollText, Swords, Sparkles, LayoutGrid, ZoomIn, Shield,
   AlertTriangle, Copy, Check, RotateCcw, Bug, Pencil, MoreHorizontal, Trash2, Heart, Coins, Flag, Feather,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -173,6 +173,7 @@ function DesktopLeftSidebar({
   areaName?: string
 }) {
   const equippedWeapon = player.equipped?.weapon ? items?.[player.equipped.weapon] : null
+  const equippedOffhand = player.equipped?.offhand ? items?.[player.equipped.offhand] : null
   const equippedArmor = player.equipped?.armor ? items?.[player.equipped.armor] : null
   const equippedAccessory = player.equipped?.accessory ? items?.[player.equipped.accessory] : null
 
@@ -253,6 +254,19 @@ function DesktopLeftSidebar({
             <span className="block font-mono text-[9px] uppercase tracking-wider text-[#9e968b]">Weapon</span>
             <span className="font-serif text-xs font-medium text-[#1a1917] truncate block">
               {equippedWeapon ? equippedWeapon.name : player.equipped?.weapon || 'Empty Hand'}
+            </span>
+          </div>
+        </div>
+
+        {/* Off-Hand Slot — the second weapon-type slot (dual-wielding, or a weapon paired with a shield) */}
+        <div className="flex items-center gap-3 p-2 rounded-lg bg-[#f5f0e6] border border-[#ede7dd]">
+          <div className="w-8 h-8 rounded-md bg-white border border-[#dec48e]/60 flex items-center justify-center text-[#8d6b1d] shrink-0">
+            <Shield size={16} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="block font-mono text-[9px] uppercase tracking-wider text-[#9e968b]">Off-Hand</span>
+            <span className="font-serif text-xs font-medium text-[#1a1917] truncate block">
+              {equippedOffhand ? equippedOffhand.name : player.equipped?.offhand || 'Empty Hand'}
             </span>
           </div>
         </div>

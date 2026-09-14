@@ -53,7 +53,7 @@ import { parseKeywordLinks } from './lib/keywordLinks.ts'
 import { slugify } from './lib/slug.ts'
 import { getProvider } from './api/providers/index.ts'
 import { sanitize } from './api/providers/gemini.ts'
-import { PROSE_DEPTHS, DEFAULT_NARRATION_STYLE, MAX_OUTPUT_TOKENS_CEILING, MIN_TURN_OUTPUT_CEILING } from './api/turnContract.ts'
+import { PROSE_DEPTHS, TALE_DIFFICULTIES, DEFAULT_NARRATION_STYLE, MAX_OUTPUT_TOKENS_CEILING, MIN_TURN_OUTPUT_CEILING } from './api/turnContract.ts'
 import { readJSONFile, saveJSON } from './lib/backup.ts'
 import {
   uploadBackupToDrive,
@@ -792,8 +792,11 @@ export default function App() {
       protagonistId: protagonistEntry.id!,
       world, // §Phase A — kept for reference until the Codex Realm Overview exists
       player,
-      proseDepth: PROSE_DEPTHS.IMMERSIVE, // default changed 2026-09-04 per explicit request for the most immersive prose by default; still overridable per-campaign in Settings
+      proseDepth: PROSE_DEPTHS.EXPANSIVE, // default changed 2026-09-04 per explicit request for the most immersive prose by default; still overridable per-campaign in Settings
       narrationStyle: world.narrationStyle || DEFAULT_NARRATION_STYLE,
+      pov: 'third',
+      narrationMode: 'immersive', // every brand-new Tale starts on Immersive per explicit request; still overridable per-campaign in Settings
+      difficulty: TALE_DIFFICULTIES.BALANCED,
       locations: { ...initialLocations, ...seeded.locations }, // §5.10 — player-authored + World Seeding fallback + later auto-registration
       regions: seeded.regions, // §7 Region Map Pins — World Seeding's regions, if any; write-once, no later auto-registration path
       npcs: { ...initialNpcs, ...seeded.npcs }, // §5.5/§5.14 — World Seeding's starting relations, then auto-registration
@@ -1023,8 +1026,11 @@ export default function App() {
       protagonistId: protagonistEntry.id!,
       world,
       player,
-      proseDepth: PROSE_DEPTHS.IMMERSIVE,
+      proseDepth: PROSE_DEPTHS.EXPANSIVE,
       narrationStyle: world.narrationStyle,
+      pov: accumulated.pov ?? 'third',
+      narrationMode: accumulated.narrationMode ?? 'immersive',
+      difficulty: accumulated.difficulty ? TALE_DIFFICULTIES[accumulated.difficulty] : TALE_DIFFICULTIES.EXTREME,
       locations,
       regions,
       npcs,
@@ -2422,11 +2428,11 @@ export default function App() {
           musicMuted={musicMuted}
           onToggleMusicMute={toggleMusicMute}
           onBack={closeSettings}
-          onSave={({ apiSettings: nextApi, uiPrefs: nextUi, proseDepthKey }: SettingsSavePayload) => {
+          onSave={({ apiSettings: nextApi, uiPrefs: nextUi, proseDepthKey, pov, narrationMode, difficultyKey }: SettingsSavePayload) => {
             setApiSettings(nextApi)
             setUiPrefs(nextUi)
             if (game) {
-              setGame((g) => g && { ...g, proseDepth: PROSE_DEPTHS[proseDepthKey] })
+              setGame((g) => g && { ...g, proseDepth: PROSE_DEPTHS[proseDepthKey], pov, narrationMode, difficulty: TALE_DIFFICULTIES[difficultyKey] })
             }
             closeSettings()
           }}

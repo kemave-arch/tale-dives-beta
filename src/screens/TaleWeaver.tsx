@@ -4,9 +4,10 @@ import {
   BookOpen, AlertCircle, Check, ArrowRight, Pencil, Plus, Save,
   ImagePlus, RotateCw, FolderOpen, Trash2, Bookmark, CheckCircle2, Clock, Info
 } from 'lucide-react'
-import { GlassScreen, GlassHeader } from '../lib/glassChrome.tsx'
+import { GlassScreen, GlassHeader, GlassSegmented } from '../lib/glassChrome.tsx'
 import { useConfirm } from '../lib/useConfirm.tsx'
-import type { ApiSettings, RevealTrigger } from '../types.ts'
+import type { ApiSettings, NarrationMode, Pov, RevealTrigger, TaleDifficultyKey } from '../types.ts'
+import { TALE_DIFFICULTIES } from '../api/turnContract.ts'
 import {
   TALE_WEAVER_PHASES, emptyAccumulated, runTaleWeaverPhase,
   type TaleWeaverAccumulated, type TaleWeaverPhaseDef,
@@ -766,6 +767,56 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
       else next.add(id)
       return next
     })
+  }
+
+  // Narrative Settings — POV/Narration Mode/Tale Difficulty. Plain preference
+  // toggles, never AI-drafted content, so this must stay reachable in the Arc
+  // phase regardless of whether any beats/events/stakes exist yet — shared by
+  // both branches of the 'arc' case below rather than only the full-content one.
+  function renderNarrativeSettingsCard() {
+    return (
+      <div className="flex flex-col gap-2">
+        <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">Narrative Settings</span>
+        <div className="rounded-xl border border-gold-accent/25 bg-[#161a28]/70 p-3 flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
+            <label className="font-mono text-[10px] uppercase text-gold-primary/70">Point of View</label>
+            <GlassSegmented
+              options={[
+                { id: 'third', label: 'Third Person' },
+                { id: 'first', label: 'First Person' },
+              ] as const}
+              value={accumulated.pov ?? 'third'}
+              onChange={(v: Pov) => setAccumulated((prev) => ({ ...prev, pov: v }))}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="font-mono text-[10px] uppercase text-gold-primary/70">Narration Mode</label>
+            <GlassSegmented
+              options={[
+                { id: 'reactive', label: 'Reactive' },
+                { id: 'immersive', label: 'Immersive' },
+              ] as const}
+              value={accumulated.narrationMode ?? 'immersive'}
+              onChange={(v: NarrationMode) => setAccumulated((prev) => ({ ...prev, narrationMode: v }))}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="font-mono text-[10px] uppercase text-gold-primary/70">Tale Difficulty</label>
+            <GlassSegmented
+              options={(Object.keys(TALE_DIFFICULTIES) as TaleDifficultyKey[]).map((key) => ({
+                id: key,
+                label: key === 'EXTREME' ? `${TALE_DIFFICULTIES[key].label} ★` : TALE_DIFFICULTIES[key].label,
+              }))}
+              value={accumulated.difficulty ?? 'EXTREME'}
+              onChange={(v: TaleDifficultyKey) => setAccumulated((prev) => ({ ...prev, difficulty: v }))}
+            />
+            {(accumulated.difficulty ?? 'EXTREME') === 'EXTREME' && (
+              <p className="font-mono text-[10px] text-gold-accent/80">★ Recommended — the most reactive, high-stakes storytelling.</p>
+            )}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   // Content cards for the currently active phase
@@ -1947,42 +1998,51 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
         const hasEvents = (accumulated.narrativeEvents?.length ?? 0) > 0
         const hasStakes = Boolean(accumulated.deathRule || accumulated.endGameRules)
 
+        // The Narrative Settings card below is a plain preference toggle,
+        // never AI-drafted content — it must stay reachable even before the
+        // player has woven a single beat/event/stake, so it renders in both
+        // this empty-state branch and the full-content one below rather than
+        // being gated behind hasBeats/hasEvents/hasStakes like everything
+        // else on this phase.
         if (!hasBeats && !hasEvents && !hasStakes) {
           return (
-            <div className="rounded-xl border border-gold-accent/20 bg-[#161a28]/60 p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 text-center sm:text-left">
-                <div className="p-2 rounded-lg bg-gold-accent/10 border border-gold-accent/20 text-gold-primary shrink-0 hidden sm:flex">
-                  <Sparkles size={16} />
+            <div className="flex flex-col gap-4">
+              <div className="rounded-xl border border-gold-accent/20 bg-[#161a28]/60 p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 text-center sm:text-left">
+                  <div className="p-2 rounded-lg bg-gold-accent/10 border border-gold-accent/20 text-gold-primary shrink-0 hidden sm:flex">
+                    <Sparkles size={16} />
+                  </div>
+                  <div>
+                    <p className="font-display font-semibold text-xs text-gold-primary">
+                      Narrative Arc & Climax Pending
+                    </p>
+                    <p className="font-narrative text-[11.5px] text-ink-muted">
+                      Weave central story beats, complications, and stakes, or draft them manually.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-display font-semibold text-xs text-gold-primary">
-                    Narrative Arc & Climax Pending
-                  </p>
-                  <p className="font-narrative text-[11.5px] text-ink-muted">
-                    Weave central story beats, complications, and stakes, or draft them manually.
-                  </p>
+                <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={handleGenerate}
+                    disabled={busy}
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold-accent/25 hover:bg-gold-accent/35 border border-gold-accent/40 text-gold-primary font-display font-semibold text-xs transition-colors"
+                  >
+                    <Sparkles size={13} />
+                    <span>Auto-Weave</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => addCustomItem('beats')}
+                    disabled={busy}
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/25 bg-[#161a28] hover:bg-gold-accent/15 text-ink-muted hover:text-ink font-display text-xs transition-colors"
+                  >
+                    <Plus size={13} />
+                    <span>Add Beat</span>
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
-                <button
-                  type="button"
-                  onClick={handleGenerate}
-                  disabled={busy}
-                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold-accent/25 hover:bg-gold-accent/35 border border-gold-accent/40 text-gold-primary font-display font-semibold text-xs transition-colors"
-                >
-                  <Sparkles size={13} />
-                  <span>Auto-Weave</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => addCustomItem('beats')}
-                  disabled={busy}
-                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-accent/25 bg-[#161a28] hover:bg-gold-accent/15 text-ink-muted hover:text-ink font-display text-xs transition-colors"
-                >
-                  <Plus size={13} />
-                  <span>Add Beat</span>
-                </button>
-              </div>
+              {renderNarrativeSettingsCard()}
             </div>
           )
         }
@@ -2348,6 +2408,8 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 )
               )}
             </div>
+
+            {renderNarrativeSettingsCard()}
           </div>
         )
       }
@@ -2911,6 +2973,15 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 ) : (
                   <p className="font-narrative text-xs italic text-ink-muted">Not yet woven</p>
                 )}
+                <p className="font-narrative text-xs text-ink-muted pt-1 mt-0.5 border-t border-gold-accent/15">
+                  <span className="font-mono text-[10px] uppercase text-gold-primary font-bold">Narrative Settings: </span>
+                  {(accumulated.pov ?? 'third') === 'first' ? 'First Person' : 'Third Person'}
+                  {' · '}
+                  {(accumulated.narrationMode ?? 'immersive') === 'immersive' ? 'Immersive' : 'Reactive'}
+                  {' · '}
+                  {TALE_DIFFICULTIES[accumulated.difficulty ?? 'EXTREME'].label}
+                  {(accumulated.difficulty ?? 'EXTREME') === 'EXTREME' ? ' ★' : ''}
+                </p>
               </div>
             </div>
 

@@ -1,4 +1,4 @@
-import type { ApiSettings, AreaEntry } from '../types.ts'
+import type { ApiSettings, AreaEntry, NarrationMode, Pov, TaleDifficultyKey } from '../types.ts'
 import { getProvider } from '../api/providers/index.ts'
 import { buildTaleWeaverSystemInstructions } from '../api/taleWeaverContract.ts'
 import { MAX_OUTPUT_TOKENS_CEILING } from '../api/turnContract.ts'
@@ -56,10 +56,26 @@ export interface TaleWeaverAccumulated {
   deathRule?: TaleWeaverDraft['deathRule']
   deathInstructions?: TaleWeaverDraft['deathInstructions']
   endGameRules?: TaleWeaverDraft['endGameRules']
+  // Narrative Settings — plain player-preference fields, never AI-parsed
+  // (no XML grammar/parser change needed for these three; see
+  // taleWeaverContract.ts's own header comment on what this flow does vs.
+  // doesn't ask the model to draft). Set via inline controls in the Story
+  // Arc phase screen (TaleWeaver.tsx).
+  pov?: Pov
+  narrationMode?: NarrationMode
+  difficulty?: TaleDifficultyKey
 }
 
 export function emptyAccumulated(): TaleWeaverAccumulated {
-  return { regions: [], locations: [], factions: [], npcs: [], lore: [], beats: [], narrativeEvents: [] }
+  return {
+    regions: [], locations: [], factions: [], npcs: [], lore: [], beats: [], narrativeEvents: [],
+    // Story Arc phase's own pre-selected defaults — Immersive per explicit
+    // request, Extreme as the tagged "Recommended" tier for Tale Weaving
+    // specifically (other creation paths stay on Balanced, see App.tsx).
+    pov: 'third',
+    narrationMode: 'immersive',
+    difficulty: 'EXTREME',
+  }
 }
 
 function buildPhasePrompt(phase: TaleWeaverPhaseDef, accumulated: TaleWeaverAccumulated, guidance: string): string {

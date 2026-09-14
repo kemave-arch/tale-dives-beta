@@ -4,9 +4,10 @@ import {
   FolderOpen, FolderX, Maximize, Minimize, Trash2, Volume2, VolumeX, Music,
   CloudUpload, CloudDownload, Loader2, Check, RefreshCw, KeyRound, Bot, Server,
   Dice5, Layers, Monitor, Bug, UserCircle, History, AlertTriangle, LogOut, Gauge, FlaskConical,
+  Eye, Sparkles, Flame,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { PROSE_DEPTHS } from '../api/turnContract.ts'
+import { PROSE_DEPTHS, TALE_DIFFICULTIES } from '../api/turnContract.ts'
 import { allProviders, getProvider } from '../api/providers/index.ts'
 import { forgetSaveFolder, loadSaveFolder, pickSaveFolder, supportsFileSystemAccess } from '../lib/fsAccess.ts'
 import { downloadSchemaCsv } from '../lib/schemaExport.ts'
@@ -17,7 +18,7 @@ import {
   initGoogleAuth, signOutGoogle, listDriveBackups, signInWithGoogle, getGoogleAccessToken,
   type GoogleDriveFile, type User,
 } from '../lib/googleDrive.ts'
-import type { ApiSettings, Campaign, UiPrefs } from '../types.ts'
+import type { ApiSettings, Campaign, NarrationMode, Pov, TaleDifficultyKey, UiPrefs } from '../types.ts'
 
 const TABS = [
   { id: 'model', label: 'AI Model', icon: Cpu },
@@ -31,6 +32,9 @@ export interface SettingsSavePayload {
   apiSettings: ApiSettings
   uiPrefs: UiPrefs
   proseDepthKey: keyof typeof PROSE_DEPTHS
+  pov: Pov
+  narrationMode: NarrationMode
+  difficultyKey: TaleDifficultyKey
 }
 
 interface SettingsProps {
@@ -105,9 +109,25 @@ export default function Settings({
   const [showMusicBanners, setShowMusicBanners] = useState<boolean>(uiPrefs.showMusicBanners ?? false)
   const [graphicsMode, setGraphicsMode] = useState<'glass' | 'performance'>(uiPrefs.graphicsMode ?? 'performance')
   const [introGazeDelay, setIntroGazeDelay] = useState<boolean>(uiPrefs.introGazeDelay ?? true)
-  const [proseDepthKey, setProseDepthKey] = useState<keyof typeof PROSE_DEPTHS>(
-    (game?.proseDepth?.label as keyof typeof PROSE_DEPTHS) ?? 'BALANCED',
-  )
+  const [proseDepthKey, setProseDepthKey] = useState<keyof typeof PROSE_DEPTHS>(() => {
+    const stored = game?.proseDepth?.label
+    // Migration: an existing save's stored label may literally be
+    // 'IMMERSIVE' — the pre-rename key (see turnContract.ts's PROSE_DEPTHS
+    // comment). Treat it as 'EXPANSIVE' here so the picker opens on the
+    // right tier instead of silently falling through to 'BALANCED'.
+    if (stored === 'IMMERSIVE') return 'EXPANSIVE'
+    return (stored as keyof typeof PROSE_DEPTHS) ?? 'BALANCED'
+  })
+  // Fallbacks here must match jitContext.ts's own fallback exactly (not the
+  // brand-new-campaign default) — an existing Tale genuinely without these
+  // fields is actually running Reactive/Third Person/Balanced right now, so
+  // the picker has to show that truthfully rather than silently upgrading it
+  // the next time the player hits Save without touching these controls.
+  // "Immersive/Extreme by default" only applies at brand-new-campaign
+  // creation time (App.tsx/taleWeaving.ts), never here.
+  const [pov, setPov] = useState<Pov>(game?.pov ?? 'third')
+  const [narrationMode, setNarrationMode] = useState<NarrationMode>(game?.narrationMode ?? 'reactive')
+  const [difficultyKey, setDifficultyKey] = useState<TaleDifficultyKey>(game?.difficulty?.key ?? 'BALANCED')
   const [folderLinked, setFolderLinked] = useState<boolean | null>(null) // null = still checking
   const [isFullscreen, setIsFullscreen] = useState(!!document.fullscreenElement)
   const [googleUser, setGoogleUser] = useState<User | null>(null)
@@ -306,6 +326,9 @@ export default function Settings({
       apiSettings: { provider, model, apiKey, temperature },
       uiPrefs: { chromeOpacity, debugMode, showMusicBanners, introGazeDelay, autoCloudBackup, graphicsMode },
       proseDepthKey,
+      pov,
+      narrationMode,
+      difficultyKey,
     })
   }
 
@@ -445,7 +468,7 @@ export default function Settings({
           {tab === 'gameplay' && (
             <div className="flex flex-col gap-5">
               <div>
-                <FieldLabel icon={Layers} tip="How long each turn's prose runs — CONCISE for a tighter, faster-paced read; IMMERSIVE for the fullest scene-by-scene detail.">
+                <FieldLabel icon={Layers} tip="How long each turn's prose runs — CONCISE for a tighter, faster-paced read; EXPANSIVE for the fullest scene-by-scene detail.">
                   Prose Depth
                 </FieldLabel>
                 <GlassSegmented
@@ -454,6 +477,54 @@ export default function Settings({
                   value={proseDepthKey}
                   onChange={setProseDepthKey}
                 />
+              </div>
+
+              <div>
+                <FieldLabel icon={Eye} tip="Whether the narrator writes your protagonist as 'I'/'me' (First Person) or 'they'/'her'/'him' (Third Person).">
+                  Point of View
+                </FieldLabel>
+                <GlassSegmented
+                  className="mt-2"
+                  options={[
+                    { id: 'third', label: 'Third Person' },
+                    { id: 'first', label: 'First Person' },
+                  ] as const}
+                  value={pov}
+                  onChange={setPov}
+                />
+              </div>
+
+              <div>
+                <FieldLabel icon={Sparkles} tip="Reactive: your own typed words stand as-is, and the Narrator only reacts to them. Immersive: the Narrator polishes your raw input into your character's own words, thoughts, and actions, woven into one continuous scene.">
+                  Narration Mode
+                </FieldLabel>
+                <GlassSegmented
+                  className="mt-2"
+                  options={[
+                    { id: 'reactive', label: 'Reactive' },
+                    { id: 'immersive', label: 'Immersive' },
+                  ] as const}
+                  value={narrationMode}
+                  onChange={setNarrationMode}
+                />
+              </div>
+
+              <div>
+                <FieldLabel icon={Flame} tip="How favorable or unfavorable events lean in response to your decisions — Chill keeps setbacks rare and recoverable, Extreme assumes something goes wrong unless your play truly earns otherwise.">
+                  Tale Difficulty
+                </FieldLabel>
+                <GlassSegmented
+                  className="mt-2"
+                  options={(Object.keys(TALE_DIFFICULTIES) as TaleDifficultyKey[]).map((key) => ({
+                    id: key,
+                    label: key === 'EXTREME' ? `${TALE_DIFFICULTIES[key].label} ★` : TALE_DIFFICULTIES[key].label,
+                  }))}
+                  value={difficultyKey}
+                  onChange={setDifficultyKey}
+                />
+                {difficultyKey === 'EXTREME' && (
+                  <p className="mt-1 text-[10px] font-mono text-gold-accent/80">★ Recommended — the most reactive, high-stakes storytelling.</p>
+                )}
               </div>
 
               <div>

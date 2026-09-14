@@ -469,6 +469,31 @@ export interface ProseDepthConfig {
   maxOutputTokens: number
 }
 
+// Narrative Settings — Point of View, Narration Mode, Tale Difficulty. Same
+// per-campaign-dial pattern as ProseDepthConfig/narrationStyle above: plain
+// preference fields threaded into the prompt every turn via jitContext.ts,
+// never AI-authored content.
+export type Pov = 'first' | 'third'
+
+// Reactive (default, today's only behavior): the player's own typed words
+// stand as-is; the model only narrates the world's reaction. Immersive: the
+// model deciphers and polishes the player's raw input into their character's
+// own words, thoughts, and actions, narrated as one continuous scene
+// alongside the world's response. Every brand-new Tale defaults to
+// 'immersive'; a pre-existing save with the field absent falls back to
+// 'reactive' at read time, since it never opted into a mode that didn't
+// exist yet when it was created — this only ever matters for saves that
+// predate this field, not for any new save going forward.
+export type NarrationMode = 'reactive' | 'immersive'
+
+export type TaleDifficultyKey = 'CHILL' | 'EASY' | 'BALANCED' | 'HARD' | 'EXTREME'
+
+export interface TaleDifficultyConfig {
+  key: TaleDifficultyKey
+  label: string
+  guidance: string
+}
+
 // §Phase A World Setup — also the World Library's stored shape (§6.4B).
 export interface WorldFaction {
   id?: string
@@ -632,6 +657,9 @@ export interface Campaign {
   player: Player
   proseDepth: ProseDepthConfig
   narrationStyle: string
+  pov?: Pov // Narrative Settings — First/Third Person; absent on an old save falls back to 'third' (today's only prior behavior)
+  narrationMode?: NarrationMode // Narrative Settings — Reactive/Immersive; absent on an old save falls back to 'reactive' (see NarrationMode's own comment for why)
+  difficulty?: TaleDifficultyConfig // Narrative Settings — Tale Difficulty; absent on an old save falls back to TALE_DIFFICULTIES.BALANCED (today's only prior behavior)
   locations: Dict<LocationEntry>
   regions?: Dict<RegionEntry> // §7 Region Map Pins — optional since older saves predate it
   npcs: Dict<NpcEntry>

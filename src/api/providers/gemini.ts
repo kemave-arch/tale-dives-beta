@@ -74,7 +74,7 @@ interface RequestParams {
 // Gemini's non-Lite Flash and Pro models run extended "thinking" by default,
 // billed against the same maxOutputTokens budget as the visible narration —
 // the working theory behind the live MAX_TOKENS truncations users have been
-// hitting on BALANCED/IMMERSIVE turns well under their nominal ceiling.
+// hitting on BALANCED/EXPANSIVE turns well under their nominal ceiling.
 // Disabling it frees the whole budget for prose. Flash-Lite variants default
 // thinking off already (no override needed); 2.0-generation models predate
 // thinking entirely and don't accept `thinkingConfig` at all, so neither
@@ -181,10 +181,10 @@ function formatGameTime(t: GameTime): string {
 // chapter summary is prose that only exists once every ~15 turns — it isn't
 // worth carrying on every single turn's schema).
 // Widened from a terse 2-sentence/200-token cap to a full narrated recap
-// (2026-09-04, alongside the IMMERSIVE prose-depth increase), then handed
+// (2026-09-04, alongside the EXPANSIVE prose-depth increase), then handed
 // the caller's own ceiling (2026-09-04, MAX_OUTPUT_TOKENS_CEILING from
 // turnContract.ts — a recap happens rarely enough that the cost tradeoff
-// IMMERSIVE was tuned for doesn't apply) so chapter breaks read like a real
+// EXPANSIVE was tuned for doesn't apply) so chapter breaks read like a real
 // novel's "previously..." passage instead of a mechanical plot-point list,
 // without getting cut off mid-paragraph.
 export async function runSummary({ apiKey, model, temperature, maxOutputTokens, history, startTime, endTime }: SummaryParams): Promise<string> {

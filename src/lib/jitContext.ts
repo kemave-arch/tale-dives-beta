@@ -3,6 +3,7 @@ import { describePresentNpc, presentNpcs } from './npcs.ts'
 import { isHidden } from './discovery.ts'
 import { checkAffordability } from './skills.ts'
 import { compareTiers, wordToTier, COMPETENCY_TIERS, THREAT_TIERS } from './tiers.ts'
+import { TALE_DIFFICULTIES } from '../api/turnContract.ts'
 import type { Campaign, ConditionTag, Dict, EquipSlot, ItemEntry, LogEntry, Player, SkillEntry } from '../types.ts'
 
 const RECENT_CHAPTER_DIGEST_COUNT = 3
@@ -64,7 +65,7 @@ function lastNarratedTurnState(log: LogEntry[] | undefined): string | undefined 
 // Builds the compact per-turn header re-sent alongside the player's action;
 // this (not model memory) is what keeps state consistent turn to turn.
 export function buildContextSlice(state: Campaign, craftReadyLine?: string | null): string {
-  const { player, proseDepth, narrationStyle, locations, npcs, factions, lore, world, flags, quests, log, items, combat, bestiary, projects, beats, narrativeEvents, deathInstructions, endGameRules } = state
+  const { player, proseDepth, narrationStyle, pov, narrationMode, difficulty, locations, npcs, factions, lore, world, flags, quests, log, items, combat, bestiary, projects, beats, narrativeEvents, deathInstructions, endGameRules } = state
 
   const playerIdentity = [player.gender && `Gender: ${player.gender}`, player.age !== undefined && `Age: ${player.age}`]
     .filter(Boolean)
@@ -336,9 +337,20 @@ export function buildContextSlice(state: Campaign, craftReadyLine?: string | nul
   // happened client-side regardless of where the player is).
   if (craftReadyLine) lines.push(craftReadyLine)
 
+  const povWord = pov ?? 'third'
+  const narrationModeWord = narrationMode ?? 'reactive'
+  const difficultyConfig = difficulty ?? TALE_DIFFICULTIES.BALANCED
+
   lines.push(
     `Prose Depth: ${proseDepth.label} (${proseDepth.targetTokens})`,
     `Narration Style: ${narrationStyle}`,
+    `Point of View: ${povWord === 'first' ? 'First Person ("I")' : 'Third Person ("they")'} — apply this consistently to every sentence of narration this turn.`,
+    `Narration Mode: ${
+      narrationModeWord === 'immersive'
+        ? 'Immersive — decipher and polish the player\'s raw input into their character\'s own words, thoughts, and actions, narrated as one continuous real-time scene alongside the world\'s response, the way a novelist would write it, not as a separate action-then-reaction report.'
+        : 'Reactive — the player\'s own typed words stand as-is; narrate only the world\'s reaction to them.'
+    }`,
+    `Tale Difficulty: ${difficultyConfig.label} — ${difficultyConfig.guidance}`,
     `Copper: ${player.copper}`,
   )
 

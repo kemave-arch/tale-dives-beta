@@ -72,7 +72,11 @@ export function buildContextSlice(state: Campaign, craftReadyLine?: string | nul
     .join(' | ')
 
   const lines = [
-    '[ACTIVE CONTEXT SLICE]',
+    // Day/time stamped directly on the header line itself, not just buried
+    // in the Location Node line below — the model should be able to orient
+    // temporally at a glance from the very first line of every turn's
+    // context, not have to scan for it.
+    `[ACTIVE CONTEXT SLICE — Day ${player.time.d}, ${player.time.h}]`,
     `Player: ${player.name} (${player.className})${playerIdentity ? ` | ${playerIdentity}` : ''} | Level: ${player.level} | Conditions: ${describeConditions(player.conditions)}`,
     `Location Node: ${player.locId} | Time: Day ${player.time.d} ${player.time.h}`,
   ]

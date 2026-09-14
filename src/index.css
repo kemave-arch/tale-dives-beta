@@ -115,6 +115,13 @@
   --td-rose-bg: #fce7ea;
   --td-skill: #31456e;
   --td-skill-bg: #e8eefb;
+  /* Editorial Vellum look (Chronicle only) — Literata for reading prose,
+     applied through the same `--font-narrative` variable `font-narrative`
+     resolves everywhere, so it takes effect for any text inside this scope
+     without a separate utility class. Falls back to the app-wide Lora
+     stack so nothing looks unstyled before the Google Fonts request
+     resolves. */
+  --font-narrative: 'Literata', 'Lora', Georgia, serif;
   --color-ink: var(--td-ink);
   --color-ink-muted: var(--td-ink-muted);
   --color-gold-primary: var(--td-gold-primary);
@@ -215,47 +222,47 @@ a,
   background-repeat: repeat;
 }
 
-/* §3.2 solid obsidian chrome — a runtime-set --turn-accent (fixed gold) tints
-   only the border/ring, never the fill. Flat obsidian background — matches
-   the clean idle/focus card look without glassmorphic transparency. */
+/* Editorial vellum chrome (Chronicle input bar) — a runtime-set --turn-accent
+   (ochre) tints only the border/ring, never the fill. Flat, lightweight
+   surface — no backdrop blur, just a considered light fill + hairline
+   border, matching the reading pane's own "paper, not glass" language. */
 .turn-glow {
-  --turn-accent: var(--td-gold-accent);
-  background: #131622;
-  border-color: color-mix(in srgb, var(--turn-accent) 30%, transparent);
-  box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.5);
-  transition: background 0.25s ease-out, box-shadow 0.2s ease-out, border-color 0.2s ease-out;
+  --turn-accent: #b08830;
+  background: #ffffff;
+  border-color: #ede7dd;
+  box-shadow: none;
+  transition: background 0.2s ease-out, box-shadow 0.2s ease-out, border-color 0.2s ease-out;
 }
 .turn-glow:focus,
 .turn-glow:hover,
 .turn-glow:focus-within {
   outline: none;
-  background: #181d2c;
+  background: #ffffff;
   border-color: var(--turn-accent);
-  box-shadow:
-    0 0 0 2px color-mix(in srgb, var(--turn-accent) 45%, transparent),
-    0 12px 28px -8px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--turn-accent) 20%, transparent);
 }
 .turn-glow-btn {
-  box-shadow: 0 4px 12px -3px rgba(0, 0, 0, 0.5);
+  box-shadow: none;
 }
 .turn-glow-btn:disabled {
   box-shadow: none;
 }
 
-/* §9.2 block navigator — idle: nearly invisible; hover/focus: solid, no glow
-   blur, borderless. Fading back to idle waits a beat (transition-delay) so it
+/* §9.2 block navigator — idle: nearly invisible; hover/focus: a light card,
+   no glow/blur. Fading back to idle waits a beat (transition-delay) so it
    doesn't snap transparent the instant the pointer lifts off; going solid is
    instant (delay reset to 0 on the active selectors). */
 .turn-nav {
-  --turn-accent: var(--td-gold-accent);
-  background: rgba(20, 22, 34, 0.12);
+  --turn-accent: #b08830;
+  background: rgba(250, 248, 245, 0.1);
   transition: background 0.25s ease-out 0.6s, box-shadow 0.25s ease-out 0.6s;
 }
 .turn-nav:hover,
 .turn-nav:focus-within {
-  background: rgba(20, 22, 34, 0.88);
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #ede7dd;
   transition-delay: 0s;
-  box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
 /* Rising gold embers layered over the artwork, echoing its own painted
@@ -409,6 +416,21 @@ a,
 }
 .parchment-surface::-webkit-scrollbar-thumb:hover {
   background-color: var(--td-gold-accent);
+}
+
+/* Editorial Vellum — illuminated opening letter for a chapter's first
+   narrated turn (Chronicle.tsx passes this class only on that one entry per
+   chapter, never on every turn). */
+.editorial-drop-cap::first-letter {
+  font-family: 'Cinzel', serif;
+  float: left;
+  font-size: 3rem;
+  line-height: 0.85;
+  padding-top: 4px;
+  padding-right: 10px;
+  padding-bottom: 2px;
+  color: #b08830;
+  font-weight: 600;
 }
 
 /* Mobile perf — backdrop-filter is one of the most expensive things a phone

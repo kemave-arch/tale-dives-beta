@@ -33,16 +33,25 @@ const ENDING_LABELS: Record<EndingOutcome, string> = { win: 'Victory', lose: 'De
 // it needs its own component instance per NPC, not one call shared across
 // a loop. No image yet (never generated) just renders nothing: the rail
 // only shows chips for NPCs that actually have art, never an empty frame.
-function NpcPortraitChip({ name, portraitKey }: { name: string; portraitKey?: string }) {
+// Editorial vellum treatment — a small illuminated portrait medallion with
+// its name in the champagne-gold ring beneath, echoing the "character voice
+// plate" look of the reference mockup without fabricating dialogue
+// attribution the turn data doesn't actually carry.
+function NpcPortraitChip({ name, portraitKey, role }: { name: string; portraitKey?: string; role?: string }) {
   const url = useEntityImage(portraitKey)
   if (!url) return null
   return (
-    <img
-      src={url}
-      alt={name}
-      title={name}
-      className="w-10 h-10 rounded-full object-cover border-2 border-gold-accent/50 shrink-0 shadow-md"
-    />
+    <div className="flex flex-col items-center gap-1 shrink-0 w-14">
+      <img
+        src={url}
+        alt={name}
+        title={role ? `${name} — ${role}` : name}
+        className="w-12 h-12 rounded-full object-cover border-2 border-[#dec48e] shadow-[0_2px_8px_rgba(176,136,48,0.25)]"
+      />
+      <span className="font-sans text-[9px] font-semibold uppercase tracking-wide text-[#6c665e] truncate w-full text-center">
+        {name}
+      </span>
+    </div>
   )
 }
 
@@ -138,13 +147,13 @@ function ConditionBadge({
 function CurrencyBadge({ copper }: { copper: number }) {
   const { p, g, s, c } = formatCurrency(copper)
   return (
-    <div className="flex items-center gap-1.5 shrink-0 font-mono text-[10px] font-semibold bg-black/30 border border-white/10 px-2 py-0.5 rounded-full">
-      <Coins size={12} className="text-[#fbbf24] shrink-0" />
+    <div className="flex items-center gap-1.5 shrink-0 font-mono text-[10px] font-semibold bg-[#f5f0e6] border border-[#ede7dd] px-2 py-0.5 rounded-full">
+      <Coins size={12} className="text-[#b08830] shrink-0" />
       <div className="flex items-center gap-1">
-        {p > 0 && <span className="text-[#e2e8f0]">{p}<span className="text-[#cbd5e1] text-[9px] font-normal">P</span></span>}
-        {g > 0 && <span className="text-[#fbbf24]">{g}<span className="text-[#f59e0b] text-[9px] font-normal">G</span></span>}
-        {(s > 0 || (p === 0 && g === 0)) && <span className="text-[#cbd5e1]">{s}<span className="text-[#94a3b8] text-[9px] font-normal">S</span></span>}
-        {(c > 0 || (p === 0 && g === 0 && s === 0)) && <span className="text-[#f97316]">{c}<span className="text-[#ea580c] text-[9px] font-normal">C</span></span>}
+        {p > 0 && <span className="text-[#2c2825]">{p}<span className="text-[#6c665e] text-[9px] font-normal">P</span></span>}
+        {g > 0 && <span className="text-[#84631f]">{g}<span className="text-[#8d6b1d] text-[9px] font-normal">G</span></span>}
+        {(s > 0 || (p === 0 && g === 0)) && <span className="text-[#52525b]">{s}<span className="text-[#9e968b] text-[9px] font-normal">S</span></span>}
+        {(c > 0 || (p === 0 && g === 0 && s === 0)) && <span className="text-[#a15c2f]">{c}<span className="text-[#8a4c26] text-[9px] font-normal">C</span></span>}
       </div>
     </div>
   )
@@ -168,62 +177,61 @@ function DesktopLeftSidebar({
   const equippedAccessory = player.equipped?.accessory ? items?.[player.equipped.accessory] : null
 
   return (
-    <aside className="hidden lg:flex lg:w-80 xl:w-96 shrink-0 flex-col gap-4 overflow-y-auto p-4 bg-[#0e1017]/90 border-r border-[#c89d51]/25 backdrop-blur-md text-[#f5ebd7] z-10 h-full">
+    <aside className="hidden lg:flex lg:w-80 xl:w-96 shrink-0 flex-col gap-4 overflow-y-auto p-4 bg-[#f5f0e6] border-r border-[#ede7dd] text-[#1a1917] z-10 h-full">
       {/* 1. Character Overview */}
-      <div className="bg-[#181324] border border-[#c89d51]/40 rounded-xl p-4 shadow-lg relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-24 h-24 bg-[#c89d51]/5 rounded-full blur-2xl pointer-events-none" />
+      <div className="bg-white border border-[#ede7dd] rounded-xl p-4 shadow-sm relative overflow-hidden">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-12 h-12 rounded-xl bg-[#2b1e38] border border-[#c89d51]/60 flex items-center justify-center text-[#d4af37] shadow-inner font-serif text-lg font-bold shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-[#ebdcb8]/50 border border-[#dec48e] flex items-center justify-center text-[#8d6b1d] shadow-inner font-serif text-lg font-bold shrink-0">
             {player.name ? player.name.charAt(0).toUpperCase() : 'P'}
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="font-serif text-lg font-bold text-[#f5ebd7] leading-tight truncate">{player.name || 'Hero'}</h2>
+            <h2 className="font-serif text-lg font-bold text-[#1a1917] leading-tight truncate">{player.name || 'Hero'}</h2>
             <div className="flex items-center gap-2 mt-1">
-              <span className="font-display text-xs font-semibold text-[#d4af37] bg-[#c89d51]/15 px-2 py-0.5 rounded-md border border-[#c89d51]/30 shrink-0">
+              <span className="font-display text-xs font-semibold text-[#8d6b1d] bg-[#ebdcb8]/40 px-2 py-0.5 rounded-md border border-[#dec48e] shrink-0">
                 Lvl {player.level}
               </span>
-              <span className="font-serif text-xs text-[#c8b8a2] truncate">{player.className || 'Adventurer'}</span>
+              <span className="font-serif text-xs text-[#6c665e] truncate">{player.className || 'Adventurer'}</span>
             </div>
           </div>
         </div>
 
         {/* Attrs Grid */}
-        <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-[#c89d51]/20">
-          <div className="bg-[#100b1a] border border-[#c89d51]/20 p-2 rounded-lg text-center">
-            <span className="block font-mono text-[10px] text-[#a89575] font-bold uppercase">STR</span>
-            <span className="font-mono text-sm font-bold text-[#f5ebd7]">{player.attrs?.STR ?? 10}</span>
+        <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-[#ede7dd]">
+          <div className="bg-[#f5f0e6] border border-[#ede7dd] p-2 rounded-lg text-center">
+            <span className="block font-mono text-[10px] text-[#9e968b] font-bold uppercase">STR</span>
+            <span className="font-mono text-sm font-bold text-[#1a1917]">{player.attrs?.STR ?? 10}</span>
           </div>
-          <div className="bg-[#100b1a] border border-[#c89d51]/20 p-2 rounded-lg text-center">
-            <span className="block font-mono text-[10px] text-[#a89575] font-bold uppercase">INT</span>
-            <span className="font-mono text-sm font-bold text-[#f5ebd7]">{player.attrs?.INT ?? 10}</span>
+          <div className="bg-[#f5f0e6] border border-[#ede7dd] p-2 rounded-lg text-center">
+            <span className="block font-mono text-[10px] text-[#9e968b] font-bold uppercase">INT</span>
+            <span className="font-mono text-sm font-bold text-[#1a1917]">{player.attrs?.INT ?? 10}</span>
           </div>
-          <div className="bg-[#100b1a] border border-[#c89d51]/20 p-2 rounded-lg text-center">
-            <span className="block font-mono text-[10px] text-[#a89575] font-bold uppercase">AGI</span>
-            <span className="font-mono text-sm font-bold text-[#f5ebd7]">{player.attrs?.AGI ?? 10}</span>
+          <div className="bg-[#f5f0e6] border border-[#ede7dd] p-2 rounded-lg text-center">
+            <span className="block font-mono text-[10px] text-[#9e968b] font-bold uppercase">AGI</span>
+            <span className="font-mono text-sm font-bold text-[#1a1917]">{player.attrs?.AGI ?? 10}</span>
           </div>
         </div>
       </div>
 
       {/* 2. Stats & Pools HUD */}
-      <div className="bg-[#181324] border border-[#c89d51]/40 rounded-xl p-4 shadow-lg space-y-3">
-        <div className="flex items-center justify-between border-b border-[#c89d51]/20 pb-2">
-          <h3 className="font-serif text-xs font-bold text-[#d4af37] tracking-wider uppercase">
+      <div className="bg-white border border-[#ede7dd] rounded-xl p-4 shadow-sm space-y-3">
+        <div className="flex items-center justify-between border-b border-[#ede7dd] pb-2">
+          <h3 className="font-serif text-xs font-bold text-[#8d6b1d] tracking-wider uppercase">
             Vitals & Wealth
           </h3>
           <CurrencyBadge copper={player.copper} />
         </div>
         <div className="space-y-2.5">
-          <ConditionBadge icon={Heart} label="Vitals" conditions={player.conditions} colorVar="#fb3552" />
+          <ConditionBadge icon={Heart} label="Vitals" conditions={player.conditions} colorVar="#b71c1c" />
         </div>
         {(player.locDisp || locationName) && (
-          <div className="pt-2 border-t border-[#c89d51]/20 flex items-center gap-2 text-xs text-[#c8b8a2] font-serif">
-            <MapIcon size={14} className="text-[#d4af37] shrink-0" />
+          <div className="pt-2 border-t border-[#ede7dd] flex items-center gap-2 text-xs text-[#6c665e] font-serif">
+            <MapIcon size={14} className="text-[#8d6b1d] shrink-0" />
             <span className="truncate">
               {player.locDisp || locationName}
-              {areaName && <span className="text-[#a89575]"> — {areaName}</span>}
+              {areaName && <span className="text-[#9e968b]"> — {areaName}</span>}
             </span>
             {player.time && (
-              <span className="ml-auto font-mono text-[11px] text-[#a89575] shrink-0">
+              <span className="ml-auto font-mono text-[11px] text-[#9e968b] shrink-0">
                 D{player.time.d} {player.time.h}
               </span>
             )}
@@ -232,44 +240,44 @@ function DesktopLeftSidebar({
       </div>
 
       {/* 3. Equip Slots */}
-      <div className="bg-[#181324] border border-[#c89d51]/40 rounded-xl p-4 shadow-lg space-y-2.5">
-        <h3 className="font-serif text-xs font-bold text-[#d4af37] tracking-wider uppercase border-b border-[#c89d51]/20 pb-2">
+      <div className="bg-white border border-[#ede7dd] rounded-xl p-4 shadow-sm space-y-2.5">
+        <h3 className="font-serif text-xs font-bold text-[#8d6b1d] tracking-wider uppercase border-b border-[#ede7dd] pb-2">
           Equipped Gear
         </h3>
         {/* Weapon Slot */}
-        <div className="flex items-center gap-3 p-2 rounded-lg bg-[#100b1a] border border-[#c89d51]/20">
-          <div className="w-8 h-8 rounded-md bg-[#251933] border border-[#c89d51]/40 flex items-center justify-center text-[#d4af37] shrink-0">
+        <div className="flex items-center gap-3 p-2 rounded-lg bg-[#f5f0e6] border border-[#ede7dd]">
+          <div className="w-8 h-8 rounded-md bg-white border border-[#dec48e]/60 flex items-center justify-center text-[#8d6b1d] shrink-0">
             <Swords size={16} />
           </div>
           <div className="min-w-0 flex-1">
-            <span className="block font-mono text-[9px] uppercase tracking-wider text-[#a89575]">Weapon</span>
-            <span className="font-serif text-xs font-medium text-[#f5ebd7] truncate block">
+            <span className="block font-mono text-[9px] uppercase tracking-wider text-[#9e968b]">Weapon</span>
+            <span className="font-serif text-xs font-medium text-[#1a1917] truncate block">
               {equippedWeapon ? equippedWeapon.name : player.equipped?.weapon || 'Empty Hand'}
             </span>
           </div>
         </div>
 
         {/* Armor Slot */}
-        <div className="flex items-center gap-3 p-2 rounded-lg bg-[#100b1a] border border-[#c89d51]/20">
-          <div className="w-8 h-8 rounded-md bg-[#251933] border border-[#c89d51]/40 flex items-center justify-center text-[#d4af37] shrink-0">
+        <div className="flex items-center gap-3 p-2 rounded-lg bg-[#f5f0e6] border border-[#ede7dd]">
+          <div className="w-8 h-8 rounded-md bg-white border border-[#dec48e]/60 flex items-center justify-center text-[#8d6b1d] shrink-0">
             <ShieldCheck size={16} />
           </div>
           <div className="min-w-0 flex-1">
-            <span className="block font-mono text-[9px] uppercase tracking-wider text-[#a89575]">Armor</span>
-            <span className="font-serif text-xs font-medium text-[#f5ebd7] truncate block">
+            <span className="block font-mono text-[9px] uppercase tracking-wider text-[#9e968b]">Armor</span>
+            <span className="font-serif text-xs font-medium text-[#1a1917] truncate block">
               {equippedArmor ? equippedArmor.name : player.equipped?.armor || 'No Armor'}
             </span>
           </div>
         </div>
 
         {/* Accessory Slot */}
-        <div className="flex items-center gap-3 p-2 rounded-lg bg-[#100b1a] border border-[#c89d51]/20">
-          <div className="w-8 h-8 rounded-md bg-[#251933] border border-[#c89d51]/40 flex items-center justify-center text-[#d4af37] shrink-0">
+        <div className="flex items-center gap-3 p-2 rounded-lg bg-[#f5f0e6] border border-[#ede7dd]">
+          <div className="w-8 h-8 rounded-md bg-white border border-[#dec48e]/60 flex items-center justify-center text-[#8d6b1d] shrink-0">
             <Sparkles size={16} />
           </div>
           <div className="min-w-0 flex-1">
-            <span className="block font-mono text-[9px] uppercase tracking-wider text-[#a89575]">Accessory</span>
-            <span className="font-serif text-xs font-medium text-[#f5ebd7] truncate block">
+            <span className="block font-mono text-[9px] uppercase tracking-wider text-[#9e968b]">Accessory</span>
+            <span className="font-serif text-xs font-medium text-[#1a1917] truncate block">
               {equippedAccessory ? equippedAccessory.name : player.equipped?.accessory || 'None'}
             </span>
           </div>
@@ -278,16 +286,16 @@ function DesktopLeftSidebar({
 
       {/* 4. Active Tactical Combat */}
       {combat?.active && (
-        <div className="bg-[#2a0e14] border border-rose/50 rounded-xl p-4 shadow-lg space-y-2 mt-auto">
-          <div className="flex items-center justify-between text-rose-300 font-serif text-xs font-bold uppercase tracking-wider">
+        <div className="bg-[#fdecec] border border-[#b71c1c]/30 rounded-xl p-4 shadow-sm space-y-2 mt-auto">
+          <div className="flex items-center justify-between text-[#b71c1c] font-serif text-xs font-bold uppercase tracking-wider">
             <span className="flex items-center gap-1.5">
-              <Swords size={14} className="text-rose-500" /> Tactical Encounter
+              <Swords size={14} className="text-[#b71c1c]" /> Tactical Encounter
             </span>
           </div>
-          <p className="font-serif text-sm font-bold text-white truncate">
+          <p className="font-serif text-sm font-bold text-[#1a1917] truncate">
             {combat.enemyName?.toUpperCase() ?? 'HOSTILE'}
           </p>
-          <ConditionBadge icon={Heart} label="Enemy" conditions={combat.enemyConditions} colorVar="#f43f5e" />
+          <ConditionBadge icon={Heart} label="Enemy" conditions={combat.enemyConditions} colorVar="#b71c1c" />
         </div>
       )}
     </aside>
@@ -343,6 +351,7 @@ interface TurnBlockProps {
   registerRef: (index: number, el: HTMLDivElement | null) => void
   debugMode?: boolean
   isLastTurn?: boolean
+  isChapterOpener?: boolean
   onEditLastTurn?: (newNar: string) => void
   onRemoveLastTurn?: () => void
   editLongText?: (label: string, value: string, hint?: string, placeholder?: string) => Promise<string | null>
@@ -424,7 +433,7 @@ function SessionPayloadPanel({ log, title, seedDebug }: { log: LogEntry[]; title
 
   return (
     <div className="px-3 pb-2">
-      <div className="rounded-lg border border-rose/30 bg-black/30 overflow-hidden">
+      <div className="rounded-lg border border-rose/30 bg-[#f5f0e6] overflow-hidden">
         <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-rose/20">
           <span className="text-[10px] font-mono uppercase tracking-wide text-rose">Session Payload — since Turn 0</span>
           <button onClick={handleCopy} className="inline-flex items-center gap-1 text-[10px] font-mono text-ink-muted hover:text-ink">
@@ -606,6 +615,7 @@ const TurnBlock = memo(function TurnBlock({
   registerRef,
   debugMode,
   isLastTurn,
+  isChapterOpener,
   onEditLastTurn,
   onRemoveLastTurn,
   editLongText,
@@ -628,19 +638,19 @@ const TurnBlock = memo(function TurnBlock({
             a matching divider closing it and resuming the tale. Styled as an
             in-game dossier reveal, not a raw "!command" console dump. */}
         <div className="w-full flex items-center gap-3">
-          <div className="flex-1 h-px bg-gold-accent/40" />
-          <span className="flex items-center gap-1.5 font-display text-[10px] uppercase tracking-wide text-gold-primary/70 shrink-0">
+          <div className="flex-1 h-px bg-[#dec48e]" />
+          <span className="flex items-center gap-1.5 font-display text-[10px] uppercase tracking-wide text-[#8d6b1d]/80 shrink-0">
             <Pause size={11} /> Roleplay Paused
           </span>
-          <div className="flex-1 h-px bg-gold-accent/40" />
+          <div className="flex-1 h-px bg-[#dec48e]" />
         </div>
 
-        <div className="rounded-xl border border-gold-primary/25 bg-gold-accent/10 px-3 py-2.5">
+        <div className="rounded-xl border border-[#dec48e] bg-white px-3 py-2.5 shadow-sm">
           <div className="flex items-center gap-1.5 mb-2">
-            <DossierIcon size={13} className="text-gold-primary/80 shrink-0" />
-            <span className="font-display text-xs font-bold uppercase tracking-wide text-gold-primary">
+            <DossierIcon size={13} className="text-[#8d6b1d] shrink-0" />
+            <span className="font-display text-xs font-bold uppercase tracking-wide text-[#8d6b1d]">
               {label}
-              {target && <span className="text-ink-muted normal-case font-normal"> — {target}</span>}
+              {target && <span className="text-[#6c665e] normal-case font-normal"> — {target}</span>}
             </span>
           </div>
           {rows.length > 0 && (
@@ -650,61 +660,61 @@ const TurnBlock = memo(function TurnBlock({
                   {row.category ? (
                     <button
                       onClick={() => onTapTerm(row.name, row.category!)}
-                      className="font-display font-semibold text-ink hover:text-gold-primary shrink-0 underline decoration-dotted decoration-gold-primary/40 underline-offset-2"
+                      className="font-display font-semibold text-[#1a1917] hover:text-[#8d6b1d] shrink-0 underline decoration-dotted decoration-[#b08830]/40 underline-offset-2"
                     >
                       {row.name}
                     </button>
                   ) : (
-                    <span className="font-display font-semibold text-ink shrink-0">{row.name}</span>
+                    <span className="font-display font-semibold text-[#1a1917] shrink-0">{row.name}</span>
                   )}
-                  <span className="text-ink-muted truncate">{row.fields.join(' · ')}</span>
+                  <span className="text-[#6c665e] truncate">{row.fields.join(' · ')}</span>
                 </div>
               ))}
             </div>
           )}
-          {note && <p className="font-narrative italic text-[11px] text-ink-muted mt-1.5">{note}</p>}
+          {note && <p className="font-narrative italic text-[11px] text-[#6c665e] mt-1.5">{note}</p>}
         </div>
 
-        <div className="w-full h-px bg-gold-accent/40" />
+        <div className="w-full h-px bg-[#dec48e]" />
       </div>
     )
   }
 
   if (entry.chapterSummary || entry.chapterBeats) {
     return (
-      <div ref={setRef} className="my-4 p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#161208]/90 via-[#10131e]/92 to-[#0a0c14]/95 border border-[#f0ca65]/35 shadow-xl relative overflow-hidden flex flex-col items-center gap-3">
+      <div ref={setRef} className="my-4 p-4 sm:p-5 rounded-2xl bg-[#fbf8f3] border border-[#dec48e] shadow-sm relative overflow-hidden flex flex-col items-center gap-3">
         <div className="w-full flex items-center gap-3">
-          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#f0ca65]/40 to-transparent" />
-          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#241a0a] border border-[#f0ca65]/40 text-[#fae5b5] font-display font-bold text-xs uppercase tracking-wider shrink-0 shadow-md">
-            <BookOpen size={13} className="text-[#f0ca65]" />
+          <div className="flex-1 h-px bg-[#dec48e]" />
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#ebdcb8]/40 border border-[#dec48e] text-[#8d6b1d] font-display font-bold text-xs uppercase tracking-wider shrink-0">
+            <BookOpen size={13} className="text-[#b08830]" />
             <span>Chapter {entry.chapterNumber} Milestone</span>
           </div>
-          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#f0ca65]/40 to-transparent" />
+          <div className="flex-1 h-px bg-[#dec48e]" />
         </div>
         {entry.chapterBeats?.length ? (
           <div className="w-full max-w-xl flex flex-col gap-2.5 pl-1">
             {entry.chapterBeats.map((b, i) => (
               <div key={i} className="flex gap-3">
                 <div className="flex flex-col items-center shrink-0 pt-0.5">
-                  <div className="w-2 h-2 rounded-full bg-[#f0ca65] shadow-[0_0_6px_rgba(240,202,101,0.6)]" />
-                  {i < entry.chapterBeats!.length - 1 && <div className="w-px flex-1 bg-[#f0ca65]/25 mt-1" />}
+                  <div className="w-2 h-2 rounded-full bg-[#b08830]" />
+                  {i < entry.chapterBeats!.length - 1 && <div className="w-px flex-1 bg-[#dec48e] mt-1" />}
                 </div>
                 <div className="pb-1 min-w-0">
-                  <p className="font-mono text-[10px] uppercase tracking-wide text-[#f0ca65]/70">{formatChapterBeatTime(b.time)}</p>
-                  <p className="font-narrative text-xs sm:text-sm text-[#f5ebd7]/90 leading-relaxed">{b.text}</p>
+                  <p className="font-mono text-[10px] uppercase tracking-wide text-[#8d6b1d]/70">{formatChapterBeatTime(b.time)}</p>
+                  <p className="font-narrative text-xs sm:text-sm text-[#2c2825] leading-relaxed">{b.text}</p>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <p className="font-narrative italic text-xs sm:text-sm text-[#f5ebd7]/90 text-center leading-relaxed max-w-xl">
+          <p className="font-narrative italic text-xs sm:text-sm text-[#2c2825] text-center leading-relaxed max-w-xl">
             "{entry.chapterSummary}"
           </p>
         )}
         {entry.chapterNarrative && (
-          <div className="w-full max-w-xl border-t border-[#f0ca65]/20 pt-3 flex flex-col gap-2">
+          <div className="w-full max-w-xl border-t border-[#dec48e]/60 pt-3 flex flex-col gap-2">
             {entry.chapterNarrative.split('\n\n').map((para, i) => (
-              <p key={i} className="font-narrative italic text-xs sm:text-sm text-[#f5ebd7]/80 leading-relaxed">
+              <p key={i} className="font-narrative italic text-xs sm:text-sm text-[#6c665e] leading-relaxed">
                 {para}
               </p>
             ))}
@@ -744,16 +754,32 @@ const TurnBlock = memo(function TurnBlock({
     [entry.nar, onTapTerm, items, locations]
   )
 
+  // §Editorial Vellum eyebrow — "Turn {block} · Chapter {chapter}", parsed
+  // from the same turnRef every entry already carries ("C{chapter}-{block}",
+  // see LogEntry.turnRef), so this is real data rather than fabricated
+  // per-turn framing. Falls back to the plain D-xx/location timestamp for an
+  // entry logged before turnRef existed.
+  const turnRefMatch = entry.turnRef ? /^C(\d+)-(\d+)$/.exec(entry.turnRef) : null
+
   return (
-    <div
-      ref={setRef}
-      className="space-y-1 border-l-2 pl-3"
-      style={{ borderColor: stateMeta ? `color-mix(in srgb, ${stateMeta.accent} 33%, transparent)` : 'transparent' }}
-    >
-      {entry.time && entry.locDisp && (
-        <p className="font-mono text-[10px] font-semibold uppercase tracking-wide text-gold-primary text-left">
-          {formatTimestamp(entry.time, entry.locDisp)}
-        </p>
+    <div ref={setRef} className="space-y-2">
+      {(turnRefMatch || (entry.time && entry.locDisp)) && (
+        <div className="flex items-center justify-between gap-3 border-b border-[#ede7dd] pb-1.5">
+          {turnRefMatch ? (
+            <span className="font-sans text-[10px] tracking-[0.14em] uppercase text-[#9e968b]">
+              Turn {turnRefMatch[2]} &nbsp;·&nbsp; Chapter {turnRefMatch[1]}
+            </span>
+          ) : (
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wide text-[#8d6b1d]">
+              {entry.time && entry.locDisp ? formatTimestamp(entry.time, entry.locDisp) : ''}
+            </span>
+          )}
+          {entry.locDisp && (
+            <span className="font-mono text-[10px] text-[#8d6b1d] shrink-0 truncate max-w-[45%] text-right">
+              {entry.locDisp}
+            </span>
+          )}
+        </div>
       )}
       {/* The player's own typed action — still the same narrative serif and
           italic treatment as everything else on the page (dropped the old
@@ -764,9 +790,9 @@ const TurnBlock = memo(function TurnBlock({
           longer forced onto the same line as the turn-state badge, which
           used to wrap awkwardly against a short action. */}
       {entry.action && (
-        <div className="flex items-start gap-1.5 rounded-lg bg-gold-accent/[0.07] px-2.5 py-1.5">
-          <Feather size={12} className="text-gold-primary/60 shrink-0 mt-0.5" />
-          <p className="font-narrative italic text-sm text-gold-primary leading-snug text-left whitespace-pre-wrap">{entry.action}</p>
+        <div className="flex items-start gap-1.5 rounded-lg bg-[#f5f0e6] border border-[#ede7dd] px-2.5 py-1.5">
+          <Feather size={12} className="text-[#b08830] shrink-0 mt-0.5" />
+          <p className="font-narrative italic text-sm text-[#6c665e] leading-snug text-left whitespace-pre-wrap">{entry.action}</p>
         </div>
       )}
       {((StateIcon && stateMeta) || entry.mood) && (
@@ -777,13 +803,15 @@ const TurnBlock = memo(function TurnBlock({
             </span>
           )}
           {entry.mood && (
-            <span className="inline-flex items-center gap-1 text-[11px] italic text-ink-muted">
+            <span className="inline-flex items-center gap-1 text-[11px] italic text-[#8a8378]">
               <Sparkle size={10} /> {entry.mood}
             </span>
           )}
         </div>
       )}
-      <div className="font-narrative text-sm leading-relaxed whitespace-pre-wrap text-left">
+      <div
+        className={`font-narrative text-[15.5px] sm:text-[16.5px] text-[#2c2825] leading-[1.85] whitespace-pre-wrap text-left ${isChapterOpener ? 'editorial-drop-cap' : ''}`}
+      >
         {renderedNarrative}
       </div>
       {entry.levelUp && (
@@ -849,7 +877,7 @@ const TurnBlock = memo(function TurnBlock({
           {entry.minionsDissipated.map((name, i) => (
             <span
               key={i}
-              className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1 font-display text-xs text-ink-muted"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#f5f0e6] border border-[#ede7dd] px-3 py-1 font-display text-xs text-ink-muted"
             >
               <Ghost size={12} /> {name} dissipated (unpaid upkeep)
             </span>
@@ -974,7 +1002,7 @@ function ApiErrorPanel({
       <div className="flex items-center gap-2 border-b border-white/10 pb-2.5">
         <AlertTriangle className="text-rose-400 shrink-0" size={18} />
         <h3 className="font-display text-sm font-bold tracking-wide text-rose-400 flex-1">
-          FATE THREAD FALTERED
+          Request Failed
         </h3>
         <button
           onClick={handleDismissAndPause}
@@ -1196,10 +1224,10 @@ export default function Chronicle({
     }
   }
 
-  // §6.0 — the chrome (header/frame/input/motes) uses a fixed gold accent; it
+  // §6.0 — the chrome (header/frame/input/motes) uses a fixed ochre accent; it
   // no longer retints per turn state. Per-entry turn-state badges in the log
   // (TurnBlock, below) are unrelated and keep their own per-entry coloring.
-  const stateAccent = '#e8ca8a'
+  const stateAccent = '#b08830'
 
   // Non-chapter-summary entries only — those are what the navigator steps between.
   const narratedIndices = log.reduce<number[]>((acc, e, i) => {
@@ -1499,8 +1527,12 @@ export default function Chronicle({
   const popupImageUrl = useEntityImage(popupImageKey)
 
   return (
-    <div className="fixed inset-0 overflow-hidden text-ink bg-canvas flex flex-col lg:flex-row">
-      {/* PC Left Sidebar (Character Info, Equipment Slots, Stats HUD, Tactical Combat) */}
+    <div className="parchment-surface fixed inset-0 overflow-hidden text-[#1a1917] bg-[#fbf8f3] flex flex-col lg:flex-row">
+      {/* PC Left Sidebar (Character Info, Equipment Slots, Stats HUD, Tactical Combat) —
+          a Bento-style column of distinct light cards. The reference mockup is
+          mobile-only; this is how the same editorial vellum language extends
+          to a wider desktop viewport instead of just stretching the reading
+          column, keeping every stat/equipment panel it already carried. */}
       <DesktopLeftSidebar
         player={player}
         items={items}
@@ -1514,16 +1546,16 @@ export default function Chronicle({
         {/* Mobile/Tablet Header Bar */}
         <header
           ref={headerRef}
-          className="absolute top-0 inset-x-0 z-10 flex flex-col bg-[#0b0d14] border-b border-[#e8ca8a]/30 shadow-2xl"
+          className="absolute top-0 inset-x-0 z-10 flex flex-col bg-[#faf8f5]/95 border-b border-[#ede7dd]"
         >
           <div
-            className="flex items-center justify-between px-3 py-1.5 bg-[#0b0d14]"
+            className="flex items-center justify-between px-3 py-1.5"
             style={{ paddingTop: 'max(0.375rem, env(safe-area-inset-top))' }}
           >
-            <button onClick={onOpenMenu} aria-label="Home" title="Main Menu" className="w-8 h-8 rounded-xl inline-flex items-center justify-center text-[#e8ca8a] hover:bg-white/10">
+            <button onClick={onOpenMenu} aria-label="Home" title="Main Menu" className="w-8 h-8 rounded-xl inline-flex items-center justify-center text-[#8d6b1d] hover:bg-[#f5f0e6]">
               <Home size={16} />
             </button>
-            <div className="font-display text-xs font-semibold tracking-wide text-center flex-1 truncate px-2 text-[#e8ca8a]">
+            <div className="font-display text-xs font-semibold tracking-[0.08em] text-center flex-1 truncate px-2 text-[#1a1917]">
               {title}
             </div>
             {debugMode && (
@@ -1531,26 +1563,26 @@ export default function Chronicle({
                 onClick={() => setSessionPayloadOpen((v) => !v)}
                 aria-label="Session Payload"
                 title="This session's turn-by-turn request/response/finishReason since turn 0, for debugging"
-                className={`w-8 h-8 rounded-xl inline-flex items-center justify-center hover:bg-white/10 ${sessionPayloadOpen ? 'text-rose' : 'text-[#e8ca8a]'}`}
+                className={`w-8 h-8 rounded-xl inline-flex items-center justify-center hover:bg-[#f5f0e6] ${sessionPayloadOpen ? 'text-rose' : 'text-[#8d6b1d]'}`}
               >
                 <Bug size={16} />
               </button>
             )}
-            <button onClick={onOpenCodex} aria-label="Codex" className="w-8 h-8 rounded-xl inline-flex items-center justify-center text-[#e8ca8a] hover:bg-white/10">
+            <button onClick={onOpenCodex} aria-label="Codex" className="w-8 h-8 rounded-xl inline-flex items-center justify-center text-[#8d6b1d] hover:bg-[#f5f0e6]">
               <Library size={16} />
             </button>
-            <button onClick={onOpenSettings} aria-label="Settings" className="w-8 h-8 rounded-xl inline-flex items-center justify-center text-[#e8ca8a] hover:bg-white/10">
+            <button onClick={onOpenSettings} aria-label="Settings" className="w-8 h-8 rounded-xl inline-flex items-center justify-center text-[#8d6b1d] hover:bg-[#f5f0e6]">
               <SettingsIcon size={16} />
             </button>
           </div>
 
           {/* Player Vitals HUD Bar placed below header bar (mobile / tablet) */}
-          <div className="lg:hidden px-3 border-t border-white/10 bg-[#0d0f18]">
+          <div className="lg:hidden px-3 border-t border-[#ede7dd] bg-[#f5f0e6]/70">
             <div className="flex items-center justify-between py-0.5">
               <button
                 onClick={() => setStatsCollapsed((v) => !v)}
                 aria-label={statsCollapsed ? 'Expand stats' : 'Collapse stats'}
-                className="w-full flex items-center justify-center leading-none text-white/40 hover:text-[#e8ca8a] py-0.5 cursor-pointer"
+                className="w-full flex items-center justify-center leading-none text-[#9e968b] hover:text-[#8d6b1d] py-0.5 cursor-pointer"
               >
                 {statsCollapsed ? <ChevronDown size={11} /> : <ChevronUp size={11} />}
               </button>
@@ -1560,8 +1592,8 @@ export default function Chronicle({
               style={{ gridTemplateRows: statsCollapsed ? '0fr' : '1fr' }}
             >
               <div className="overflow-hidden">
-                <div className="px-1 pb-1.5 flex items-center gap-3 text-white/80 flex-wrap sm:flex-nowrap">
-                  <ConditionBadge icon={Heart} label="Vitals" conditions={player.conditions} colorVar="#fb3552" />
+                <div className="px-1 pb-1.5 flex items-center gap-3 text-[#2c2825] flex-wrap sm:flex-nowrap">
+                  <ConditionBadge icon={Heart} label="Vitals" conditions={player.conditions} colorVar="#b71c1c" />
                   <CurrencyBadge copper={player.copper} />
                 </div>
               </div>
@@ -1569,95 +1601,127 @@ export default function Chronicle({
           </div>
 
           {combat?.active && (
-            <div className="lg:hidden border-t border-rose/30 px-4 py-1 text-white/80 bg-rose-950/40">
-              <ConditionBadge icon={Swords} label={combat.enemyName?.toUpperCase() ?? 'HOSTILE'} conditions={combat.enemyConditions} colorVar="#e11d48" />
+            <div className="lg:hidden border-t border-[#b71c1c]/25 px-4 py-1 text-[#2c2825] bg-[#fdecec]">
+              <ConditionBadge icon={Swords} label={combat.enemyName?.toUpperCase() ?? 'HOSTILE'} conditions={combat.enemyConditions} colorVar="#b71c1c" />
             </div>
           )}
 
           {debugMode && sessionPayloadOpen && <SessionPayloadPanel log={log} title={title} seedDebug={seedDebug} />}
         </header>
 
-        {/* §7 Present-NPC portrait rail — floats just above the parchment,
-            only rendered when at least one present NPC actually has art. */}
-        {presentNpcList.length > 0 && (
-          <div className="absolute left-3 z-10 flex gap-1.5" style={{ top: headerHeight + 10 }}>
-            {presentNpcList.map(([id, n]) => (
-              <NpcPortraitChip key={id} name={n.name} portraitKey={n.portraitKey} />
-            ))}
-          </div>
-        )}
-
-        {/* Parchment Log Container — the current location's own generated
-            art becomes the background image when one exists (§7 Image
-            Generation); otherwise the existing flat parchment texture
-            below is completely untouched, exactly as it always was. */}
+        {/* Parchment Log Container — flat vellum ground; the current
+            location's own generated art (§7 Image Generation) now runs as a
+            proper hero banner at the top of the scroll content instead of a
+            tinted full-bleed wash behind every turn, matching the reference
+            mockup's "Cinematic Scene Plate" treatment. */}
         <div
           ref={scrollRef}
           onClick={() => setDrawerOpen(false)}
-          className={`parchment-surface absolute inset-0 overflow-y-auto rounded-xl pl-4 pr-6 space-y-4 cursor-default ${currentLocationImageUrl ? 'bg-parchment' : 'bg-parchment parchment-texture'}`}
+          className="parchment-surface absolute inset-0 overflow-y-auto cursor-default bg-[#fbf8f3]"
           style={{
             top: 6,
             bottom: 6,
             left: 6,
             right: 6,
-            paddingTop: headerHeight + 16,
+            paddingTop: headerHeight,
             paddingBottom: bottomHeight + 40,
-            ...(currentLocationImageUrl
-              ? {
-                  // Tint matches --td-parchment (#f8f1de) exactly, at
-                  // enough opacity to keep narration text legible over
-                  // whatever the generated art looks like underneath.
-                  backgroundImage: `linear-gradient(rgba(248,241,222,0.88), rgba(248,241,222,0.88)), url(${currentLocationImageUrl})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                }
-              : {}),
           }}
         >
+          {/* §7 Cinematic hero plate — the current location's generated art,
+              full-bleed with a gradient fade into the vellum ground below,
+              carrying the location name + day/time as an overlay badge. Only
+              rendered when art actually exists; no fallback texture needed
+              now that the ground is a flat, considered vellum on its own. */}
+          {currentLocationImageUrl && (
+            <div className="relative w-full h-[220px] sm:h-[280px] overflow-hidden">
+              <img
+                src={currentLocationImageUrl}
+                alt={locations[player.locId]?.name || player.locDisp || 'Current location'}
+                className="w-full h-full object-cover object-center"
+              />
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{ background: 'linear-gradient(to bottom, rgba(251,248,243,0) 55%, rgba(251,248,243,0.55) 82%, #fbf8f3 100%)' }}
+              />
+              <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between text-[11px] font-mono tracking-wider text-[#4e4637] uppercase">
+                <span className="flex items-center gap-1.5 truncate">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#b08830] shrink-0" />
+                  <span className="truncate">{player.locDisp || locations[player.locId]?.name || 'Unknown'}</span>
+                </span>
+                {player.time && (
+                  <span className="shrink-0 pl-2">Day {player.time.d} · {player.time.h}</span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* §7 Present-NPC portrait rail — a row of illuminated medallions
+              for whoever's in the scene, just above the reading column. Only
+              rendered when at least one present NPC actually has art. */}
+          {presentNpcList.length > 0 && (
+            <div className="max-w-2xl sm:max-w-3xl mx-auto w-full px-4 pt-3 flex gap-3 overflow-x-auto">
+              {presentNpcList.map(([id, n]) => (
+                <NpcPortraitChip key={id} name={n.name} portraitKey={n.portraitKey} role={n.role} />
+              ))}
+            </div>
+          )}
+
+          <div className="pl-4 pr-6 pt-3">
           <div className="max-w-2xl sm:max-w-3xl mx-auto w-full space-y-4">
             {log.length === 0 && (
-              <p className="font-narrative italic text-sm opacity-60 text-center">
-                The tale hasn't begun. Type an action below to dive in.
+              <p className="font-narrative italic text-sm text-[#6c665e] text-center">
+                No turns yet. Type an action below to begin.
               </p>
             )}
             {hasEarlierTurns && (
               <button
                 onClick={loadEarlierTurns}
-                className="mx-auto flex items-center gap-1.5 rounded-xl border border-gold-accent/40 px-3 py-1.5 font-display text-xs text-gold-primary cursor-pointer hover:bg-gold-accent/10"
+                className="mx-auto flex items-center gap-1.5 rounded-full border border-[#ede7dd] bg-[#f5f0e6] px-3 py-1.5 font-display text-xs text-[#8d6b1d] cursor-pointer hover:bg-[#ebdcb8]/40"
               >
                 <History size={12} /> Load Earlier Turns
               </button>
             )}
-            {visibleLog.map((entry, i) => (
-              <TurnBlock
-                key={windowStart + i}
-                entry={entry}
-                globalIndex={windowStart + i}
-                onTapTerm={onTapTerm}
-                registerRef={registerRef}
-                debugMode={debugMode}
-                isLastTurn={windowStart + i === lastNarratedIndex}
-                onEditLastTurn={onEditLastTurn}
-                onRemoveLastTurn={onRemoveLastTurn}
-                editLongText={editLongText}
-                onOpenRetryEditor={onOpenRetryEditor}
-                confirmAction={confirmAction}
-                setInput={setInput}
-                onSend={onSend}
-                items={items}
-                locations={locations}
-              />
-            ))}
-            {busy && <p className="font-narrative italic text-sm opacity-50 text-left">The thread of fate is being woven...</p>}
+            {visibleLog.map((entry, i) => {
+              const globalIndex = windowStart + i
+              // §Editorial Vellum drop cap — only the first real narrated
+              // entry of a chapter (the log's own start, or the first entry
+              // after a chapter-boundary synthetic entry) gets the
+              // illuminated opening letter, matching the mockup's "opening
+              // chapter paragraph" use rather than repeating it on every turn.
+              const prevEntry = globalIndex > 0 ? log[globalIndex - 1] : undefined
+              const isChapterOpener = !!entry.nar && (globalIndex === 0 || !!prevEntry?.chapterBeats?.length || !!prevEntry?.chapterSummary)
+              return (
+                <TurnBlock
+                  key={globalIndex}
+                  entry={entry}
+                  globalIndex={globalIndex}
+                  onTapTerm={onTapTerm}
+                  registerRef={registerRef}
+                  debugMode={debugMode}
+                  isLastTurn={globalIndex === lastNarratedIndex}
+                  isChapterOpener={isChapterOpener}
+                  onEditLastTurn={onEditLastTurn}
+                  onRemoveLastTurn={onRemoveLastTurn}
+                  editLongText={editLongText}
+                  onOpenRetryEditor={onOpenRetryEditor}
+                  confirmAction={confirmAction}
+                  setInput={setInput}
+                  onSend={onSend}
+                  items={items}
+                  locations={locations}
+                />
+              )
+            })}
+            {busy && <p className="font-narrative italic text-sm text-[#6c665e] text-left">Generating...</p>}
             {lastLogEntry?.act && lastLogEntry.act.length > 0 && !busy && !error && (
-              <div className="flex flex-col gap-1.5 pt-2 border-t border-gold-accent/15">
-                <span className="text-[10px] font-mono tracking-wider text-gold-primary opacity-60 uppercase text-left">Suggested Actions</span>
+              <div className="flex flex-col gap-1.5 pt-2 border-t border-[#ede7dd]">
+                <span className="text-[10px] font-mono tracking-wider text-[#8d6b1d]/70 uppercase text-left">Suggested Actions</span>
                 <div className="flex flex-wrap gap-1.5 justify-start">
                   {lastLogEntry.act.map((suggestion, idx) => (
                     <button
                       key={idx}
                       onClick={() => setInput(suggestion)}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-gold-accent/10 hover:bg-gold-accent/20 border border-gold-accent/35 hover:border-gold-accent/60 px-3 py-1 font-narrative text-xs text-gold-primary transition-all cursor-pointer active:scale-[0.98]"
+                      className="inline-flex items-center gap-1.5 rounded-full bg-[#f5f0e6] hover:bg-[#ebdcb8]/40 border border-[#ede7dd] hover:border-[#dec48e] px-3 py-1 font-narrative text-xs text-[#8d6b1d] transition-all cursor-pointer active:scale-[0.98]"
                     >
                       {suggestion}
                     </button>
@@ -1678,6 +1742,7 @@ export default function Chronicle({
               />
             )}
           </div>
+          </div>
         </div>
 
         {/* Turn Navigator */}
@@ -1688,36 +1753,36 @@ export default function Chronicle({
             onPointerMove={onNavPointerMove}
             onPointerUp={onNavPointerUp}
             onPointerCancel={onNavPointerUp}
-            className="turn-nav group fixed z-10 flex flex-col items-center gap-0.5 rounded-xl backdrop-blur-sm px-1 py-1.5 cursor-grab active:cursor-grabbing touch-none"
+            className="turn-nav group fixed z-10 flex flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 cursor-grab active:cursor-grabbing touch-none"
             style={{
               right: 14,
               ...(navDragPos ? { top: navDragPos.y } : { bottom: bottomHeight + 16 }),
               ['--turn-accent' as string]: stateAccent,
-              ...(navDragging ? { background: 'rgba(20,22,34,0.88)' } : {}),
+              ...(navDragging ? { background: 'rgba(255,255,255,0.96)', border: '1px solid #ede7dd' } : {}),
             }}
           >
             <button
               onClick={goPrevious}
               aria-label="Previous turn"
-              className="w-6 h-6 rounded-lg inline-flex items-center justify-center text-white/40 hover:!text-[#e8ca8a] group-hover:text-white/70 hover:bg-white/10 transition-colors cursor-pointer"
+              className="w-6 h-6 rounded-lg inline-flex items-center justify-center text-[#9e968b] hover:!text-[#8d6b1d] group-hover:text-[#6c665e] hover:bg-[#f5f0e6] transition-colors cursor-pointer"
             >
               <ChevronUp size={13} />
             </button>
-            <span className="font-mono text-[10px] tabular-nums text-white/40 group-hover:text-white/80 transition-colors">
+            <span className="font-mono text-[10px] tabular-nums text-[#9e968b] group-hover:text-[#6c665e] transition-colors">
               {navPosition || ''}
             </span>
             <button
               onClick={goNext}
               aria-label="Next turn"
-              className="w-6 h-6 rounded-lg inline-flex items-center justify-center text-white/40 hover:!text-[#e8ca8a] group-hover:text-white/70 hover:bg-white/10 transition-colors cursor-pointer"
+              className="w-6 h-6 rounded-lg inline-flex items-center justify-center text-[#9e968b] hover:!text-[#8d6b1d] group-hover:text-[#6c665e] hover:bg-[#f5f0e6] transition-colors cursor-pointer"
             >
               <ChevronDown size={13} />
             </button>
-            <div className="w-3 h-px my-0.5 bg-white/10 group-hover:bg-white/20 transition-colors" />
+            <div className="w-3 h-px my-0.5 bg-[#ede7dd] transition-colors" />
             <button
               onClick={jumpToLatest}
               aria-label="Jump to latest"
-              className="w-6 h-6 rounded-lg inline-flex items-center justify-center text-white/40 hover:!text-[#e8ca8a] group-hover:text-white/70 hover:bg-white/10 transition-colors cursor-pointer"
+              className="w-6 h-6 rounded-lg inline-flex items-center justify-center text-[#9e968b] hover:!text-[#8d6b1d] group-hover:text-[#6c665e] hover:bg-[#f5f0e6] transition-colors cursor-pointer"
             >
               <ChevronsDown size={13} />
             </button>
@@ -1727,7 +1792,7 @@ export default function Chronicle({
         {/* Elevated Input Bar Tray with Extending Drawer Menu */}
         <div
           ref={bottomRef}
-          className="absolute bottom-0 inset-x-0 lg:bottom-5 lg:inset-x-6 lg:max-w-4xl lg:mx-auto z-20 flex flex-col rounded-t-2xl lg:rounded-2xl border-t border-x-0 border-b-0 lg:border shadow-2xl bg-[#0b0d14] border-[#e8ca8a]/30"
+          className="absolute bottom-0 inset-x-0 lg:bottom-5 lg:inset-x-6 lg:max-w-4xl lg:mx-auto z-20 flex flex-col rounded-t-2xl lg:rounded-2xl border-t border-x-0 border-b-0 lg:border shadow-[0_-2px_16px_rgba(0,0,0,0.04)] bg-[#faf8f5] border-[#ede7dd]"
         >
           {/* Drawer Menu Popup */}
           <AnimatePresence>
@@ -1737,15 +1802,15 @@ export default function Chronicle({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.97 }}
                 transition={{ duration: 0.18, ease: 'easeOut' }}
-                className="absolute bottom-full mb-3 left-0 right-0 p-3 sm:p-4 rounded-2xl bg-[#14101d]/95 border border-[#c89d51]/50 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.9)] z-30"
+                className="absolute bottom-full mb-3 left-0 right-0 p-3 sm:p-4 rounded-2xl bg-white border border-[#ede7dd] shadow-[0_12px_32px_rgba(0,0,0,0.1)] z-30"
               >
-                <div className="flex items-center justify-between mb-2.5 px-1 border-b border-[#c89d51]/20 pb-1.5">
-                  <span className="font-serif text-xs font-bold uppercase tracking-wider text-[#d4af37] flex items-center gap-1.5">
-                    <LayoutGrid size={14} /> Codex Navigation
+                <div className="flex items-center justify-between mb-2.5 px-1 border-b border-[#ede7dd] pb-1.5">
+                  <span className="font-serif text-xs font-bold uppercase tracking-wider text-[#8d6b1d] flex items-center gap-1.5">
+                    <LayoutGrid size={14} /> Codex
                   </span>
                   <button
                     onClick={() => setDrawerOpen(false)}
-                    className="text-[#a89575] hover:text-[#f5ebd7] p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                    className="text-[#9e968b] hover:text-[#1a1917] p-1 rounded-lg hover:bg-[#f5f0e6] transition-colors cursor-pointer"
                   >
                     <X size={14} />
                   </button>
@@ -1758,10 +1823,10 @@ export default function Chronicle({
                         act.onClick()
                         setDrawerOpen(false)
                       }}
-                      className="group flex flex-col items-center justify-center p-2 rounded-xl bg-[#23172e] border border-[#c89d51]/30 hover:border-[#f0ca65] hover:bg-[#322042] active:scale-95 text-[#f5ebd7] transition-all shadow-md cursor-pointer aspect-square"
+                      className="group flex flex-col items-center justify-center p-2 rounded-xl bg-[#f5f0e6] border border-[#ede7dd] hover:border-[#dec48e] hover:bg-[#ebdcb8]/30 active:scale-95 text-[#1a1917] transition-all cursor-pointer aspect-square"
                     >
-                      <act.icon size={20} className="text-[#d4af37] group-hover:text-[#fff5dd] transition-colors mb-1 shrink-0" />
-                      <span className="font-serif text-[10px] font-medium text-[#c8b8a2] group-hover:text-[#ffffff] truncate w-full text-center">
+                      <act.icon size={20} className="text-[#8d6b1d] transition-colors mb-1 shrink-0" />
+                      <span className="font-serif text-[10px] font-medium text-[#6c665e] group-hover:text-[#1a1917] truncate w-full text-center">
                         {act.label}
                       </span>
                     </button>
@@ -1774,40 +1839,40 @@ export default function Chronicle({
           <div className="relative px-3 pt-2 pb-2.5 flex gap-2 items-end">
             {/* Bang Suggestions */}
             {bangSuggestions.length > 0 && (
-              <div className="absolute left-3 right-3 bottom-full mb-1.5 rounded-xl border border-[#e8ca8a]/25 bg-[#141622]/90 backdrop-blur-md shadow-2xl overflow-hidden">
+              <div className="absolute left-3 right-3 bottom-full mb-1.5 rounded-xl border border-[#ede7dd] bg-white shadow-[0_12px_32px_rgba(0,0,0,0.1)] overflow-hidden">
                 {bangSuggestions.map((cmd, i) => (
                   <button
                     key={cmd.name}
                     onClick={() => selectBangSuggestion(cmd.name)}
                     onMouseEnter={() => setBangHighlight(i)}
                     className={`w-full text-left px-3 py-2 flex items-center justify-between gap-3 transition-colors ${
-                      i === bangHighlight ? 'bg-[#e8ca8a]/15' : ''
+                      i === bangHighlight ? 'bg-[#f5f0e6]' : ''
                     }`}
                   >
-                    <span className="font-mono text-xs font-semibold text-[#e8ca8a] shrink-0">{cmd.usage}</span>
-                    <span className="text-[11px] text-white/50 truncate">{cmd.description}</span>
+                    <span className="font-mono text-xs font-semibold text-[#8d6b1d] shrink-0">{cmd.usage}</span>
+                    <span className="text-[11px] text-[#9e968b] truncate">{cmd.description}</span>
                   </button>
                 ))}
               </div>
             )}
             {/* Slash Suggestions */}
             {slashSuggestions.length > 0 && (
-              <div className="absolute left-3 right-3 bottom-full mb-1.5 rounded-xl border border-[#e8ca8a]/25 bg-[#141622]/90 backdrop-blur-md shadow-2xl overflow-hidden">
+              <div className="absolute left-3 right-3 bottom-full mb-1.5 rounded-xl border border-[#ede7dd] bg-white shadow-[0_12px_32px_rgba(0,0,0,0.1)] overflow-hidden">
                 {slashSuggestions.map((cmd, i) => (
                   <button
                     key={cmd.id}
                     onClick={() => selectSlashSuggestion(cmd)}
                     onMouseEnter={() => setSlashHighlight(i)}
                     className={`w-full text-left px-3 py-2 flex items-center justify-between gap-3 transition-colors ${
-                      i === slashHighlight ? 'bg-[#e8ca8a]/15' : ''
+                      i === slashHighlight ? 'bg-[#f5f0e6]' : ''
                     }`}
                   >
-                    <span className="font-mono text-xs font-semibold text-[#e8ca8a] shrink-0">/{cmd.name}</span>
-                    <span className="text-[11px] text-white/50 truncate">{cmd.prompt}</span>
+                    <span className="font-mono text-xs font-semibold text-[#8d6b1d] shrink-0">/{cmd.name}</span>
+                    <span className="text-[11px] text-[#9e968b] truncate">{cmd.prompt}</span>
                   </button>
                 ))}
                 {slashCommands.length === 0 && (
-                  <p className="px-3 py-2 text-[11px] text-white/40 italic">No slash commands yet — tap / below to create one.</p>
+                  <p className="px-3 py-2 text-[11px] text-[#9e968b] italic">No slash commands yet — tap / below to create one.</p>
                 )}
               </div>
             )}
@@ -1817,7 +1882,7 @@ export default function Chronicle({
               onClick={onOpenSlashManager}
               aria-label="Slash commands"
               title="Slash Command Manager"
-              className="shrink-0 w-8 h-8 rounded-xl inline-flex items-center justify-center font-mono text-sm font-bold bg-[#1e142a] text-[#e8ca8a] border border-[#c89d51]/40 hover:bg-[#2c1d3e] hover:border-[#f0ca65] hover:text-[#f0ca65] transition-all cursor-pointer"
+              className="shrink-0 w-8 h-8 rounded-xl inline-flex items-center justify-center font-mono text-sm font-bold bg-[#f5f0e6] text-[#8d6b1d] border border-[#ede7dd] hover:bg-[#ebdcb8]/40 hover:border-[#dec48e] transition-all cursor-pointer"
             >
               /
             </button>
@@ -1829,8 +1894,8 @@ export default function Chronicle({
               title="Quick Codex Navigation Drawer"
               className={`shrink-0 w-8 h-8 rounded-xl inline-flex items-center justify-center transition-all border cursor-pointer ${
                 drawerOpen
-                  ? 'bg-[#c89d51] text-[#0e1017] border-[#f0ca65] shadow-[0_0_12px_rgba(200,157,81,0.5)]'
-                  : 'bg-[#1e142a] text-[#e8ca8a] border-[#c89d51]/40 hover:bg-[#2c1d3e] hover:border-[#f0ca65] hover:text-[#f0ca65]'
+                  ? 'bg-[#b08830] text-white border-[#b08830]'
+                  : 'bg-[#f5f0e6] text-[#8d6b1d] border-[#ede7dd] hover:bg-[#ebdcb8]/40 hover:border-[#dec48e]'
               }`}
             >
               <LayoutGrid size={16} />
@@ -1900,7 +1965,7 @@ export default function Chronicle({
               }}
               placeholder="What do you do?"
               disabled={busy}
-              className="turn-glow flex-1 resize-none rounded-xl border px-3 py-2 font-narrative text-[13px] leading-relaxed text-white/90 placeholder:text-white/35 min-h-[56px] bg-[#131622]"
+              className="turn-glow flex-1 resize-none rounded-xl border px-3 py-2 font-narrative text-[13px] leading-relaxed text-[#1a1917] placeholder:text-[#9e968b] min-h-[56px]"
               style={{
                 maxHeight: INPUT_MAX_HEIGHT,
                 ['--turn-accent' as string]: stateAccent,
@@ -1912,7 +1977,7 @@ export default function Chronicle({
               onClick={send}
               disabled={busy || !input.trim()}
               aria-label="Send"
-              className="turn-glow-btn w-8 h-8 shrink-0 rounded-xl inline-flex items-center justify-center transition-all bg-[#e8ca8a] text-[#0e1017] border border-[#f0ca65] hover:bg-[#f0ca65] hover:shadow-[0_0_12px_rgba(200,157,81,0.5)] disabled:bg-white/10 disabled:text-white/25 disabled:border-transparent cursor-pointer"
+              className="turn-glow-btn w-8 h-8 shrink-0 rounded-xl inline-flex items-center justify-center transition-all bg-[#b08830] text-white border border-[#b08830] hover:bg-[#8d6b1d] disabled:bg-[#ede7dd] disabled:text-[#9e968b] disabled:border-transparent cursor-pointer"
             >
               <Send size={14} />
             </button>
@@ -1922,60 +1987,45 @@ export default function Chronicle({
 
       {popup && popupEntry && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 sm:p-6"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 sm:p-6"
           onClick={() => setPopup(null)}
         >
           <div
-            className="relative bg-[#120d1b] border border-[#c89d51]/50 shadow-[0_20px_50px_rgba(0,0,0,0.95),0_0_30px_rgba(200,157,81,0.2)] rounded-xl p-5 sm:p-6 w-full max-w-sm sm:max-w-md overflow-hidden text-left"
+            className="relative bg-[#fbf8f3] border border-[#dec48e] shadow-[0_20px_50px_rgba(0,0,0,0.25)] rounded-xl p-5 sm:p-6 w-full max-w-sm sm:max-w-md overflow-hidden text-left"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Ambient Background Watermark / Glow Accent */}
-            <div className="absolute -top-16 -right-16 w-36 h-36 bg-[#d4af37]/10 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute -bottom-10 -right-10 w-32 h-32 text-[#c89d51]/5 pointer-events-none">
-              <svg viewBox="0 0 100 100" fill="currentColor">
-                <path d="M50 0 C60 30, 70 40, 100 50 C70 60, 60 70, 50 100 C40 70, 30 60, 0 50 C30 40, 40 30, 50 0 Z" />
-              </svg>
-            </div>
-
             {/* Header: Title + Lock + Close */}
             <div className="flex items-start justify-between gap-3 pr-1">
-              <h3 className="font-serif text-xl sm:text-2xl font-normal text-[#f5ebd7] tracking-wide flex items-center gap-2 drop-shadow-sm">
-                {'discovery' in popupEntry && isHidden(popupEntry) && <Lock size={18} className="text-[#c89d51] shrink-0" />}
+              <h3 className="font-serif text-xl sm:text-2xl font-normal text-[#1a1917] tracking-wide flex items-center gap-2">
+                {'discovery' in popupEntry && isHidden(popupEntry) && <Lock size={18} className="text-[#b08830] shrink-0" />}
                 <span>{'discovery' in popupEntry && isHidden(popupEntry) ? '???' : popupEntry.name}</span>
               </h3>
               <button
                 onClick={() => setPopup(null)}
                 aria-label="Close"
-                className="text-[#a89575] hover:text-[#f5ebd7] transition-colors p-1.5 -mr-1.5 -mt-1 rounded-md hover:bg-white/5 cursor-pointer"
+                className="text-[#9e968b] hover:text-[#1a1917] transition-colors p-1.5 -mr-1.5 -mt-1 rounded-md hover:bg-[#f5f0e6] cursor-pointer"
               >
                 <X size={18} />
               </button>
             </div>
 
-            {/* Ornamental Gold Line with Flourish */}
-            <div className="flex items-center gap-1 my-3">
-              <svg className="w-7 h-5 text-[#c89d51] shrink-0 -mr-1" viewBox="0 0 28 20" fill="currentColor">
-                <path d="M 2 10 C 2 6, 6 3, 10 3 C 13 3, 15 5, 14 8 C 13 11, 10 11, 9 9 C 8 7, 10 6, 11 6 C 10 4, 7 4, 5 8 C 3 12, 7 15, 12 14 C 16 13, 18 10, 22 10 L 28 10 L 28 11 L 22 11 C 18 11, 16 14, 12 15 C 6 16, 2 14, 2 10 Z" />
-                <circle cx="10" cy="8" r="1.5" />
-              </svg>
-              <div className="h-[1.5px] flex-1 bg-gradient-to-r from-[#c89d51] via-[#c89d51]/70 to-transparent" />
-            </div>
+            {/* Gold Divider */}
+            <div className="h-[1.5px] my-3 bg-gradient-to-r from-[#dec48e] via-[#dec48e]/70 to-transparent" />
 
             {/* Entity Image preview if generated */}
             {popupImageUrl && (!('discovery' in popupEntry) || !isHidden(popupEntry)) && (
-              <div className="relative w-full h-44 sm:h-52 rounded-lg overflow-hidden border border-[#c89d51]/50 bg-black/60 shadow-lg my-3">
+              <div className="relative w-full h-44 sm:h-52 rounded-lg overflow-hidden border border-[#dec48e] bg-[#f5f0e6] shadow-sm my-3">
                 <img
                   src={popupImageUrl}
                   alt={popupEntry.name}
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#120d1b] via-transparent to-transparent opacity-80 pointer-events-none" />
               </div>
             )}
 
             {/* Content Body */}
             {'discovery' in popupEntry && isHidden(popupEntry) ? (
-              <p className="font-serif text-sm italic text-[#b8a892] leading-relaxed my-3">
+              <p className="font-serif text-sm italic text-[#6c665e] leading-relaxed my-3">
                 {popupEntry.discovery?.teaser || 'Not yet discovered.'}
               </p>
             ) : (
@@ -1990,26 +2040,26 @@ export default function Chronicle({
                     const item = popupEntry as ItemEntry
                     return (
                       <>
-                        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
-                          <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Type</span>
-                          <span className="font-sans font-bold text-xs text-[#f5ebd7] capitalize">{item.type}</span>
+                        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#f5f0e6] border border-[#ede7dd]">
+                          <span className="font-serif text-[#8d6b1d] text-xs uppercase tracking-wider font-medium">Type</span>
+                          <span className="font-sans font-bold text-xs text-[#1a1917] capitalize">{item.type}</span>
                         </div>
                         {item.rarity && (
-                          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
-                            <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Rarity</span>
-                            <span className="font-sans font-bold text-xs text-[#f5ebd7]">{item.rarity}</span>
+                          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#f5f0e6] border border-[#ede7dd]">
+                            <span className="font-serif text-[#8d6b1d] text-xs uppercase tracking-wider font-medium">Rarity</span>
+                            <span className="font-sans font-bold text-xs text-[#1a1917]">{item.rarity}</span>
                           </div>
                         )}
                         {traitsText(item.traits) && (
-                          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
-                            <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Traits</span>
-                            <span className="font-sans font-bold text-xs text-[#f5ebd7]">{traitsText(item.traits)}</span>
+                          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#f5f0e6] border border-[#ede7dd]">
+                            <span className="font-serif text-[#8d6b1d] text-xs uppercase tracking-wider font-medium">Traits</span>
+                            <span className="font-sans font-bold text-xs text-[#1a1917]">{traitsText(item.traits)}</span>
                           </div>
                         )}
                         {item.value !== undefined && (
-                          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
-                            <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Worth</span>
-                            <span className="font-sans font-bold text-xs text-[#f5ebd7]">{item.value} C</span>
+                          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#f5f0e6] border border-[#ede7dd]">
+                            <span className="font-serif text-[#8d6b1d] text-xs uppercase tracking-wider font-medium">Worth</span>
+                            <span className="font-sans font-bold text-xs text-[#1a1917]">{item.value} C</span>
                           </div>
                         )}
                       </>
@@ -2018,41 +2068,41 @@ export default function Chronicle({
 
                   {popup.category === 'npc' && 'stage' in popupEntry && (
                     <>
-                      <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
-                        <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">{popupEntry.role || 'NPC'}</span>
-                        <span className="font-sans font-bold text-xs text-[#f5ebd7] capitalize">{popupEntry.stage}</span>
+                      <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#f5f0e6] border border-[#ede7dd]">
+                        <span className="font-serif text-[#8d6b1d] text-xs uppercase tracking-wider font-medium">{popupEntry.role || 'NPC'}</span>
+                        <span className="font-sans font-bold text-xs text-[#1a1917] capitalize">{popupEntry.stage}</span>
                       </div>
-                      <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
-                        <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Trust</span>
-                        <span className="font-sans font-bold text-xs text-[#f5ebd7]">{trustWord(popupEntry.trust)}</span>
+                      <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#f5f0e6] border border-[#ede7dd]">
+                        <span className="font-serif text-[#8d6b1d] text-xs uppercase tracking-wider font-medium">Trust</span>
+                        <span className="font-sans font-bold text-xs text-[#1a1917]">{trustWord(popupEntry.trust)}</span>
                       </div>
                     </>
                   )}
 
                   {popup.category === 'loc' && 'region' in popupEntry && (
                     <>
-                      <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
-                        <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Region</span>
-                        <span className="font-sans font-bold text-xs text-[#f5ebd7]">{popupEntry.region || 'Realm'}</span>
+                      <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#f5f0e6] border border-[#ede7dd]">
+                        <span className="font-serif text-[#8d6b1d] text-xs uppercase tracking-wider font-medium">Region</span>
+                        <span className="font-sans font-bold text-xs text-[#1a1917]">{popupEntry.region || 'Realm'}</span>
                       </div>
-                      <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
-                        <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Danger</span>
-                        <span className="font-sans font-bold text-xs text-[#f5ebd7]">{popupEntry.dangerLevel || 'Safe'}</span>
+                      <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#f5f0e6] border border-[#ede7dd]">
+                        <span className="font-serif text-[#8d6b1d] text-xs uppercase tracking-wider font-medium">Danger</span>
+                        <span className="font-sans font-bold text-xs text-[#1a1917]">{popupEntry.dangerLevel || 'Safe'}</span>
                       </div>
                     </>
                   )}
 
                   {popup.category === 'faction' && 'repTier' in popupEntry && (
-                    <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
-                      <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Reputation</span>
-                      <span className="font-sans font-bold text-xs text-[#f5ebd7]">{popupEntry.repTier > 0 ? '+' : ''}{popupEntry.repTier}</span>
+                    <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#f5f0e6] border border-[#ede7dd]">
+                      <span className="font-serif text-[#8d6b1d] text-xs uppercase tracking-wider font-medium">Reputation</span>
+                      <span className="font-sans font-bold text-xs text-[#1a1917]">{popupEntry.repTier > 0 ? '+' : ''}{popupEntry.repTier}</span>
                     </div>
                   )}
 
                   {popup.category === 'skill' && (
-                    <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
-                      <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Effort</span>
-                      <span className="font-sans font-bold text-xs text-[#f5ebd7] capitalize">
+                    <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#f5f0e6] border border-[#ede7dd]">
+                      <span className="font-serif text-[#8d6b1d] text-xs uppercase tracking-wider font-medium">Effort</span>
+                      <span className="font-sans font-bold text-xs text-[#1a1917] capitalize">
                         {'effort' in popupEntry && popupEntry.effort ? popupEntry.effort : 'Ability'}
                       </span>
                     </div>
@@ -2060,47 +2110,47 @@ export default function Chronicle({
 
                   {popup.category === 'beast' && 'threatTier' in popupEntry && (
                     <>
-                      <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
-                        <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Threat</span>
-                        <span className="font-sans font-bold text-xs text-[#f5ebd7]">{popupEntry.threatTier}</span>
+                      <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#f5f0e6] border border-[#ede7dd]">
+                        <span className="font-serif text-[#8d6b1d] text-xs uppercase tracking-wider font-medium">Threat</span>
+                        <span className="font-sans font-bold text-xs text-[#1a1917]">{popupEntry.threatTier}</span>
                       </div>
                       {popupEntry.conditions?.length ? (
-                        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
-                          <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Conditions</span>
-                          <span className="font-sans font-bold text-xs text-[#f5ebd7]">{popupEntry.conditions.map((c) => c.label).join(', ')}</span>
+                        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#f5f0e6] border border-[#ede7dd]">
+                          <span className="font-serif text-[#8d6b1d] text-xs uppercase tracking-wider font-medium">Conditions</span>
+                          <span className="font-sans font-bold text-xs text-[#1a1917]">{popupEntry.conditions.map((c) => c.label).join(', ')}</span>
                         </div>
                       ) : null}
                     </>
                   )}
 
                   {popup.category === 'quest' && 'status' in popupEntry && (
-                    <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
-                      <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Status</span>
-                      <span className="font-sans font-bold text-xs text-[#f5ebd7] capitalize">{popupEntry.status ?? 'active'}</span>
+                    <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#f5f0e6] border border-[#ede7dd]">
+                      <span className="font-serif text-[#8d6b1d] text-xs uppercase tracking-wider font-medium">Status</span>
+                      <span className="font-sans font-bold text-xs text-[#1a1917] capitalize">{popupEntry.status ?? 'active'}</span>
                     </div>
                   )}
 
                   {popup.category === 'lore' && 'category' in popupEntry && (
-                    <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#231710] border border-[#a87034]/60 shadow-sm">
-                      <span className="font-serif text-[#d4af37] text-xs uppercase tracking-wider font-medium">Category</span>
-                      <span className="font-sans font-bold text-xs text-[#f5ebd7] capitalize">{popupEntry.category || 'General'}</span>
+                    <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#f5f0e6] border border-[#ede7dd]">
+                      <span className="font-serif text-[#8d6b1d] text-xs uppercase tracking-wider font-medium">Category</span>
+                      <span className="font-sans font-bold text-xs text-[#1a1917] capitalize">{popupEntry.category || 'General'}</span>
                     </div>
                   )}
                 </div>
 
                 {/* Prose Text / Descriptions */}
-                <div className="font-serif text-sm leading-relaxed text-[#ded2be] space-y-2 pt-1">
+                <div className="font-serif text-sm leading-relaxed text-[#2c2825] space-y-2 pt-1">
                   {'description' in popupEntry && popupEntry.description && (
                     <p>{popupEntry.description}</p>
                   )}
                   {popup.category === 'npc' && 'memSummary' in popupEntry && popupEntry.memSummary && (
-                    <p className="italic text-[#c8b8a2]">"{popupEntry.memSummary}"</p>
+                    <p className="italic text-[#6c665e]">"{popupEntry.memSummary}"</p>
                   )}
                   {popup.category === 'item' && 'loreText' in popupEntry && popupEntry.loreText && (
-                    <p className="italic text-[#c8b8a2]">{popupEntry.loreText}</p>
+                    <p className="italic text-[#6c665e]">{popupEntry.loreText}</p>
                   )}
                   {popup.category === 'loc' && 'notableFeatures' in popupEntry && popupEntry.notableFeatures && (
-                    <p className="text-xs text-[#b3a48e]"><strong className="text-[#d4af37] font-normal">Features:</strong> {popupEntry.notableFeatures}</p>
+                    <p className="text-xs text-[#6c665e]"><strong className="text-[#8d6b1d] font-normal">Features:</strong> {popupEntry.notableFeatures}</p>
                   )}
                 </div>
               </div>
@@ -2112,7 +2162,7 @@ export default function Chronicle({
                 onOpenCodexEntry(popup.category, popup.id)
                 setPopup(null)
               }}
-              className="mt-5 w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-[#2a1b35] via-[#20142b] to-[#180e22] border border-[#c89d51]/50 hover:border-[#f0ca65] text-[#f0ca65] hover:text-[#fff5dd] font-serif text-xs font-semibold tracking-wider uppercase flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.98] cursor-pointer"
+              className="mt-5 w-full py-2.5 px-4 rounded-lg bg-[#f5f0e6] hover:bg-[#ebdcb8]/40 border border-[#ede7dd] hover:border-[#dec48e] text-[#8d6b1d] font-serif text-xs font-semibold tracking-wider uppercase flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
             >
               <span>Open in Codex</span>
               <ExternalLink size={13} />
@@ -2123,20 +2173,19 @@ export default function Chronicle({
 
       {storySoFar && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 sm:p-6"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 sm:p-6"
           onClick={() => {
             onAcknowledgeChapterStory?.(storySoFar.chapterNumber!)
             setStorySoFar(null)
           }}
         >
           <div
-            className="relative bg-[#120d1b] border border-[#c89d51]/50 shadow-[0_20px_50px_rgba(0,0,0,0.95),0_0_30px_rgba(200,157,81,0.2)] rounded-xl p-5 sm:p-6 w-full max-w-md overflow-hidden text-left max-h-[80vh] flex flex-col"
+            className="relative bg-[#fbf8f3] border border-[#dec48e] shadow-[0_20px_50px_rgba(0,0,0,0.25)] rounded-xl p-5 sm:p-6 w-full max-w-md overflow-hidden text-left max-h-[80vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="absolute -top-16 -right-16 w-36 h-36 bg-[#d4af37]/10 rounded-full blur-3xl pointer-events-none" />
             <div className="flex items-start justify-between gap-3 pr-1 shrink-0">
-              <h3 className="font-serif text-lg sm:text-xl font-normal text-[#f5ebd7] tracking-wide flex items-center gap-2 drop-shadow-sm">
-                <BookOpen size={18} className="text-[#f0ca65]" />
+              <h3 className="font-serif text-lg sm:text-xl font-normal text-[#1a1917] tracking-wide flex items-center gap-2">
+                <BookOpen size={18} className="text-[#b08830]" />
                 <span>Story So Far</span>
               </h3>
               <button
@@ -2145,30 +2194,30 @@ export default function Chronicle({
                   setStorySoFar(null)
                 }}
                 aria-label="Close"
-                className="text-[#a89575] hover:text-[#f5ebd7] transition-colors p-1.5 -mr-1.5 -mt-1 rounded-md hover:bg-white/5 cursor-pointer"
+                className="text-[#9e968b] hover:text-[#1a1917] transition-colors p-1.5 -mr-1.5 -mt-1 rounded-md hover:bg-[#f5f0e6] cursor-pointer"
               >
                 <X size={18} />
               </button>
             </div>
-            <div className="h-[1.5px] my-3 bg-gradient-to-r from-[#c89d51] via-[#c89d51]/70 to-transparent shrink-0" />
+            <div className="h-[1.5px] my-3 bg-gradient-to-r from-[#dec48e] via-[#dec48e]/70 to-transparent shrink-0" />
             <div className="overflow-y-auto flex flex-col gap-2.5 pr-1">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-[#f0ca65]/70">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-[#8d6b1d]/70">
                 Chapter {storySoFar.chapterNumber}
               </span>
               {storySoFar.chapterNarrative ? (
                 storySoFar.chapterNarrative.split('\n\n').map((para, i) => (
-                  <p key={i} className="font-narrative text-sm text-[#f5ebd7]/90 leading-relaxed">
+                  <p key={i} className="font-narrative text-sm text-[#2c2825] leading-relaxed">
                     {para}
                   </p>
                 ))
               ) : storySoFar.chapterBeats?.length ? (
                 storySoFar.chapterBeats.map((b, i) => (
-                  <p key={i} className="font-narrative text-sm text-[#f5ebd7]/90 leading-relaxed">
+                  <p key={i} className="font-narrative text-sm text-[#2c2825] leading-relaxed">
                     {b.text}
                   </p>
                 ))
               ) : (
-                <p className="font-narrative italic text-sm text-[#f5ebd7]/90 leading-relaxed">"{storySoFar.chapterSummary}"</p>
+                <p className="font-narrative italic text-sm text-[#2c2825] leading-relaxed">"{storySoFar.chapterSummary}"</p>
               )}
             </div>
             <button
@@ -2176,7 +2225,7 @@ export default function Chronicle({
                 onAcknowledgeChapterStory?.(storySoFar.chapterNumber!)
                 setStorySoFar(null)
               }}
-              className="mt-4 w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-[#2a1b35] via-[#20142b] to-[#180e22] border border-[#c89d51]/50 hover:border-[#f0ca65] text-[#f0ca65] hover:text-[#fff5dd] font-serif text-xs font-semibold tracking-wider uppercase flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.98] cursor-pointer shrink-0"
+              className="mt-4 w-full py-2.5 px-4 rounded-lg bg-[#f5f0e6] hover:bg-[#ebdcb8]/40 border border-[#ede7dd] hover:border-[#dec48e] text-[#8d6b1d] font-serif text-xs font-semibold tracking-wider uppercase flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer shrink-0"
             >
               <span>Continue the Tale</span>
             </button>

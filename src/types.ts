@@ -586,6 +586,18 @@ export interface BangCommandEntry {
   note?: string // dossier detail (deeds/memory), "not found", truncation notice, etc.
 }
 
+// §2 Phase E Chapter Milestone, incremental redesign — one short, past-tense
+// sentence logged the turn it happened, carrying its own real in-game
+// timestamp, rather than reconstructing a chapter's pacing cold from raw
+// turn history after the fact (the exact mechanism that caused the earlier
+// "temporal hallucination" bug: a multi-paragraph recap generated in one
+// shot at the chapter boundary, with no per-event grounding of its own).
+export interface ChapterBeat {
+  time: GameTime
+  text: string
+  turnRef: string
+}
+
 export interface LogEntry {
   action?: string
   nar: string
@@ -603,8 +615,9 @@ export interface LogEntry {
   act?: string[]
   levelUp?: number // §5.1a — set when this turn triggered a Milestone Level-up
   breakthrough?: { attr: 'STR' | 'INT' | 'AGI'; tier: string } // §5.1c — a narrated permanent attribute breakthrough (tier is the canonical word, for display)
-  chapterSummary?: string // §2 Phase E — a synthetic entry marking a chapter boundary
+  chapterSummary?: string // §2 Phase E — a synthetic entry marking a chapter boundary. Pre-redesign field: a cold multi-paragraph recap generated in one LLM call at the boundary. Kept for backward compat display on a save from before the incremental redesign (chapterBeats absent on those entries); a chapter closed after the redesign carries chapterBeats instead and leaves this unset.
   chapterNumber?: number
+  chapterBeats?: ChapterBeat[] // §2 Phase E, incremental redesign — this chapter's beats, frozen at the boundary (see Campaign.currentChapterLog for the live, in-progress list)
   time?: GameTime // per-turn timestamp, absent on entries logged before this field existed
   locDisp?: string // per-turn location display, same caveat as `time`
   bang?: BangCommandEntry // §6.6 — a rendered bang-command result, not real narration
@@ -687,6 +700,13 @@ export interface Campaign {
   createdAt?: number // when this Tale was first begun — optional since older saves predate the field; falls back to lastPlayed for display
   lastPlayed: number
   turnCount: number // real narrated turns only — decoupled from log.length, which also holds synthetic chapter-recap entries
+  // §2 Phase E Chapter Milestone, incremental redesign — the CURRENT, still-
+  // open chapter's beats accumulated live, one per narratively significant
+  // turn (see ChapterBeat/api/xmlTurnContract.ts's `beat` attribute). Frozen
+  // onto a synthetic LogEntry's own `chapterBeats` and reset to [] the moment
+  // the chapter boundary hits (App.tsx) — this field is always just the
+  // in-progress tail end, never a full history (that lives in `log`).
+  currentChapterLog?: ChapterBeat[]
   // One-time World Seeding call's raw request/response (or failure reason) —
   // there's no turn/log entry to attach this to since seeding isn't a turn.
   // Surfaced only under Debug Mode; never re-sent to the model.
@@ -984,6 +1004,15 @@ export interface TurnResponse {
   fac_rep?: FactionRepChange[]
   skill_learn?: SkillLearn[]
   enrich?: EnrichUpdate[]
+  // §2 Phase E Chapter Milestone, incremental redesign — one short, past-
+  // tense sentence for THIS turn's own chapter-log entry, only on a turn
+  // that genuinely advances the story (not every ordinary turn — see
+  // xmlTurnContract.ts's rule text). Paired client-side with this turn's own
+  // real GameTime into a ChapterBeat; absent = this turn added nothing to
+  // the chapter log. Named distinctly from `beat_update`/TaleBeat (the
+  // pre-authored Story Arc spine) — unrelated concepts that happen to share
+  // the word "beat."
+  chapter_beat?: string
   // §6.6 — only present on the turn the client marked as a !conclude
   // request; never inferred from ordinary narration. See turnContract.ts
   // rule 2d.

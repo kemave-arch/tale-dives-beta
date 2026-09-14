@@ -19,7 +19,7 @@ import { useConfirm } from '../lib/useConfirm.tsx'
 import { useLongTextEditor } from '../lib/useLongTextEditor.tsx'
 import { EQUIPPABLE_TYPES, LOCATION_DANGER_LEVELS, LOCATION_TYPES } from '../types.ts'
 import type {
-  ApiSettings, BestiaryEntry, CompetencyTier, CraftingJob, DeathRule, Dict, Discovery, EndingOutcome, EquipSlot, FactionEntry, ItemEntry, ItemType, KinshipType, LocationEntry, LogEntry, LoreEntry,
+  ApiSettings, BestiaryEntry, ChapterBeat, CompetencyTier, CraftingJob, DeathRule, Dict, Discovery, EndingOutcome, EquipSlot, FactionEntry, ItemEntry, ItemType, KinshipType, LocationEntry, LogEntry, LoreEntry,
   NarrativeEvent, NpcEntry, Player, ProjectEntry, ProjectStage, QuestEntry, RegionEntry, RevealTrigger, SkillEntry, TaleBeat, ThreatTierToken, WorldData,
 } from '../types.ts'
 import { COMPETENCY_TIERS, THREAT_TIERS, tierToWord, wordToTier, displayThreatLabel } from '../lib/tiers.ts'
@@ -61,6 +61,12 @@ function traitsText(traits: ItemEntry['traits']): string | null {
   return traits?.length ? traits.join(', ') : null
 }
 
+// §2 Phase E Chapter Milestone, incremental redesign — a beat's timestamp in
+// the Chapters category's vertical timeline.
+function formatChapterBeatTimeCodex(time: ChapterBeat['time']): string {
+  return `Day ${time.d} · ${time.h}`
+}
+
 export type CategoryId =
   | 'campaign' | 'crafting' | 'chapters' | 'npcs' | 'factions' | 'locations' | 'regions' | 'lore' | 'quests' | 'bestiary' | 'items' | 'skills' | 'projects'
 
@@ -69,6 +75,7 @@ interface CodexProps {
   world: WorldData
   player: Player
   log: LogEntry[]
+  currentChapterLog?: ChapterBeat[]
   npcs: Record<string, NpcEntry>
   skills: Record<string, SkillEntry>
   factions: Record<string, FactionEntry>
@@ -1335,6 +1342,7 @@ export default function Codex({
   world,
   player,
   log,
+  currentChapterLog,
   npcs,
   factions,
   locations,
@@ -1818,7 +1826,7 @@ export default function Codex({
     )
   }, [category, entryId, editing, searchQuery, activeSubtab, categorySubtabs, currentAccent])
 
-  const chapters = log.filter((e) => e.chapterSummary)
+  const chapters = log.filter((e) => e.chapterBeats?.length || e.chapterSummary)
 
   // Ordered matching classic RPG Codex hierarchy: Realm -> Chapters -> NPCs -> Factions -> Locations -> Lore -> Skills -> Items -> Quests -> Crafting -> Projects -> Bestiary
   const categories: { id: CategoryId; label: string; description: string; icon: LucideIcon; count: number }[] = [
@@ -2742,37 +2750,126 @@ export default function Codex({
         </div>
       )}
 
-      {/* Chapters — generated recap, read-only */}
-      {category === 'chapters' && (
-        <div className="flex flex-col gap-3">
-          {chapters.length === 0 && (
-            <p className="font-narrative italic text-sm text-ink-muted">No chapters recorded yet.</p>
-          )}
-          {chapters.map((c, i) => (
-            <div
-              key={i}
-              className="rounded-xl p-4 border border-[#38bdf8]/30 bg-gradient-to-br from-[#0c1829]/90 via-[#0a1422]/90 to-[#070e17]/95 shadow-lg flex flex-col gap-2 relative overflow-hidden"
-            >
-              <div className="flex items-center justify-between gap-2 border-b border-sky-500/20 pb-2">
+      {/* Chapters — live in-progress timeline + Pending, then archived chapters */}
+      {category === 'chapters' && (() => {
+        const pendingQuests = Object.entries(quests).filter(([, q]) => q.status === 'advanced')
+        // Only the beat the story has actually turned toward — every other
+        // 'pending' beat is just the not-yet-reached rest of the outline
+        // (dozens of entries on a fully-authored Tale Weaving arc), which
+        // would dump the whole future storyline as a spoiler list rather
+        // than showing what's genuinely open right now.
+        const pendingBeats = beats.filter((b) => b.status === 'active')
+        const activeEvents = Object.entries(narrativeEvents).filter(([, e]) => e.status === 'active')
+        const hasPending = pendingQuests.length > 0 || pendingBeats.length > 0 || activeEvents.length > 0
+
+        return (
+          <div className="flex flex-col gap-4">
+            {/* Current, still-open chapter — live timeline, builds one beat at a time as the story goes */}
+            <div className="rounded-xl p-4 border border-[#f0ca65]/35 bg-gradient-to-br from-[#161208]/90 via-[#10131e]/92 to-[#0a0c14]/95 shadow-lg flex flex-col gap-3 relative overflow-hidden">
+              <div className="flex items-center justify-between gap-2 border-b border-[#f0ca65]/20 pb-2">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-sky-500/20 border border-sky-400/40 flex items-center justify-center text-sky-300 shrink-0">
+                  <div className="w-7 h-7 rounded-lg bg-[#f0ca65]/15 border border-[#f0ca65]/40 flex items-center justify-center text-[#f0ca65] shrink-0">
                     <BookOpen size={14} />
                   </div>
-                  <h3 className="font-display font-bold text-sm text-[#bae6fd] uppercase tracking-wide">
-                    Chapter {c.chapterNumber}
+                  <h3 className="font-display font-bold text-sm text-[#fae5b5] uppercase tracking-wide">
+                    Current Chapter
                   </h3>
                 </div>
-                <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-sky-500/15 border border-sky-500/30 text-sky-300">
-                  Archived
+                <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#f0ca65]/15 border border-[#f0ca65]/30 text-[#f0ca65] flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#f0ca65] animate-pulse" /> In Progress
                 </span>
               </div>
-              <p className="font-narrative text-xs sm:text-sm text-[#d4e7f8] leading-relaxed italic">
-                "{c.chapterSummary}"
-              </p>
+              {currentChapterLog?.length ? (
+                <div className="flex flex-col gap-2.5 pl-1">
+                  {currentChapterLog.map((b, i) => (
+                    <div key={i} className="flex gap-3">
+                      <div className="flex flex-col items-center shrink-0 pt-0.5">
+                        <div className="w-2 h-2 rounded-full bg-[#f0ca65] shadow-[0_0_6px_rgba(240,202,101,0.6)]" />
+                        {i < currentChapterLog.length - 1 && <div className="w-px flex-1 bg-[#f0ca65]/25 mt-1" />}
+                      </div>
+                      <div className="pb-1 min-w-0">
+                        <p className="font-mono text-[10px] uppercase tracking-wide text-[#f0ca65]/70">{formatChapterBeatTimeCodex(b.time)}</p>
+                        <p className="font-narrative text-xs sm:text-sm text-[#f5ebd7]/90 leading-relaxed">{b.text}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="font-narrative italic text-xs text-ink-muted">Nothing chapter-worthy has happened yet this chapter.</p>
+              )}
+
+              {hasPending && (
+                <div className="border-t border-[#f0ca65]/20 pt-2.5 flex flex-col gap-1.5">
+                  <span className="font-mono text-[10px] uppercase tracking-wide text-ink-muted/80">Pending</span>
+                  {pendingBeats.map((b) => (
+                    <div key={b.id} className="flex items-center gap-2 text-xs">
+                      <Compass size={12} className="text-[#f0ca65] shrink-0" />
+                      <span className="text-[#f5ebd7]/90 truncate">{b.title}</span>
+                    </div>
+                  ))}
+                  {pendingQuests.map(([id, q]) => (
+                    <div key={id} className="flex items-center gap-2 text-xs">
+                      <ScrollText size={12} className="text-[#f0ca65] shrink-0" />
+                      <span className="text-[#f5ebd7]/90 truncate">{q.name}</span>
+                    </div>
+                  ))}
+                  {activeEvents.map(([id, e]) => (
+                    <div key={id} className="flex items-center gap-2 text-xs">
+                      <Zap size={12} className="text-[#f0ca65] shrink-0" />
+                      <span className="text-[#f5ebd7]/90 truncate">{e.title}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          ))}
-        </div>
-      )}
+
+            {chapters.length === 0 ? (
+              <p className="font-narrative italic text-sm text-ink-muted">No chapters archived yet.</p>
+            ) : (
+              [...chapters].reverse().map((c, i) => (
+                <div
+                  key={i}
+                  className="rounded-xl p-4 border border-[#38bdf8]/30 bg-gradient-to-br from-[#0c1829]/90 via-[#0a1422]/90 to-[#070e17]/95 shadow-lg flex flex-col gap-2.5 relative overflow-hidden"
+                >
+                  <div className="flex items-center justify-between gap-2 border-b border-sky-500/20 pb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-sky-500/20 border border-sky-400/40 flex items-center justify-center text-sky-300 shrink-0">
+                        <BookOpen size={14} />
+                      </div>
+                      <h3 className="font-display font-bold text-sm text-[#bae6fd] uppercase tracking-wide">
+                        Chapter {c.chapterNumber}
+                      </h3>
+                    </div>
+                    <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-sky-500/15 border border-sky-500/30 text-sky-300">
+                      Archived
+                    </span>
+                  </div>
+                  {c.chapterBeats?.length ? (
+                    <div className="flex flex-col gap-2.5 pl-1">
+                      {c.chapterBeats.map((b, j) => (
+                        <div key={j} className="flex gap-3">
+                          <div className="flex flex-col items-center shrink-0 pt-0.5">
+                            <div className="w-2 h-2 rounded-full bg-sky-400 shadow-[0_0_6px_rgba(56,189,248,0.5)]" />
+                            {j < c.chapterBeats!.length - 1 && <div className="w-px flex-1 bg-sky-400/25 mt-1" />}
+                          </div>
+                          <div className="pb-1 min-w-0">
+                            <p className="font-mono text-[10px] uppercase tracking-wide text-sky-300/70">{formatChapterBeatTimeCodex(b.time)}</p>
+                            <p className="font-narrative text-xs sm:text-sm text-[#d4e7f8] leading-relaxed">{b.text}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="font-narrative text-xs sm:text-sm text-[#d4e7f8] leading-relaxed italic">
+                      "{c.chapterSummary}"
+                    </p>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        )
+      })()}
 
       {/* NPCs */}
       {category === 'npcs' && !entryId && (

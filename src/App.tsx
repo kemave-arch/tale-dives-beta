@@ -73,7 +73,7 @@ import NowPlayingBanner from './components/NowPlayingBanner.tsx'
 import * as store from './lib/store.ts'
 import { CURRENT_SCHEMA_VERSION, EQUIPPABLE_TYPES } from './types.ts'
 import type {
-  AreaEntry, BestiaryEntry, Campaign, CombatState, ConditionTag, Dict, EffortTier, EndingOutcome, EquipSlot, FactionEntry, GameTime, HistoryTurn, ItemEntry, KeywordLink, LocationEntry, LogEntry, LoreEntry,
+  AreaEntry, BestiaryEntry, Campaign, ChapterBeat, CombatState, ConditionTag, Dict, EffortTier, EndingOutcome, EquipSlot, FactionEntry, HistoryTurn, ItemEntry, KeywordLink, LocationEntry, LogEntry, LoreEntry,
   NarrativeEvent, NpcEntry, Player, ProjectEntry, ProtagonistData, QuestEntry, RegionEntry, SkillEntry, SlashCommand, TaleBeat, TurnState, WorldData,
 } from './types.ts'
 
@@ -1500,6 +1500,20 @@ export default function App() {
 
       const finalPlayer: Player = grantedPlayer
 
+      // §2 Phase E Chapter Milestone, incremental redesign — append this
+      // turn's own chapter_beat (if any) to the still-open chapter's log,
+      // then, at the boundary, freeze the whole thing onto a synthetic log
+      // entry and start the next chapter's log empty. Replaces the old cold,
+      // one-shot multi-paragraph recap (a separate LLM call reconstructing a
+      // whole chapter's pacing after the fact — the exact mechanism behind
+      // the earlier "temporal hallucination" bug) with per-turn, per-event
+      // grounding that can't drift the same way, at zero extra API cost.
+      const updatedChapterLog: ChapterBeat[] = [
+        ...(current.currentChapterLog ?? []),
+        ...(turn.chapter_beat ? [{ time: finalPlayer.time, text: turn.chapter_beat, turnRef }] : []),
+      ]
+      const chapterNumber = Math.floor(turnNumber / CHAPTER_TURN_INTERVAL)
+
       const nextCampaign: Campaign = {
         ...current,
         player: finalPlayer,
@@ -1522,6 +1536,10 @@ export default function App() {
         crafting: craftResolution.jobs,
         lastPlayed: Date.now(),
         turnCount: turnNumber,
+        // §2 Phase E Chapter Milestone — the still-open chapter's log resets
+        // to empty the instant this turn closes it (chapterLevels > 0); the
+        // full accumulated list is frozen onto the synthetic log entry below.
+        currentChapterLog: chapterLevels > 0 ? [] : updatedChapterLog,
         // §6.6 !conclude — once set, stays set: an ending is never
         // overwritten by a later turn (the player may keep exploring an
         // epilogue, but the Tale's own concluded banner persists).
@@ -1552,6 +1570,9 @@ export default function App() {
             ...(upkeep.dissipated.length ? { minionsDissipated: upkeep.dissipated } : {}),
             ...(turn.end ? { ending: turn.end.outcome } : {}),
           },
+          // §2 Phase E Chapter Milestone — a synthetic entry marking this
+          // chapter's close, carrying the beats accumulated across it.
+          ...(chapterLevels > 0 ? [{ nar: '', chapterBeats: updatedChapterLog, chapterNumber }] : []),
         ],
       }
 
@@ -1570,15 +1591,12 @@ export default function App() {
       }
 
       // §2 Phase E Chapter Milestone — same boundary trigger as the
-      // chapter-level-up above; the recap call reads historyWithResponse
-      // (this turn included) before the sliding window gets flushed.
+      // chapter-level-up above; the synthetic chapterBeats entry is already
+      // folded into nextCampaign.log above, so this just flushes the sliding
+      // conversation window for the next chapter, same as the old recap call
+      // used to once its (now-removed) LLM round trip succeeded.
       if (chapterLevels > 0) {
-        recapChapter(
-          historyWithResponse,
-          Math.floor(turnNumber / CHAPTER_TURN_INTERVAL),
-          chapterStartTime(nextCampaign.log),
-          finalPlayer.time,
-        )
+        setHistory([])
         if (uiPrefs.autoCloudBackup) {
           triggerAutoCloudBackup()
         }
@@ -1690,51 +1708,6 @@ export default function App() {
       setError(`The thread of fate falters... (${errorMessage(err)})`)
     } finally {
       setBusy(false)
-    }
-  }
-
-  // The real in-game clock span this chapter covers — the "start" is
-  // whatever time the turn right after the previous chapterSummary marker
-  // logged (or the very first turn, for chapter 1). Passed into the recap
-  // prompt as an explicit anchor: without it, a "several full paragraphs,
-  // evocative" recap prompt naturally reaches for saga-length language
-  // ("a grueling ascent," "days of hardship") even when the record shows
-  // only a few in-game hours passed — the exact "temporal hallucination"
-  // a live payload surfaced (a player line mockingly quoting the model's own
-  // inflated framing: "Wait, days? I just met her this morning.").
-  function chapterStartTime(log: LogEntry[]): GameTime | undefined {
-    for (let i = log.length - 1; i >= 0; i--) {
-      if (log[i].chapterSummary) return log[i + 1]?.time
-    }
-    return log.find((e) => e.time)?.time
-  }
-
-  // §2 Phase E Chapter Milestone — plain-text 2-sentence recap, then flush
-  // the sliding history window: "past conversation turns are flushed... while
-  // persistent summary cards are saved locally." A missed recap costs only
-  // flavor (the log entry), so failures are swallowed rather than surfaced —
-  // the window keeps growing and the next boundary just retries.
-  async function recapChapter(
-    historyForSummary: HistoryTurn[],
-    chapterNumber: number,
-    startTime?: GameTime,
-    endTime?: GameTime,
-  ) {
-    try {
-      const summary = await getProvider(apiSettings.provider).runSummary({
-        apiKey: apiSettings.apiKey,
-        model: apiSettings.model,
-        temperature: apiSettings.temperature,
-        maxOutputTokens: MAX_OUTPUT_TOKENS_CEILING,
-        history: historyForSummary,
-        startTime,
-        endTime,
-      })
-
-      setGame((g) => g && { ...g, log: [...g.log, { nar: '', chapterSummary: summary, chapterNumber }] })
-      setHistory([])
-    } catch {
-      // swallowed — see comment above
     }
   }
 
@@ -2329,6 +2302,7 @@ export default function App() {
         world={game.world}
         player={game.player}
         log={game.log}
+        currentChapterLog={game.currentChapterLog}
         npcs={game.npcs}
         factions={game.factions}
         locations={game.locations}
@@ -2380,6 +2354,7 @@ export default function App() {
         world={game.world}
         player={game.player}
         log={game.log}
+        currentChapterLog={game.currentChapterLog}
         npcs={game.npcs}
         factions={game.factions}
         locations={game.locations}

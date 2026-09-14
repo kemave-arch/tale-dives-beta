@@ -267,9 +267,18 @@ export function buildContextSlice(state: Campaign, craftReadyLine?: string | nul
     )
   }
 
-  const recentChapters = (log ?? []).filter((e) => e.chapterSummary).slice(-RECENT_CHAPTER_DIGEST_COUNT)
+  // §2 Phase E Chapter Milestone, incremental redesign — a closed chapter's
+  // own beats (short, already-grounded sentences logged turn by turn) are
+  // joined straight into this digest instead of a cold multi-paragraph
+  // recap reconstructed after the fact. `chapterSummary` alone (no
+  // chapterBeats) means this closed entry predates the redesign — falls
+  // back to the old prose so an in-progress save's earlier chapters don't
+  // just vanish from context.
+  const recentChapters = (log ?? []).filter((e) => e.chapterBeats?.length || e.chapterSummary).slice(-RECENT_CHAPTER_DIGEST_COUNT)
   if (recentChapters.length > 0) {
-    const digest = recentChapters.map((c) => `[Ch${c.chapterNumber}] ${c.chapterSummary}`).join(' ')
+    const digest = recentChapters
+      .map((c) => `[Ch${c.chapterNumber}] ${c.chapterBeats?.length ? c.chapterBeats.map((b) => b.text).join(' ') : c.chapterSummary}`)
+      .join(' ')
     lines.push(`Story So Far: ${digest}`)
   }
 

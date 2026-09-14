@@ -322,6 +322,13 @@ function formatTimestamp(time: GameTime, locDisp: string): string {
   return `D-${String(time.d).padStart(2, '0')} ${time.h} | ${locDisp.toUpperCase()}`
 }
 
+// §2 Phase E Chapter Milestone, incremental redesign — a beat's timestamp in
+// the vertical timeline, distinct from formatTimestamp above (no location,
+// and phrased for a standalone reader rather than a live HUD line).
+function formatChapterBeatTime(time: GameTime): string {
+  return `Day ${time.d} · ${time.h}`
+}
+
 interface PopupTarget {
   category: KeywordLink['category']
   id: string
@@ -661,9 +668,9 @@ const TurnBlock = memo(function TurnBlock({
     )
   }
 
-  if (entry.chapterSummary) {
+  if (entry.chapterSummary || entry.chapterBeats) {
     return (
-      <div ref={setRef} className="my-4 p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#161208]/90 via-[#10131e]/92 to-[#0a0c14]/95 border border-[#f0ca65]/35 shadow-xl relative overflow-hidden flex flex-col items-center gap-2.5">
+      <div ref={setRef} className="my-4 p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#161208]/90 via-[#10131e]/92 to-[#0a0c14]/95 border border-[#f0ca65]/35 shadow-xl relative overflow-hidden flex flex-col items-center gap-3">
         <div className="w-full flex items-center gap-3">
           <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#f0ca65]/40 to-transparent" />
           <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#241a0a] border border-[#f0ca65]/40 text-[#fae5b5] font-display font-bold text-xs uppercase tracking-wider shrink-0 shadow-md">
@@ -672,9 +679,26 @@ const TurnBlock = memo(function TurnBlock({
           </div>
           <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#f0ca65]/40 to-transparent" />
         </div>
-        <p className="font-narrative italic text-xs sm:text-sm text-[#f5ebd7]/90 text-center leading-relaxed max-w-xl">
-          "{entry.chapterSummary}"
-        </p>
+        {entry.chapterBeats?.length ? (
+          <div className="w-full max-w-xl flex flex-col gap-2.5 pl-1">
+            {entry.chapterBeats.map((b, i) => (
+              <div key={i} className="flex gap-3">
+                <div className="flex flex-col items-center shrink-0 pt-0.5">
+                  <div className="w-2 h-2 rounded-full bg-[#f0ca65] shadow-[0_0_6px_rgba(240,202,101,0.6)]" />
+                  {i < entry.chapterBeats!.length - 1 && <div className="w-px flex-1 bg-[#f0ca65]/25 mt-1" />}
+                </div>
+                <div className="pb-1 min-w-0">
+                  <p className="font-mono text-[10px] uppercase tracking-wide text-[#f0ca65]/70">{formatChapterBeatTime(b.time)}</p>
+                  <p className="font-narrative text-xs sm:text-sm text-[#f5ebd7]/90 leading-relaxed">{b.text}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="font-narrative italic text-xs sm:text-sm text-[#f5ebd7]/90 text-center leading-relaxed max-w-xl">
+            "{entry.chapterSummary}"
+          </p>
+        )}
       </div>
     )
   }

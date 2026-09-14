@@ -88,6 +88,10 @@ export function parseXmlTurnResponse(raw: string): TurnResponse {
   const map_x = num(turnEl.getAttribute('mapx'))
   const map_y = num(turnEl.getAttribute('mapy'))
 
+  // §2 Phase E Chapter Milestone, incremental redesign — a short chapter-log
+  // sentence, only present on a narratively significant turn.
+  const chapter_beat = str(turnEl.getAttribute('chapbeat'))
+
   // <cond> — Condition Tag adds/removes, player by default or the current
   // combat opponent via id="enemy" (the only other valid value for "id").
   const cond_updates: ConditionUpdate[] = []
@@ -279,6 +283,7 @@ export function parseXmlTurnResponse(raw: string): TurnResponse {
     region_disp,
     map_x,
     map_y,
+    chapter_beat,
     mood,
     copper_delta,
     cond_updates: cond_updates.length ? cond_updates : undefined,

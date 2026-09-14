@@ -3,7 +3,7 @@ import { getProvider } from '../api/providers/index.ts'
 import { buildTaleWeaverSystemInstructions } from '../api/taleWeaverContract.ts'
 import { MAX_OUTPUT_TOKENS_CEILING } from '../api/turnContract.ts'
 import { slugify } from './slug.ts'
-import { parseTaleWeaverResponse, type TaleWeaverDraft } from './taleWeaverParser.ts'
+import { parseTaleWeaverResponse, type TaleWeaverDraft, type TaleWeaverSkill } from './taleWeaverParser.ts'
 
 // Same comma-separated-names shape as an item's "traits" or world seeding's
 // own <location areas="...">  — each name mints its own slug id so Codex
@@ -51,6 +51,12 @@ export interface TaleWeaverAccumulated {
   factions: TaleWeaverDraft['factions']
   npcs: TaleWeaverDraft['npcs']
   lore: TaleWeaverDraft['lore']
+  // Starting abilities drafted alongside the Protagonist phase's own
+  // <protagonist> tag — see App.tsx's beginInspiredTale for how classHint +
+  // this list seed the new campaign's player.classId/className and
+  // campaign.skills, closing the gap where a Tale Weaving-created
+  // protagonist used to always start abilityless on a hardcoded class.
+  skills: TaleWeaverSkill[]
   beats: TaleWeaverDraft['beats']
   narrativeEvents?: TaleWeaverDraft['narrativeEvents']
   deathRule?: TaleWeaverDraft['deathRule']
@@ -68,7 +74,7 @@ export interface TaleWeaverAccumulated {
 
 export function emptyAccumulated(): TaleWeaverAccumulated {
   return {
-    regions: [], locations: [], factions: [], npcs: [], lore: [], beats: [], narrativeEvents: [],
+    regions: [], locations: [], factions: [], npcs: [], lore: [], skills: [], beats: [], narrativeEvents: [],
     // Story Arc phase's own pre-selected defaults — Immersive per explicit
     // request, Extreme as the tagged "Recommended" tier for Tale Weaving
     // specifically (other creation paths stay on Balanced, see App.tsx).
@@ -95,8 +101,11 @@ function buildPhasePrompt(phase: TaleWeaverPhaseDef, accumulated: TaleWeaverAccu
   if (accumulated.protagonist) {
     const p = accumulated.protagonist
     lines.push(
-      `Confirmed Protagonist: ${[p.name, p.background, p.personality, p.motivation, p.physicalTrait, p.secret, p.opening].filter(Boolean).join(' | ')}`,
+      `Confirmed Protagonist: ${[p.name, p.background, p.personality, p.motivation, p.physicalTrait, p.secret, p.opening, p.classHint && `Class: ${p.classHint}`].filter(Boolean).join(' | ')}`,
     )
+  }
+  if (accumulated.skills.length > 0) {
+    lines.push(`Confirmed Starting Skills: ${accumulated.skills.map((s) => s.name).join(', ')}`)
   }
   if (accumulated.regions.length > 0) {
     lines.push(`Confirmed Regions: ${accumulated.regions.map((r) => r.name).join(', ')}`)

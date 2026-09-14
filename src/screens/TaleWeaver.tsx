@@ -492,6 +492,9 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
       } else if (key.startsWith('lore_')) {
         const id = key.replace('lore_', '')
         next.lore = prev.lore.map((l) => (l.id === id ? { ...l, ...editFormData } : l))
+      } else if (key.startsWith('skill_')) {
+        const id = key.replace('skill_', '')
+        next.skills = prev.skills.map((s) => (s.id === id ? { ...s, ...editFormData } : s))
       } else if (key.startsWith('beat_')) {
         const id = key.replace('beat_', '')
         next.beats = prev.beats.map((b) => (b.id === id ? { ...b, ...editFormData } : b))
@@ -509,7 +512,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
     setEditFormData({})
   }
 
-  function addCustomItem(category: 'regions' | 'locations' | 'factions' | 'npcs' | 'lore' | 'beats' | 'narrativeEvents') {
+  function addCustomItem(category: 'regions' | 'locations' | 'factions' | 'npcs' | 'lore' | 'skills' | 'beats' | 'narrativeEvents') {
     const timeId = `${category.slice(0, 3)}_${Date.now().toString(36)}`
     if (category === 'regions') {
       const newRegion = { id: timeId, name: 'New Region', desc: '' }
@@ -531,6 +534,10 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
       const newLore = { id: timeId, name: 'New Secret / History', category: 'History', content: '' }
       setAccumulated((prev) => ({ ...prev, lore: [...prev.lore, newLore] }))
       startEditing(`lore_${timeId}`, newLore)
+    } else if (category === 'skills') {
+      const newSkill = { id: timeId, name: 'New Ability', desc: '', effort: 'minor', tier: 'Novice' }
+      setAccumulated((prev) => ({ ...prev, skills: [...prev.skills, newSkill] }))
+      startEditing(`skill_${timeId}`, newSkill)
     } else if (category === 'beats') {
       const newBeat = { id: timeId, title: 'New Story Beat', summary: '' }
       setAccumulated((prev) => ({ ...prev, beats: [...prev.beats, newBeat] }))
@@ -574,6 +581,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
       physicalTrait: '',
       secret: '',
       opening: '',
+      classHint: 'Warrior',
     }
     setAccumulated((prev) => ({ ...prev, protagonist: defaultProtag }))
     startEditing('protagonist', defaultProtag)
@@ -630,7 +638,12 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
       return
     }
     if (phase.id === 'protagonist' && draft.protagonist) {
-      setAccumulated((prev) => ({ ...prev, protagonist: draft.protagonist }))
+      // Starting Skills are drafted alongside the protagonist in this same
+      // phase call — regenerating the protagonist regenerates their starting
+      // abilities together, same "whole-entity replace" behavior as
+      // protagonist itself (unlike regions/npcs/etc., which accumulate
+      // across guidance rounds instead of replacing).
+      setAccumulated((prev) => ({ ...prev, protagonist: draft.protagonist, skills: draft.skills }))
       return
     }
 
@@ -1181,6 +1194,16 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
                   />
                 </div>
+                <div className="flex flex-col gap-1">
+                  <label className="font-mono text-[10px] uppercase text-gold-primary/70">Class / Archetype</label>
+                  <input
+                    type="text"
+                    value={editFormData.classHint || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, classHint: e.target.value })}
+                    placeholder="e.g. Warrior, Mage, Dragon Rider"
+                    className="px-2.5 py-1.5 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary"
+                  />
+                </div>
               </div>
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[10px] uppercase text-gold-primary/70">Origin & Background</label>
@@ -1218,7 +1241,14 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
             <div className="flex items-start justify-between gap-2">
               <div>
                 <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">Protagonist</span>
-                <h3 className="font-display font-bold text-base text-gold-primary">{p.name || 'Unnamed Protagonist'}</h3>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-display font-bold text-base text-gold-primary">{p.name || 'Unnamed Protagonist'}</h3>
+                  {p.classHint && (
+                    <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-gold-accent/15 text-gold-primary/90 border border-gold-accent/25">
+                      {p.classHint}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-1">
                 <button
@@ -1263,6 +1293,99 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 <p className="font-narrative text-xs italic text-ink-muted">{p.opening}</p>
               </div>
             )}
+            <div className="border-t border-gold-accent/20 pt-2.5 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[10px] uppercase text-ink-muted/80">Starting Skills</span>
+                <button
+                  type="button"
+                  onClick={() => addCustomItem('skills')}
+                  className="flex items-center gap-1 font-mono text-[10px] text-gold-primary hover:underline"
+                >
+                  <Plus size={12} /> Add Skill
+                </button>
+              </div>
+              {accumulated.skills.length === 0 ? (
+                <p className="font-narrative text-xs italic text-ink-muted/70">None — a mundane, non-abilities protagonist is fine.</p>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {accumulated.skills.map((s) => {
+                    const isEditing = editingKey === `skill_${s.id}`
+                    if (isEditing) {
+                      return (
+                        <div key={s.id} className="rounded-lg border border-gold-primary/60 bg-[#0d1017] p-2.5 flex flex-col gap-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <input
+                              type="text"
+                              value={editFormData.name || ''}
+                              onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                              placeholder="Skill Name"
+                              className="px-2.5 py-1 rounded-lg bg-[#161a28] border border-gold-accent/30 text-xs text-ink outline-none"
+                            />
+                            <select
+                              value={editFormData.effort || 'minor'}
+                              onChange={(e) => setEditFormData({ ...editFormData, effort: e.target.value })}
+                              className="px-2.5 py-1 rounded-lg bg-[#161a28] border border-gold-accent/30 text-xs text-ink outline-none"
+                            >
+                              <option value="minor">Minor</option>
+                              <option value="focused">Focused</option>
+                              <option value="taxing">Taxing</option>
+                            </select>
+                            <select
+                              value={editFormData.tier || 'Novice'}
+                              onChange={(e) => setEditFormData({ ...editFormData, tier: e.target.value })}
+                              className="px-2.5 py-1 rounded-lg bg-[#161a28] border border-gold-accent/30 text-xs text-ink outline-none"
+                            >
+                              {['Untrained', 'Novice', 'Adept', 'Expert', 'Master'].map((t) => (
+                                <option key={t} value={t}>{t}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <input
+                            type="text"
+                            value={editFormData.desc || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, desc: e.target.value })}
+                            placeholder="What it does"
+                            className="px-2.5 py-1 rounded-lg bg-[#161a28] border border-gold-accent/30 text-xs text-ink outline-none"
+                          />
+                          <div className="flex items-center gap-1.5 self-end">
+                            <button
+                              type="button"
+                              onClick={() => saveEditing(`skill_${s.id}`)}
+                              className="px-2 py-0.5 rounded bg-gold-primary text-black font-display font-bold text-xs flex items-center gap-1"
+                            >
+                              <Save size={12} /> Save
+                            </button>
+                            <button type="button" onClick={cancelEditing} className="px-2 py-0.5 rounded border border-gold-accent/30 text-xs">
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    }
+                    return (
+                      <div key={s.id} className="rounded-lg border border-gold-accent/25 bg-[#0d1017]/60 px-2.5 py-1.5 flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-display font-semibold text-xs text-gold-primary">{s.name}</span>
+                            {s.tier && <span className="font-mono text-[9px] uppercase text-ink-muted/80">{s.tier}</span>}
+                            {s.effort && <span className="font-mono text-[9px] uppercase text-skill">{s.effort}</span>}
+                          </div>
+                          {s.desc && <p className="font-narrative text-[11px] text-ink-muted truncate">{s.desc}</p>}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button type="button" onClick={() => startEditing(`skill_${s.id}`, s)} className="text-gold-primary/70 hover:text-gold-primary p-1">
+                            <Pencil size={12} />
+                          </button>
+                          <button type="button" onClick={() => removeItem('skills', s.id)} className="text-red-400/70 hover:text-red-300 p-1">
+                            <X size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )
       }

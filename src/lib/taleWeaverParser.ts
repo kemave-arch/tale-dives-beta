@@ -94,6 +94,22 @@ export interface TaleWeaverProtagonistDraft {
   secret?: string
   opening?: string
   portraitKey?: string
+  // Free-text class/archetype name (e.g. "Warrior", "Dragon Rider", or an
+  // original one fitting the world) — resolved leniently against the
+  // Preset Class Dictionary at Tale creation (data/classes.ts's
+  // getClassById already does this same lenient by-name matching for a
+  // player-typed or model-proposed class elsewhere), never a strict enum
+  // here, so the model is free to propose anything and an unrecognized name
+  // still degrades to a sensible synthesized class rather than failing.
+  classHint?: string
+}
+
+export interface TaleWeaverSkill {
+  id: string
+  name: string
+  desc?: string
+  effort?: string
+  tier?: string
 }
 
 export interface TaleWeaverRegion {
@@ -181,6 +197,7 @@ export interface TaleWeaverDraft {
   factions: TaleWeaverFaction[]
   npcs: TaleWeaverNpc[]
   lore: TaleWeaverLore[]
+  skills: TaleWeaverSkill[]
   beats: TaleWeaverBeat[]
   narrativeEvents: TaleWeaverNarrativeEvent[]
   deathRule?: DeathRule
@@ -225,8 +242,23 @@ export function parseTaleWeaverResponse(raw: string): TaleWeaverDraft {
         physicalTrait: str(protagEl.getAttribute('physical_trait')) || str(protagEl.getAttribute('appearance')) || str(protagEl.getAttribute('trait')),
         secret: str(protagEl.getAttribute('secret')) || str(protagEl.getAttribute('hidden')),
         opening: str(protagEl.getAttribute('opening')) || str(protagEl.getAttribute('opening_scene')),
+        classHint: str(protagEl.getAttribute('class')) || str(protagEl.getAttribute('archetype')),
       }
     : undefined
+
+  const skills: TaleWeaverSkill[] = []
+  for (const el of Array.from(doc.querySelectorAll('skill'))) {
+    const id = str(el.getAttribute('id'))
+    const name = str(el.getAttribute('name'))
+    if (!id || !name) continue
+    skills.push({
+      id,
+      name,
+      desc: str(el.getAttribute('desc')),
+      effort: str(el.getAttribute('effort')),
+      tier: str(el.getAttribute('tier')),
+    })
+  }
 
   const regions: TaleWeaverRegion[] = []
   for (const el of Array.from(doc.querySelectorAll('region'))) {
@@ -355,5 +387,5 @@ export function parseTaleWeaverResponse(raw: string): TaleWeaverDraft {
   const endGameRules: Partial<Record<EndingOutcome, string>> | undefined =
     win || lose || neutral ? { ...(win ? { win } : {}), ...(lose ? { lose } : {}), ...(neutral ? { neutral } : {}) } : undefined
 
-  return { world, protagonist, regions, locations, factions, npcs, lore, beats, narrativeEvents, deathRule, deathInstructions, endGameRules }
+  return { world, protagonist, regions, locations, factions, npcs, lore, skills, beats, narrativeEvents, deathRule, deathInstructions, endGameRules }
 }

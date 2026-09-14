@@ -23,7 +23,7 @@ const TaleDiveWeaver = lazy(() => import('./screens/TaleDiveWeaver.tsx'))
 const TaleWeaver = lazy(() => import('./screens/TaleWeaver.tsx'))
 const WeaverCalibrator = lazy(() => import('./components/seedweaver/WeaverCalibrator.tsx'))
 const PromptLab = lazy(() => import('./screens/PromptLab.tsx'))
-import { getClassById, findClassById, PRESET_CLASSES } from './data/classes.ts'
+import { getClassById, findClassById } from './data/classes.ts'
 import { FOURTH_WING_WORLD, VIOLET_SORRENGAIL } from './data/starterTemplates.ts'
 import { buildContextSlice } from './lib/jitContext.ts'
 import { applyTurn } from './lib/shadowReferee.ts'
@@ -47,7 +47,7 @@ import { applyMinionUpkeep, attemptSummon, type SummonCommand } from './lib/summ
 import { applyFactionRepDeltas, attitudeToRepTier } from './lib/factions.ts'
 import { addCondition, removeCondition, expireConditions } from './lib/conditions.ts'
 import { ensureEntry } from './lib/autoRegister.ts'
-import { tierToWord, COMPETENCY_TIERS } from './lib/tiers.ts'
+import { tierToWord, wordToTier, COMPETENCY_TIERS } from './lib/tiers.ts'
 import { applyLevelUps, isChapterBoundary, CHAPTER_TURN_INTERVAL, turnRefFor } from './lib/leveling.ts'
 import { parseKeywordLinks } from './lib/keywordLinks.ts'
 import { slugify } from './lib/slug.ts'
@@ -73,7 +73,7 @@ import NowPlayingBanner from './components/NowPlayingBanner.tsx'
 import * as store from './lib/store.ts'
 import { CURRENT_SCHEMA_VERSION, EQUIPPABLE_TYPES } from './types.ts'
 import type {
-  AreaEntry, BestiaryEntry, Campaign, CombatState, ConditionTag, Dict, EndingOutcome, EquipSlot, FactionEntry, GameTime, HistoryTurn, ItemEntry, KeywordLink, LocationEntry, LogEntry, LoreEntry,
+  AreaEntry, BestiaryEntry, Campaign, CombatState, ConditionTag, Dict, EffortTier, EndingOutcome, EquipSlot, FactionEntry, GameTime, HistoryTurn, ItemEntry, KeywordLink, LocationEntry, LogEntry, LoreEntry,
   NarrativeEvent, NpcEntry, Player, ProjectEntry, ProtagonistData, QuestEntry, RegionEntry, SkillEntry, SlashCommand, TaleBeat, TurnState, WorldData,
 } from './types.ts'
 
@@ -107,6 +107,26 @@ function errorMessage(err: unknown): string {
 // 1-5 CompetencyTier scale. Default (unset) lands at the midpoint tier.
 function npcSliderToTier(value: number | undefined): number {
   return Math.max(1, Math.min(5, Math.round(1 + ((value ?? 50) / 100) * 4)))
+}
+
+// Tale Weaving's Protagonist phase drafts starting skills as free-text
+// effort/tier words (TaleWeaverSkill), same vocabulary the turn-time <skill>
+// tag uses — but unlike a live turn's own strict reqTierWord parse (a
+// malformed model turn IS a parse failure worth surfacing), a one-shot Tale
+// creation draft degrading a slightly-off word to a sensible default beats
+// failing the whole Tale over one bad attribute.
+const TALE_WEAVER_EFFORT_WORDS = ['minor', 'focused', 'taxing'] as const
+function coerceEffort(raw: string | undefined): EffortTier | undefined {
+  const w = raw?.trim().toLowerCase()
+  return w && (TALE_WEAVER_EFFORT_WORDS as readonly string[]).includes(w) ? (w as EffortTier) : undefined
+}
+function coerceSkillTier(raw: string | undefined): number | undefined {
+  if (!raw?.trim()) return undefined
+  try {
+    return wordToTier(raw, COMPETENCY_TIERS)
+  } catch {
+    return undefined
+  }
 }
 
 export default function App() {
@@ -854,7 +874,13 @@ export default function App() {
 
     const w = accumulated.world
     const p = accumulated.protagonist
-    const cls = PRESET_CLASSES[0]
+    // A class/archetype hint drafted alongside the protagonist (or typed
+    // manually) — getClassById already does the same lenient by-name match
+    // used for a player-typed or model-proposed class elsewhere, degrading
+    // an unrecognized name to a sensible synthesized class rather than
+    // failing, so a Tale Weaving protagonist stops always landing on
+    // PRESET_CLASSES[0] regardless of what the conversation established.
+    const cls = getClassById(p?.classHint || 'warrior')
 
     const protagonistData: ProtagonistData = {
       name: p?.name?.trim() || 'The Protagonist',
@@ -995,6 +1021,25 @@ export default function App() {
       lore[id] = { ...lore[id], discovery: validateDiscovery(lore[id].discovery, { locations, npcs, quests: {} }) }
     }
 
+    // Starting Skills drafted alongside the protagonist — see the classHint
+    // comment above for why this closes the same gap: a Tale Weaving-created
+    // campaign used to always seed skills:{} regardless of what the
+    // conversation established.
+    const skills: Dict<SkillEntry> = {}
+    for (const s of accumulated.skills) {
+      if (!s.name?.trim()) continue
+      const id = s.id || 'skill_' + slugify(s.name)
+      skills[id] = {
+        name: s.name.trim(),
+        skillType: 'Active',
+        tier: coerceSkillTier(s.tier) ?? 2, // Novice
+        effort: coerceEffort(s.effort),
+        description: s.desc?.trim() || undefined,
+        classId: cls.id,
+        discovery: { state: 'known' },
+      }
+    }
+
     const beats: TaleBeat[] = accumulated.beats.map((b) => ({ id: b.id, title: b.title, summary: b.summary, status: 'pending' as const }))
 
     const narrativeEvents: Dict<NarrativeEvent> = {}
@@ -1038,7 +1083,7 @@ export default function App() {
       lore,
       quests: {},
       bestiary: {},
-      skills: {},
+      skills,
       combat: { active: false },
       flags: [],
       inventory: {},

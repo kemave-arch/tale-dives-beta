@@ -5,6 +5,22 @@ export interface InventoryResult {
   items: Dict<ItemEntry>
 }
 
+// A live QC pass caught the model drifting an item's own id between turns
+// (inv_add "healing_draught", inv_rem "healing_draughts" one turn later) —
+// Rule 2b (Name/ID Consistency) asks for exact reuse, but a plural/singular
+// slip is an easy one to make and the old exact-match-only lookup below
+// silently no-ops on it: the player's inventory count never actually drops,
+// with no error or sign anything went wrong. Cheap, narrow normalization —
+// try the id as given first, then its plural-or-singular counterpart against
+// whatever's actually in the inventory — before giving up, mirroring the
+// same "self-healing over silent failure" spirit as lib/codex.ts's fuzzy
+// dedup guard for {{Term|loc}} auto-registration.
+function resolveInventoryId(id: string, inventory: Dict<number>): string {
+  if (inventory[id]) return id
+  const alt = id.endsWith('s') ? id.slice(0, -1) : `${id}s`
+  return inventory[alt] ? alt : id
+}
+
 // §5.9/§3.2 Inventory Sanity Check — inv_add creates or increments; inv_rem
 // for an item the player doesn't (fully) own is clamped rather than driven
 // negative, and a fully-removed item's entry is dropped rather than left at
@@ -40,10 +56,12 @@ export function applyInventoryChanges(
   }
 
   for (const item of remove) {
-    if (!item.id || !nextInventory[item.id]) continue
-    const qty = Math.max(0, nextInventory[item.id] - Math.max(1, item.qty ?? 1))
-    if (qty === 0) delete nextInventory[item.id]
-    else nextInventory[item.id] = qty
+    if (!item.id) continue
+    const id = resolveInventoryId(item.id, nextInventory)
+    if (!nextInventory[id]) continue
+    const qty = Math.max(0, nextInventory[id] - Math.max(1, item.qty ?? 1))
+    if (qty === 0) delete nextInventory[id]
+    else nextInventory[id] = qty
   }
 
   return { inventory: nextInventory, items: nextItems }

@@ -170,8 +170,17 @@ interface SummaryParams {
   endTime?: GameTime
 }
 
-function formatGameTime(t: GameTime): string {
-  return `Day ${t.d} ${t.h}`
+// A coarse, qualitative day-span only — never the literal clock/day-of-time
+// string (GameTime.h is freeform model-written text like "08:15" or
+// "Morning Muster", not reliably parseable, so day count is the only part
+// safe to compute). Deliberately vague ("a single day," not "Day 1 08:00 to
+// Day 1 09:10") — see runSummary's own comment for why handing the model an
+// exact timestamp backfired.
+function describeChapterSpan(start: GameTime, end: GameTime): string {
+  const days = end.d - start.d
+  if (days <= 0) return 'a single day'
+  if (days === 1) return 'about a day'
+  return `about ${days} days`
 }
 
 // §2 Phase E Chapter Milestone — a plain-text (not JSON-schema) follow-up
@@ -195,9 +204,19 @@ export async function runSummary({ apiKey, model, temperature, maxOutputTokens, 
   // drift a live payload surfaced. Omitted (rather than a vague fallback)
   // when either bound couldn't be resolved, so the base instruction still
   // works for an older save with no time-stamped turns.
+  //
+  // This note used to ALSO tell the model the literal clock span ("from Day
+  // 1 08:00 to Day 1 09:10") as the guardrail against inflation — which
+  // backfired: with an exact timestamp handed to it as material, the model
+  // treated restating it as the way to prove the pacing was honest,
+  // producing a recap that stamped "Day 1, 08:00..." / "by 09:10..." onto
+  // nearly every beat, reading like a ship's log instead of prose. The
+  // pacing guardrail is kept (still ground it against real elapsed time),
+  // but the literal timestamps are withheld from the prompt entirely and
+  // the model is told explicitly not to write clock-like time stamps.
   const timeSpanNote =
     startTime && endTime
-      ? ` This chapter's events span real story-time from ${formatGameTime(startTime)} to ${formatGameTime(endTime)} — that is the ONLY time that has passed. Keep the recap's implied pacing honest to that span; do not describe it as spanning more time than it actually did (no "days later," "weeks of hardship," etc.) unless the span above genuinely covers that much time.`
+      ? ` This chapter's events covered only ${describeChapterSpan(startTime, endTime)} of real story-time — keep the recap's implied pacing honest to that (no "days later," "weeks of hardship," etc. if it was actually much shorter). Convey the passage of time the way a novel does — through scene transitions and natural phrasing ("by the time...", "afterward...") — never by stating an explicit clock time or day number; the reader should feel the pacing, not read a timestamp.`
       : ''
 
   const body = {

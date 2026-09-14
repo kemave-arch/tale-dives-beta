@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Home, Settings as SettingsIcon, Send, Star, BookOpen, Library, Sparkle, X, ExternalLink,
   ChevronUp, ChevronDown, ChevronsDown, History, Pause, Users, Backpack, Map as MapIcon, ShieldCheck, Target, Skull, HelpCircle,
-  Unlock, Lock, Repeat, Hammer, Ghost, ScrollText, Swords, Sparkles, LayoutGrid,
+  Unlock, Lock, Repeat, Hammer, Ghost, ScrollText, Swords, Sparkles, LayoutGrid, ZoomIn,
   AlertTriangle, Copy, Check, RotateCcw, Bug, Pencil, MoreHorizontal, Trash2, Heart, Coins, Flag, Feather,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -1206,6 +1206,10 @@ export default function Chronicle({
   const [navDragPos, setNavDragPos] = useState<{ y: number } | null>(null)
   const [navDragging, setNavDragging] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  // §7 Tap-to-inspect lightbox — a full-screen enlarged view for the hero
+  // location plate and any Codex-popup entity image. Pure display, no pan/
+  // zoom gesture; just a bigger look at art that's otherwise cropped small.
+  const [lightbox, setLightbox] = useState<{ url: string; caption: string } | null>(null)
   // §2 Phase E Chapter Milestone — a one-time "Story So Far" welcome-back
   // memo, shown when this screen is freshly entered (mount) and the most
   // recently closed chapter is newer than what's already been acknowledged.
@@ -1689,16 +1693,28 @@ export default function Chronicle({
               rendered when art actually exists; no fallback texture needed
               now that the ground is a flat, considered vellum on its own. */}
           {currentLocationImageUrl && (
-            <div className="relative w-full h-[220px] sm:h-[280px] overflow-hidden">
+            <button
+              onClick={() =>
+                setLightbox({
+                  url: currentLocationImageUrl,
+                  caption: player.locDisp || locations[player.locId]?.name || 'Current location',
+                })
+              }
+              aria-label="Inspect location artwork"
+              className="relative w-full h-[220px] sm:h-[280px] overflow-hidden block cursor-pointer group"
+            >
               <img
                 src={currentLocationImageUrl}
                 alt={locations[player.locId]?.name || player.locDisp || 'Current location'}
-                className="w-full h-full object-cover object-center"
+                className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.02]"
               />
               <div
                 className="absolute inset-0 pointer-events-none"
                 style={{ background: 'linear-gradient(to bottom, rgba(251,248,243,0) 55%, rgba(251,248,243,0.55) 82%, #fbf8f3 100%)' }}
               />
+              <span className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full bg-black/40 text-white/90 text-[10px] font-sans tracking-wide">
+                <ZoomIn size={12} /> Inspect
+              </span>
               <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between text-[11px] font-mono tracking-wider text-[#4e4637] uppercase">
                 <span className="flex items-center gap-1.5 truncate">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#b08830] shrink-0" />
@@ -1708,7 +1724,7 @@ export default function Chronicle({
                   <span className="shrink-0 pl-2">Day {player.time.d} · {player.time.h}</span>
                 )}
               </div>
-            </div>
+            </button>
           )}
 
           {/* §7 Present-NPC portrait rail — a row of illuminated medallions
@@ -2070,13 +2086,20 @@ export default function Chronicle({
 
             {/* Entity Image preview if generated */}
             {popupImageUrl && (!('discovery' in popupEntry) || !isHidden(popupEntry)) && (
-              <div className="relative w-full h-44 sm:h-52 rounded-lg overflow-hidden border border-[#dec48e] bg-[#f5f0e6] shadow-sm my-3">
+              <button
+                onClick={() => setLightbox({ url: popupImageUrl, caption: popupEntry.name })}
+                aria-label={`Inspect ${popupEntry.name} artwork`}
+                className="relative w-full h-44 sm:h-52 rounded-lg overflow-hidden border border-[#dec48e] bg-[#f5f0e6] shadow-sm my-3 block cursor-pointer group"
+              >
                 <img
                   src={popupImageUrl}
                   alt={popupEntry.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                 />
-              </div>
+                <span className="absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/40 text-white/90 text-[10px] font-sans tracking-wide">
+                  <ZoomIn size={11} /> Inspect
+                </span>
+              </button>
             )}
 
             {/* Content Body */}
@@ -2286,6 +2309,31 @@ export default function Chronicle({
               <span>Continue the Tale</span>
             </button>
           </div>
+        </div>
+      )}
+
+      {/* §7 Tap-to-inspect lightbox — sits above every other overlay (popup
+          card, Story So Far memo) since it can be triggered from inside
+          either one. */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-black/85 p-4 sm:p-6"
+          onClick={() => setLightbox(null)}
+        >
+          <button
+            onClick={() => setLightbox(null)}
+            aria-label="Close artwork preview"
+            className="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
+          >
+            <X size={20} />
+          </button>
+          <img
+            src={lightbox.url}
+            alt={lightbox.caption}
+            className="max-h-[80vh] max-w-full object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <p className="mt-4 font-display text-sm text-white/80 tracking-wide text-center">{lightbox.caption}</p>
         </div>
       )}
     </div>

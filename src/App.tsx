@@ -1633,7 +1633,23 @@ export default function App() {
   // record), so failures are swallowed rather than surfaced.
   async function narrateChapter(chapterNumber: number, chapterBeats: ChapterBeat[]) {
     if (!chapterBeats.length) return
-    const beatLines = chapterBeats.map((b) => `- Day ${b.time.d} ${b.time.h}: ${b.text}`).join('\n')
+    // Each beat used to carry its own literal "Day D H:" prefix — handed
+    // that as source material, the model mirrored the format straight back
+    // into the recap prose, stamping a clock time onto nearly every
+    // sentence instead of writing a normal narrated passage (see
+    // runSummary's own comment in gemini.ts for the matching fix on the
+    // instruction side). A day marker is still inserted, but only when the
+    // day actually changes across the list — enough to keep a multi-day
+    // chapter's beats in the right bucket without turning every single
+    // beat into its own timestamped log line.
+    let lastDay: number | null = null
+    const beatLines = chapterBeats
+      .flatMap((b) => {
+        const dayMarker = b.time.d !== lastDay ? [`(Day ${b.time.d})`] : []
+        lastDay = b.time.d
+        return [...dayMarker, `- ${b.text}`]
+      })
+      .join('\n')
     const syntheticHistory: HistoryTurn[] = [
       { role: 'user', parts: [{ text: `Chapter ${chapterNumber} — confirmed events, in order:\n${beatLines}` }] },
     ]

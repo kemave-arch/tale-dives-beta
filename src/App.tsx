@@ -1195,7 +1195,13 @@ export default function App() {
               ...g.log,
               {
                 action: actionText,
-                nar: `[Repairing State] ${result.fallbackText}`,
+                // Parens, not [square brackets] — richText.tsx's [Skill]
+                // convention treats any bracketed span as a tappable skill
+                // chip, so a literal "[Repairing State]" prefix rendered as
+                // a fake, dead skill link (tapping it found no such skill
+                // and silently no-op'd) — the exact "unclickable" bug a
+                // live report traced back to this exact string.
+                nar: `(Repairing State) ${result.fallbackText}`,
                 time: g.player.time,
                 locDisp: g.player.locDisp,
                 requestPayload: userTurnText,

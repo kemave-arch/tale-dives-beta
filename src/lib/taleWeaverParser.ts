@@ -1,6 +1,25 @@
 import type { DeathRule, EndingOutcome, RevealTrigger } from '../types.ts'
 import { str, num, parseXmlBlock, sanitizeXmlForParsing, decodeXmlEntities } from './xmlHelpers.ts'
 
+// Codex Discovery (lib/discovery.ts's matchesReveal) auto-resolves flag/
+// location_visit/npc_met/quest_complete for a hidden Codex entry — but at
+// Tale Weaving time, Campaign.quests always starts empty (quests only ever
+// originate from actual play, never from Tale Weaving), so a quest_complete
+// reveal_cond can never reference a quest that exists yet. validateDiscovery
+// (lib/discovery.ts) fails a hidden entry open to "known" the moment its own
+// revealCondition doesn't resolve against the current dict — so a
+// Tale-Weaving-authored quest_complete trigger would un-hide itself
+// immediately at Campaign creation, before play even starts. Deliberately
+// excluded here (along with 'story', Narrative-Event-only, and 'manual', the
+// safe "never auto-reveals" default) — only flag/location_visit/npc_met are
+// meaningful for content the model authors before any quest exists.
+const DISCOVERY_REVEAL_TRIGGERS = ['flag', 'location_visit', 'npc_met'] as const
+
+function parseRevealTrigger(el: Element): RevealTrigger | undefined {
+  const trg = str(el.getAttribute('reveal_trigger'))
+  return trg && (DISCOVERY_REVEAL_TRIGGERS as readonly string[]).includes(trg) ? (trg as RevealTrigger) : undefined
+}
+
 function parseXmlWithRegexFallback(raw: string): Document {
   try {
     return parseXmlBlock(raw, 'phase')
@@ -97,6 +116,8 @@ export interface TaleWeaverLocation {
   imageKey?: string
   hidden?: boolean
   teaser?: string
+  revealTrigger?: RevealTrigger
+  revealCondition?: string
 }
 
 export interface TaleWeaverFaction {
@@ -107,6 +128,8 @@ export interface TaleWeaverFaction {
   desc?: string
   hidden?: boolean
   teaser?: string
+  revealTrigger?: RevealTrigger
+  revealCondition?: string
 }
 
 export interface TaleWeaverNpc {
@@ -120,6 +143,8 @@ export interface TaleWeaverNpc {
   portraitKey?: string
   hidden?: boolean
   teaser?: string
+  revealTrigger?: RevealTrigger
+  revealCondition?: string
 }
 
 export interface TaleWeaverLore {
@@ -130,6 +155,8 @@ export interface TaleWeaverLore {
   era?: string
   hidden?: boolean
   teaser?: string
+  revealTrigger?: RevealTrigger
+  revealCondition?: string
 }
 
 export interface TaleWeaverBeat {
@@ -226,6 +253,8 @@ export function parseTaleWeaverResponse(raw: string): TaleWeaverDraft {
       areas: str(el.getAttribute('areas')),
       hidden: el.getAttribute('hidden') === '1' && !!str(el.getAttribute('tease')),
       teaser: str(el.getAttribute('tease')),
+      revealTrigger: parseRevealTrigger(el),
+      revealCondition: str(el.getAttribute('reveal_cond')),
     })
   }
 
@@ -242,6 +271,8 @@ export function parseTaleWeaverResponse(raw: string): TaleWeaverDraft {
       desc: str(el.getAttribute('desc')),
       hidden: el.getAttribute('hidden') === '1' && !!str(el.getAttribute('tease')),
       teaser: str(el.getAttribute('tease')),
+      revealTrigger: parseRevealTrigger(el),
+      revealCondition: str(el.getAttribute('reveal_cond')),
     })
   }
 
@@ -260,6 +291,8 @@ export function parseTaleWeaverResponse(raw: string): TaleWeaverDraft {
       trust: str(el.getAttribute('trust')),
       hidden: el.getAttribute('hidden') === '1' && !!str(el.getAttribute('tease')),
       teaser: str(el.getAttribute('tease')),
+      revealTrigger: parseRevealTrigger(el),
+      revealCondition: str(el.getAttribute('reveal_cond')),
     })
   }
 
@@ -278,6 +311,8 @@ export function parseTaleWeaverResponse(raw: string): TaleWeaverDraft {
       era: str(el.getAttribute('era')),
       hidden: hidden && !!teaser,
       teaser,
+      revealTrigger: parseRevealTrigger(el),
+      revealCondition: str(el.getAttribute('reveal_cond')),
     })
   }
 

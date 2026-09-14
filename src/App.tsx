@@ -915,9 +915,14 @@ export default function App() {
         factionOwner: null,
         standing: 'neutral',
         locationType: l.locationType || 'Landmark',
-        discovery: l.hidden
-          ? validateDiscovery({ state: 'hidden', revealTrigger: 'manual', teaser: l.teaser }, { locations, npcs: {}, quests: {} })
-          : { state: 'known' },
+        // Left as a raw (unvalidated) hidden block for now — validateDiscovery
+        // needs the *complete* locations/npcs dicts to correctly resolve a
+        // location_visit/npc_met reveal_cond, but those dicts are still being
+        // built at this point in the function (locations/factions come before
+        // npcs below). Resolved in one pass, against the finished dicts, right
+        // after npcs/lore are both built too — see "resolve deferred hidden
+        // Tale-Weaving discovery blocks" below.
+        discovery: l.hidden ? { state: 'hidden', revealTrigger: l.revealTrigger ?? 'manual', revealCondition: l.revealCondition, teaser: l.teaser } : { state: 'known' },
         imageKey: l.imageKey,
         ...(regionId ? { regionId } : {}),
         ...(l.mapX !== undefined ? { mapX: l.mapX } : {}),
@@ -934,9 +939,7 @@ export default function App() {
         description: f.desc?.trim() || undefined,
         territory: f.territory?.trim() || undefined,
         tags: f.attitude ? [f.attitude] : undefined,
-        discovery: f.hidden
-          ? validateDiscovery({ state: 'hidden', revealTrigger: 'manual', teaser: f.teaser }, { locations, npcs: {}, quests: {} })
-          : { state: 'known' },
+        discovery: f.hidden ? { state: 'hidden', revealTrigger: f.revealTrigger ?? 'manual', revealCondition: f.revealCondition, teaser: f.teaser } : { state: 'known' },
       }
     }
 
@@ -954,9 +957,7 @@ export default function App() {
         memSummary: '',
         lastSeenLocId: null,
         portraitKey: n.portraitKey,
-        discovery: n.hidden
-          ? validateDiscovery({ state: 'hidden', revealTrigger: 'manual', teaser: n.teaser }, { locations, npcs: {}, quests: {} })
-          : undefined,
+        discovery: n.hidden ? { state: 'hidden', revealTrigger: n.revealTrigger ?? 'manual', revealCondition: n.revealCondition, teaser: n.teaser } : undefined,
       }
     }
 
@@ -967,10 +968,28 @@ export default function App() {
         category: l.category?.trim() || 'General',
         content: l.content?.trim() || undefined,
         era: l.era?.trim() || undefined,
-        discovery: l.hidden
-          ? validateDiscovery({ state: 'hidden', revealTrigger: 'manual', teaser: l.teaser }, { locations, npcs, quests: {} })
-          : undefined,
+        discovery: l.hidden ? { state: 'hidden', revealTrigger: l.revealTrigger ?? 'manual', revealCondition: l.revealCondition, teaser: l.teaser } : undefined,
       }
+    }
+
+    // Resolve deferred hidden Tale-Weaving discovery blocks now that
+    // locations/factions/npcs/lore all exist in full — a location_visit or
+    // npc_met reveal_cond referencing an id from a *later*-built category
+    // (e.g. a hidden Location whose reveal_cond names an NPC, which isn't
+    // built until after locations/factions above) would otherwise fail open
+    // to "known" immediately, since validateDiscovery only trusts a
+    // reveal_cond it can actually find in the dict it's given.
+    for (const id of Object.keys(locations)) {
+      locations[id] = { ...locations[id], discovery: validateDiscovery(locations[id].discovery, { locations, npcs, quests: {} }) }
+    }
+    for (const id of Object.keys(factions)) {
+      factions[id] = { ...factions[id], discovery: validateDiscovery(factions[id].discovery, { locations, npcs, quests: {} }) }
+    }
+    for (const id of Object.keys(npcs)) {
+      npcs[id] = { ...npcs[id], discovery: validateDiscovery(npcs[id].discovery, { locations, npcs, quests: {} }) }
+    }
+    for (const id of Object.keys(lore)) {
+      lore[id] = { ...lore[id], discovery: validateDiscovery(lore[id].discovery, { locations, npcs, quests: {} }) }
     }
 
     const beats: TaleBeat[] = accumulated.beats.map((b) => ({ id: b.id, title: b.title, summary: b.summary, status: 'pending' as const }))

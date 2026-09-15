@@ -3,8 +3,9 @@ import {
   ArrowLeft, ArrowRight, ChevronRight, Zap, Sparkles, BookOpen, Users, Landmark, Shield,
   ScrollText, Flag, Save, FolderOpen, X, CheckCircle2, Loader2, Trash2, Info,
 } from 'lucide-react'
-import { GlassScreen } from '../lib/glassChrome.tsx'
+import { GlassScreen, GlassCTAButton } from '../lib/glassChrome.tsx'
 import { useConfirm } from '../lib/useConfirm.tsx'
+import { useSetupScreenBg } from '../lib/setupBgResolver.ts'
 import type { ApiSettings } from '../types.ts'
 import {
   TALE_WEAVER_PHASES, emptyAccumulated, runTaleWeaverPhase, mergeTaleWeaverDraft,
@@ -151,6 +152,24 @@ function EmptyNote({ status }: { status: GenStatus }) {
   )
 }
 
+// The same gender-matched background Original Mode's own Setup screen uses
+// (lib/setupBgResolver.ts) — reused here for the Tale Initiation Overview so
+// Dive In carries the same dramatic art treatment, instead of a plain vellum
+// review page. A fixed full-bleed layer behind the accordion cards, with a
+// scrim for contrast since we don't know the art's own contents in advance.
+function DiveWallpaperLayer({ gender }: { gender?: string }) {
+  const { pcUrl, mobileUrl } = useSetupScreenBg(gender)
+  return (
+    <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+      <picture>
+        <source media="(min-width: 768px)" srcSet={pcUrl} />
+        <img src={mobileUrl} alt="" decoding="async" fetchPriority="high" className="w-full h-full object-cover" />
+      </picture>
+      <div className="absolute inset-0 bg-black/40" />
+    </div>
+  )
+}
+
 export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPlayProps) {
   const [initialAutosave] = useState(() => loadTaleWeaverAutosave('quickplay'))
   const [step, setStep] = useState(initialAutosave?.step ?? 0)
@@ -270,7 +289,16 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
   const anyRunning = (Object.values(genStatus) as GenStatus[]).some((s) => s === 'running')
 
   return (
-    <GlassScreen ground="dark" className="parchment-surface !bg-[#fbf8f3] flex flex-col h-full overflow-hidden">
+    <GlassScreen ground="dark" className="flex flex-col h-full overflow-hidden">
+      {/* The Tale Initiation Overview trades the light vellum reading surface
+          every other step uses for the same gender-matched Dive-In wallpaper
+          Original Mode's own Setup screen used — dropping parchment-surface
+          here lets text-ink/text-gold-primary fall back to their default
+          dark-chrome values, which read correctly against this dark art
+          instead of the light-surface values parchment-surface would pin
+          them to. */}
+      {step === 4 && <DiveWallpaperLayer gender={accumulated.protagonist?.gender} />}
+      <div className={`relative z-10 flex flex-col h-full overflow-hidden ${step === 4 ? '' : 'parchment-surface !bg-[#fbf8f3]'}`}>
       <div className="max-w-2xl mx-auto w-full flex flex-col h-full overflow-hidden px-4 sm:px-6 pt-3 pb-4 gap-3">
         {/* Header */}
         <div className="flex items-center justify-between gap-2 shrink-0">
@@ -343,6 +371,7 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
             />
           )}
         </div>
+      </div>
       </div>
 
       {(presetToast || autosaveToast) && (
@@ -528,6 +557,12 @@ function TaleInitiationOverview({
         </p>
       </div>
 
+      {/* Scoped light-surface: the accordion cards are always white regardless
+          of the page's own background (dark wallpaper here, vellum
+          elsewhere), so their text-ink/text-gold-primary content needs the
+          light-surface token values pinned locally rather than inheriting
+          whatever the outer page happens to use. */}
+      <div className="parchment-surface flex flex-col gap-3">
       <AccordionSection icon={Sparkles} label="World Foundation" status={genStatus.world} defaultOpen>
         {w?.name || w?.background ? (
           <div className="flex flex-col gap-1">
@@ -631,31 +666,27 @@ function TaleInitiationOverview({
           <EmptyNote status={genStatus.arc} />
         )}
       </AccordionSection>
+      </div>
 
-      <div className="flex items-center w-full rounded-lg border border-gold-accent/30 bg-white shadow-xs overflow-hidden divide-x divide-gold-accent/15 mt-1 shrink-0">
+      <div className="flex items-center justify-between gap-3 w-full mt-1 shrink-0">
         <button
           type="button"
           onClick={onReturn}
-          className="flex-1 flex items-center justify-center gap-1.5 h-11 text-xs font-semibold text-ink-muted hover:text-ink hover:bg-gold-accent/10 transition-colors"
+          className="flex items-center gap-1.5 h-10 px-3 text-xs font-semibold text-[#e8ca8a]/80 hover:text-[#fae5b5] transition-colors"
         >
           <ArrowLeft size={15} /><span>Back</span>
         </button>
-        <button
-          type="button"
+        <GlassCTAButton
           onClick={onDiveIn}
+          icon={anyRunning ? undefined : Zap}
           disabled={anyRunning || !hasAnyContent(accumulated)}
-          className="flex-[1.4] flex items-center justify-center gap-1.5 h-11 bg-[#b08830] hover:bg-[#8d6b1d] text-white text-xs sm:text-sm font-semibold disabled:opacity-40 transition-colors"
         >
           {anyRunning ? (
-            <>
-              <Loader2 size={15} className="animate-spin" /><span>Still Weaving…</span>
-            </>
+            <span className="inline-flex items-center gap-1.5"><Loader2 size={15} className="animate-spin" /> Still Weaving…</span>
           ) : (
-            <>
-              <Zap size={15} /><span>Dive In</span>
-            </>
+            'Dive In'
           )}
-        </button>
+        </GlassCTAButton>
       </div>
     </div>
   )

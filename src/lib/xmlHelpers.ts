@@ -63,23 +63,37 @@ export function reqTierWord<T extends readonly string[]>(v: string | null, field
 
 // Same as reqTierWord, but optional — returns undefined when the attribute
 // is simply absent (a legitimate "not set this turn" case for e.g. an NPC's
-// `resolve`), still throwing on a present-but-off-vocabulary value.
+// `resolve`). A live QC pass caught the model also writing a literal "none"
+// for an optional field it had nothing to report (npc.party, when an NPC
+// isn't currently a companion or departed) — for an optional attribute that
+// throwing on is just as disproportionate as signToDelta's own "=" case
+// was: none of this parser's optional-field vocabularies (competency tiers,
+// kinship words, party status) use the literal word "none" for real, so
+// treating it as "not set" here can never shadow a genuine value. Anything
+// else off-vocabulary still throws — this only widens what counts as absent.
 export function optTierWord<T extends readonly string[]>(v: string | null, field: string, validSet: T): T[number] | undefined {
-  if (v === null || v === '') return undefined
+  if (v === null || v === '' || v.trim().toLowerCase() === 'none') return undefined
   return reqTierWord(v, field, validSet)
 }
 
 // The new `<npc aff="+|-" trust="+|-">` / `<cond>` sign attributes: a bare
 // '+' or '-' character only, never a magnitude, never a signed integer
-// string. Absent/empty means "no change" (undefined); anything else is a
-// parse error — this is the strictest version of this channel after several
-// rounds of review, specifically to foreclose any drift back toward "small
-// integer" thinking.
+// string — kept strict about what counts as a real delta, specifically to
+// foreclose any drift back toward "small integer" thinking. Absent/empty
+// means "no change" (undefined). A live QC pass caught the model also
+// writing an explicit `"="` here (a reasonable way to say "no change" on an
+// attribute it's already listing others alongside) — and, previously, ANY
+// off-vocabulary value here (this one included) threw and discarded the
+// *entire* turn's narration/sync, a wildly disproportionate cost for a
+// single cosmetic relationship-nudge attribute. Self-heals to "no change"
+// instead, same self-heal-over-silent-failure spirit as this file's other
+// tolerant parsers (optTierWord, resolveInventoryId).
 export function signToDelta(raw: string | null, field: string): -1 | 1 | undefined {
-  if (raw === null || raw === '') return undefined
+  if (raw === null || raw === '' || raw === '=') return undefined
   if (raw === '+') return 1
   if (raw === '-') return -1
-  throw new XmlParseError(`Invalid ${field}: expected a bare "+" or "-", got "${raw}"`)
+  console.warn(`signToDelta: unrecognized ${field} value "${raw}" — treating as no change`)
+  return undefined
 }
 
 // Sanitizes raw string for XML parsing by converting unescaped ampersands

@@ -19,7 +19,6 @@ const DiveLoadingScreen = lazy(() => import('./screens/DiveLoadingScreen.tsx'))
 const Chronicle = lazy(() => import('./screens/Chronicle.tsx'))
 const Codex = lazy(() => import('./screens/Codex.tsx'))
 const SlashCommandManager = lazy(() => import('./screens/SlashCommandManager.tsx'))
-const TaleDiveWeaver = lazy(() => import('./screens/TaleDiveWeaver.tsx'))
 const TaleWeaver = lazy(() => import('./screens/TaleWeaver.tsx'))
 const QuickPlay = lazy(() => import('./screens/QuickPlay.tsx'))
 const WeaverCalibrator = lazy(() => import('./components/seedweaver/WeaverCalibrator.tsx'))
@@ -93,7 +92,7 @@ const KEYWORD_CATEGORY_TO_CODEX: Record<KeywordLink['category'], CategoryId> = {
 // screen is current (same as SlashCommandManager), not a screen that replaces
 // it — that's what lets its glass read against the live Chronicle parchment or
 // the Title artwork behind it rather than a flat ground.
-type Screen = 'title' | 'mainmenu' | 'storymode' | 'worldsetup' | 'newgame' | 'talebrief' | 'chronicle' | 'codex' | 'diveloading' | 'seedingreview' | 'talediveweaver' | 'taleweaver' | 'quickplay'
+type Screen = 'title' | 'mainmenu' | 'storymode' | 'worldsetup' | 'newgame' | 'talebrief' | 'chronicle' | 'codex' | 'diveloading' | 'seedingreview' | 'taleweaver' | 'quickplay'
 type CreationMode = 'tale' | 'library'
 
 // §5.7 Player Defeat State — soft-fail recovery, client-owned.
@@ -884,6 +883,7 @@ export default function App() {
 
     const protagonistData: ProtagonistData = {
       name: p?.name?.trim() || 'The Protagonist',
+      gender: p?.gender,
       classId: cls.id,
       className: cls.name,
       background: p?.background,
@@ -1131,7 +1131,23 @@ export default function App() {
     if (uiPrefs.autoCloudBackup) {
       triggerAutoCloudBackup()
     }
-    navigateTo('seedingreview')
+
+    // Same Diving transition Original Mode's beginCampaign gets (matching
+    // gender-art DiveLoadingScreen) before landing on the Seeding Review —
+    // there's no real async work to cover here (unlike beginCampaign's own
+    // seedCampaign() call), so a short artificial hold is what actually makes
+    // the screen visible rather than an instant flash. The dummy abort
+    // controller only exists to satisfy the 'diveloading' screen's own
+    // safety-net effect (which otherwise bounces straight to the main menu
+    // when nothing is in flight) and to give Cancel something to no-op on.
+    setLoadingGender(protagonistData.gender)
+    const diveHold = new AbortController()
+    diveAbortRef.current = diveHold
+    navigateTo('diveloading')
+    setTimeout(() => {
+      if (diveAbortRef.current === diveHold) diveAbortRef.current = null
+      navigateTo('seedingreview')
+    }, 1600)
   }
 
   async function sendAction(actionText: string, forcePauseState?: boolean, overrideGame?: Campaign, overrideHistory?: HistoryTurn[]) {
@@ -2262,23 +2278,6 @@ export default function App() {
         onResumeSoundtrack={onResumeSoundtrack}
       />
     )
-  } else if (screen === 'talediveweaver') {
-    content = (
-      <TaleDiveWeaver
-        debugMode={uiPrefs.debugMode}
-        worldTemplates={Object.values(worlds)}
-        protagonistTemplates={Object.values(protagonists)}
-        existingTitles={Object.values(campaigns).map((c) => c.title)}
-        onBack={() => goBack('mainmenu')}
-        onSaveProtagonistPreset={(pData: ProtagonistData) => upsertProtagonist(pData, pData.id, pData.className || getClassById(pData.classId).name)}
-        onSaveWorldPreset={(wData: WorldData) => upsertWorld(wData, wData.id)}
-        onDeleteProtagonistPreset={deleteProtagonist}
-        onDeleteWorldPreset={deleteWorld}
-        onBeginTale={(protagonistData: ProtagonistData, worldOverride: Partial<WorldData>, customTitle: string, customNpcs?: SeedNpcData[]) => {
-          beginCampaign(protagonistData, worldOverride, customTitle, customNpcs)
-        }}
-      />
-    )
   } else if (screen === 'diveloading') {
     content = (
       <DiveLoadingScreen
@@ -2297,7 +2296,6 @@ export default function App() {
     content = (
       <StoryMode
         onBack={() => goBack('mainmenu')}
-        onSelectOriginal={() => navigateTo('talediveweaver')}
         onSelectInspired={() => navigateTo('taleweaver')}
         onSelectQuickPlay={() => navigateTo('quickplay')}
       />
@@ -2725,7 +2723,7 @@ export default function App() {
        </Suspense>
       )}
 
-      {uiPrefs.debugMode && screen !== 'talediveweaver' && (
+      {uiPrefs.debugMode && (
         <Suspense fallback={null}>
           <WeaverCalibrator isGlobal />
         </Suspense>

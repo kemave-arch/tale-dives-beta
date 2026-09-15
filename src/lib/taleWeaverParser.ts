@@ -87,6 +87,10 @@ export interface TaleWeaverWorldDraft {
 
 export interface TaleWeaverProtagonistDraft {
   name?: string
+  // Male/female, model-inferred from the protagonist described — used purely
+  // to pick the matching Dive-In/setup wallpaper art (lib/setupBgResolver.ts),
+  // never narrated or treated as a story trait.
+  gender?: string
   background?: string
   personality?: string
   motivation?: string
@@ -236,6 +240,7 @@ export function parseTaleWeaverResponse(raw: string): TaleWeaverDraft {
   const protagonist: TaleWeaverProtagonistDraft | undefined = protagEl
     ? {
         name: str(protagEl.getAttribute('name')),
+        gender: str(protagEl.getAttribute('gender')),
         background: str(protagEl.getAttribute('background')) || str(protagEl.getAttribute('backstory')),
         personality: str(protagEl.getAttribute('personality')) || str(protagEl.getAttribute('traits')),
         motivation: str(protagEl.getAttribute('motivation')) || str(protagEl.getAttribute('goal')),

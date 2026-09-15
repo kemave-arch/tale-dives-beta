@@ -1258,9 +1258,21 @@ export default function App() {
       // directly, so the redirect applies uniformly.
       const currentLocEntry = current.locations[current.player.locId]
       const misfiledAsLoc = !current.locations[turn.loc_id] ? currentLocEntry?.areas?.find((a) => a.id === turn.loc_id) : undefined
-      const effectiveLocId = misfiledAsLoc ? current.player.locId : turn.loc_id
-      const effectiveLocDisp = misfiledAsLoc ? undefined : turn.loc_disp
-      const effectiveLocDesc = misfiledAsLoc ? undefined : turn.loc_desc
+      // §7 — an unrecognized loc_id with no loc_disp to register a new place
+      // under is never a real relocation (a genuine new location always gets
+      // a display name so ensureLocation has something to call it — see the
+      // grammar's own "only on the turn it's first introduced" rule) —
+      // treat it as the model misremembering/mistyping the current
+      // location's own id rather than forking a nameless duplicate under
+      // the wrong key. Live-caught: several turns straight reverting to the
+      // Tale's own starting-location placeholder id ('loc_start', set once
+      // by beginInspiredTale/beginCampaign before the Prologue's own loc_id
+      // first resolves it) well after the model had already self-corrected
+      // to the real slug and stayed there.
+      const staleIdNoRename = !misfiledAsLoc && !current.locations[turn.loc_id] && !turn.loc_disp && !!currentLocEntry
+      const effectiveLocId = misfiledAsLoc || staleIdNoRename ? current.player.locId : turn.loc_id
+      const effectiveLocDisp = misfiledAsLoc || staleIdNoRename ? undefined : turn.loc_disp
+      const effectiveLocDesc = misfiledAsLoc || staleIdNoRename ? undefined : turn.loc_desc
       const effectiveAreaId = misfiledAsLoc ? misfiledAsLoc.id : turn.area_id
       const effectiveAreaDisp = misfiledAsLoc ? undefined : turn.area_disp
       const effectiveAreaDesc = misfiledAsLoc ? undefined : turn.area_desc

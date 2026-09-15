@@ -36,6 +36,22 @@ interface TaleWeaverProps {
 
 const PHASE_SHORT_LABELS = ['World', 'Hero', 'Places', 'Factions', 'Cast', 'Lore', 'Arc']
 
+// Desktop sidebar-only: a one-line status under each phase's short label
+// (mirrors the mockup's persistent phase-pipeline sidebar). Plain and
+// descriptive, matching each phase's own TALE_WEAVER_PHASES.label rather
+// than reaching for flowery/roleplay-flavored copy.
+const PHASE_SIDEBAR_SUBLABELS = [
+  'Foundational canon',
+  'Drafting identity',
+  'Cartography & biomes',
+  'Orders & creeds',
+  'Cast & relationships',
+  'Myths & records',
+  'Structure & stakes',
+]
+
+const PHASE_ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII']
+
 function fieldSummary(fields: (string | undefined)[]): string {
   return fields.filter(Boolean).join(' · ')
 }
@@ -2668,8 +2684,98 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
   }
 
   return (
-    <GlassScreen ground="dark" className="parchment-surface !bg-[#fbf8f3] px-3 sm:px-6 pb-4 pt-2 flex flex-col h-full overflow-hidden">
-      <div className="max-w-4xl lg:max-w-5xl mx-auto w-full flex flex-col h-full overflow-hidden gap-2">
+    <GlassScreen ground="dark" className="parchment-surface !bg-[#fbf8f3] flex flex-col h-full overflow-hidden">
+      {/* GlassScreen's own inner wrapper (which actually renders these
+          children) carries no flex/height styling of its own when `fill`
+          isn't passed — so the sidebar+content split needs its own explicit
+          flex row container here, rather than putting flex-row on
+          GlassScreen's className above (that flex would have nothing to
+          apply to, since GlassScreen wraps all children in one plain block
+          div first). */}
+      <div className="flex flex-col h-full overflow-hidden lg:flex-row">
+      {/* Persistent desktop phase-pipeline sidebar (mockup's "Story Pipeline"
+          panel) — hidden on mobile/tablet, where the horizontal stepper strip
+          below already covers phase navigation in less width. */}
+      <aside className="hidden lg:flex lg:flex-col lg:w-72 lg:shrink-0 lg:h-full lg:overflow-y-auto lg:border-r lg:border-gold-accent/20 lg:bg-[#f5f0e6] lg:p-4 lg:gap-4">
+        <div className="flex items-center gap-1.5 min-w-0 text-xs px-1">
+          <span className="font-display font-bold tracking-wider text-gold-primary uppercase truncate">Tale Dives</span>
+          <span className="text-gold-accent/40">/</span>
+          <span className="text-ink-muted font-medium truncate">Weaver Studio</span>
+        </div>
+        <div className="flex flex-col gap-3">
+          <div className="px-1 flex items-center justify-between">
+            <span className="font-display text-[11px] font-bold uppercase tracking-widest text-ink">Story Pipeline</span>
+            <span className="font-display text-xs text-gold-primary font-bold">Phase {phaseIdx + 1} of {TALE_WEAVER_PHASES.length}</span>
+          </div>
+          <div className="w-full bg-gold-accent/20 h-1 rounded-full overflow-hidden">
+            <div
+              className="bg-gold-primary h-full transition-all"
+              style={{ width: `${((phaseIdx + 1) / TALE_WEAVER_PHASES.length) * 100}%` }}
+            />
+          </div>
+          <nav className="flex flex-col gap-1 w-full">
+            {TALE_WEAVER_PHASES.map((p, idx) => {
+              const isActive = idx === phaseIdx
+              const isCompleted = hasPhaseContent(p.id, accumulated)
+              const isVisited = idx <= maxVisitedIdx
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => handleJumpToPhase(idx)}
+                  aria-current={isActive ? 'step' : undefined}
+                  className={`group flex items-center justify-between px-3 py-2.5 rounded-lg text-left transition-all border ${
+                    isActive
+                      ? 'bg-white border-gold-primary/50 shadow-xs'
+                      : 'border-transparent hover:bg-white/60 hover:border-gold-accent/25'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span
+                      className={`w-6 h-6 shrink-0 rounded-full font-mono text-xs flex items-center justify-center font-bold ${
+                        isActive
+                          ? 'bg-gold-primary text-white shadow-xs'
+                          : 'bg-white border border-gold-accent/25 text-ink-muted'
+                      }`}
+                    >
+                      {PHASE_ROMAN[idx]}
+                    </span>
+                    <div className="flex flex-col min-w-0">
+                      <span className={`font-display text-xs font-bold truncate ${isActive ? 'text-gold-primary' : 'text-ink'}`}>
+                        {p.label}
+                      </span>
+                      <span className={`text-[11px] truncate ${isActive ? 'text-gold-primary/80 font-medium' : 'text-ink-muted'}`}>
+                        {PHASE_SIDEBAR_SUBLABELS[idx]}
+                      </span>
+                    </div>
+                  </div>
+                  {isCompleted ? (
+                    <Check size={16} className="text-gold-primary shrink-0" />
+                  ) : isActive ? (
+                    <span className="w-2 h-2 rounded-full bg-gold-primary shrink-0" />
+                  ) : !isVisited ? (
+                    <Lock size={14} className="text-ink-muted/60 shrink-0" />
+                  ) : null}
+                </button>
+              )
+            })}
+          </nav>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowOverview(true)}
+          className="mt-auto p-3.5 rounded-lg bg-white border border-gold-accent/25 shadow-xs text-left hover:border-gold-accent/50 transition-colors"
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <BookOpen size={16} className="text-gold-primary" />
+            <span className="font-display text-xs font-bold text-ink uppercase">Tale Overview</span>
+          </div>
+          <p className="text-[11px] text-ink-muted leading-tight">Review every established world, cast, and story element woven so far.</p>
+        </button>
+      </aside>
+
+      <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden px-3 sm:px-6 pb-4 pt-2">
+      <div className="max-w-4xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto w-full flex flex-col h-full overflow-hidden gap-2">
         {/* Top Header */}
         <header className="shrink-0 flex flex-col gap-2 pt-1">
           <div className="flex items-center justify-between gap-2">
@@ -2707,9 +2813,12 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
           </div>
         </header>
 
-        {/* Stepper Bar & Overview Trigger */}
-        <div className="shrink-0 flex items-center justify-between gap-2 py-1.5 px-2 rounded-xl bg-[#fbf8f3]/80 border border-gold-accent/20">
-          <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-0.5 flex-1 justify-start md:justify-center">
+        {/* Stepper Bar & Overview Trigger — the phase pills are the only
+            phase-navigation UI on mobile/tablet; on desktop the persistent
+            sidebar owns that job instead, so the pills hide there and this
+            row collapses to just the Save/Load/Overview action bar. */}
+        <div className="shrink-0 flex items-center justify-between lg:justify-end gap-2 py-1.5 px-2 rounded-xl bg-[#fbf8f3]/80 border border-gold-accent/20">
+          <div className="flex lg:hidden items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-0.5 flex-1 justify-start md:justify-center">
             {TALE_WEAVER_PHASES.map((p, idx) => {
               const isActive = idx === phaseIdx
               const isCompleted = hasPhaseContent(p.id, accumulated)
@@ -2905,6 +3014,8 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
             </button>
           </div>
         </div>
+      </div>
+      </div>
       </div>
 
       {/* Tale Overview Modal */}

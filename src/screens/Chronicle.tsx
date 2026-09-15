@@ -891,23 +891,39 @@ const TurnBlock = memo(function TurnBlock({
 
   return (
     <div ref={setRef} className="space-y-2">
-      {(turnRefMatch || (entry.time && entry.locDisp)) && (
-        <div className="flex items-center justify-between gap-3 border-b border-[#ede7dd] pb-1.5">
-          {turnRefMatch ? (
-            <span className="font-sans text-[10px] tracking-[0.14em] uppercase text-[#9e968b]">
-              Turn {turnRefMatch[2]} &nbsp;·&nbsp; Chapter {turnRefMatch[1]}
-            </span>
-          ) : (
-            <span className="font-mono text-[10px] font-semibold uppercase tracking-wide text-[#8d6b1d]">
-              {entry.time && entry.locDisp ? formatTimestamp(entry.time, entry.locDisp) : ''}
-            </span>
-          )}
-          {entry.locDisp && (
-            <span className="font-mono text-[10px] text-[#8d6b1d] shrink-0 truncate max-w-[45%] text-right">
-              {entry.locDisp}
-            </span>
-          )}
+      {entry.isPrologue ? (
+        // The world-seeding turn's own `action` is a technical seed dump
+        // (world/protagonist/identity lines), never something the player
+        // typed — App.tsx omits it from `action` entirely for this entry —
+        // so this replaces the ordinary timestamp header with a dedicated
+        // "The Prologue" eyebrow instead, matching the bracketed-divider
+        // language this file already uses for chapter/bang-command beats.
+        <div className="flex items-center gap-3 pb-1.5">
+          <div className="flex-1 h-px bg-[#dec48e]" />
+          <span className="flex items-center gap-1.5 font-display text-[11px] font-bold uppercase tracking-[0.14em] text-[#8d6b1d] shrink-0">
+            <Feather size={12} className="text-[#b08830]" /> The Prologue
+          </span>
+          <div className="flex-1 h-px bg-[#dec48e]" />
         </div>
+      ) : (
+        (turnRefMatch || (entry.time && entry.locDisp)) && (
+          <div className="flex items-center justify-between gap-3 border-b border-[#ede7dd] pb-1.5">
+            {turnRefMatch ? (
+              <span className="font-sans text-[10px] tracking-[0.14em] uppercase text-[#9e968b]">
+                Turn {turnRefMatch[2]} &nbsp;·&nbsp; Chapter {turnRefMatch[1]}
+              </span>
+            ) : (
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-wide text-[#8d6b1d]">
+                {entry.time && entry.locDisp ? formatTimestamp(entry.time, entry.locDisp) : ''}
+              </span>
+            )}
+            {entry.locDisp && (
+              <span className="font-mono text-[10px] text-[#8d6b1d] shrink-0 truncate max-w-[45%] text-right">
+                {entry.locDisp}
+              </span>
+            )}
+          </div>
+        )
       )}
       {/* The player's own typed action — still the same narrative serif and
           italic treatment as everything else on the page (dropped the old
@@ -916,7 +932,8 @@ const TurnBlock = memo(function TurnBlock({
           so it reads as a distinct voice from the narration beneath it
           instead of blending straight into the timestamp above it — and no
           longer forced onto the same line as the turn-state badge, which
-          used to wrap awkwardly against a short action. */}
+          used to wrap awkwardly against a short action. Never set for the
+          Prologue turn (see entry.isPrologue above). */}
       {entry.action && (
         <div className="flex items-start gap-1.5 rounded-lg bg-[#f5f0e6] border border-[#ede7dd] px-2.5 py-1.5">
           <Feather size={12} className="text-[#b08830] shrink-0 mt-0.5" />

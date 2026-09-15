@@ -134,6 +134,62 @@ function buildPhasePrompt(phase: TaleWeaverPhaseDef, accumulated: TaleWeaverAccu
   return lines.join('\n')
 }
 
+// Folds one phase's freshly generated draft into the accumulated whole —
+// shared by both Tale Weaving creation flows (the full 7-phase screen and
+// Quick Play's 3-question screen) so a merge behavior fixed in one place
+// (e.g. "Source Material fields are player-typed, never overwritten") never
+// drifts between the two. World/Protagonist are whole-entity replacements;
+// every other phase accumulates new entries alongside what's already there,
+// deduping by id so a regenerated round doesn't create doubles.
+export function mergeTaleWeaverDraft(
+  prev: TaleWeaverAccumulated,
+  phaseId: TaleWeaverPhaseDef['id'],
+  draft: TaleWeaverDraft,
+): TaleWeaverAccumulated {
+  if (phaseId === 'world' && draft.world) {
+    return {
+      ...prev,
+      world: {
+        ...draft.world,
+        sourceTitle: prev.world?.sourceTitle,
+        sourceAuthor: prev.world?.sourceAuthor,
+        sourceScope: prev.world?.sourceScope,
+      },
+    }
+  }
+  if (phaseId === 'protagonist' && draft.protagonist) {
+    return { ...prev, protagonist: draft.protagonist, skills: draft.skills }
+  }
+
+  const next = { ...prev }
+  if (draft.regions.length) {
+    next.regions = [...prev.regions.filter((r) => !draft.regions.some((d) => d.id === r.id)), ...draft.regions]
+  }
+  if (draft.locations.length) {
+    next.locations = [...prev.locations.filter((l) => !draft.locations.some((d) => d.id === l.id)), ...draft.locations]
+  }
+  if (draft.factions.length) {
+    next.factions = [...prev.factions.filter((f) => !draft.factions.some((d) => d.id === f.id)), ...draft.factions]
+  }
+  if (draft.npcs.length) {
+    next.npcs = [...prev.npcs.filter((n) => !draft.npcs.some((d) => d.id === n.id)), ...draft.npcs]
+  }
+  if (draft.lore.length) {
+    next.lore = [...prev.lore.filter((l) => !draft.lore.some((d) => d.id === l.id)), ...draft.lore]
+  }
+  if (draft.beats.length) {
+    next.beats = [...prev.beats.filter((b) => !draft.beats.some((d) => d.id === b.id)), ...draft.beats]
+  }
+  if (draft.narrativeEvents.length) {
+    const prevEvents = prev.narrativeEvents ?? []
+    next.narrativeEvents = [...prevEvents.filter((e) => !draft.narrativeEvents.some((d) => d.id === e.id)), ...draft.narrativeEvents]
+  }
+  if (draft.deathRule) next.deathRule = draft.deathRule
+  if (draft.deathInstructions) next.deathInstructions = draft.deathInstructions
+  if (draft.endGameRules) next.endGameRules = { ...prev.endGameRules, ...draft.endGameRules }
+  return next
+}
+
 export interface RunTaleWeaverPhaseInput {
   apiSettings: ApiSettings
   phase: TaleWeaverPhaseDef

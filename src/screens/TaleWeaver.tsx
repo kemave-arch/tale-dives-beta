@@ -9,13 +9,14 @@ import { useConfirm } from '../lib/useConfirm.tsx'
 import type { ApiSettings, NarrationMode, Pov, RevealTrigger, TaleDifficultyKey } from '../types.ts'
 import { TALE_DIFFICULTIES } from '../api/turnContract.ts'
 import {
-  TALE_WEAVER_PHASES, emptyAccumulated, runTaleWeaverPhase,
+  TALE_WEAVER_PHASES, emptyAccumulated, runTaleWeaverPhase, mergeTaleWeaverDraft,
   type TaleWeaverAccumulated, type TaleWeaverPhaseDef,
 } from '../lib/taleWeaving.ts'
 import {
   getTaleWeaverPresets, saveTaleWeaverPreset, deleteTaleWeaverPreset,
   type TaleWeaverPreset
 } from '../lib/taleWeaverPresets.ts'
+import { loadTaleWeaverAutosave, saveTaleWeaverAutosave, clearTaleWeaverAutosave } from '../lib/taleWeaverAutosave.ts'
 import { useEntityImage } from '../lib/useEntityImage.ts'
 import { generateAndStoreEntityImage } from '../lib/entityImages.ts'
 import { buildLocationImagePrompt, buildNpcPortraitPrompt, buildRegionMapPrompt, getPremiumApiKey } from '../lib/imageGeneration.ts'
@@ -461,14 +462,34 @@ function TaleWeaverImageGenerator({
 }
 
 export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWeaverProps) {
-  const [phaseIdx, setPhaseIdx] = useState(0)
-  const [maxVisitedIdx, setMaxVisitedIdx] = useState(0)
-  const [guidance, setGuidance] = useState('')
+  // A silent in-progress draft (lib/taleWeaverAutosave.ts) resumed here so an
+  // accidental exit never costs the player their answers — distinct from the
+  // named "Save Preset" library below, which is an explicit player action.
+  const [initialAutosave] = useState(() => loadTaleWeaverAutosave('full'))
+  const [phaseIdx, setPhaseIdx] = useState(initialAutosave?.phaseIdx ?? 0)
+  const [maxVisitedIdx, setMaxVisitedIdx] = useState(initialAutosave?.phaseIdx ?? 0)
+  const [guidance, setGuidance] = useState(initialAutosave?.guidance ?? '')
   const [busy, setBusy] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [revealedBeats, setRevealedBeats] = useState<Set<string>>(new Set())
-  const [accumulated, setAccumulated] = useState<TaleWeaverAccumulated>(emptyAccumulated())
+  const [accumulated, setAccumulated] = useState<TaleWeaverAccumulated>(initialAutosave?.accumulated ?? emptyAccumulated())
   const [showOverview, setShowOverview] = useState(false)
+  const [autosaveToast, setAutosaveToast] = useState<string | null>(
+    initialAutosave && hasAnyContent(initialAutosave.accumulated) ? 'Resumed your in-progress draft.' : null,
+  )
+
+  useEffect(() => {
+    if (!autosaveToast) return
+    const t = setTimeout(() => setAutosaveToast(null), 3500)
+    return () => clearTimeout(t)
+  }, [autosaveToast])
+
+  // Re-saved on every change rather than only at phase transitions — a
+  // player can lose the app (or accidentally tap Back) mid-phase too.
+  useEffect(() => {
+    if (!hasAnyContent(accumulated)) return
+    saveTaleWeaverAutosave('full', { accumulated, phaseIdx, guidance })
+  }, [accumulated, phaseIdx, guidance])
 
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [showLoadModal, setShowLoadModal] = useState(false)
@@ -682,7 +703,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
   async function handleSafeExit() {
     if (hasAnyContent(accumulated)) {
       const ok = await confirm(
-        'Leave Tale Weaving? Any progress made crafting this tale will be discarded.'
+        'Leave Tale Weaving? Your progress is saved automatically — you can pick up right where you left off.'
       )
       if (!ok) return
     }
@@ -713,67 +734,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
 
     const draft = result.draft
     setGuidance('')
-
-    if (phase.id === 'world' && draft.world) {
-      // Source Material fields are player-typed, never model-produced (see
-      // TaleWeaverWorldDraft's own comment) — a regenerated draft.world
-      // would otherwise silently wipe out whatever was already typed here.
-      setAccumulated((prev) => ({
-        ...prev,
-        world: {
-          ...draft.world,
-          sourceTitle: prev.world?.sourceTitle,
-          sourceAuthor: prev.world?.sourceAuthor,
-          sourceScope: prev.world?.sourceScope,
-        },
-      }))
-      return
-    }
-    if (phase.id === 'protagonist' && draft.protagonist) {
-      // Starting Skills are drafted alongside the protagonist in this same
-      // phase call — regenerating the protagonist regenerates their starting
-      // abilities together, same "whole-entity replace" behavior as
-      // protagonist itself (unlike regions/npcs/etc., which accumulate
-      // across guidance rounds instead of replacing).
-      setAccumulated((prev) => ({ ...prev, protagonist: draft.protagonist, skills: draft.skills }))
-      return
-    }
-
-    setAccumulated((prev) => {
-      const next = { ...prev }
-      if (draft.regions.length) {
-        next.regions = [...prev.regions.filter((r) => !draft.regions.some((d) => d.id === r.id)), ...draft.regions]
-      }
-      if (draft.locations.length) {
-        next.locations = [...prev.locations.filter((l) => !draft.locations.some((d) => d.id === l.id)), ...draft.locations]
-      }
-      if (draft.factions.length) {
-        next.factions = [...prev.factions.filter((f) => !draft.factions.some((d) => d.id === f.id)), ...draft.factions]
-      }
-      if (draft.npcs.length) {
-        next.npcs = [...prev.npcs.filter((n) => !draft.npcs.some((d) => d.id === n.id)), ...draft.npcs]
-      }
-      if (draft.lore.length) {
-        next.lore = [...prev.lore.filter((l) => !draft.lore.some((d) => d.id === l.id)), ...draft.lore]
-      }
-      if (draft.beats.length) {
-        next.beats = [...prev.beats.filter((b) => !draft.beats.some((d) => d.id === b.id)), ...draft.beats]
-      }
-      if (draft.narrativeEvents.length) {
-        const prevEvents = prev.narrativeEvents ?? []
-        next.narrativeEvents = [...prevEvents.filter((e) => !draft.narrativeEvents.some((d) => d.id === e.id)), ...draft.narrativeEvents]
-      }
-      if (draft.deathRule) {
-        next.deathRule = draft.deathRule
-      }
-      if (draft.deathInstructions) {
-        next.deathInstructions = draft.deathInstructions
-      }
-      if (draft.endGameRules) {
-        next.endGameRules = { ...prev.endGameRules, ...draft.endGameRules }
-      }
-      return next
-    })
+    setAccumulated((prev) => mergeTaleWeaverDraft(prev, phase.id, draft))
   }
 
   function removeItem(category: keyof TaleWeaverAccumulated, id: string) {
@@ -3397,6 +3358,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 type="button"
                 onClick={() => {
                   if (!hasAnyContent(accumulated)) return
+                  clearTaleWeaverAutosave('full')
                   setShowOverview(false)
                   onBeginTale(accumulated)
                 }}
@@ -3412,10 +3374,10 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
       )}
 
       {/* Toast Notice Banner */}
-      {presetToast && (
+      {(presetToast || autosaveToast) && (
         <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#b08830] text-white font-display font-bold text-xs shadow-2xl animate-in fade-in slide-in-from-top-3 duration-200">
           <CheckCircle2 size={15} />
-          <span>{presetToast}</span>
+          <span>{presetToast ?? autosaveToast}</span>
         </div>
       )}
 

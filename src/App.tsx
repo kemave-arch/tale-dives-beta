@@ -1194,7 +1194,8 @@ export default function App() {
             log: [
               ...g.log,
               {
-                action: actionText,
+                action: isWorldSeedingTurn ? undefined : actionText,
+                ...(isWorldSeedingTurn ? { isPrologue: true } : {}),
                 // Parens, not [square brackets] — richText.tsx's [Skill]
                 // convention treats any bracketed span as a tappable skill
                 // chip, so a literal "[Repairing State]" prefix rendered as
@@ -1559,7 +1560,8 @@ export default function App() {
         log: [
           ...current.log,
           {
-            action: actionText,
+            action: isWorldSeedingTurn ? undefined : actionText,
+            ...(isWorldSeedingTurn ? { isPrologue: true } : {}),
             nar: turn.nar,
             turnRef,
             turnState,

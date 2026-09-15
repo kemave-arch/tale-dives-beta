@@ -604,6 +604,11 @@ export interface ChapterBeat {
 
 export interface LogEntry {
   action?: string
+  // Turn 1 only — the world-seeding turn's `action` is the technical
+  // seed dump (world/protagonist/identity lines), not something the player
+  // typed, so it's never stored/rendered as a normal action card. Chronicle
+  // uses this flag to give the entry its own "Prologue" framing instead.
+  isPrologue?: boolean
   nar: string
   // Chapter-relative trace id, "C{chapter}-{block}" (e.g. "C1-3" = Chapter 1,
   // 3rd narrated turn), computed client-side from turnCount and

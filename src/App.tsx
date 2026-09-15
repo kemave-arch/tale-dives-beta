@@ -1270,9 +1270,20 @@ export default function App() {
       // first resolves it) well after the model had already self-corrected
       // to the real slug and stayed there.
       const staleIdNoRename = !misfiledAsLoc && !current.locations[turn.loc_id] && !turn.loc_disp && !!currentLocEntry
-      const effectiveLocId = misfiledAsLoc || staleIdNoRename ? current.player.locId : turn.loc_id
-      const effectiveLocDisp = misfiledAsLoc || staleIdNoRename ? undefined : turn.loc_disp
-      const effectiveLocDesc = misfiledAsLoc || staleIdNoRename ? undefined : turn.loc_desc
+      // Same live-caught placeholder-reversion, one variant further: the
+      // model gives a loc_disp this time, but it names a location that
+      // already has its own real entry (e.g. loc="loc_start" loc_disp="The
+      // Threshing Grounds", well after "the_threshing_grounds" was already
+      // registered) — staleIdNoRename doesn't catch this since a loc_disp
+      // IS present, so without this check it forks a second, duplicate
+      // Location keyed under the stale id instead of just staying put.
+      const renamedExistingId = !misfiledAsLoc && !staleIdNoRename && !current.locations[turn.loc_id] && turn.loc_disp
+        ? Object.entries(current.locations).find(([, l]) => l.name?.trim().toLowerCase() === turn.loc_disp!.trim().toLowerCase())?.[0]
+        : undefined
+      const staleIdRenamedKnown = !!renamedExistingId
+      const effectiveLocId = misfiledAsLoc || staleIdNoRename ? current.player.locId : (renamedExistingId ?? turn.loc_id)
+      const effectiveLocDisp = misfiledAsLoc || staleIdNoRename || staleIdRenamedKnown ? undefined : turn.loc_disp
+      const effectiveLocDesc = misfiledAsLoc || staleIdNoRename || staleIdRenamedKnown ? undefined : turn.loc_desc
       const effectiveAreaId = misfiledAsLoc ? misfiledAsLoc.id : turn.area_id
       const effectiveAreaDisp = misfiledAsLoc ? undefined : turn.area_disp
       const effectiveAreaDesc = misfiledAsLoc ? undefined : turn.area_desc

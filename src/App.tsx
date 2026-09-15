@@ -21,6 +21,7 @@ const Codex = lazy(() => import('./screens/Codex.tsx'))
 const SlashCommandManager = lazy(() => import('./screens/SlashCommandManager.tsx'))
 const TaleDiveWeaver = lazy(() => import('./screens/TaleDiveWeaver.tsx'))
 const TaleWeaver = lazy(() => import('./screens/TaleWeaver.tsx'))
+const QuickPlay = lazy(() => import('./screens/QuickPlay.tsx'))
 const WeaverCalibrator = lazy(() => import('./components/seedweaver/WeaverCalibrator.tsx'))
 const PromptLab = lazy(() => import('./screens/PromptLab.tsx'))
 import { getClassById, findClassById } from './data/classes.ts'
@@ -92,7 +93,7 @@ const KEYWORD_CATEGORY_TO_CODEX: Record<KeywordLink['category'], CategoryId> = {
 // screen is current (same as SlashCommandManager), not a screen that replaces
 // it — that's what lets its glass read against the live Chronicle parchment or
 // the Title artwork behind it rather than a flat ground.
-type Screen = 'title' | 'mainmenu' | 'storymode' | 'worldsetup' | 'newgame' | 'talebrief' | 'chronicle' | 'codex' | 'diveloading' | 'seedingreview' | 'talediveweaver' | 'taleweaver'
+type Screen = 'title' | 'mainmenu' | 'storymode' | 'worldsetup' | 'newgame' | 'talebrief' | 'chronicle' | 'codex' | 'diveloading' | 'seedingreview' | 'talediveweaver' | 'taleweaver' | 'quickplay'
 type CreationMode = 'tale' | 'library'
 
 // §5.7 Player Defeat State — soft-fail recovery, client-owned.
@@ -2298,11 +2299,20 @@ export default function App() {
         onBack={() => goBack('mainmenu')}
         onSelectOriginal={() => navigateTo('talediveweaver')}
         onSelectInspired={() => navigateTo('taleweaver')}
+        onSelectQuickPlay={() => navigateTo('quickplay')}
       />
     )
   } else if (screen === 'taleweaver') {
     content = (
       <TaleWeaver
+        apiSettings={apiSettings}
+        onBack={() => goBack('storymode')}
+        onBeginTale={beginInspiredTale}
+      />
+    )
+  } else if (screen === 'quickplay') {
+    content = (
+      <QuickPlay
         apiSettings={apiSettings}
         onBack={() => goBack('storymode')}
         onBeginTale={beginInspiredTale}

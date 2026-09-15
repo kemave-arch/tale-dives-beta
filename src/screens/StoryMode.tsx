@@ -1,11 +1,12 @@
 import { motion } from 'framer-motion'
-import { Sparkles, BookOpen } from 'lucide-react'
+import { Sparkles, BookOpen, Zap } from 'lucide-react'
 import { GlassHeader, GlassScreen } from '../lib/glassChrome.tsx'
 
 interface StoryModeProps {
   onBack: () => void
   onSelectOriginal: () => void
   onSelectInspired: () => void
+  onSelectQuickPlay: () => void
 }
 
 // §Phase A / §6.4B "Story Creation — Cards Row" — the entry point into
@@ -15,7 +16,7 @@ interface StoryModeProps {
 // Sits on the cycling artwork, like the other three creation steps: building a
 // story is a continuation of the front door, not a separate utility screen.
 // Back moved into the shared header rather than its own bordered footer.
-export default function StoryMode({ onBack, onSelectOriginal, onSelectInspired }: StoryModeProps) {
+export default function StoryMode({ onBack, onSelectOriginal, onSelectInspired, onSelectQuickPlay }: StoryModeProps) {
   return (
     <GlassScreen ground="art" fill>
       <GlassHeader title="Choose Your Story Mode" subtitle="How should this tale begin?" onBack={onBack} />
@@ -53,6 +54,26 @@ export default function StoryMode({ onBack, onSelectOriginal, onSelectInspired }
             <h3 className="font-display font-bold text-lg text-gold-primary">Inspired Mode</h3>
             <p className="font-narrative text-sm text-ink-muted">
               Weave a world in conversation — describe it phase by phase and watch it take shape.
+            </p>
+          </motion.button>
+
+          <motion.button
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.16 }}
+            whileHover={{ y: -3 }}
+            onClick={onSelectQuickPlay}
+            className="glass-panel glass-panel-hover rounded-2xl p-6 flex flex-col items-center gap-3 text-center relative"
+          >
+            <span className="absolute top-3 right-3 font-mono text-[9px] uppercase tracking-wider text-gold-primary/80 border border-gold-accent/40 rounded-full px-2 py-0.5">
+              ★ Recommended
+            </span>
+            <span className="w-14 h-14 rounded-full border border-gold-accent/50 flex items-center justify-center text-gold-primary">
+              <Zap size={26} />
+            </span>
+            <h3 className="font-display font-bold text-lg text-gold-primary">Quick Play</h3>
+            <p className="font-narrative text-sm text-ink-muted">
+              Three questions — your realm, your hero, your entry into the tale — and the Tale Weaver does the rest.
             </p>
           </motion.button>
         </div>

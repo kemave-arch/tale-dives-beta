@@ -3418,30 +3418,26 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
         </div>
       )}
 
-      {/* Confirmation Dialog (Modal) — useConfirm.tsx's shared dialog is built
-          for the app's default dark chrome (dark scrim, near-transparent gold
-          panel, light ink text) and is reused by several still-dark screens,
-          so it can't be recolored for light mode without breaking those.
-          Re-pinning the ink/gold tokens back to their dark-chrome values for
-          just this one subtree keeps it legible inside this screen's light
-          .parchment-surface scope without touching the shared hook. */}
+      {/* Confirmation Dialog (Modal) — useConfirm.tsx's shared dialog uses the
+          .glass-panel class, which several still-dark screens rely on for a
+          dark-chrome card. The ink/gold/rose text tokens already inherit this
+          screen's light .parchment-surface values correctly (that class's own
+          --color-* redeclaration freezes them light from here down), so only
+          .glass-panel's own fill needs addressing: in flat/performance mode
+          (index.css's html.gfx-performance override, the app's default) it
+          paints an opaque gradient from --td-surface/--td-surface-raised,
+          which are dark app-wide and not part of .parchment-surface's
+          overrides — left alone, the panel renders as a dark card floating on
+          this light screen. Re-pinning just those two tokens to light vellum
+          hex here (without touching --td-ink et al.) makes that gradient
+          resolve light, matching the Save/Load preset modals' own #fbf8f3
+          card fill, while leaving every other screen that shares this hook
+          untouched. */}
       <div
         style={
           {
-            '--td-ink': '#f0e3c4',
-            '--td-ink-muted': '#d3c1a0',
-            '--td-gold-primary': '#f0ca65',
-            '--td-gold-accent': '#e8ca8a',
-            '--td-rose': '#f87171',
-            // Tailwind's generated color utilities (.text-ink, .border-gold-accent,
-            // .bg-rose, ...) read the once-resolved --color-* variable from
-            // @theme, not --td-* directly — same reason .parchment-surface
-            // itself has to redeclare both; see that class's own comment.
-            '--color-ink': 'var(--td-ink)',
-            '--color-ink-muted': 'var(--td-ink-muted)',
-            '--color-gold-primary': 'var(--td-gold-primary)',
-            '--color-gold-accent': 'var(--td-gold-accent)',
-            '--color-rose': 'var(--td-rose)',
+            '--td-surface': '#fbf8f3',
+            '--td-surface-raised': '#f3ead9',
           } as CSSProperties
         }
       >

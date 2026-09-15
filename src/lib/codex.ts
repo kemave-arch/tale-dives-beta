@@ -122,16 +122,16 @@ export function applyKeywordLinks(codex: CodexDicts, nar: string | undefined, tu
         if (!isKnownByName(factions, term)) factions = ensureStub(factions, id, () => ({ name: term, repTier: 0 }), turnRef)
         break
       case 'lore':
-        lore = ensureStub(lore, id, () => ({ name: term, category: 'Unknown' }), turnRef)
+        if (!isKnownByName(lore, term)) lore = ensureStub(lore, id, () => ({ name: term, category: 'Unknown' }), turnRef)
         break
       case 'quest':
-        quests = ensureStub(quests, id, () => ({ name: term }), turnRef)
+        if (!isKnownByName(quests, term)) quests = ensureStub(quests, id, () => ({ name: term }), turnRef)
         break
       case 'beast':
-        bestiary = ensureStub(bestiary, id, () => ({ name: term, threatTier: 'unknown' as const }), turnRef)
+        if (!isKnownByName(bestiary, term)) bestiary = ensureStub(bestiary, id, () => ({ name: term, threatTier: 'unknown' as const }), turnRef)
         break
       case 'skill':
-        skills = ensureStub(skills, id, () => emptySkill(term), turnRef)
+        if (!isKnownByName(skills, term)) skills = ensureStub(skills, id, () => emptySkill(term), turnRef)
         break
     }
   }

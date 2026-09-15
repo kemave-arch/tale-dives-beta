@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, type CSSProperties } from 'react'
 import {
   X, ChevronRight, ChevronLeft, Sparkles, Lock, Unlock,
   BookOpen, AlertCircle, Check, ArrowRight, ArrowLeft, Pencil, Plus, Save,
-  ImagePlus, RotateCw, FolderOpen, Trash2, Bookmark, CheckCircle2, Clock, Info,
+  ImagePlus, RotateCw, FolderOpen, Trash2, Bookmark, CheckCircle2, Clock, Info, Search,
 } from 'lucide-react'
 import { GlassScreen } from '../lib/glassChrome.tsx'
 import { useConfirm } from '../lib/useConfirm.tsx'
@@ -459,6 +459,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
   const [presetNameInput, setPresetNameInput] = useState('')
   const [savedPresets, setSavedPresets] = useState<TaleWeaverPreset[]>([])
   const [presetToast, setPresetToast] = useState<string | null>(null)
+  const [presetSearch, setPresetSearch] = useState('')
 
   function handleSavePreset() {
     if (!presetNameInput.trim()) return
@@ -470,6 +471,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
 
   function handleOpenLoadModal() {
     setSavedPresets(getTaleWeaverPresets())
+    setPresetSearch('')
     setShowLoadModal(true)
   }
 
@@ -3356,12 +3358,15 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
             <div className="flex items-center justify-between border-b border-gold-accent/20 pb-2">
               <div className="flex items-center gap-2">
                 <FolderOpen size={16} className="text-gold-primary" />
-                <h3 className="font-display font-bold text-sm text-gold-primary">Load Draft Preset</h3>
+                <h3 className="font-bold text-sm text-gold-primary">World Presets</h3>
+                <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gold-accent/15 border border-gold-accent/30 text-gold-primary">
+                  {savedPresets.length}
+                </span>
               </div>
               <button
                 type="button"
                 onClick={() => setShowLoadModal(false)}
-                className="text-ink-muted hover:text-ink p-1 rounded-lg hover:bg-white/5 transition-colors"
+                className="text-ink-muted hover:text-ink p-1 rounded-lg hover:bg-gold-accent/10 transition-colors"
               >
                 <X size={15} />
               </button>
@@ -3371,6 +3376,19 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
               Select a previously saved World & Character preset to populate your Tale Weaver setup.
             </p>
 
+            {savedPresets.length > 0 && (
+              <div className="relative flex items-center">
+                <Search size={14} className="absolute left-2.5 text-ink-muted pointer-events-none" />
+                <input
+                  type="search"
+                  value={presetSearch}
+                  onChange={(e) => setPresetSearch(e.target.value)}
+                  placeholder="Search saved presets..."
+                  className="w-full pl-8 pr-3 py-2 rounded-md bg-white border border-gold-accent/25 text-xs font-semibold text-ink placeholder:text-ink-muted/60 shadow-xs outline-none focus:border-gold-primary focus:ring-1 focus:ring-gold-primary transition-all"
+                />
+              </div>
+            )}
+
             <div className="flex-1 overflow-y-auto flex flex-col gap-2.5 my-1 pr-1">
               {savedPresets.length === 0 ? (
                 <div className="py-8 text-center flex flex-col items-center justify-center gap-2 text-ink-muted font-narrative text-xs">
@@ -3378,8 +3396,24 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                   <p>No saved draft presets found.</p>
                   <p className="text-[11px] text-ink-muted/70">Click "Save Draft" in Tale Overview to save your first preset.</p>
                 </div>
-              ) : (
-                savedPresets.map((preset) => {
+              ) : (() => {
+                const query = presetSearch.trim().toLowerCase()
+                const filtered = query
+                  ? savedPresets.filter((preset) =>
+                      preset.name.toLowerCase().includes(query) ||
+                      preset.accumulated.world?.name?.toLowerCase().includes(query) ||
+                      preset.accumulated.protagonist?.name?.toLowerCase().includes(query)
+                    )
+                  : savedPresets
+                if (filtered.length === 0) {
+                  return (
+                    <div className="py-8 text-center flex flex-col items-center justify-center gap-1.5 text-ink-muted font-narrative text-xs">
+                      <Search size={20} className="text-gold-primary/30" />
+                      <p>No presets match "{presetSearch.trim()}".</p>
+                    </div>
+                  )
+                }
+                return filtered.map((preset) => {
                   const acc = preset.accumulated
                   const dateStr = new Date(preset.createdAt).toLocaleDateString(undefined, {
                     month: 'short',
@@ -3391,59 +3425,67 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                   return (
                     <div
                       key={preset.id}
-                      className="rounded-xl border border-gold-accent/25 bg-white p-3 flex flex-col gap-2 hover:border-gold-accent/50 transition-colors"
+                      className="rounded-xl border border-gold-accent/25 bg-white shadow-xs overflow-hidden flex flex-col gap-2 hover:border-gold-accent/50 transition-colors"
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <h4 className="font-display font-bold text-sm text-gold-primary">{preset.name}</h4>
-                          <span className="font-mono text-[10px] text-ink-muted">{dateStr}</span>
+                      <div className="p-3 pb-0 flex flex-col gap-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-sm text-gold-primary truncate">{preset.name}</h4>
+                            <span className="font-mono text-[10px] text-ink-muted">{dateStr}</span>
+                          </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleDeletePreset(preset.id)}
-                          className="p-1 rounded text-[#b91c1c]/70 hover:text-[#b91c1c] hover:bg-[#fdecec] transition-colors shrink-0"
-                          title="Delete preset"
-                        >
-                          <Trash2 size={13} />
-                        </button>
+
+                        {/* Preset Content Badges */}
+                        <div className="flex flex-wrap items-center gap-1.5 font-mono text-[10px]">
+                          {acc.world?.name && (
+                            <span className="px-2 py-0.5 rounded-full bg-gold-accent/15 border border-gold-accent/30 text-gold-primary">
+                              World: {acc.world.name}
+                            </span>
+                          )}
+                          {acc.protagonist?.name && (
+                            <span className="px-2 py-0.5 rounded-full bg-[#eef7f0] border border-[#0f5132]/30 text-[#0f5132]">
+                              Hero: {acc.protagonist.name}
+                            </span>
+                          )}
+                          {acc.regions.length > 0 && (
+                            <span className="px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700">
+                              {acc.regions.length} Regions / {acc.locations.length} Locs
+                            </span>
+                          )}
+                          {acc.npcs.length > 0 && (
+                            <span className="px-2 py-0.5 rounded-full bg-purple-50 border border-purple-200 text-purple-700">
+                              {acc.npcs.length} NPCs
+                            </span>
+                          )}
+                        </div>
                       </div>
 
-                      {/* Preset Content Badges */}
-                      <div className="flex flex-wrap items-center gap-1.5 font-mono text-[10px]">
-                        {acc.world?.name && (
-                          <span className="px-2 py-0.5 rounded-full bg-gold-accent/15 border border-gold-accent/30 text-gold-primary">
-                            World: {acc.world.name}
-                          </span>
-                        )}
-                        {acc.protagonist?.name && (
-                          <span className="px-2 py-0.5 rounded-full bg-[#eef7f0] border border-[#0f5132]/30 text-[#0f5132]">
-                            Hero: {acc.protagonist.name}
-                          </span>
-                        )}
-                        {acc.regions.length > 0 && (
-                          <span className="px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300">
-                            {acc.regions.length} Regions / {acc.locations.length} Locs
-                          </span>
-                        )}
-                        {acc.npcs.length > 0 && (
-                          <span className="px-2 py-0.5 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300">
-                            {acc.npcs.length} NPCs
-                          </span>
-                        )}
+                      {/* Load / Delete action group — mirrors the mockup's
+                          single bordered button-group per preset card. */}
+                      <div className="p-2 pt-1">
+                        <div className="flex items-center rounded-lg border border-gold-accent/25 bg-[#faf8f4] overflow-hidden divide-x divide-gold-accent/15">
+                          <button
+                            type="button"
+                            onClick={() => handleLoadPreset(preset)}
+                            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold text-gold-primary hover:bg-gold-accent/15 transition-colors"
+                          >
+                            <FolderOpen size={13} />
+                            <span>Load Preset</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePreset(preset.id)}
+                            className="px-3 py-1.5 text-ink-muted hover:text-[#b91c1c] hover:bg-[#fdecec] transition-colors"
+                            title="Delete preset"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleLoadPreset(preset)}
-                        className="mt-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-gold-accent/20 border border-gold-accent/40 text-gold-primary text-xs font-semibold hover:bg-gold-accent/35 transition-colors"
-                      >
-                        <FolderOpen size={13} />
-                        <span>Load Preset</span>
-                      </button>
                     </div>
                   )
                 })
-              )}
+              })()}
             </div>
           </div>
         </div>

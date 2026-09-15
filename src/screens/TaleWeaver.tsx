@@ -2794,6 +2794,34 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 <span className="text-ink-muted font-medium truncate">Weaver Studio</span>
               </div>
             </div>
+
+            {/* Load/Save Preset — moved here to match the mockup's top-header
+                placement (a single bordered pill group), rather than sitting
+                in the stepper-bar action row below. */}
+            <div className="shrink-0 inline-flex rounded-md border border-gold-accent/25 divide-x divide-gold-accent/15 bg-white shadow-xs overflow-hidden">
+              <button
+                type="button"
+                onClick={handleOpenLoadModal}
+                className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-medium text-ink-muted hover:text-ink hover:bg-gold-accent/10 transition-colors"
+                title="Load a saved World & Character Preset"
+              >
+                <FolderOpen size={13} className="text-gold-primary" />
+                <span>Load</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPresetNameInput(`${accumulated.world?.name || 'Custom World'} - ${accumulated.protagonist?.name || 'Hero'}`)
+                  setShowSaveModal(true)
+                }}
+                disabled={!hasAnyContent(accumulated)}
+                className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-medium text-ink-muted hover:text-ink hover:bg-gold-accent/10 transition-colors disabled:opacity-40"
+                title="Save current settings as a World & Character Preset"
+              >
+                <Save size={13} className="text-gold-primary" />
+                <span>Save</span>
+              </button>
+            </div>
           </div>
 
           {/* Tale Title — player-set, falls back to "{Name}'s Tale" at creation */}
@@ -2849,33 +2877,10 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
             })}
           </div>
 
-          {/* Preset & Overview Action Bar */}
-          <div className="shrink-0 flex items-center gap-1.5 border-l border-gold-accent/20 pl-2">
-            <button
-              type="button"
-              onClick={() => {
-                setPresetNameInput(`${accumulated.world?.name || 'Custom World'} - ${accumulated.protagonist?.name || 'Hero'}`)
-                setShowSaveModal(true)
-              }}
-              disabled={!hasAnyContent(accumulated)}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-gold-accent/30 bg-white hover:bg-gold-accent/20 text-gold-primary text-xs transition-colors disabled:opacity-40"
-              title="Save current settings as a World & Character Preset"
-            >
-              <Save size={13} />
-              <span className="hidden lg:inline">Save Draft</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleOpenLoadModal}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-gold-accent/30 bg-white hover:bg-gold-accent/20 text-gold-primary text-xs transition-colors"
-              title="Load a saved World & Character Preset"
-            >
-              <FolderOpen size={13} />
-              <span className="hidden lg:inline">Load Draft</span>
-            </button>
-
-            {/* Overview Button */}
+          {/* Overview Action Bar — Save/Load moved up into the top header,
+              matching the mockup's placement (a single pill group next to
+              the breadcrumb) instead of sitting alongside Overview here. */}
+          <div className="shrink-0 flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => setShowOverview(true)}
@@ -2895,14 +2900,22 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
 
         {/* Main Content Area */}
         <div ref={contentAreaRef} className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 py-2 pr-1">
-          {/* Phase Header & Description */}
+          {/* Phase Header & Description — mockup-style eyebrow indicator
+              (gold dot + "PHASE X OF 7" + "/" + phase name in caps) in place
+              of the previous plain "Phase X: Label" line. */}
           <div className="px-1 py-1 flex flex-col gap-1 shrink-0">
             <div className="flex items-center justify-between gap-2">
-              <h2 className="font-display font-semibold text-xs sm:text-sm text-gold-primary tracking-wide flex items-center gap-1.5">
-                <Sparkles size={13} className="text-gold-accent shrink-0" />
-                Phase {phaseIdx + 1}: {phase.label}
-              </h2>
-              <span className="font-mono text-[10.5px] text-gold-accent/80 font-medium">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-2 h-2 rounded-full bg-gold-primary shrink-0" />
+                <span className="font-display text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gold-primary shrink-0">
+                  Phase {phaseIdx + 1} of {TALE_WEAVER_PHASES.length}
+                </span>
+                <span className="text-gold-accent/40 shrink-0">/</span>
+                <span className="font-display text-[11px] sm:text-xs font-bold uppercase tracking-wider text-ink truncate">
+                  {phase.label}
+                </span>
+              </div>
+              <span className="font-mono text-[10.5px] text-gold-accent/80 font-medium shrink-0">
                 {currentHasContent ? `${getPhaseCount(phase.id, accumulated)} established` : 'Draft pending'}
               </span>
             </div>

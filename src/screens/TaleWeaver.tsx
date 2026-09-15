@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, type CSSProperties } from 'react'
+import { useState, useRef, useEffect, type CSSProperties, type Dispatch, type SetStateAction } from 'react'
 import {
   X, ChevronRight, ChevronLeft, Sparkles, Lock, Unlock,
   BookOpen, AlertCircle, Check, ArrowRight, ArrowLeft, Pencil, Plus, Save,
@@ -121,7 +121,7 @@ function getTotalEntityCount(acc: TaleWeaverAccumulated): number {
 // hard-coded to the app's dark chrome and reused by many other still-dark
 // screens) — same button-group behavior/props, recolored locally so this
 // screen's own reskin never touches that shared file.
-function VellumSegmented<T extends string>({
+export function VellumSegmented<T extends string>({
   options,
   value,
   onChange,
@@ -148,6 +148,63 @@ function VellumSegmented<T extends string>({
           {label}
         </button>
       ))}
+    </div>
+  )
+}
+
+// Narrative Settings — POV/Narration Mode/Tale Difficulty. Plain preference
+// toggles, never AI-drafted content. Module-scope (not closed over any one
+// screen's local state) so both the full 7-phase Tale Weaver (Arc phase) and
+// Quick Play (its own dedicated step, between Question III and the Tale
+// Initiation Overview) render the exact same card rather than two forks of it.
+export function NarrativeSettingsCard({
+  accumulated,
+  setAccumulated,
+}: {
+  accumulated: TaleWeaverAccumulated
+  setAccumulated: Dispatch<SetStateAction<TaleWeaverAccumulated>>
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">Narrative Settings</span>
+      <div className="rounded-xl border border-gold-accent/25 bg-white/70 p-3 flex flex-col gap-3">
+        <div className="flex flex-col gap-1.5">
+          <label className="font-mono text-[10px] uppercase text-gold-primary/70">Point of View</label>
+          <VellumSegmented
+            options={[
+              { id: 'third', label: 'Third Person' },
+              { id: 'first', label: 'First Person' },
+            ] as const}
+            value={accumulated.pov ?? 'third'}
+            onChange={(v: Pov) => setAccumulated((prev) => ({ ...prev, pov: v }))}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="font-mono text-[10px] uppercase text-gold-primary/70">Narration Mode</label>
+          <VellumSegmented
+            options={[
+              { id: 'reactive', label: 'Reactive' },
+              { id: 'immersive', label: 'Immersive' },
+            ] as const}
+            value={accumulated.narrationMode ?? 'immersive'}
+            onChange={(v: NarrationMode) => setAccumulated((prev) => ({ ...prev, narrationMode: v }))}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="font-mono text-[10px] uppercase text-gold-primary/70">Tale Difficulty</label>
+          <VellumSegmented
+            options={(Object.keys(TALE_DIFFICULTIES) as TaleDifficultyKey[]).map((key) => ({
+              id: key,
+              label: key === 'EXTREME' ? `${TALE_DIFFICULTIES[key].label} ★` : TALE_DIFFICULTIES[key].label,
+            }))}
+            value={accumulated.difficulty ?? 'EXTREME'}
+            onChange={(v: TaleDifficultyKey) => setAccumulated((prev) => ({ ...prev, difficulty: v }))}
+          />
+          {(accumulated.difficulty ?? 'EXTREME') === 'EXTREME' && (
+            <p className="font-mono text-[10px] text-gold-accent/80">★ Recommended — the most reactive, high-stakes storytelling.</p>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
@@ -835,54 +892,8 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
     })
   }
 
-  // Narrative Settings — POV/Narration Mode/Tale Difficulty. Plain preference
-  // toggles, never AI-drafted content, so this must stay reachable in the Arc
-  // phase regardless of whether any beats/events/stakes exist yet — shared by
-  // both branches of the 'arc' case below rather than only the full-content one.
   function renderNarrativeSettingsCard() {
-    return (
-      <div className="flex flex-col gap-2">
-        <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">Narrative Settings</span>
-        <div className="rounded-xl border border-gold-accent/25 bg-white/70 p-3 flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
-            <label className="font-mono text-[10px] uppercase text-gold-primary/70">Point of View</label>
-            <VellumSegmented
-              options={[
-                { id: 'third', label: 'Third Person' },
-                { id: 'first', label: 'First Person' },
-              ] as const}
-              value={accumulated.pov ?? 'third'}
-              onChange={(v: Pov) => setAccumulated((prev) => ({ ...prev, pov: v }))}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="font-mono text-[10px] uppercase text-gold-primary/70">Narration Mode</label>
-            <VellumSegmented
-              options={[
-                { id: 'reactive', label: 'Reactive' },
-                { id: 'immersive', label: 'Immersive' },
-              ] as const}
-              value={accumulated.narrationMode ?? 'immersive'}
-              onChange={(v: NarrationMode) => setAccumulated((prev) => ({ ...prev, narrationMode: v }))}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="font-mono text-[10px] uppercase text-gold-primary/70">Tale Difficulty</label>
-            <VellumSegmented
-              options={(Object.keys(TALE_DIFFICULTIES) as TaleDifficultyKey[]).map((key) => ({
-                id: key,
-                label: key === 'EXTREME' ? `${TALE_DIFFICULTIES[key].label} ★` : TALE_DIFFICULTIES[key].label,
-              }))}
-              value={accumulated.difficulty ?? 'EXTREME'}
-              onChange={(v: TaleDifficultyKey) => setAccumulated((prev) => ({ ...prev, difficulty: v }))}
-            />
-            {(accumulated.difficulty ?? 'EXTREME') === 'EXTREME' && (
-              <p className="font-mono text-[10px] text-gold-accent/80">★ Recommended — the most reactive, high-stakes storytelling.</p>
-            )}
-          </div>
-        </div>
-      </div>
-    )
+    return <NarrativeSettingsCard accumulated={accumulated} setAccumulated={setAccumulated} />
   }
 
   // Content cards for the currently active phase

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import {
   ArrowLeft, ArrowRight, ChevronRight, Zap, Sparkles, BookOpen, Users, Landmark, Shield,
   ScrollText, Flag, Save, FolderOpen, X, CheckCircle2, Loader2, Trash2, Info,
@@ -15,7 +15,7 @@ import {
   type TaleWeaverPreset,
 } from '../lib/taleWeaverPresets.ts'
 import { loadTaleWeaverAutosave, saveTaleWeaverAutosave, clearTaleWeaverAutosave } from '../lib/taleWeaverAutosave.ts'
-import { hasAnyContent } from './TaleWeaver.tsx'
+import { hasAnyContent, NarrativeSettingsCard } from './TaleWeaver.tsx'
 
 // Quick Play — the same full Tale Weaving generator behind the scenes (every
 // one of TALE_WEAVER_PHASES actually runs), just asked through 3 plain
@@ -258,7 +258,7 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
       setGenStatus((s) => ({ ...s, [k]: hasGenContent(k, preset.accumulated) ? 'done' : 'idle' }))
     })
     setShowLoadModal(false)
-    setStep(3)
+    setStep(4)
     setPresetToast(`Loaded preset "${preset.name}"!`)
   }
 
@@ -266,7 +266,7 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
     setSavedPresets(deleteTaleWeaverPreset(id))
   }
 
-  const stepLabels = ['Realm', 'Hero', 'Beginning', 'Overview']
+  const stepLabels = ['Realm', 'Hero', 'Beginning', 'Narrative Settings', 'Overview']
   const anyRunning = (Object.values(genStatus) as GenStatus[]).some((s) => s === 'running')
 
   return (
@@ -283,7 +283,7 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
               <div className="flex items-center gap-2 min-w-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-gold-primary shrink-0" />
                 <span className="font-display text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gold-primary shrink-0">
-                  Step {step + 1} of 4
+                  Step {step + 1} of 5
                 </span>
                 <span className="text-gold-accent/40 shrink-0">/</span>
                 <span className="font-display text-[11px] sm:text-xs font-bold uppercase tracking-wider text-ink truncate">
@@ -325,13 +325,20 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
               onBack={step > 0 ? () => setStep(step - 1) : undefined}
               isLast={step === 2}
             />
+          ) : step === 3 ? (
+            <NarrativeSettingsStep
+              accumulated={accumulated}
+              setAccumulated={setAccumulated}
+              onBack={() => setStep(2)}
+              onContinue={() => setStep(4)}
+            />
           ) : (
             <TaleInitiationOverview
               accumulated={accumulated}
               genStatus={genStatus}
               anyRunning={anyRunning}
               onRemove={removeEntry}
-              onReturn={() => setStep(2)}
+              onReturn={() => setStep(3)}
               onDiveIn={handleDiveIn}
             />
           )}
@@ -454,6 +461,44 @@ function QuestionScreen({
           className="flex-[1.4] flex items-center justify-center gap-1.5 h-11 bg-[#b08830] hover:bg-[#8d6b1d] text-white text-xs sm:text-sm font-semibold transition-colors"
         >
           <span>{isLast ? 'Weave the Tale' : 'Next'}</span><ArrowRight size={15} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function NarrativeSettingsStep({
+  accumulated, setAccumulated, onBack, onContinue,
+}: {
+  accumulated: TaleWeaverAccumulated
+  setAccumulated: Dispatch<SetStateAction<TaleWeaverAccumulated>>
+  onBack: () => void
+  onContinue: () => void
+}) {
+  return (
+    <div className="flex-1 flex flex-col justify-center gap-4 py-4">
+      <div className="flex flex-col gap-2">
+        <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">Before You Dive In</span>
+        <h2 className="font-display font-bold text-xl sm:text-2xl text-ink">Tune the Telling</h2>
+        <p className="font-narrative text-sm text-ink-muted leading-relaxed">
+          A few quick preferences for how this Tale is narrated — change these anytime later in Settings.
+        </p>
+      </div>
+      <NarrativeSettingsCard accumulated={accumulated} setAccumulated={setAccumulated} />
+      <div className="flex items-center w-full rounded-lg border border-gold-accent/30 bg-white shadow-xs overflow-hidden divide-x divide-gold-accent/15">
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex-1 flex items-center justify-center gap-1.5 h-11 text-xs font-semibold text-ink-muted hover:text-ink hover:bg-gold-accent/10 transition-colors"
+        >
+          <ArrowLeft size={15} /><span>Back</span>
+        </button>
+        <button
+          type="button"
+          onClick={onContinue}
+          className="flex-[1.4] flex items-center justify-center gap-1.5 h-11 bg-[#b08830] hover:bg-[#8d6b1d] text-white text-xs sm:text-sm font-semibold transition-colors"
+        >
+          <span>Continue</span><ArrowRight size={15} />
         </button>
       </div>
     </div>

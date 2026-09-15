@@ -148,8 +148,16 @@ export function parseXmlTurnResponse(raw: string): TurnResponse {
       }
     : undefined
 
+  // <act> suggestions are a pure convenience (quick-action chips the player
+  // can tap instead of typing) — LogEntry.act is already optional downstream
+  // (Chronicle.tsx simply skips the chip row when empty), so there was never
+  // a real reason to fail the whole turn over the model forgetting them. A
+  // live QC pass caught exactly that: a turn with real narration and a real
+  // <sync> block, just missing <act>, discarded entirely — and, worse, each
+  // discard feeds a garbled "Repairing State" placeholder into the next
+  // turn's own history, which measurably made the *next* turn more likely to
+  // come back malformed too. Self-heal to an empty list instead.
   const act = Array.from(doc.querySelectorAll('act')).map((el) => (el.textContent ?? '').trim())
-  if (act.length === 0) throw new XmlTurnParseError('No <act> tags found — at least one is required')
 
   const flag_add = Array.from(doc.querySelectorAll('flag')).map((el) => reqStr(el.getAttribute('add'), 'flag.add'))
 

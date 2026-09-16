@@ -186,7 +186,7 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
   // cast/places/chronology and a sensible spoiler boundary (defaults to the
   // first book/entry only for a multi-part source when Q1 doesn't say
   // otherwise) — no separate Author/Scope fields needed for Quick Play.
-  const [sourceAccurate, setSourceAccurate] = useState(initialAutosave?.sourceAccurate ?? false)
+  const [sourceAccurate, setSourceAccurate] = useState(initialAutosave?.sourceAccurate ?? true)
   const [accumulated, setAccumulated] = useState<TaleWeaverAccumulated>(initialAutosave?.accumulated ?? emptyAccumulated())
   const [autosaveToast, setAutosaveToast] = useState<string | null>(
     initialAutosave && (hasAnyContent(initialAutosave.accumulated) || initialAutosave.q1 || initialAutosave.q2 || initialAutosave.q3)

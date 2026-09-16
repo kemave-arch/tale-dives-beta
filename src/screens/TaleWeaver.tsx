@@ -635,6 +635,16 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
     }
   }
 
+  // Separate on/off gate from sourceTitle itself (see WorldData's own
+  // sourceAccurate comment in types.ts) — a boolean toggle, not a text
+  // field, so it doesn't fit updateSourceMaterial's string-only shape above.
+  function toggleSourceAccurate(val: boolean) {
+    setAccumulated((prev) => {
+      const baseWorld = prev.world || { name: '', genreTone: '', conflict: '', powerSystem: '', eraTechLevel: '', keyFactions: '', background: '' }
+      return { ...prev, world: { ...baseWorld, sourceAccurate: val } }
+    })
+  }
+
   function saveEditing(key: string) {
     setAccumulated((prev) => {
       const next = { ...prev }
@@ -644,6 +654,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
           sourceTitle: editFormData.sourceTitle ?? prev.world?.sourceTitle,
           sourceAuthor: editFormData.sourceAuthor ?? prev.world?.sourceAuthor,
           sourceScope: editFormData.sourceScope ?? prev.world?.sourceScope,
+          sourceAccurate: editFormData.sourceAccurate ?? prev.world?.sourceAccurate,
         }
       } else if (key === 'protagonist') {
         next.protagonist = { ...editFormData }
@@ -727,6 +738,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
       sourceTitle: accumulated.world?.sourceTitle,
       sourceAuthor: accumulated.world?.sourceAuthor,
       sourceScope: accumulated.world?.sourceScope,
+      sourceAccurate: accumulated.world?.sourceAccurate,
     }
     const defaultWorld = {
       name: 'A Custom Realm',
@@ -820,6 +832,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 sourceTitle: prev.world?.sourceTitle,
                 sourceAuthor: prev.world?.sourceAuthor,
                 sourceScope: prev.world?.sourceScope,
+                sourceAccurate: prev.world?.sourceAccurate,
               }
             : undefined,
         }
@@ -922,6 +935,21 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                   The world will try to accurately represent the novel universe from that source, but note that as an LLM there will still be significant difference to the original literature.
                 </p>
               </div>
+
+              <label className="flex items-start gap-2.5 rounded-lg border border-gold-accent/25 bg-[#faf8f4] px-3 py-2.5 cursor-pointer hover:border-gold-primary/40 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={w?.sourceAccurate ?? true}
+                  onChange={(e) => toggleSourceAccurate(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 accent-[#b08830] shrink-0 cursor-pointer"
+                />
+                <span className="flex flex-col gap-0.5 min-w-0">
+                  <span className="font-display font-bold text-xs text-ink">Source Accurate</span>
+                  <span className="font-narrative text-[11px] text-ink-muted leading-snug">
+                    On by default — stay faithful to this source's real cast, places, and chronology within the scope below. Turn off to use the title as loose inspiration only, with full creative freedom.
+                  </span>
+                </span>
+              </label>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                 <div className="flex flex-col gap-1">

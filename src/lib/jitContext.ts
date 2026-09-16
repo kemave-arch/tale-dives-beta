@@ -260,17 +260,18 @@ export function buildContextSlice(state: Campaign, craftReadyLine?: string | nul
   }
 
   // Source Material — only present when Tale Weaving's World Foundation
-  // phase set both sourceTitle and sourceScope (see WorldData's own comment
-  // in types.ts on why sourceScope specifically is the gate). Repeated every
-  // turn, same reasoning as World Premise above: this has to survive chapter-
-  // recap flushes, not just seed the opening scene, since NPCs/locations/lore
-  // introduced turns later need the same canon-accuracy + spoiler-boundary
-  // treatment as anything seeded up front.
-  if (world?.sourceTitle?.trim()) {
+  // phase (or Quick Play's own "Source Accurate" checkbox) set sourceTitle
+  // with sourceAccurate not explicitly false (see WorldData's own comment in
+  // types.ts — sourceAccurate is the actual gate, undefined reads as on).
+  // Repeated every turn, same reasoning as World Premise above: this has to
+  // survive chapter-recap flushes, not just seed the opening scene, since
+  // NPCs/locations/lore introduced turns later need the same canon-accuracy +
+  // spoiler-boundary treatment as anything seeded up front.
+  if (world?.sourceTitle?.trim() && world.sourceAccurate !== false) {
     const attribution = world.sourceAuthor?.trim() ? `"${world.sourceTitle.trim()}" by ${world.sourceAuthor.trim()}` : `"${world.sourceTitle.trim()}"`
     const scope = world.sourceScope?.trim()
     lines.push(
-      `Source Material: This tale draws on ${attribution}. Stay accurate to established canon — names, personalities, relationships, appearance, history — for anything corresponding to it; never invent a false version to fill a gap. ${scope ? `Canon knowledge boundary: ${scope} — never reference, foreshadow, or draw on anything past this point in the source.` : 'No canon boundary was set — treat only broad, widely-known public facts as safe, avoid deep-cut or late-story specifics.'} The player's own choices may diverge freely from here on; only canon facts already established by the boundary must stay accurate.`,
+      `Source Material: This tale draws on ${attribution}. Stay accurate to established canon — names, personalities, relationships, appearance, history — for anything corresponding to it; never invent a false version to fill a gap. ${scope ? `Canon knowledge boundary: ${scope} — never reference, foreshadow, or draw on anything past this point in the source.` : 'No canon boundary was set — default sensibly from the source\'s own shape: the first standalone book/season/entry is fair game with full depth and accuracy if it spans more than one, otherwise the entirety of it.'} The player's own choices may diverge freely from here on; only canon facts already established by the boundary must stay accurate.`,
     )
   }
 

@@ -78,7 +78,7 @@ Rules:
 - Emit ONLY the tag(s) belonging to the Active Phase named in the prompt — never any tag from a different phase, and never more than one <world> or <protagonist> tag.
 - World Foundation phase: exactly one <world> tag with EVERY attribute filled with rich, specific content. Always include era_tech specifying the historical era and technology level (e.g. "Late Medieval / Iron Age", "Victorian Gaslamp / Steampunk", "Far-Future Spacefaring"), power_system, genre_tone, conflict, key_factions, and background.
 - Protagonist phase: exactly one <protagonist> tag with every attribute populated — including "gender" (male or female, your own best fit for the described protagonist, used purely to pick matching cover art, never narrated or treated as a trait) — and a fitting "class" (a short evocative class/archetype name — e.g. "Warrior", "Mage", "Dragon Rider", "Necromancer", "Scribe" — or an original one fitting the world's own power system; never leave it blank). Also include 0-3 <skill> tags for starting abilities that genuinely make sense given the protagonist's background and class — omit entirely for a mundane, non-abilities-based character concept rather than inventing one that doesn't fit.
-- Regions & Locations phase: 1-4 <region> tags and, for each, 1-4 <location> tags with region_id set to one of them — map_x/map_y (integers 0-100) are optional but encouraged, spaced out sensibly per region; "areas" is an optional comma-separated list of named sub-zones within that one location, only when it genuinely has distinct internal zones worth naming. hidden/tease are optional — omit both for a normal, immediately-known location, include both only for the rare one meant to stay undiscovered until the player finds it in play (a hidden sanctuary, a secret vault) — regions themselves are never hidden, only individual locations within them.
+- Regions & Locations phase: 1-4 <region> tags and, for each, 1-4 <location> tags with region_id set to one of them — map_x/map_y (integers 0-100) are optional but encouraged, spaced out sensibly per region; "areas" is an optional comma-separated list of named sub-zones within that one location, only when it genuinely has distinct internal zones worth naming. hidden/tease are optional — omit both for a normal, immediately-known location, include both only for the rare one meant to stay undiscovered until the player finds it in play (a hidden sanctuary, a secret vault) — regions themselves are never hidden, only individual locations within them. When a Lore Accuracy Contract is active (see the system instructions above), its hard rule on locations overrides this 1-4 range — real canon places only, fewer than 4 (even just one) if that's genuinely all the source itself supplies within the spoiler boundary, never padded out with invented filler to hit the count.
 - Factions phase: 1-4 <faction> tags. hidden/tease are optional — omit both for a normal, publicly-known faction, include both only for the rare one meant to stay concealed until discovered in play (a secret society, a hidden cabal).
 - Cast of Characters phase: 1-4 <npc> tags. aff/trust are each one of their exact canonical words, omitted entirely for a neutral/unestablished relationship. hidden/tease are optional — omit both for a normal NPC the protagonist already knows of or will plainly meet, include both only for the rare one meant to stay concealed until discovered in play (a hidden mentor, a masked antagonist).
 - Lore & Secrets phase: 2-5 <lore> tags. hidden/tease are optional — omit both for a normal entry, include both only for the rare deliberately-hidden one.
@@ -126,9 +126,20 @@ what you are genuinely confident is accurate; for a real entity, if you are not 
 specific detail (a relationship, a minor trait, an exact event), leave that particular detail out
 or phrase it generally rather than asserting a specific-sounding but invented one — a gap is
 honest, a confident wrong detail is not. Never let an invented detail overwrite or contradict
-something the source actually establishes. Original characters, locations, and factions not from
-the source are unaffected by any of this and can be created freely, provided they read as
-original rather than imitation canon per the paragraph above.
+something the source actually establishes. Original characters and factions not from the source are
+unaffected by any of this and can be created freely, provided they read as original rather than
+imitation canon per the paragraph above.
+
+HARD RULE — LOCATIONS, WEAVING TIME ONLY: for the Regions & Locations phase specifically, do not
+invent generic, non-canon locations to round out the usual count — every region and location this
+phase produces must be a real, accurately-named place from the source. If the source's own
+established geography (within the spoiler boundary below) doesn't supply enough real places to fill
+the phase's usual range, output fewer regions/locations rather than padding the gap with invented
+filler; a short, entirely-canon list is correct here, not a violation. This restriction is scoped to
+Tale Weaving's own upfront world-building only — once the Tale is actually underway, the story is
+expected to discover genuinely new, original locations as it goes (a back-alley, a side room, a
+place the source never needed to name), exactly as any evolving story would; that turn-time
+invention is unaffected by this rule and never routed through this contract to begin with.
 
 STRICT SPOILER BOUNDARY: ${scope ? `The player has scoped canon knowledge to: "${scope}".` : 'No explicit scope was given — default sensibly from the source\'s own shape: if it spans more than one book, season, or entry, treat only the first standalone one as safe ground (its full cast, places, and events are fair game with genuine depth and accuracy — this is not a "broad facts only" restriction); if it is already a single self-contained work, the entirety of it is fair game.'} Only treat events, relationships, revelations, or character knowledge that occur at or before that point as established fact. Never reference, foreshadow, or draw on anything that happens after it in the source material — if you are unsure whether something falls after the boundary, leave it out rather than risk a spoiler or an anachronistic reference.`
 }

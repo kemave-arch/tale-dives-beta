@@ -548,9 +548,18 @@ export interface WorldData {
   keyFactions?: string // 1-2 named factions/nations up front — context only, not yet auto-seeded into the Faction Codex
   factionsList?: WorldFaction[] // Structured factions list for fast CRUD & direct Codex seeding
   locationsList?: WorldLocation[] // Structured locations list for fast CRUD & direct Codex seeding
-  sourceTitle?: string // Appendix A.1 "Title" — attribution when adapted from existing work. Original-Mode/Library worlds (e.g. starterTemplates.ts) leave sourceScope unset, so this stays attribution-only and is never sent to the model. Tale Weaving's World Foundation phase can set sourceTitle + sourceScope together to opt into lore-accuracy enforcement (see sourceScope) — presence of sourceScope is what gates that, not sourceTitle alone.
+  sourceTitle?: string // Appendix A.1 "Title" — attribution when adapted from existing work. Original-Mode/Library worlds (e.g. starterTemplates.ts) never set sourceAccurate, so this stays attribution-only and is never sent to the model. Tale Weaving's World Foundation phase (and Quick Play's own "Source Accurate" checkbox) sets sourceTitle to opt into lore-accuracy enforcement — gated on sourceTitle's own presence AND sourceAccurate not being explicitly false (see sourceAccurate), not on sourceScope.
   sourceAuthor?: string // Appendix A.1 "Author" — same caveat as sourceTitle
-  sourceScope?: string // Tale Weaving-only: player-declared canon boundary (e.g. "Prologue only", "through Book 1, Chapter 12") when sourceTitle names existing published work. When set alongside sourceTitle, both ARE sent to the model — as a lore-accuracy contract (stay faithful to canon facts up to this point) plus a strict spoiler boundary (never reference or foreshadow anything past it). Absence of this field is what keeps a bare sourceTitle attribution-only.
+  sourceScope?: string // Tale Weaving-only: player-declared canon boundary (e.g. "Prologue only", "through Book 1, Chapter 12") when sourceTitle names existing published work — refines the lore-accuracy contract's spoiler boundary but doesn't gate whether it fires at all (see sourceAccurate). Left blank, the contract still fires (once sourceTitle+sourceAccurate opt in) with a sensible default boundary (the source's first standalone book/entry).
+  // The actual on/off gate for the lore-accuracy contract (Tale Weaving's own
+  // phase calls via taleWeaverContract.ts, and this same Campaign's ongoing
+  // turn-time context via jitContext.ts) — a separate signal from sourceTitle
+  // itself so a player can name a novel purely as loose flavor/inspiration
+  // without committing to strict canon fidelity. Undefined reads as on
+  // (matches this system's original behavior of gating on sourceTitle alone,
+  // before this explicit toggle existed) — only an explicit `false` ever
+  // suppresses it. Defaults to on in both Tale Weaving flows' own UI.
+  sourceAccurate?: boolean
   isDefault?: boolean
   isMaster?: boolean // Immutable master preset (cannot be deleted)
   savedAt?: number // Timestamp when saved/updated in the library

@@ -925,6 +925,7 @@ export default function App() {
       sourceTitle: w?.sourceTitle?.trim() || undefined,
       sourceAuthor: w?.sourceAuthor?.trim() || undefined,
       sourceScope: w?.sourceScope?.trim() || undefined,
+      sourceAccurate: w?.sourceAccurate,
     }
 
     const regions: Dict<RegionEntry> = {}

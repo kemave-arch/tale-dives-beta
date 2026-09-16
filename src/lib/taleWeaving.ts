@@ -154,6 +154,7 @@ export function mergeTaleWeaverDraft(
         sourceTitle: prev.world?.sourceTitle,
         sourceAuthor: prev.world?.sourceAuthor,
         sourceScope: prev.world?.sourceScope,
+        sourceAccurate: prev.world?.sourceAccurate,
       },
     }
   }
@@ -212,7 +213,10 @@ export async function runTaleWeaverPhase(input: RunTaleWeaverPhaseInput): Promis
       temperature: input.apiSettings.temperature,
       maxOutputTokens: MAX_OUTPUT_TOKENS_CEILING,
       systemInstructions: buildTaleWeaverSystemInstructions(
-        input.accumulated.world?.sourceTitle
+        // Source Accurate defaults on — undefined (no toggle touched yet, or
+        // an old save/preset predating it) reads as on, so this only ever
+        // suppresses the contract when explicitly unchecked.
+        input.accumulated.world?.sourceTitle && input.accumulated.world.sourceAccurate !== false
           ? {
               title: input.accumulated.world.sourceTitle,
               author: input.accumulated.world.sourceAuthor,

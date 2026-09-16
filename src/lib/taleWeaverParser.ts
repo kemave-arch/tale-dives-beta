@@ -83,6 +83,14 @@ export interface TaleWeaverWorldDraft {
   sourceTitle?: string
   sourceAuthor?: string
   sourceScope?: string
+  // The "Source Accurate" toggle (TaleWeaver.tsx's own checkbox, and Quick
+  // Play's — see QuickPlay.tsx) — a separate on/off signal from sourceTitle
+  // itself, so a player can name a novel purely as loose flavor/inspiration
+  // (toggle off) without committing to strict canon fidelity, or leave it on
+  // (the default) for real accuracy enforcement. Undefined (an old save/
+  // preset predating this field) reads as on, matching this field's
+  // pre-existing behavior of gating purely on sourceTitle's own presence.
+  sourceAccurate?: boolean
 }
 
 export interface TaleWeaverProtagonistDraft {

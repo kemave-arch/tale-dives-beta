@@ -107,7 +107,11 @@ function buildLoreAccuracyContract(source?: TaleWeaverSourceMaterial): string {
 
   return `
 
-LORE ACCURACY CONTRACT: This tale draws on ${attribution}. Prefer the real cast, places, and
+LORE ACCURACY CONTRACT: This tale draws on ${attribution}. When the source has a known chapter, book,
+or season structure, ground locations, NPCs, factions, and story beats in that structure and its real
+chronological order — a multi-book saga's early cast/places are not interchangeable with its later
+ones, and beats/narrative events should unfold in the sequence the source itself establishes, not a
+generic arc shape. Prefer the real cast, places, and
 factions of that source over inventing new ones — when a phase asks for entries and the source has
 real ones that fit (within the spoiler boundary below), draw on those by their real, correctly
 spelled names first, and only invent original entries to fill whatever slots genuine canon can't
@@ -126,7 +130,7 @@ something the source actually establishes. Original characters, locations, and f
 the source are unaffected by any of this and can be created freely, provided they read as
 original rather than imitation canon per the paragraph above.
 
-STRICT SPOILER BOUNDARY: ${scope ? `The player has scoped canon knowledge to: "${scope}".` : 'No scope boundary was given — treat only broad, widely-known public facts about the source as safe ground, and avoid deep-cut or late-story specifics.'} Only treat events, relationships, revelations, or character knowledge that occur at or before that point as established fact. Never reference, foreshadow, or draw on anything that happens after it in the source material — if you are unsure whether something falls after the boundary, leave it out rather than risk a spoiler or an anachronistic reference.`
+STRICT SPOILER BOUNDARY: ${scope ? `The player has scoped canon knowledge to: "${scope}".` : 'No explicit scope was given — default sensibly from the source\'s own shape: if it spans more than one book, season, or entry, treat only the first standalone one as safe ground (its full cast, places, and events are fair game with genuine depth and accuracy — this is not a "broad facts only" restriction); if it is already a single self-contained work, the entirety of it is fair game.'} Only treat events, relationships, revelations, or character knowledge that occur at or before that point as established fact. Never reference, foreshadow, or draw on anything that happens after it in the source material — if you are unsure whether something falls after the boundary, leave it out rather than risk a spoiler or an anachronistic reference.`
 }
 
 export function buildTaleWeaverSystemInstructions(source?: TaleWeaverSourceMaterial): string {

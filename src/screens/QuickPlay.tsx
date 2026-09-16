@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import {
   ArrowLeft, ArrowRight, ChevronRight, Zap, Sparkles, BookOpen, Users, Landmark, Shield,
-  ScrollText, Flag, Save, FolderOpen, X, CheckCircle2, Loader2, Trash2, Info,
+  ScrollText, Flag, Save, FolderOpen, X, CheckCircle2, Loader2, Trash2, Info, BookMarked,
 } from 'lucide-react'
 import { GlassScreen, GlassCTAButton } from '../lib/glassChrome.tsx'
 import { useConfirm } from '../lib/useConfirm.tsx'
@@ -176,6 +176,17 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
   const [q1, setQ1] = useState(initialAutosave?.q1 ?? '')
   const [q2, setQ2] = useState(initialAutosave?.q2 ?? '')
   const [q3, setQ3] = useState(initialAutosave?.q3 ?? '')
+  // "Source Accurate" — a single Quick Play-wide toggle (shared across all 3
+  // questions, unlike the full Tale Weaver's dedicated Title/Author/Scope
+  // fields on its own World Foundation phase) standing in for the same
+  // Lore Accuracy Contract (taleWeaverContract.ts). Enabling it derives
+  // world.sourceTitle from Question I's own answer (already "name a novel,
+  // film, or era" — the same concept) the moment any question is submitted,
+  // which is all every phase call needs to start enforcing accurate canon
+  // cast/places/chronology and a sensible spoiler boundary (defaults to the
+  // first book/entry only for a multi-part source when Q1 doesn't say
+  // otherwise) — no separate Author/Scope fields needed for Quick Play.
+  const [sourceAccurate, setSourceAccurate] = useState(initialAutosave?.sourceAccurate ?? false)
   const [accumulated, setAccumulated] = useState<TaleWeaverAccumulated>(initialAutosave?.accumulated ?? emptyAccumulated())
   const [autosaveToast, setAutosaveToast] = useState<string | null>(
     initialAutosave && (hasAnyContent(initialAutosave.accumulated) || initialAutosave.q1 || initialAutosave.q2 || initialAutosave.q3)
@@ -211,8 +222,8 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
 
   useEffect(() => {
     if (!hasAnyContent(accumulated) && !q1.trim() && !q2.trim() && !q3.trim()) return
-    saveTaleWeaverAutosave('quickplay', { accumulated, step, q1, q2, q3 })
-  }, [accumulated, step, q1, q2, q3])
+    saveTaleWeaverAutosave('quickplay', { accumulated, step, q1, q2, q3, sourceAccurate })
+  }, [accumulated, step, q1, q2, q3, sourceAccurate])
 
   function mergeAndSet(patch: (prev: TaleWeaverAccumulated) => TaleWeaverAccumulated) {
     accRef.current = patch(accRef.current)
@@ -235,6 +246,13 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
   }
 
   function submitQuestion(idx: number, text: string) {
+    if (sourceAccurate) {
+      // idx===0's own text IS Question I's answer; a later question re-syncs
+      // from the already-stored q1 so toggling Source Accurate on AFTER
+      // Question I still backfills it for every phase call still to come.
+      const title = (idx === 0 ? text : q1).trim()
+      if (title) mergeAndSet((prev) => ({ ...prev, world: { ...prev.world, sourceTitle: title } }))
+    }
     queueStages(QUICK_PLAY_QUESTIONS[idx].keys, text.trim())
     setStep(idx + 1)
   }
@@ -352,6 +370,11 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
               onSubmit={(text) => submitQuestion(step, text)}
               onBack={step > 0 ? () => setStep(step - 1) : undefined}
               isLast={step === 2}
+              sourceAccurate={sourceAccurate}
+              onToggleSourceAccurate={(v) => {
+                setSourceAccurate(v)
+                if (!v) mergeAndSet((prev) => ({ ...prev, world: prev.world ? { ...prev.world, sourceTitle: undefined } : prev.world }))
+              }}
             />
           ) : step === 3 ? (
             <NarrativeSettingsStep
@@ -447,7 +470,7 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
 }
 
 function QuestionScreen({
-  question, value, onChange, onSubmit, onBack, isLast,
+  question, value, onChange, onSubmit, onBack, isLast, sourceAccurate, onToggleSourceAccurate,
 }: {
   question: (typeof QUICK_PLAY_QUESTIONS)[number]
   value: string
@@ -455,6 +478,8 @@ function QuestionScreen({
   onSubmit: (text: string) => void
   onBack?: () => void
   isLast: boolean
+  sourceAccurate: boolean
+  onToggleSourceAccurate: (v: boolean) => void
 }) {
   return (
     <div className="flex-1 flex flex-col justify-center gap-4 py-4">
@@ -463,6 +488,22 @@ function QuestionScreen({
         <h2 className="font-display font-bold text-xl sm:text-2xl text-ink">{question.title}</h2>
         <p className="font-narrative text-sm text-ink-muted leading-relaxed">{question.prompt}</p>
       </div>
+      <label className="flex items-start gap-2.5 rounded-lg border border-gold-accent/25 bg-[#faf8f4] px-3 py-2.5 cursor-pointer hover:border-gold-primary/40 transition-colors">
+        <input
+          type="checkbox"
+          checked={sourceAccurate}
+          onChange={(e) => onToggleSourceAccurate(e.target.checked)}
+          className="mt-0.5 w-4 h-4 accent-[#b08830] shrink-0 cursor-pointer"
+        />
+        <span className="flex flex-col gap-0.5 min-w-0">
+          <span className="flex items-center gap-1.5 font-display font-bold text-xs text-ink">
+            <BookMarked size={13} className="text-gold-primary shrink-0" /> Source Accurate
+          </span>
+          <span className="font-narrative text-[11px] text-ink-muted leading-snug">
+            If your answer above names a real novel, film, or series, stay faithful to its real cast, places, and chronology — spoiler-bounded to its first book or entry unless you say otherwise.
+          </span>
+        </span>
+      </label>
       <textarea
         autoFocus
         rows={6}
@@ -571,6 +612,11 @@ function TaleInitiationOverview({
               {[w.genreTone, w.eraTechLevel].filter(Boolean).join(' · ')}
             </p>
             {w.background && <p className="font-narrative text-xs text-ink leading-relaxed line-clamp-4">{w.background}</p>}
+            {w.sourceTitle && (
+              <span className="inline-flex items-center gap-1 self-start mt-0.5 font-mono text-[10px] uppercase tracking-wide text-gold-accent/80 border border-gold-accent/30 rounded-full px-2 py-0.5">
+                <BookMarked size={10} /> Source Accurate
+              </span>
+            )}
           </div>
         ) : (
           <EmptyNote status={genStatus.world} />

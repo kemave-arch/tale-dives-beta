@@ -18,6 +18,7 @@ export interface TaleWeaverAutosaveState {
   q1?: string
   q2?: string
   q3?: string
+  sourceAccurate?: boolean // Quick Play's "Source Accurate" toggle — see QuickPlay.tsx
 }
 
 const STORAGE_KEY: Record<TaleWeaverAutosaveMode, string> = {

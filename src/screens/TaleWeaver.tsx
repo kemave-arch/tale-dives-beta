@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, type CSSProperties, type Dispatch, type Se
 import {
   X, ChevronRight, ChevronLeft, Sparkles, Lock, Unlock,
   BookOpen, AlertCircle, Check, ArrowRight, ArrowLeft, Pencil, Plus, Save,
-  ImagePlus, RotateCw, FolderOpen, Trash2, Bookmark, CheckCircle2, Clock, Info, Search,
+  ImagePlus, RotateCw, FolderOpen, Trash2, Bookmark, CheckCircle2, Clock, Search,
 } from 'lucide-react'
 import { GlassScreen } from '../lib/glassChrome.tsx'
 import { useConfirm } from '../lib/useConfirm.tsx'
@@ -929,13 +929,6 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 </span>
               </div>
 
-              <div className="rounded-lg bg-[#faf8f4]/70 border border-gold-accent/20 p-2.5 flex items-start gap-2">
-                <Info size={14} className="text-gold-primary shrink-0 mt-0.5" />
-                <p className="font-narrative text-[11px] text-ink/85 leading-relaxed">
-                  The world will try to accurately represent the novel universe from that source, but note that as an LLM there will still be significant difference to the original literature.
-                </p>
-              </div>
-
               <label className="flex items-start gap-2.5 rounded-lg border border-gold-accent/25 bg-[#faf8f4] px-3 py-2.5 cursor-pointer hover:border-gold-primary/40 transition-colors">
                 <input
                   type="checkbox"
@@ -946,17 +939,14 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 <span className="flex flex-col gap-0.5 min-w-0">
                   <span className="font-display font-bold text-xs text-ink">Source Accurate</span>
                   <span className="font-narrative text-[11px] text-ink-muted leading-snug">
-                    On by default — stay faithful to this source's real cast, places, and chronology within the scope below. Turn off to use the title as loose inspiration only, with full creative freedom.
+                    Stay faithful to the source below. Turn off for loose inspiration only.
                   </span>
                 </span>
               </label>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                 <div className="flex flex-col gap-1">
-                  <label className="font-mono text-[10px] uppercase text-gold-accent font-medium flex items-center justify-between">
-                    <span>Novel Title</span>
-                    <span className="text-ink-muted/70 text-[9px] font-normal lowercase">priority source</span>
-                  </label>
+                  <label className="font-mono text-[10px] uppercase text-gold-accent font-medium">Novel Title</label>
                   <input
                     type="text"
                     placeholder="e.g. Fourth Wing, Dune, Lord of the Mysteries"
@@ -966,10 +956,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="font-mono text-[10px] uppercase text-gold-accent font-medium flex items-center justify-between">
-                    <span>Author</span>
-                    <span className="text-ink-muted/70 text-[9px] font-normal lowercase">optional</span>
-                  </label>
+                  <label className="font-mono text-[10px] uppercase text-gold-accent font-medium">Author</label>
                   <input
                     type="text"
                     placeholder="e.g. Rebecca Yarros, Frank Herbert"
@@ -979,10 +966,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                   />
                 </div>
                 <div className="flex flex-col gap-1 sm:col-span-2 lg:col-span-1">
-                  <label className="font-mono text-[10px] uppercase text-gold-accent font-medium flex items-center justify-between">
-                    <span>Canon Scope Boundary</span>
-                    <span className="text-ink-muted/70 text-[9px] font-normal lowercase">spoiler limit</span>
-                  </label>
+                  <label className="font-mono text-[10px] uppercase text-gold-accent font-medium">Canon Scope</label>
                   <input
                     type="text"
                     placeholder="e.g. Book 1 only, through Ch. 12, or leave blank"

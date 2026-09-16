@@ -500,7 +500,7 @@ function QuestionScreen({
             <BookMarked size={13} className="text-gold-primary shrink-0" /> Source Accurate
           </span>
           <span className="font-narrative text-[11px] text-ink-muted leading-snug">
-            If your answer above names a real novel, film, or series, stay faithful to its real cast, places, and chronology — spoiler-bounded to its first book or entry unless you say otherwise.
+            Stay faithful to a real source named above, if any.
           </span>
         </span>
       </label>

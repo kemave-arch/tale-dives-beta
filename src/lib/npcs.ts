@@ -1,5 +1,6 @@
 import { ensureEntry } from './autoRegister.ts'
 import { slugify, titleCaseId } from './slug.ts'
+import { revealOnTouch } from './discovery.ts'
 import type { CompetencyTier, Dict, GameTime, NpcEntry, NpcMemoryUpdate } from '../types.ts'
 
 // §5.5 Romance & Key Contact Memory Engine + §5.14 auto-registration.
@@ -67,7 +68,7 @@ export function applyNpcUpdates(
 
     dict = {
       ...dict,
-      [id]: {
+      [id]: revealOnTouch({
         ...prev,
         affection,
         trust,
@@ -90,7 +91,7 @@ export function applyNpcUpdates(
         // entry" would almost always miss the real first encounter.
         firstSeenTime: prev.firstSeenTime ?? time,
         lastSeenTime: time ?? prev.lastSeenTime,
-      },
+      }),
     }
   }
 

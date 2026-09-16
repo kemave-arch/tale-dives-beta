@@ -16,6 +16,29 @@ export function isHidden(entry: { discovery?: Discovery }): boolean {
   return entry.discovery?.state === 'hidden'
 }
 
+// Live-caught gap: a hidden entry's own authored revealTrigger/revealCondition
+// (location_visit/npc_met/flag/quest_complete) is the ONLY path that ever
+// flips it to 'known' — but every mechanical per-turn update path (npc_mem_up,
+// arriving at a location, a faction rep delta, a lore <enrich>) updates that
+// same entry's OTHER fields regardless of discovery state, since none of
+// those paths are discovery-aware. If the model reintroduces a hidden
+// entry under its own real name without realizing it already exists (fog-of-
+// war deliberately hides it from "Known Entities" in jitContext.ts, so the
+// model has no way to know), the entry silently accumulates real updates
+// (lastSeenLocId, deeds, rep, content) while staying marked hidden forever,
+// unless its own separately-declared reveal condition also happens to fire —
+// a real discovery-state desync: the player reads about them in the
+// narration, `presentNpcs` will describe them fully starting next turn, yet
+// the Codex still lists them as undiscovered. Since npc_mem_up/arrival/a fac
+// delta/an enrich are each already unambiguous proof this entry is now
+// genuinely active in the story, they're a stronger, more direct discovery
+// signal than whatever reveal condition happened to be authored — call this
+// at each of those four touch points to close the gap.
+export function revealOnTouch<T extends { discovery?: Discovery }>(entry: T): T {
+  if (entry.discovery?.state !== 'hidden') return entry
+  return { ...entry, discovery: { ...entry.discovery, state: 'known' } }
+}
+
 // Fails a hidden entry open to `known` if its own revealCondition doesn't
 // actually reference a real id in the seeded/current dicts — an unreachable
 // hidden entry (a typo'd loc_id, a quest_id nothing ever creates) is a worse

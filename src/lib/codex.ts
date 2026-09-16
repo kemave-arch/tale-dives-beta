@@ -4,6 +4,7 @@ import { parseKeywordLinks, parseItemMentions } from './keywordLinks.ts'
 import { ensureLocation } from './locations.ts'
 import { emptyNpc } from './npcs.ts'
 import { emptySkill } from './skills.ts'
+import { revealOnTouch } from './discovery.ts'
 import type { BestiaryEntry, Dict, EnrichUpdate, FactionEntry, ItemEntry, LocationEntry, LoreEntry, NpcEntry, QuestEntry, RegionEntry, SkillEntry } from '../types.ts'
 
 function ensureStub<T extends { autoLogged?: boolean; loggedAt?: string }>(
@@ -178,10 +179,10 @@ export function applyEnrichUpdates(
     if (!u.id) continue
     if (u.kind === 'lore') {
       loreDict = ensureStub(loreDict, u.id, () => ({ name: u.id, category: 'Unknown' }), turnRef)
-      loreDict = { ...loreDict, [u.id]: { ...loreDict[u.id], content: u.desc } }
+      loreDict = { ...loreDict, [u.id]: revealOnTouch({ ...loreDict[u.id], content: u.desc }) }
     } else {
       bestiaryDict = ensureStub(bestiaryDict, u.id, () => ({ name: u.id, threatTier: 'unknown' as const }), turnRef)
-      bestiaryDict = { ...bestiaryDict, [u.id]: { ...bestiaryDict[u.id], description: u.desc } }
+      bestiaryDict = { ...bestiaryDict, [u.id]: revealOnTouch({ ...bestiaryDict[u.id], description: u.desc }) }
     }
   }
 

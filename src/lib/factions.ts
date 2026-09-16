@@ -1,3 +1,4 @@
+import { revealOnTouch } from './discovery.ts'
 import type { Dict, FactionEntry, FactionRepChange, LocationEntry } from '../types.ts'
 
 // §5.4 5-Tier Faction Reputation & Rivalry System.
@@ -40,7 +41,7 @@ export function applyFactionRepDeltas(factions: Dict<FactionEntry>, deltas: Fact
       next = { ...next }
       changed = true
     }
-    next[d.faction_id] = { ...entry, repTier: clampTier(entry.repTier + d.delta) }
+    next[d.faction_id] = revealOnTouch({ ...entry, repTier: clampTier(entry.repTier + d.delta) })
     if (entry.rivalId && next[entry.rivalId]) {
       const rival = next[entry.rivalId]
       next[entry.rivalId] = { ...rival, repTier: clampTier(rival.repTier - d.delta) }

@@ -1,5 +1,6 @@
 import { ensureEntry } from './autoRegister.ts'
 import { deriveStanding, effectiveStanding } from './factions.ts'
+import { revealOnTouch } from './discovery.ts'
 import type { Dict, EnsureResult, FactionEntry, GameTime, LocationEntry } from '../types.ts'
 
 // §7 turn-time region placement — the region/coordinate info a <turn> can
@@ -59,11 +60,11 @@ export function ensureLocation(
   // time, but only overwrite description when the model actually sent a new
   // one (§5.10 — "only on first visit or a genuine change", same economy as
   // quest_update.description) rather than re-asserting the placeholder.
-  const updated: LocationEntry = {
+  const updated: LocationEntry = revealOnTouch({
     ...result.entry,
     lastVisitedTime: time ?? result.entry.lastVisitedTime,
     description: (!result.created && description) || result.entry.description,
-  }
+  })
   return { dict: { ...result.dict, [locId]: updated }, entry: updated, created: result.created }
 }
 

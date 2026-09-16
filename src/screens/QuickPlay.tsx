@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import {
   ArrowLeft, ArrowRight, ChevronRight, Zap, Sparkles, BookOpen, Users, Landmark, Shield,
-  ScrollText, Flag, Save, FolderOpen, X, CheckCircle2, Loader2, Trash2, Info, BookMarked,
+  ScrollText, Flag, Save, FolderOpen, X, CheckCircle2, Loader2, Trash2, Info, BookMarked, RefreshCw,
 } from 'lucide-react'
 import { GlassScreen, GlassCTAButton } from '../lib/glassChrome.tsx'
 import { useConfirm } from '../lib/useConfirm.tsx'
@@ -21,10 +21,17 @@ import { hasAnyContent, NarrativeSettingsCard } from './TaleWeaver.tsx'
 // Quick Play — the same full Tale Weaving generator behind the scenes (every
 // one of TALE_WEAVER_PHASES actually runs), just asked through 3 plain
 // questions instead of 7 guided phases, so a player who wants to dive in
-// fast never sees the phase machinery at all. Generation for each question
-// fires in the background the moment it's answered — nothing is shown
-// inline — and everything lands together on the Tale Initiation Overview
-// (step 3) for one compact review pass before Dive In.
+// fast never sees the phase machinery at all.
+//
+// Each question's generation must finish (successfully or not) before the
+// player can move to the next one — a review panel shows exactly what got
+// woven for that question, live-updating per section, with its own Retry
+// button per section. This used to fire-and-forget in the background while
+// letting the player advance immediately; bouncing back and forth between
+// questions could requeue the same phases on top of an already-running (or
+// already-done) batch, which is what produced the live-reported "weaves and
+// fails" bug. Blocking on completion — and letting a slipped section be
+// individually retried instead of forcing a full re-answer — fixes both.
 
 interface QuickPlayProps {
   apiSettings: ApiSettings
@@ -43,6 +50,16 @@ const GEN_LABELS: Record<GenKey, string> = {
   npcs: 'Cast of Characters',
   lore: 'Lore & Secrets',
   arc: 'Story Arc',
+}
+
+const GEN_ICONS: Record<GenKey, typeof Sparkles> = {
+  world: Sparkles,
+  regions: Landmark,
+  factions: Shield,
+  protagonist: BookOpen,
+  npcs: Users,
+  lore: ScrollText,
+  arc: Flag,
 }
 
 const QUICK_PLAY_QUESTIONS = [
@@ -95,6 +112,13 @@ function hasGenContent(key: GenKey, acc: TaleWeaverAccumulated): boolean {
   }
 }
 
+// Every key belonging to a question is settled (not still running) once
+// this reads true for all of them — the gate a review panel's Continue
+// button (and the initial-mount/step-change stepPhase resolution) checks.
+function keysSettled(keys: GenKey[], status: Record<GenKey, GenStatus>): boolean {
+  return keys.every((k) => status[k] !== 'running')
+}
+
 function StatusPip({ status }: { status: GenStatus }) {
   if (status === 'running') {
     return (
@@ -117,9 +141,9 @@ function StatusPip({ status }: { status: GenStatus }) {
 }
 
 function AccordionSection({
-  icon: Icon, label, status, defaultOpen = false, children,
+  icon: Icon, label, status, defaultOpen = false, onRetry, children,
 }: {
-  icon: typeof Sparkles; label: string; status: GenStatus; defaultOpen?: boolean; children: React.ReactNode
+  icon: typeof Sparkles; label: string; status: GenStatus; defaultOpen?: boolean; onRetry?: () => void; children: React.ReactNode
 }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
@@ -136,6 +160,18 @@ function AccordionSection({
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <StatusPip status={status} />
+          {onRetry && status !== 'running' && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); onRetry() }}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onRetry() } }}
+              className="p-1 rounded text-ink-muted/60 hover:text-gold-primary hover:bg-gold-accent/10 transition-colors"
+              title="Reroll this section"
+            >
+              <RefreshCw size={12} />
+            </span>
+          )}
           <ChevronRight size={14} className={`text-gold-primary transition-transform duration-150 ${open ? 'rotate-90' : ''}`} />
         </div>
       </button>
@@ -147,9 +183,123 @@ function AccordionSection({
 function EmptyNote({ status }: { status: GenStatus }) {
   return (
     <p className="font-narrative italic text-xs text-ink-muted py-1">
-      {status === 'running' ? 'Still being woven…' : status === 'error' ? 'This part slipped — you can still Dive In without it.' : 'Nothing woven here yet.'}
+      {status === 'running' ? 'Still being woven…' : status === 'error' ? 'This part slipped — retry it, or continue without it.' : 'Nothing woven here yet.'}
     </p>
   )
+}
+
+// The one place each section's content is actually rendered — shared by the
+// per-question review panel and the final Tale Initiation Overview, so
+// fixing "long text gets truncated" (dropping every line-clamp below) only
+// has to happen once and both surfaces stay in sync.
+function SectionBody({
+  genKey, accumulated, status, onRemove,
+}: {
+  genKey: GenKey
+  accumulated: TaleWeaverAccumulated
+  status: GenStatus
+  onRemove: (category: 'regions' | 'locations' | 'factions' | 'npcs' | 'lore' | 'beats', id: string) => void
+}) {
+  const w = accumulated.world
+  const p = accumulated.protagonist
+
+  switch (genKey) {
+    case 'world':
+      return w?.name || w?.background ? (
+        <div className="flex flex-col gap-1">
+          <p className="font-display font-bold text-sm text-ink">{w.name || 'Untitled World'}</p>
+          <p className="font-narrative text-xs text-ink-muted leading-relaxed">
+            {[w.genreTone, w.eraTechLevel].filter(Boolean).join(' · ')}
+          </p>
+          {w.background && <p className="font-narrative text-xs text-ink leading-relaxed whitespace-pre-wrap">{w.background}</p>}
+          {w.sourceTitle && (
+            <span className="inline-flex items-center gap-1 self-start mt-0.5 font-mono text-[10px] uppercase tracking-wide text-gold-accent/80 border border-gold-accent/30 rounded-full px-2 py-0.5">
+              <BookMarked size={10} /> Source Accurate
+            </span>
+          )}
+        </div>
+      ) : (
+        <EmptyNote status={status} />
+      )
+    case 'protagonist':
+      return p?.name ? (
+        <div className="flex flex-col gap-1">
+          <p className="font-display font-bold text-sm text-ink">{p.name}{p.classHint ? ` — ${p.classHint}` : ''}</p>
+          {p.background && <p className="font-narrative text-xs text-ink-muted leading-relaxed whitespace-pre-wrap">{p.background}</p>}
+          {accumulated.skills.length > 0 && (
+            <p className="font-mono text-[10px] text-gold-accent/80 uppercase tracking-wide">
+              Skills: {accumulated.skills.map((s) => s.name).join(', ')}
+            </p>
+          )}
+        </div>
+      ) : (
+        <EmptyNote status={status} />
+      )
+    case 'regions':
+      return accumulated.regions.length || accumulated.locations.length ? (
+        <div className="flex flex-col gap-1.5">
+          {accumulated.regions.map((r) => (
+            <EntryRow key={r.id} name={r.name} desc={r.desc} onRemove={() => onRemove('regions', r.id)} />
+          ))}
+          {accumulated.locations.map((l) => (
+            <EntryRow key={l.id} name={l.name} desc={l.desc} sub={l.locationType} onRemove={() => onRemove('locations', l.id)} />
+          ))}
+        </div>
+      ) : (
+        <EmptyNote status={status} />
+      )
+    case 'factions':
+      return accumulated.factions.length ? (
+        <div className="flex flex-col gap-1.5">
+          {accumulated.factions.map((f) => (
+            <EntryRow key={f.id} name={f.name} desc={f.desc} sub={f.attitude} onRemove={() => onRemove('factions', f.id)} />
+          ))}
+        </div>
+      ) : (
+        <EmptyNote status={status} />
+      )
+    case 'npcs':
+      return accumulated.npcs.length ? (
+        <div className="flex flex-col gap-1.5">
+          {accumulated.npcs.map((n) => (
+            <EntryRow key={n.id} name={n.name} desc={n.personality} sub={n.role} onRemove={() => onRemove('npcs', n.id)} />
+          ))}
+        </div>
+      ) : (
+        <EmptyNote status={status} />
+      )
+    case 'lore':
+      return accumulated.lore.length ? (
+        <div className="flex flex-col gap-1.5">
+          {accumulated.lore.map((l) => (
+            <EntryRow key={l.id} name={l.name} desc={l.content} sub={l.category} onRemove={() => onRemove('lore', l.id)} />
+          ))}
+        </div>
+      ) : (
+        <EmptyNote status={status} />
+      )
+    case 'arc':
+      return accumulated.beats.length || accumulated.deathRule || accumulated.endGameRules ? (
+        <div className="flex flex-col gap-1.5">
+          {accumulated.beats.map((b) => (
+            <EntryRow key={b.id} name={b.title} desc={b.summary} onRemove={() => onRemove('beats', b.id)} />
+          ))}
+          <div className="pt-1.5 mt-1 border-t border-gold-accent/15 flex flex-wrap gap-1.5">
+            <span className="font-mono text-[10px] uppercase tracking-wide text-gold-accent/80 border border-gold-accent/30 rounded-full px-2 py-0.5">
+              {accumulated.pov === 'first' ? 'First Person' : 'Third Person'}
+            </span>
+            <span className="font-mono text-[10px] uppercase tracking-wide text-gold-accent/80 border border-gold-accent/30 rounded-full px-2 py-0.5">
+              {accumulated.narrationMode === 'reactive' ? 'Reactive' : 'Immersive'}
+            </span>
+            <span className="font-mono text-[10px] uppercase tracking-wide text-gold-accent/80 border border-gold-accent/30 rounded-full px-2 py-0.5">
+              {accumulated.difficulty ?? 'EXTREME'}
+            </span>
+          </div>
+        </div>
+      ) : (
+        <EmptyNote status={status} />
+      )
+  }
 }
 
 // The same gender-matched background Original Mode's own Setup screen uses
@@ -196,12 +346,27 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
 
   const accRef = useRef(accumulated)
   const chainRef = useRef<Promise<void>>(Promise.resolve())
+  // Remembers the guidance text each generated section was last woven with,
+  // so a per-section Retry can reroll with the same answer instead of an
+  // empty prompt — keyed by GenKey since that's what a single retry acts on.
+  const guidanceRef = useRef<Partial<Record<GenKey, string>>>({})
 
   const initialStatus = {} as Record<GenKey, GenStatus>
   ;(Object.keys(GEN_LABELS) as GenKey[]).forEach((k) => {
     initialStatus[k] = hasGenContent(k, accumulated) ? 'done' : 'idle'
   })
   const [genStatus, setGenStatus] = useState<Record<GenKey, GenStatus>>(initialStatus)
+
+  // 'input' shows the question's textarea; 'review' shows what got woven
+  // for it (live-updating) and gates advancing to the next question until
+  // every one of its sections has settled (done or error, never mid-flight).
+  // A step whose keys already have content on mount/resume (or after
+  // navigating back to an already-answered question) starts in 'review'
+  // rather than re-asking the question.
+  const [stepPhase, setStepPhase] = useState<'input' | 'review'>(() => {
+    const keys = QUICK_PLAY_QUESTIONS[step]?.keys
+    return keys && keys.every((k) => hasGenContent(k, accumulated)) ? 'review' : 'input'
+  })
 
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [showLoadModal, setShowLoadModal] = useState(false)
@@ -230,7 +395,12 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
     setAccumulated(accRef.current)
   }
 
+  // Chained on chainRef so no two phase calls (whether from a question
+  // submit or an individual section Retry) ever run concurrently — that
+  // chain is exactly what previously let bouncing between steps requeue an
+  // already-in-flight batch on top of itself.
   function queueStages(keys: GenKey[], guidance: string) {
+    keys.forEach((k) => { guidanceRef.current[k] = guidance })
     chainRef.current = chainRef.current.then(async () => {
       for (const key of keys) {
         setGenStatus((s) => ({ ...s, [key]: 'running' }))
@@ -245,6 +415,10 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
     })
   }
 
+  function retryKey(key: GenKey) {
+    queueStages([key], guidanceRef.current[key] ?? '')
+  }
+
   function submitQuestion(idx: number, text: string) {
     if (sourceAccurate) {
       // idx===0's own text IS Question I's answer; a later question re-syncs
@@ -254,7 +428,15 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
       if (title) mergeAndSet((prev) => ({ ...prev, world: { ...prev.world, sourceTitle: title } }))
     }
     queueStages(QUICK_PLAY_QUESTIONS[idx].keys, text.trim())
-    setStep(idx + 1)
+    setStepPhase('review')
+  }
+
+  // Moving to a different question: land on 'review' if it's already fully
+  // woven (revisiting an answered question), otherwise 'input'.
+  function goToStep(idx: number) {
+    const keys = QUICK_PLAY_QUESTIONS[idx]?.keys
+    setStepPhase(keys && keys.every((k) => hasGenContent(k, accRef.current)) ? 'review' : 'input')
+    setStep(idx)
   }
 
   function removeEntry(category: 'regions' | 'locations' | 'factions' | 'npcs' | 'lore' | 'beats', id: string) {
@@ -361,14 +543,14 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
 
         {/* Content */}
         <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3">
-          {step < 3 ? (
+          {step < 3 && stepPhase === 'input' ? (
             <QuestionScreen
               key={step}
               question={QUICK_PLAY_QUESTIONS[step]}
               value={step === 0 ? q1 : step === 1 ? q2 : q3}
               onChange={step === 0 ? setQ1 : step === 1 ? setQ2 : setQ3}
               onSubmit={(text) => submitQuestion(step, text)}
-              onBack={step > 0 ? () => setStep(step - 1) : undefined}
+              onBack={step > 0 ? () => goToStep(step - 1) : undefined}
               isLast={step === 2}
               sourceAccurate={sourceAccurate}
               onToggleSourceAccurate={(v) => {
@@ -376,11 +558,24 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
                 if (!v) mergeAndSet((prev) => ({ ...prev, world: prev.world ? { ...prev.world, sourceTitle: undefined } : prev.world }))
               }}
             />
+          ) : step < 3 ? (
+            <QuestionReviewPanel
+              key={step}
+              questionNumber={step + 1}
+              keys={QUICK_PLAY_QUESTIONS[step].keys}
+              accumulated={accumulated}
+              genStatus={genStatus}
+              onRemove={removeEntry}
+              onRetry={retryKey}
+              onBack={() => setStepPhase('input')}
+              onContinue={() => goToStep(step + 1)}
+              continueLabel={step === 2 ? 'Continue to Narrative Settings' : 'Continue'}
+            />
           ) : step === 3 ? (
             <NarrativeSettingsStep
               accumulated={accumulated}
               setAccumulated={setAccumulated}
-              onBack={() => setStep(2)}
+              onBack={() => goToStep(2)}
               onContinue={() => setStep(4)}
             />
           ) : (
@@ -389,6 +584,7 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
               genStatus={genStatus}
               anyRunning={anyRunning}
               onRemove={removeEntry}
+              onRetry={retryKey}
               onReturn={() => setStep(3)}
               onDiveIn={handleDiveIn}
             />
@@ -537,6 +733,74 @@ function QuestionScreen({
   )
 }
 
+// Shown immediately after a question is submitted — live-updates each of
+// that question's sections (Weaving… -> Ready/Failed) as its own phase call
+// settles. Continue stays disabled until none of them are still running, so
+// the player can never advance mid-weave; a slipped section gets its own
+// Retry instead of forcing the whole question to be re-answered.
+function QuestionReviewPanel({
+  questionNumber, keys, accumulated, genStatus, onRemove, onRetry, onBack, onContinue, continueLabel,
+}: {
+  questionNumber: number
+  keys: GenKey[]
+  accumulated: TaleWeaverAccumulated
+  genStatus: Record<GenKey, GenStatus>
+  onRemove: (category: 'regions' | 'locations' | 'factions' | 'npcs' | 'lore' | 'beats', id: string) => void
+  onRetry: (key: GenKey) => void
+  onBack: () => void
+  onContinue: () => void
+  continueLabel: string
+}) {
+  const settled = keysSettled(keys, genStatus)
+  const anyError = keys.some((k) => genStatus[k] === 'error')
+
+  return (
+    <div className="flex-1 flex flex-col gap-3 py-2">
+      <div className="flex flex-col gap-1">
+        <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">Question {questionNumber} · Woven</span>
+        <h2 className="font-display font-bold text-xl text-ink">Here's What Came of It</h2>
+        <p className="font-narrative text-sm text-ink-muted leading-relaxed">
+          {settled
+            ? anyError
+              ? "Most of it's ready — retry anything that slipped, or continue without it."
+              : 'Glance it over, trim anything you don’t want, then continue.'
+            : 'Weaving now — this only takes a moment.'}
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        {keys.map((key) => (
+          <AccordionSection
+            key={key}
+            icon={GEN_ICONS[key]}
+            label={GEN_LABELS[key]}
+            status={genStatus[key]}
+            defaultOpen
+            onRetry={() => onRetry(key)}
+          >
+            <SectionBody genKey={key} accumulated={accumulated} status={genStatus[key]} onRemove={onRemove} />
+          </AccordionSection>
+        ))}
+      </div>
+
+      <div className="flex items-center justify-between gap-3 w-full mt-1 shrink-0">
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex items-center gap-1.5 h-10 px-3 text-xs font-semibold text-ink-muted hover:text-ink transition-colors"
+        >
+          <ArrowLeft size={15} /><span>Edit Answer</span>
+        </button>
+        <GlassCTAButton onClick={onContinue} icon={settled ? ArrowRight : undefined} disabled={!settled}>
+          {settled ? continueLabel : (
+            <span className="inline-flex items-center gap-1.5"><Loader2 size={15} className="animate-spin" /> Weaving…</span>
+          )}
+        </GlassCTAButton>
+      </div>
+    </div>
+  )
+}
+
 function NarrativeSettingsStep({
   accumulated, setAccumulated, onBack, onContinue,
 }: {
@@ -576,18 +840,16 @@ function NarrativeSettingsStep({
 }
 
 function TaleInitiationOverview({
-  accumulated, genStatus, anyRunning, onRemove, onReturn, onDiveIn,
+  accumulated, genStatus, anyRunning, onRemove, onRetry, onReturn, onDiveIn,
 }: {
   accumulated: TaleWeaverAccumulated
   genStatus: Record<GenKey, GenStatus>
   anyRunning: boolean
   onRemove: (category: 'regions' | 'locations' | 'factions' | 'npcs' | 'lore' | 'beats', id: string) => void
+  onRetry: (key: GenKey) => void
   onReturn: () => void
   onDiveIn: () => void
 }) {
-  const w = accumulated.world
-  const p = accumulated.protagonist
-
   return (
     <div className="flex-1 flex flex-col gap-3 py-2">
       <div className="flex flex-col gap-1">
@@ -604,114 +866,18 @@ function TaleInitiationOverview({
           light-surface token values pinned locally rather than inheriting
           whatever the outer page happens to use. */}
       <div className="parchment-surface flex flex-col gap-3">
-      <AccordionSection icon={Sparkles} label="World Foundation" status={genStatus.world} defaultOpen>
-        {w?.name || w?.background ? (
-          <div className="flex flex-col gap-1">
-            <p className="font-display font-bold text-sm text-ink">{w.name || 'Untitled World'}</p>
-            <p className="font-narrative text-xs text-ink-muted leading-relaxed">
-              {[w.genreTone, w.eraTechLevel].filter(Boolean).join(' · ')}
-            </p>
-            {w.background && <p className="font-narrative text-xs text-ink leading-relaxed line-clamp-4">{w.background}</p>}
-            {w.sourceTitle && (
-              <span className="inline-flex items-center gap-1 self-start mt-0.5 font-mono text-[10px] uppercase tracking-wide text-gold-accent/80 border border-gold-accent/30 rounded-full px-2 py-0.5">
-                <BookMarked size={10} /> Source Accurate
-              </span>
-            )}
-          </div>
-        ) : (
-          <EmptyNote status={genStatus.world} />
-        )}
-      </AccordionSection>
-
-      <AccordionSection icon={BookOpen} label="Protagonist" status={genStatus.protagonist}>
-        {p?.name ? (
-          <div className="flex flex-col gap-1">
-            <p className="font-display font-bold text-sm text-ink">{p.name}{p.classHint ? ` — ${p.classHint}` : ''}</p>
-            {p.background && <p className="font-narrative text-xs text-ink-muted leading-relaxed line-clamp-3">{p.background}</p>}
-            {accumulated.skills.length > 0 && (
-              <p className="font-mono text-[10px] text-gold-accent/80 uppercase tracking-wide">
-                Skills: {accumulated.skills.map((s) => s.name).join(', ')}
-              </p>
-            )}
-          </div>
-        ) : (
-          <EmptyNote status={genStatus.protagonist} />
-        )}
-      </AccordionSection>
-
-      <AccordionSection icon={Landmark} label="Regions & Locations" status={genStatus.regions}>
-        {accumulated.regions.length || accumulated.locations.length ? (
-          <div className="flex flex-col gap-1.5">
-            {accumulated.regions.map((r) => (
-              <EntryRow key={r.id} name={r.name} desc={r.desc} onRemove={() => onRemove('regions', r.id)} />
-            ))}
-            {accumulated.locations.map((l) => (
-              <EntryRow key={l.id} name={l.name} desc={l.desc} sub={l.locationType} onRemove={() => onRemove('locations', l.id)} />
-            ))}
-          </div>
-        ) : (
-          <EmptyNote status={genStatus.regions} />
-        )}
-      </AccordionSection>
-
-      <AccordionSection icon={Shield} label="Factions" status={genStatus.factions}>
-        {accumulated.factions.length ? (
-          <div className="flex flex-col gap-1.5">
-            {accumulated.factions.map((f) => (
-              <EntryRow key={f.id} name={f.name} desc={f.desc} sub={f.attitude} onRemove={() => onRemove('factions', f.id)} />
-            ))}
-          </div>
-        ) : (
-          <EmptyNote status={genStatus.factions} />
-        )}
-      </AccordionSection>
-
-      <AccordionSection icon={Users} label="Cast of Characters" status={genStatus.npcs}>
-        {accumulated.npcs.length ? (
-          <div className="flex flex-col gap-1.5">
-            {accumulated.npcs.map((n) => (
-              <EntryRow key={n.id} name={n.name} desc={n.personality} sub={n.role} onRemove={() => onRemove('npcs', n.id)} />
-            ))}
-          </div>
-        ) : (
-          <EmptyNote status={genStatus.npcs} />
-        )}
-      </AccordionSection>
-
-      <AccordionSection icon={ScrollText} label="Lore & Secrets" status={genStatus.lore}>
-        {accumulated.lore.length ? (
-          <div className="flex flex-col gap-1.5">
-            {accumulated.lore.map((l) => (
-              <EntryRow key={l.id} name={l.name} desc={l.content} sub={l.category} onRemove={() => onRemove('lore', l.id)} />
-            ))}
-          </div>
-        ) : (
-          <EmptyNote status={genStatus.lore} />
-        )}
-      </AccordionSection>
-
-      <AccordionSection icon={Flag} label="Story Arc" status={genStatus.arc}>
-        {accumulated.beats.length || accumulated.deathRule || accumulated.endGameRules ? (
-          <div className="flex flex-col gap-1.5">
-            {accumulated.beats.map((b) => (
-              <EntryRow key={b.id} name={b.title} desc={b.summary} onRemove={() => onRemove('beats', b.id)} />
-            ))}
-            <div className="pt-1.5 mt-1 border-t border-gold-accent/15 flex flex-wrap gap-1.5">
-              <span className="font-mono text-[10px] uppercase tracking-wide text-gold-accent/80 border border-gold-accent/30 rounded-full px-2 py-0.5">
-                {accumulated.pov === 'first' ? 'First Person' : 'Third Person'}
-              </span>
-              <span className="font-mono text-[10px] uppercase tracking-wide text-gold-accent/80 border border-gold-accent/30 rounded-full px-2 py-0.5">
-                {accumulated.narrationMode === 'reactive' ? 'Reactive' : 'Immersive'}
-              </span>
-              <span className="font-mono text-[10px] uppercase tracking-wide text-gold-accent/80 border border-gold-accent/30 rounded-full px-2 py-0.5">
-                {accumulated.difficulty ?? 'EXTREME'}
-              </span>
-            </div>
-          </div>
-        ) : (
-          <EmptyNote status={genStatus.arc} />
-        )}
-      </AccordionSection>
+        {(Object.keys(GEN_LABELS) as GenKey[]).map((key) => (
+          <AccordionSection
+            key={key}
+            icon={GEN_ICONS[key]}
+            label={GEN_LABELS[key]}
+            status={genStatus[key]}
+            defaultOpen={key === 'world'}
+            onRetry={() => onRetry(key)}
+          >
+            <SectionBody genKey={key} accumulated={accumulated} status={genStatus[key]} onRemove={onRemove} />
+          </AccordionSection>
+        ))}
       </div>
 
       <div className="flex items-center justify-between gap-3 w-full mt-1 shrink-0">
@@ -745,7 +911,7 @@ function EntryRow({ name, desc, sub, onRemove }: { name: string; desc?: string; 
         <p className="font-display font-semibold text-xs text-ink truncate">
           {name}{sub ? <span className="font-narrative italic font-normal text-ink-muted"> — {sub}</span> : null}
         </p>
-        {desc && <p className="font-narrative text-[11px] text-ink-muted leading-snug line-clamp-2">{desc}</p>}
+        {desc && <p className="font-narrative text-[11px] text-ink-muted leading-snug whitespace-pre-wrap">{desc}</p>}
       </div>
       <button type="button" onClick={onRemove} className="p-1 rounded text-ink-muted/60 hover:text-rose shrink-0" title="Remove">
         <Trash2 size={12} />

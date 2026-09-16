@@ -47,9 +47,9 @@ import { SYSTEM_INSTRUCTIONS, TURN_SCHEMA } from './turnContract.ts'
 // whatever it would have defaulted to anyway.
 //
 // Kept to exactly two short lines on purpose: this is pure per-turn output-
-// token cost (never cached, unlike the static system prompt above), and it's
-// placed before <nar> specifically so it causally informs the prose that
-// follows — but that same placement means a MAX_TOKENS truncation landing
+// token cost, and it's placed before <nar> specifically so it causally
+// informs the prose that follows — but that same placement means a
+// MAX_TOKENS truncation landing
 // mid-<plan> now loses the turn's prose entirely rather than just its
 // trailing <sync> deltas (previously <nar> was the very first tag emitted,
 // specifically so the Stage 3 Fallback Reader in gemini.ts could still

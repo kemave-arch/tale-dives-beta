@@ -1066,6 +1066,13 @@ export interface RunTurnResult {
   ok: boolean
   turn?: TurnResponse
   fallbackText?: string
+  // true when fallbackText is a real, closed-or-open <nar>...</nar> block the
+  // Fallback Reader actually found (a genuinely readable turn whose <sync>
+  // was merely malformed or absent) — false when there was no <nar> at all
+  // and fallbackText is the last-resort raw/cleaned blob instead. App.tsx
+  // uses this to tell "show this real narration as the turn it is" apart
+  // from "there's nothing coherent to show, keep the repair placeholder."
+  narRecovered?: boolean
   finishReason?: string
   raw: string // the full model response, <sync> included — kept for the debug-payload tools (LogEntry.rawPayload)
   historyText: string // `raw` with <sync>...</sync> stripped — what actually gets resent as this turn's own `model` history entry, so a turn's mechanical bookkeeping isn't replayed back to the model on every later call

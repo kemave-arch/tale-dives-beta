@@ -1204,6 +1204,70 @@ export default function App() {
       })
 
       if (!result.ok) {
+        // Stage 3 Fallback Reader (gemini.ts) recovered real <nar> prose even
+        // though <sync> was malformed or missing entirely — live-caught on a
+        // Prologue call that wrote a full, finished scene (finishReason
+        // STOP, not a MAX_TOKENS cutoff) and then never emitted <sync> at
+        // all. That's a genuinely narrated turn, not a corrupted one; showing
+        // it behind a "(Repairing State)" placeholder discarded a complete,
+        // real turn over a missing technical block. No mechanical deltas
+        // were readable, so state/time/location simply carry forward
+        // unchanged, but the turn still counts and still runs the same
+        // {{Term|category}} keyword-link registration pass a normal turn
+        // gets (parseKeywordLinks works off the nar text alone, no parsed
+        // <sync> required) so anyone/anywhere the prose actually mentions
+        // still gets a Codex stub instead of vanishing along with the rest
+        // of the turn's bookkeeping.
+        if (result.narRecovered) {
+          const turnNumber = (current.turnCount ?? 0) + 1
+          const turnRef = turnRefFor(turnNumber)
+          const linked = applyKeywordLinks(
+            {
+              locations: current.locations,
+              regions: current.regions ?? {},
+              npcs: current.npcs,
+              factions: current.factions,
+              lore: current.lore,
+              quests: current.quests,
+              bestiary: current.bestiary,
+              skills: current.skills ?? {},
+            },
+            result.fallbackText,
+            turnRef,
+            current.player.name,
+          )
+          setGame((g) =>
+            g && {
+              ...g,
+              lastPlayed: Date.now(),
+              turnCount: turnNumber,
+              locations: linked.locations,
+              npcs: linked.npcs,
+              factions: linked.factions,
+              lore: linked.lore,
+              quests: linked.quests,
+              bestiary: linked.bestiary,
+              skills: linked.skills,
+              log: [
+                ...g.log,
+                {
+                  action: isWorldSeedingTurn ? undefined : actionText,
+                  ...(isWorldSeedingTurn ? { isPrologue: true } : {}),
+                  nar: result.fallbackText!,
+                  turnRef,
+                  time: g.player.time,
+                  locDisp: g.player.locDisp,
+                  requestPayload: userTurnText,
+                  rawPayload: result.raw,
+                  finishReason: result.finishReason,
+                },
+              ],
+            },
+          )
+          setHistory([...newHistory, { role: 'model', parts: [{ text: result.historyText }] }])
+          return
+        }
+
         setGame((g) =>
           g && {
             ...g,

@@ -151,7 +151,15 @@ export async function runTurn({ apiKey, model, temperature, maxOutputTokens, his
         // throws here even when <nar> itself parsed fine, so this catches both
         // "no <nar> at all" and "nar fine, sync broken" the same way the old
         // JSON path's catch-all did.
-        return { ok: false, fallbackText: extractXmlNarrative(text) ?? cleaned ?? text, finishReason, raw: text, historyText: stripSyncForHistory(text) }
+        const recoveredNar = extractXmlNarrative(text)
+        return {
+          ok: false,
+          fallbackText: recoveredNar ?? cleaned ?? text,
+          narRecovered: recoveredNar !== null,
+          finishReason,
+          raw: text,
+          historyText: stripSyncForHistory(text),
+        }
       }
     } catch (err) {
       lastError = err

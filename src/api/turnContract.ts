@@ -5,9 +5,11 @@ import type { ProseDepthConfig, TaleDifficultyConfig, TaleDifficultyKey } from '
 // Output Grammar). Sent as system_instruction on every single turn call
 // (generateContent has no session state), so its own token cost is paid
 // every turn regardless of the JIT context slice below it — live-verified
-// (2026-09-16) that gemini-3.5-flash-lite (this app's own default model)
-// gets zero implicit cache hits on it, unlike the non-lite gemini-3.5-flash.
-// Kept tight for exactly that reason; every rule below earns its own weight.
+// (2026-09-16) that gemini-3.5-flash-lite gets zero implicit cache hits on
+// it, unlike the non-lite gemini-3.5-flash — now the app's own default
+// model (lib/store.ts), precisely to get that caching benefit and the
+// stronger model's better prose. Kept tight regardless, for whichever
+// model a player picks; every rule below earns its own weight.
 
 export const SYSTEM_INSTRUCTIONS = `You are the Dungeon Master engine for Tale Dives, an atmospheric fantasy RPG (mature violence and romance themes) set in a reactive, high-stakes world.
 

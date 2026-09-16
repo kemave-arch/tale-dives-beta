@@ -207,13 +207,14 @@ export interface RunTaleWeaverPhaseResult {
 // Tale Weaving (both the full 7-phase flow and Quick Play) fires a burst of
 // calls in quick succession that all share the same large system prompt —
 // exactly what Gemini's implicit caching targets. gemini-3.5-flash-lite
-// (this app's own default turn-time model, lib/store.ts) doesn't appear to
-// get implicit caching in live testing (three identical ~12k-token calls,
-// zero cache hits); the non-lite gemini-3.5-flash does. So every Tale
-// Weaving phase call runs on gemini-3.5-flash regardless of the player's
-// own configured model — ordinary gameplay turns (App.tsx's runTurn) are
-// unaffected and keep using whatever the player picked (or its own
-// flash-lite default).
+// doesn't appear to get implicit caching in live testing (three identical
+// ~12k-token calls, zero cache hits); the non-lite gemini-3.5-flash does.
+// So every Tale Weaving phase call runs on gemini-3.5-flash regardless of
+// the player's own configured model — this matters most for a player who's
+// downgraded their model to flash-lite (e.g. for cost on ordinary gameplay
+// turns, lib/store.ts's own default is flash-lite-eligible via Settings but
+// the app itself now defaults to flash). Ordinary gameplay turns (App.tsx's
+// runTurn) are unaffected and keep using whatever the player picked.
 const TALE_WEAVER_MODEL = 'gemini-3.5-flash'
 
 export async function runTaleWeaverPhase(input: RunTaleWeaverPhaseInput): Promise<RunTaleWeaverPhaseResult> {

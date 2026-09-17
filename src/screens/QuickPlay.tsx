@@ -492,7 +492,7 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
   const anyRunning = (Object.values(genStatus) as GenStatus[]).some((s) => s === 'running')
 
   return (
-    <GlassScreen ground="dark" fill className="flex flex-col h-full overflow-hidden">
+    <GlassScreen ground="dark" fill className="flex flex-col overflow-hidden">
       <div className="relative z-10 flex flex-col h-full overflow-hidden parchment-surface !bg-[#fbf8f3]">
       <div className="max-w-2xl mx-auto w-full flex flex-col h-full overflow-hidden px-4 sm:px-6 pt-3 pb-4 gap-3">
         {/* Header */}

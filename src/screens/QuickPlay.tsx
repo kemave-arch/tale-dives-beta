@@ -510,7 +510,7 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
   const anyRunning = (Object.values(genStatus) as GenStatus[]).some((s) => s === 'running')
 
   return (
-    <GlassScreen ground="dark" className="flex flex-col h-full overflow-hidden">
+    <GlassScreen ground="dark" fill className="flex flex-col h-full overflow-hidden">
       {/* The Tale Initiation Overview trades the light vellum reading surface
           every other step uses for the same gender-matched Dive-In wallpaper
           Original Mode's own Setup screen used — dropping parchment-surface

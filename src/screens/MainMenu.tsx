@@ -14,6 +14,7 @@ import { AmbientSparks, DashedCard, GLASS_SURFACE_LIST, GlassIconButton, GlassTa
 import { ProtagonistDetailModal, WorldDetailModal } from '../components/PresetDetailModal.tsx'
 import VaultSoundtrackView from '../components/VaultSoundtrackView.tsx'
 import VaultArtGalleryView from '../components/VaultArtGalleryView.tsx'
+import VaultGeneratedArtView from '../components/VaultGeneratedArtView.tsx'
 
 const MAIN_TABS = [
   { id: 'tales', label: 'Tales', icon: BookOpen },
@@ -94,6 +95,7 @@ export default function MainMenu({
 }: MainMenuProps) {
   const [tab, setTab] = useState<(typeof MAIN_TABS)[number]['id']>('tales')
   const [vaultTab, setVaultTab] = useState<(typeof VAULT_SUBTABS)[number]['id']>('worlds')
+  const [artSubtab, setArtSubtab] = useState<'generated' | 'wallpapers'>('generated')
   const [selectedWorld, setSelectedWorld] = useState<WorldData | null>(null)
   const [selectedProtagonist, setSelectedProtagonist] = useState<ProtagonistData | null>(null)
   const { confirm, dialog: confirmDialog } = useConfirm()
@@ -428,8 +430,37 @@ export default function MainMenu({
               )}
 
               {vaultTab === 'art' && (
-                <div className="flex-1 min-h-0 flex flex-col">
-                  <VaultArtGalleryView />
+                <div className="flex-1 min-h-0 flex flex-col gap-3">
+                  <div className="shrink-0 flex items-center gap-1.5 p-1 rounded-xl bg-[#120e1b]/80 border border-[#e8ca8a]/30 self-start">
+                    <button
+                      type="button"
+                      onClick={() => setArtSubtab('generated')}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-display text-xs transition-all ${
+                        artSubtab === 'generated'
+                          ? 'bg-[#f0ca65]/15 border border-[#f0ca65]/80 text-[#fae5b5] font-semibold shadow-[0_0_14px_rgba(240,202,101,0.22)]'
+                          : 'border border-transparent text-[#e8ca8a]/60 hover:text-[#fae5b5]'
+                      }`}
+                    >
+                      <Sparkles size={13} />
+                      Generated
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setArtSubtab('wallpapers')}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-display text-xs transition-all ${
+                        artSubtab === 'wallpapers'
+                          ? 'bg-[#f0ca65]/15 border border-[#f0ca65]/80 text-[#fae5b5] font-semibold shadow-[0_0_14px_rgba(240,202,101,0.22)]'
+                          : 'border border-transparent text-[#e8ca8a]/60 hover:text-[#fae5b5]'
+                      }`}
+                    >
+                      <ImageIcon size={13} />
+                      Wallpapers
+                    </button>
+                  </div>
+
+                  <div className="flex-1 min-h-0 flex flex-col">
+                    {artSubtab === 'generated' ? <VaultGeneratedArtView campaigns={campaigns} /> : <VaultArtGalleryView />}
+                  </div>
                 </div>
               )}
             </div>

@@ -1052,7 +1052,8 @@ function EntityImagePanel({
   }, [initialPrompt])
 
   async function handleGenerate(promptToUse?: string, isPremium = false) {
-    if (busy || isCooldownActive) return
+    if (busy) return
+    if (!isPremium && isCooldownActive) return
     const targetKey = isPremium ? getPremiumApiKey(apiSettings) : apiSettings.apiKey
     if (!targetKey) {
       setError(
@@ -1071,7 +1072,7 @@ function EntityImagePanel({
     setError(null)
     setModelUsed(null)
     setShowPromptEdit(false)
-    start62sCooldown()
+    if (!isPremium) start62sCooldown()
 
     try {
       const generatedKey = `img_${Math.random().toString(36).slice(2)}_${Date.now()}`
@@ -1230,7 +1231,7 @@ function EntityImagePanel({
             <button
               type="button"
               onClick={() => handleGenerate(customPrompt, true)}
-              disabled={busy || isCooldownActive || !customPrompt.trim()}
+              disabled={busy || !customPrompt.trim()}
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-[#f7e7ce] via-[#e8ca8a] to-[#d4af37] text-zinc-950 text-xs font-display font-bold border border-[#fff5e1] hover:brightness-110 shadow-[0_0_12px_rgba(247,231,206,0.35)] transition-all disabled:opacity-50"
               title="Generate with premium paid tokens"
             >
@@ -1257,12 +1258,12 @@ function EntityImagePanel({
             <button
               type="button"
               onClick={handleButtonClick}
-              disabled={busy || isCooldownActive}
+              disabled={busy}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#f7e7ce] via-[#e8ca8a] to-[#d4af37] text-zinc-950 text-xs font-display font-bold border border-[#fff5e1] hover:brightness-110 shadow-[0_0_12px_rgba(247,231,206,0.35)] transition-all disabled:opacity-50"
               title="Generate using paid API tokens"
             >
-              <Sparkles size={13} className="text-zinc-900" />
-              <span>Premium</span>
+              {busy ? <RotateCw size={13} className="animate-spin" /> : <Sparkles size={13} className="text-zinc-900" />}
+              <span>{busy ? 'Weaving...' : 'Premium'}</span>
             </button>
             {modelUsed && !busy && (
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 text-xs font-mono animate-fade-in shadow-sm">

@@ -2,16 +2,18 @@ import { useState, useRef, useEffect, type CSSProperties, type Dispatch, type Se
 import {
   X, ChevronRight, ChevronLeft, Sparkles, Lock, Unlock,
   BookOpen, AlertCircle, Check, ArrowRight, ArrowLeft, Pencil, Plus, Save,
-  ImagePlus, RotateCw, FolderOpen, Trash2, Bookmark, CheckCircle2, Clock, Search,
+  ImagePlus, RotateCw, FolderOpen, Trash2, Bookmark, CheckCircle2, Clock, Search, Cpu,
 } from 'lucide-react'
 import { GlassScreen } from '../lib/glassChrome.tsx'
 import { useConfirm } from '../lib/useConfirm.tsx'
 import type { ApiSettings, NarrationMode, Pov, RevealTrigger, TaleDifficultyKey } from '../types.ts'
 import { TALE_DIFFICULTIES } from '../api/turnContract.ts'
+import { getProvider } from '../api/providers/index.ts'
 import {
   TALE_WEAVER_PHASES, emptyAccumulated, runTaleWeaverPhase, mergeTaleWeaverDraft,
   type TaleWeaverAccumulated, type TaleWeaverPhaseDef,
 } from '../lib/taleWeaving.ts'
+import { loadWeaverLlmOverride, saveWeaverLlmOverride, type WeaverLlmOverride } from '../lib/weaverLlmOverride.ts'
 import {
   getTaleWeaverPresets, saveTaleWeaverPreset, deleteTaleWeaverPreset,
   type TaleWeaverPreset
@@ -101,6 +103,111 @@ function getPhaseCount(phaseId: TaleWeaverPhaseDef['id'], acc: TaleWeaverAccumul
 
 export function hasAnyContent(acc: TaleWeaverAccumulated): boolean {
   return TALE_WEAVER_PHASES.some((p) => hasPhaseContent(p.id, acc))
+}
+
+// Header control (both the full 7-phase Tale Weaver and Quick Play) for
+// Tale Weaving's own model/key fallback — see taleWeaving.ts's
+// buildFallbackChain comment for the full priority order this feeds into
+// (gemini-3.6-flash -> gemini-3.5-flash -> whatever's set here). Persisted
+// via weaverLlmOverride.ts (separate from the player's ordinary API
+// Settings) so it survives closing and reopening Tale Weaving.
+export function WeaverLlmButton({
+  apiSettings, override, onChange,
+}: {
+  apiSettings: ApiSettings
+  override: WeaverLlmOverride
+  onChange: (v: WeaverLlmOverride) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [modelInput, setModelInput] = useState(override.model ?? '')
+  const [keyInput, setKeyInput] = useState(override.apiKey ?? '')
+  const models = getProvider(apiSettings.provider).models
+  const isSet = Boolean(override.model || override.apiKey)
+
+  function openModal() {
+    setModelInput(override.model ?? '')
+    setKeyInput(override.apiKey ?? '')
+    setOpen(true)
+  }
+  function save() {
+    onChange({ model: modelInput || undefined, apiKey: keyInput.trim() || undefined })
+    setOpen(false)
+  }
+  function clear() {
+    onChange({})
+    setOpen(false)
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={openModal}
+        className="relative flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-medium text-ink-muted hover:text-ink hover:bg-gold-accent/10 transition-colors"
+        title="Set a fallback model or your own API key for Tale Weaving"
+      >
+        <Cpu size={13} className="text-gold-primary" />
+        <span>LLM</span>
+        {isSet && <span className="absolute top-1 right-1.5 w-1.5 h-1.5 rounded-full bg-emerald" />}
+      </button>
+
+      {open && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setOpen(false)}>
+          <div className="bg-white rounded-2xl p-5 w-full max-w-sm flex flex-col gap-3 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <span className="font-display font-bold text-sm text-gold-primary">Tale Weaving LLM</span>
+              <button type="button" onClick={() => setOpen(false)} className="text-ink-muted hover:text-ink"><X size={16} /></button>
+            </div>
+            <p className="font-narrative text-xs text-ink-muted leading-relaxed">
+              Weaving tries gemini-3.6-flash, then gemini-3.5-flash, using your own Settings API key. If both hit the
+              shared free model's usage limit, it falls back to what you set here — your own key has its own separate
+              limit, so weaving can keep going instead of waiting it out.
+            </p>
+            <label className="flex flex-col gap-1">
+              <span className="font-mono text-[10px] uppercase tracking-wide text-ink-muted">Fallback Model</span>
+              <select
+                value={modelInput}
+                onChange={(e) => setModelInput(e.target.value)}
+                className="px-3 py-2 rounded-md bg-white border border-gold-accent/25 text-sm text-ink shadow-xs outline-none focus:border-gold-primary focus:ring-1 focus:ring-gold-primary"
+              >
+                <option value="">Use my Settings model</option>
+                {models.map((m) => (
+                  <option key={m.id} value={m.id}>{m.label}</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="font-mono text-[10px] uppercase tracking-wide text-ink-muted">Your API Key</span>
+              <input
+                type="password"
+                value={keyInput}
+                onChange={(e) => setKeyInput(e.target.value)}
+                placeholder="Paste your own Gemini API key (optional)"
+                className="px-3 py-2 rounded-md bg-white border border-gold-accent/25 text-sm text-ink shadow-xs outline-none focus:border-gold-primary focus:ring-1 focus:ring-gold-primary"
+              />
+            </label>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={clear}
+                disabled={!isSet}
+                className="flex-1 px-4 py-2 rounded-lg border border-gold-accent/30 text-ink-muted text-sm font-semibold hover:bg-gold-accent/10 disabled:opacity-40 transition-colors"
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                onClick={save}
+                className="flex-[1.4] px-4 py-2 rounded-lg bg-[#b08830] hover:bg-[#8d6b1d] text-white text-sm font-bold transition-colors"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
 }
 
 function getTotalEntityCount(acc: TaleWeaverAccumulated): number {
@@ -554,6 +661,11 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
   const [savedPresets, setSavedPresets] = useState<TaleWeaverPreset[]>([])
   const [presetToast, setPresetToast] = useState<string | null>(null)
   const [presetSearch, setPresetSearch] = useState('')
+  const [weaverLlm, setWeaverLlm] = useState<WeaverLlmOverride>(() => loadWeaverLlmOverride())
+  function updateWeaverLlm(v: WeaverLlmOverride) {
+    setWeaverLlm(v)
+    saveWeaverLlmOverride(v)
+  }
 
   function handleSavePreset() {
     if (!presetNameInput.trim()) return
@@ -793,7 +905,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
     setBusy(true)
     setErrorMessage(null)
 
-    const result = await runTaleWeaverPhase({ apiSettings, phase, accumulated, guidance: text })
+    const result = await runTaleWeaverPhase({ apiSettings, phase, accumulated, guidance: text, weaverOverride: weaverLlm })
     setBusy(false)
 
     if (!result.ok || !result.draft) {
@@ -2805,6 +2917,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 <Save size={13} className="text-gold-primary" />
                 <span>Save</span>
               </button>
+              <WeaverLlmButton apiSettings={apiSettings} override={weaverLlm} onChange={updateWeaverLlm} />
             </div>
           </div>
 

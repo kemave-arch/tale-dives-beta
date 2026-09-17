@@ -4,6 +4,7 @@ import { buildTaleWeaverSystemInstructions } from '../api/taleWeaverContract.ts'
 import { MAX_OUTPUT_TOKENS_CEILING } from '../api/turnContract.ts'
 import { slugify } from './slug.ts'
 import { parseTaleWeaverResponse, type TaleWeaverDraft, type TaleWeaverSkill } from './taleWeaverParser.ts'
+import type { WeaverLlmOverride } from './weaverLlmOverride.ts'
 
 // Same comma-separated-names shape as an item's "traits" or world seeding's
 // own <location areas="...">  — each name mints its own slug id so Codex
@@ -196,6 +197,10 @@ export interface RunTaleWeaverPhaseInput {
   phase: TaleWeaverPhaseDef
   accumulated: TaleWeaverAccumulated
   guidance: string
+  // Tale Weaving's own manual model/key override (weaverLlmOverride.ts) —
+  // the last-resort tier in FALLBACK_MODELS below, set via the "LLM" button
+  // in the Tale Weaving screens. Absent for a player who's never opened it.
+  weaverOverride?: WeaverLlmOverride
 }
 
 export interface RunTaleWeaverPhaseResult {
@@ -208,39 +213,94 @@ export interface RunTaleWeaverPhaseResult {
 // calls in quick succession that all share the same large system prompt —
 // exactly what Gemini's implicit caching targets. gemini-3.5-flash-lite
 // doesn't appear to get implicit caching in live testing (three identical
-// ~12k-token calls, zero cache hits); the non-lite gemini-3.5-flash does.
-// So every Tale Weaving phase call runs on gemini-3.5-flash regardless of
-// the player's own configured model — this matters most for a player who's
-// downgraded their model to flash-lite (e.g. for cost on ordinary gameplay
-// turns, lib/store.ts's own default is flash-lite-eligible via Settings but
-// the app itself now defaults to flash). Ordinary gameplay turns (App.tsx's
-// runTurn) are unaffected and keep using whatever the player picked.
-const TALE_WEAVER_MODEL = 'gemini-3.5-flash'
+// ~12k-token calls, zero cache hits); the non-lite flash tiers do. So every
+// Tale Weaving phase call defaults to gemini-3.6-flash rather than whatever
+// the player's own configured model is (this matters most for a player
+// who's downgraded to flash-lite for cost on ordinary gameplay turns).
+//
+// The app's own built-in key (store.ts's DEFAULT_GEMINI_API_KEY) carries a
+// tight shared free-tier quota, PER MODEL (live-observed: "limit: 20,
+// model: gemini-3.5-flash, please retry in ~20s") — every player weaving a
+// Tale draws from the same pool. So a 429 on the first model tries a
+// *different* model next (its own separate quota bucket), not just a
+// delayed retry of the same one:
+//   1. gemini-3.6-flash, using the player's own configured apiKey
+//   2. gemini-3.5-flash, same apiKey, only if (1) failed
+//   3. the player's manually-set Tale Weaving override (model + apiKey via
+//      the "LLM" button) if set, falling back to their own Settings
+//      model+apiKey otherwise — only if (1) and (2) both failed
+// Skips a tier that would be an exact duplicate (same model AND same key)
+// of one already tried, so a player who hasn't set an override — or whose
+// Settings model already IS one of the two flash tiers — never fires the
+// same failing request twice in a row.
+const FALLBACK_MODELS = ['gemini-3.6-flash', 'gemini-3.5-flash']
+
+interface AttemptTarget {
+  model: string
+  apiKey: string
+}
+
+function buildFallbackChain(apiSettings: ApiSettings, override?: WeaverLlmOverride): AttemptTarget[] {
+  const chain: AttemptTarget[] = FALLBACK_MODELS.map((model) => ({ model, apiKey: apiSettings.apiKey }))
+  chain.push({
+    model: override?.model || apiSettings.model,
+    apiKey: override?.apiKey || apiSettings.apiKey,
+  })
+  return chain.filter((target, i) => chain.findIndex((t) => t.model === target.model && t.apiKey === target.apiKey) === i)
+}
+
+// Gemini's own free-tier quota error is a wall of text (rate-limit doc
+// links, the exact metric name, a "retry in Ns" countdown) that means
+// nothing to a player and shouldn't be showing up styled as a normal error
+// message. Detected by HTTP status (429, reliable) with a message-text
+// fallback for a provider/error shape that doesn't surface status cleanly.
+function isQuotaError(status: number | undefined, message: string | undefined): boolean {
+  if (status === 429) return true
+  return /quota|rate.?limit|resource_exhausted|too many requests/i.test(message ?? '')
+}
+
+function friendlyPhaseError(status: number | undefined, message: string | undefined): string {
+  if (isQuotaError(status, message)) {
+    return "The built-in model's free usage limit is exhausted right now. Tap the LLM button above to add your own Gemini API key (or pick a different model) and try again."
+  }
+  return message ?? 'Unknown error'
+}
 
 export async function runTaleWeaverPhase(input: RunTaleWeaverPhaseInput): Promise<RunTaleWeaverPhaseResult> {
   const prompt = buildPhasePrompt(input.phase, input.accumulated, input.guidance)
-  try {
-    const raw = await getProvider(input.apiSettings.provider).runSeed({
-      apiKey: input.apiSettings.apiKey,
-      model: TALE_WEAVER_MODEL,
-      temperature: input.apiSettings.temperature,
-      maxOutputTokens: MAX_OUTPUT_TOKENS_CEILING,
-      systemInstructions: buildTaleWeaverSystemInstructions(
-        // Source Accurate defaults on — undefined (no toggle touched yet, or
-        // an old save/preset predating it) reads as on, so this only ever
-        // suppresses the contract when explicitly unchecked.
-        input.accumulated.world?.sourceTitle && input.accumulated.world.sourceAccurate !== false
-          ? {
-              title: input.accumulated.world.sourceTitle,
-              author: input.accumulated.world.sourceAuthor,
-              scope: input.accumulated.world.sourceScope,
-            }
-          : undefined,
-      ),
-      prompt,
-    })
-    return { ok: true, draft: parseTaleWeaverResponse(raw) }
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) }
+  const systemInstructions = buildTaleWeaverSystemInstructions(
+    // Source Accurate defaults on — undefined (no toggle touched yet, or
+    // an old save/preset predating it) reads as on, so this only ever
+    // suppresses the contract when explicitly unchecked.
+    input.accumulated.world?.sourceTitle && input.accumulated.world.sourceAccurate !== false
+      ? {
+          title: input.accumulated.world.sourceTitle,
+          author: input.accumulated.world.sourceAuthor,
+          scope: input.accumulated.world.sourceScope,
+        }
+      : undefined,
+  )
+
+  const chain = buildFallbackChain(input.apiSettings, input.weaverOverride)
+  let lastStatus: number | undefined
+  let lastMessage: string | undefined
+
+  for (const target of chain) {
+    try {
+      const raw = await getProvider(input.apiSettings.provider).runSeed({
+        apiKey: target.apiKey,
+        model: target.model,
+        temperature: input.apiSettings.temperature,
+        maxOutputTokens: MAX_OUTPUT_TOKENS_CEILING,
+        systemInstructions,
+        prompt,
+      })
+      return { ok: true, draft: parseTaleWeaverResponse(raw) }
+    } catch (err) {
+      lastStatus = err instanceof Error && 'status' in err ? (err as Error & { status?: number }).status : undefined
+      lastMessage = err instanceof Error ? err.message : String(err)
+    }
   }
+
+  return { ok: false, error: friendlyPhaseError(lastStatus, lastMessage) }
 }

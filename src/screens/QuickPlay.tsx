@@ -16,7 +16,8 @@ import {
   type TaleWeaverPreset,
 } from '../lib/taleWeaverPresets.ts'
 import { loadTaleWeaverAutosave, saveTaleWeaverAutosave, clearTaleWeaverAutosave } from '../lib/taleWeaverAutosave.ts'
-import { hasAnyContent, NarrativeSettingsCard } from './TaleWeaver.tsx'
+import { hasAnyContent, NarrativeSettingsCard, WeaverLlmButton } from './TaleWeaver.tsx'
+import { loadWeaverLlmOverride, saveWeaverLlmOverride, type WeaverLlmOverride } from '../lib/weaverLlmOverride.ts'
 
 // Quick Play — the same full Tale Weaving generator behind the scenes (every
 // one of TALE_WEAVER_PHASES actually runs), just asked through 3 plain
@@ -386,6 +387,11 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
   const [presetNameInput, setPresetNameInput] = useState('')
   const [savedPresets, setSavedPresets] = useState<TaleWeaverPreset[]>([])
   const [presetToast, setPresetToast] = useState<string | null>(null)
+  const [weaverLlm, setWeaverLlm] = useState<WeaverLlmOverride>(() => loadWeaverLlmOverride())
+  function updateWeaverLlm(v: WeaverLlmOverride) {
+    setWeaverLlm(v)
+    saveWeaverLlmOverride(v)
+  }
 
   const { confirm, dialog: confirmDialog } = useConfirm()
 
@@ -417,7 +423,7 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
     chainRef.current = chainRef.current.then(async () => {
       for (const key of keys) {
         setGenStatus((s) => ({ ...s, [key]: 'running' }))
-        const result = await runTaleWeaverPhase({ apiSettings, phase: phaseFor(key), accumulated: accRef.current, guidance })
+        const result = await runTaleWeaverPhase({ apiSettings, phase: phaseFor(key), accumulated: accRef.current, guidance, weaverOverride: weaverLlm })
         if (result.ok && result.draft) {
           mergeAndSet((prev) => mergeTaleWeaverDraft(prev, key, result.draft!))
           setGenStatus((s) => ({ ...s, [key]: 'done' }))
@@ -553,6 +559,7 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
             >
               <Save size={13} className="text-gold-primary" /><span>Save</span>
             </button>
+            <WeaverLlmButton apiSettings={apiSettings} override={weaverLlm} onChange={updateWeaverLlm} />
           </div>
         </div>
 

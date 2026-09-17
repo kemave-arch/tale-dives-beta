@@ -291,7 +291,9 @@ export async function runSeed({ apiKey, model, temperature, maxOutputTokens, sys
 
   if (!res.ok) {
     const errBody = await res.json().catch(() => ({}))
-    throw new GeminiApiError(errBody?.error?.message ?? `HTTP ${res.status}`)
+    const err = new GeminiApiError(errBody?.error?.message ?? `HTTP ${res.status}`)
+    err.status = res.status
+    throw err
   }
 
   const data = await res.json()

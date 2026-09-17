@@ -180,10 +180,17 @@ function AccordionSection({
   )
 }
 
-function EmptyNote({ status }: { status: GenStatus }) {
+function EmptyNote({ status, error }: { status: GenStatus; error?: string }) {
+  if (status === 'error') {
+    return (
+      <p className="font-narrative italic text-xs text-rose py-1">
+        {error ? `This part slipped: ${error}` : 'This part slipped — retry it, or continue without it.'}
+      </p>
+    )
+  }
   return (
     <p className="font-narrative italic text-xs text-ink-muted py-1">
-      {status === 'running' ? 'Still being woven…' : status === 'error' ? 'This part slipped — retry it, or continue without it.' : 'Nothing woven here yet.'}
+      {status === 'running' ? 'Still being woven…' : 'Nothing woven here yet.'}
     </p>
   )
 }
@@ -193,11 +200,12 @@ function EmptyNote({ status }: { status: GenStatus }) {
 // fixing "long text gets truncated" (dropping every line-clamp below) only
 // has to happen once and both surfaces stay in sync.
 function SectionBody({
-  genKey, accumulated, status, onRemove,
+  genKey, accumulated, status, error, onRemove,
 }: {
   genKey: GenKey
   accumulated: TaleWeaverAccumulated
   status: GenStatus
+  error?: string
   onRemove: (category: 'regions' | 'locations' | 'factions' | 'npcs' | 'lore' | 'beats', id: string) => void
 }) {
   const w = accumulated.world
@@ -219,7 +227,7 @@ function SectionBody({
           )}
         </div>
       ) : (
-        <EmptyNote status={status} />
+        <EmptyNote status={status} error={error} />
       )
     case 'protagonist':
       return p?.name ? (
@@ -233,7 +241,7 @@ function SectionBody({
           )}
         </div>
       ) : (
-        <EmptyNote status={status} />
+        <EmptyNote status={status} error={error} />
       )
     case 'regions':
       return accumulated.regions.length || accumulated.locations.length ? (
@@ -246,7 +254,7 @@ function SectionBody({
           ))}
         </div>
       ) : (
-        <EmptyNote status={status} />
+        <EmptyNote status={status} error={error} />
       )
     case 'factions':
       return accumulated.factions.length ? (
@@ -256,7 +264,7 @@ function SectionBody({
           ))}
         </div>
       ) : (
-        <EmptyNote status={status} />
+        <EmptyNote status={status} error={error} />
       )
     case 'npcs':
       return accumulated.npcs.length ? (
@@ -266,7 +274,7 @@ function SectionBody({
           ))}
         </div>
       ) : (
-        <EmptyNote status={status} />
+        <EmptyNote status={status} error={error} />
       )
     case 'lore':
       return accumulated.lore.length ? (
@@ -276,7 +284,7 @@ function SectionBody({
           ))}
         </div>
       ) : (
-        <EmptyNote status={status} />
+        <EmptyNote status={status} error={error} />
       )
     case 'arc':
       return accumulated.beats.length || accumulated.deathRule || accumulated.endGameRules ? (
@@ -297,7 +305,7 @@ function SectionBody({
           </div>
         </div>
       ) : (
-        <EmptyNote status={status} />
+        <EmptyNote status={status} error={error} />
       )
   }
 }
@@ -356,6 +364,11 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
     initialStatus[k] = hasGenContent(k, accumulated) ? 'done' : 'idle'
   })
   const [genStatus, setGenStatus] = useState<Record<GenKey, GenStatus>>(initialStatus)
+  // The real error message behind a 'error' status (e.g. a 429 rate-limit,
+  // a malformed-response parse failure) — shown in place of the old generic
+  // "this part slipped" text so a section that keeps failing on Retry is
+  // actually diagnosable instead of a black box.
+  const [genError, setGenError] = useState<Partial<Record<GenKey, string>>>({})
 
   // 'input' shows the question's textarea; 'review' shows what got woven
   // for it (live-updating) and gates advancing to the next question until
@@ -408,8 +421,10 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
         if (result.ok && result.draft) {
           mergeAndSet((prev) => mergeTaleWeaverDraft(prev, key, result.draft!))
           setGenStatus((s) => ({ ...s, [key]: 'done' }))
+          setGenError((e) => ({ ...e, [key]: undefined }))
         } else {
           setGenStatus((s) => ({ ...s, [key]: 'error' }))
+          setGenError((e) => ({ ...e, [key]: result.error }))
         }
       }
     })
@@ -565,6 +580,7 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
               keys={QUICK_PLAY_QUESTIONS[step].keys}
               accumulated={accumulated}
               genStatus={genStatus}
+              genError={genError}
               onRemove={removeEntry}
               onRetry={retryKey}
               onBack={() => setStepPhase('input')}
@@ -582,6 +598,7 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
             <TaleInitiationOverview
               accumulated={accumulated}
               genStatus={genStatus}
+              genError={genError}
               anyRunning={anyRunning}
               onRemove={removeEntry}
               onRetry={retryKey}
@@ -739,12 +756,13 @@ function QuestionScreen({
 // the player can never advance mid-weave; a slipped section gets its own
 // Retry instead of forcing the whole question to be re-answered.
 function QuestionReviewPanel({
-  questionNumber, keys, accumulated, genStatus, onRemove, onRetry, onBack, onContinue, continueLabel,
+  questionNumber, keys, accumulated, genStatus, genError, onRemove, onRetry, onBack, onContinue, continueLabel,
 }: {
   questionNumber: number
   keys: GenKey[]
   accumulated: TaleWeaverAccumulated
   genStatus: Record<GenKey, GenStatus>
+  genError: Partial<Record<GenKey, string>>
   onRemove: (category: 'regions' | 'locations' | 'factions' | 'npcs' | 'lore' | 'beats', id: string) => void
   onRetry: (key: GenKey) => void
   onBack: () => void
@@ -778,24 +796,36 @@ function QuestionReviewPanel({
             defaultOpen
             onRetry={() => onRetry(key)}
           >
-            <SectionBody genKey={key} accumulated={accumulated} status={genStatus[key]} onRemove={onRemove} />
+            <SectionBody genKey={key} accumulated={accumulated} status={genStatus[key]} error={genError[key]} onRemove={onRemove} />
           </AccordionSection>
         ))}
       </div>
 
-      <div className="flex items-center justify-between gap-3 w-full mt-1 shrink-0">
+      {/* Same solid pill-row button pattern as QuestionScreen/NarrativeSettingsStep
+          (light vellum surface) rather than GlassCTAButton — that component's
+          frosted-glass-on-dark-art look was designed for the Overview screen's
+          own dark wallpaper background and read as washed-out/low-contrast
+          here on the light parchment surface. */}
+      <div className="flex items-center w-full rounded-lg border border-gold-accent/30 bg-white shadow-xs overflow-hidden divide-x divide-gold-accent/15">
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-1.5 h-10 px-3 text-xs font-semibold text-ink-muted hover:text-ink transition-colors"
+          className="flex-1 flex items-center justify-center gap-1.5 h-11 text-xs font-semibold text-ink-muted hover:text-ink hover:bg-gold-accent/10 transition-colors whitespace-nowrap"
         >
           <ArrowLeft size={15} /><span>Edit Answer</span>
         </button>
-        <GlassCTAButton onClick={onContinue} icon={settled ? ArrowRight : undefined} disabled={!settled}>
-          {settled ? continueLabel : (
-            <span className="inline-flex items-center gap-1.5"><Loader2 size={15} className="animate-spin" /> Weaving…</span>
+        <button
+          type="button"
+          onClick={onContinue}
+          disabled={!settled}
+          className="flex-[1.4] flex items-center justify-center gap-1.5 h-11 bg-[#b08830] hover:bg-[#8d6b1d] disabled:opacity-50 disabled:pointer-events-none text-white text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap"
+        >
+          {settled ? (
+            <><span>{continueLabel}</span><ArrowRight size={15} /></>
+          ) : (
+            <><Loader2 size={15} className="animate-spin" /><span>Weaving…</span></>
           )}
-        </GlassCTAButton>
+        </button>
       </div>
     </div>
   )
@@ -840,10 +870,11 @@ function NarrativeSettingsStep({
 }
 
 function TaleInitiationOverview({
-  accumulated, genStatus, anyRunning, onRemove, onRetry, onReturn, onDiveIn,
+  accumulated, genStatus, genError, anyRunning, onRemove, onRetry, onReturn, onDiveIn,
 }: {
   accumulated: TaleWeaverAccumulated
   genStatus: Record<GenKey, GenStatus>
+  genError: Partial<Record<GenKey, string>>
   anyRunning: boolean
   onRemove: (category: 'regions' | 'locations' | 'factions' | 'npcs' | 'lore' | 'beats', id: string) => void
   onRetry: (key: GenKey) => void
@@ -875,7 +906,7 @@ function TaleInitiationOverview({
             defaultOpen={key === 'world'}
             onRetry={() => onRetry(key)}
           >
-            <SectionBody genKey={key} accumulated={accumulated} status={genStatus[key]} onRemove={onRemove} />
+            <SectionBody genKey={key} accumulated={accumulated} status={genStatus[key]} error={genError[key]} onRemove={onRemove} />
           </AccordionSection>
         ))}
       </div>

@@ -896,6 +896,7 @@ export default function App() {
 
     const player: Player = {
       name: protagonistData.name,
+      gender: protagonistData.gender,
       background: protagonistData.background,
       personality: protagonistData.personality,
       motivation: protagonistData.motivation,
@@ -928,16 +929,30 @@ export default function App() {
       sourceAccurate: w?.sourceAccurate,
     }
 
+    // §8 — every id below is slugified at creation, exactly like World
+    // Seeding's own merge (lib/seeding.ts) already does: a turn-time update
+    // (npc_mem_up, loc_update, fac_rep, ...) always slugifies the id it's
+    // given (lib/npcs.ts et al.) before touching a dict, INCLUDING stripping
+    // a leading title word ("General"/"Captain"/...) — so a Tale-Weaving-
+    // authored id that kept its own title word intact (the model's own
+    // choice during Tale Weaving, never itself run through slugify) would
+    // silently diverge from the id any later turn normalizes to, forking a
+    // duplicate Codex entry the moment the model ever refers back to that
+    // same character/place by id. Slugifying here closes the gap for good.
     const regions: Dict<RegionEntry> = {}
     for (const r of accumulated.regions) {
-      regions[r.id] = { name: r.name, description: r.desc?.trim() || undefined, mapImageKey: r.mapImageKey }
+      const id = slugify(r.id) || slugify(r.name)
+      if (!id) continue
+      regions[id] = { name: r.name, description: r.desc?.trim() || undefined, mapImageKey: r.mapImageKey }
     }
 
     const locations: Dict<LocationEntry> = {}
     for (const l of accumulated.locations) {
+      const id = slugify(l.id) || slugify(l.name)
+      if (!id) continue
       const areas: AreaEntry[] | undefined = parseTaleWeaverDraftAreas(l.areas)
-      const regionId = l.regionId && regions[l.regionId] ? l.regionId : undefined
-      locations[l.id] = {
+      const regionId = l.regionId && regions[slugify(l.regionId)] ? slugify(l.regionId) : undefined
+      locations[id] = {
         name: l.name,
         region: (regionId ? regions[regionId].name : undefined) ?? 'Known World',
         description: l.desc?.trim() || '',
@@ -963,7 +978,9 @@ export default function App() {
 
     const factions: Dict<FactionEntry> = {}
     for (const f of accumulated.factions) {
-      factions[f.id] = {
+      const id = slugify(f.id) || slugify(f.name)
+      if (!id) continue
+      factions[id] = {
         name: f.name,
         repTier: attitudeToRepTier(f.attitude),
         description: f.desc?.trim() || undefined,
@@ -975,7 +992,9 @@ export default function App() {
 
     const npcs: Dict<NpcEntry> = {}
     for (const n of accumulated.npcs) {
-      npcs[n.id] = {
+      const id = slugify(n.id) || slugify(n.name)
+      if (!id) continue
+      npcs[id] = {
         name: n.name,
         role: n.role?.trim() || undefined,
         personality: n.personality?.trim() || undefined,
@@ -993,7 +1012,9 @@ export default function App() {
 
     const lore: Dict<LoreEntry> = {}
     for (const l of accumulated.lore) {
-      lore[l.id] = {
+      const id = slugify(l.id) || slugify(l.name)
+      if (!id) continue
+      lore[id] = {
         name: l.name,
         category: l.category?.trim() || 'General',
         content: l.content?.trim() || undefined,

@@ -380,7 +380,11 @@ export function buildContextSlice(state: Campaign, craftReadyLine?: string | nul
   lines.push(
     `Prose Depth: ${proseDepth.label} (${proseDepth.targetTokens})`,
     `Narration Style: ${narrationStyle}`,
-    `Point of View: ${povWord === 'first' ? 'First Person ("I")' : 'Third Person ("they")'} — apply this consistently to every sentence of narration this turn.`,
+    `Point of View: ${
+      povWord === 'first'
+        ? 'First Person ("I")'
+        : `Third Person, using the pronoun consistent with the protagonist's established gender${player.gender ? ` (${player.gender})` : ''} — canon-accurate if a real source is in play; default to "they" only when no gender has been established`
+    } — apply this consistently to every sentence of narration this turn.`,
     `Narration Mode: ${
       narrationModeWord === 'immersive'
         ? 'Immersive — decipher and polish the player\'s raw input into their character\'s own words, thoughts, and actions, narrated as one continuous real-time scene alongside the world\'s response, the way a novelist would write it, not as a separate action-then-reaction report.'

@@ -49,7 +49,13 @@ const BREAKTHROUGH_TIERS = COMPETENCY_TIERS.filter((w) => w !== 'Untrained')
 export function parseXmlTurnResponse(raw: string): TurnResponse {
   const narMatch = raw.match(/<nar>([\s\S]*?)<\/nar>/)
   if (!narMatch) throw new XmlTurnParseError('No <nar> block found')
-  const nar = decodeXmlEntities(narMatch[1].trim())
+  // <plan> belongs BEFORE <nar>, so the regex above normally excludes it —
+  // but a live-caught case had the model nest it inside <nar> instead,
+  // which meant the raw <plan>...</plan> block itself got shown to the
+  // player as part of the narrative. Stripped defensively here regardless
+  // of where the model actually put it, same "tolerate a stray tag" spirit
+  // as this function's unclosed-tag handling described above.
+  const nar = decodeXmlEntities(narMatch[1].replace(/<plan>[\s\S]*?<\/plan>/g, '').trim())
 
   const doc = parseXmlBlock(raw, 'sync')
 

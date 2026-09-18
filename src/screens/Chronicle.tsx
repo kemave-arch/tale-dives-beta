@@ -25,6 +25,15 @@ function traitsText(traits: ItemEntry['traits']): string | null {
   return traits?.length ? traits.join(', ') : null
 }
 
+// Mobile/tablet on-screen keyboards fire the same plain Enter keydown a
+// desktop Enter key does — so a bare (non-preventDefault'd) Enter there
+// still needs to stay a newline, not send the action, since there's no
+// physical Shift+Enter available to type a multi-line action. Same
+// touch/small-screen detection glassChrome.tsx's GlassScreen already uses.
+function isTouchOrSmallScreen(): boolean {
+  return ('ontouchstart' in window) || window.matchMedia('(max-width: 1024px)').matches
+}
+
 // §6.6 !conclude — display words for LogEntry.ending's fixed outcome set.
 const ENDING_LABELS: Record<EndingOutcome, string> = { win: 'Victory', lose: 'Defeat', neutral: 'A Costly End' }
 
@@ -2061,7 +2070,7 @@ export default function Chronicle({
                     return
                   }
                 }
-                if (e.key === 'Enter' && !e.shiftKey) {
+                if (e.key === 'Enter' && !e.shiftKey && !isTouchOrSmallScreen()) {
                   e.preventDefault()
                   send()
                 }

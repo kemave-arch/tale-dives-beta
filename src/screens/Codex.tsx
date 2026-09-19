@@ -4,9 +4,9 @@ import {
   Globe, BookOpen, Users, ShieldCheck, Map, ScrollText, Target, Skull, Backpack,
   Pencil, Save, X, Trash2, Plus, Lock, User, Hammer, Clock, Sparkles, CheckCircle2, XCircle, ArrowRight, Ghost,
   Swords, Star, EyeOff, Search, MapPin, Heart, Coins, Gift, Zap, Compass, AlertTriangle, AlertCircle, Shield, Flame, Milestone, ListChecks,
-  ChevronRight, ChevronLeft, Flag, ImagePlus, RotateCw,
+  ChevronRight, ChevronLeft, Flag, ImagePlus, RotateCw, ArrowLeft,
 } from 'lucide-react'
-import { DASHED_ROW_CLASS, GLASS_SURFACE_LIST, GlassHeader, GlassIconButton, GlassScreen, SELECT_CLASS } from '../lib/glassChrome.tsx'
+import { GlassScreen } from '../lib/glassChrome.tsx'
 import { slugify } from '../lib/slug.ts'
 import { isHidden, validateDiscovery } from '../lib/discovery.ts'
 import { checkAffordability } from '../lib/skills.ts'
@@ -135,13 +135,13 @@ function genId(name: string, existing: Record<string, unknown>): string {
 
 function AutoBadge({ shown }: { shown?: boolean }) {
   if (!shown) return null
-  return <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#e8ca8a]/15 text-[#e8ca8a]/80">auto</span>
+  return <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-gold-accent/15 text-gold-primary">auto</span>
 }
 
 // §5.12 Codex Discovery — a masked card badge; the entry grid otherwise shows AutoBadge.
 function LockBadge() {
   return (
-    <span className="text-[#e8ca8a]/50 shrink-0">
+    <span className="text-gold-primary/60 shrink-0">
       <Lock size={13} />
     </span>
   )
@@ -237,7 +237,7 @@ function StatBar({ label, value, max = 100, displayValue }: { label: string; val
 }
 
 function DetailPanel({ children }: { children: React.ReactNode }) {
-  return <div className="rounded-2xl p-5 flex flex-col gap-4 border border-[#e8ca8a]/25 bg-transparent backdrop-blur-sm">{children}</div>
+  return <div className="rounded-2xl p-5 flex flex-col gap-4 border border-gold-accent/25 bg-white">{children}</div>
 }
 
 // TextField's textarea variant is used across every Codex CRUD form (NPCs,
@@ -248,6 +248,14 @@ function DetailPanel({ children }: { children: React.ReactNode }) {
 // every textarea gets the expand affordance automatically with zero changes
 // at any individual call site.
 const LongTextEditorContext = createContext<((label: string, value: string, hint?: string) => Promise<string | null>) | null>(null)
+
+// glassChrome.tsx's own SELECT_CLASS has an opaque near-black fill tuned
+// for the dark canvas/art background every other screen sits on — wrong
+// here now that Codex's content is a light vellum surface. Same field
+// shape, light vellum coloring instead, matching TextField's own `cls`
+// below and the input style Quick Play/Tale Weaving already established.
+const CODEX_SELECT_CLASS =
+  'w-full rounded-lg border border-gold-accent/25 bg-[#faf8f4] px-3 py-2.5 font-sans text-[12px] leading-relaxed text-ink outline-none transition-colors duration-150 focus:border-gold-primary [&>option]:bg-white [&>option]:text-ink'
 
 function TextField({
   label, value, onChange, textarea, placeholder,
@@ -383,6 +391,36 @@ function TierField<T extends readonly string[]>({
 
 // §9 CRUD toolbar — swaps between "view" (Edit/Delete) and "edit" (Save/Cancel)
 // affordances, shown next to the header title on any editable detail view.
+// Local vellum-styled buttons rather than glassChrome.tsx's CodexIconButton
+// — that component's dark near-black fill is tuned to sit over the app's
+// cycling artwork/dark canvas, not this screen's now-light parchment
+// content, where it would render as a dark, out-of-place pill.
+function CodexIconButton({
+  icon: Icon, label, onClick, tone = 'default',
+}: {
+  icon: LucideIcon
+  label: string
+  onClick: () => void
+  tone?: 'default' | 'action' | 'danger'
+}) {
+  const toneClass = tone === 'action'
+    ? 'border-gold-accent/60 text-gold-primary bg-gold-accent/10 hover:bg-gold-accent/20'
+    : tone === 'danger'
+      ? 'border-rose/35 text-rose hover:bg-rose-bg hover:border-rose/60'
+      : 'border-gold-accent/30 text-ink-muted hover:text-ink hover:border-gold-accent/60 hover:bg-gold-accent/10'
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      className={`inline-flex items-center justify-center w-8 h-8 rounded-full border bg-white transition-colors duration-150 shrink-0 ${toneClass}`}
+    >
+      <Icon size={15} />
+    </button>
+  )
+}
+
 function CrudToolbar({
   editing, canDelete, onEdit, onSave, onCancel, onDelete,
 }: {
@@ -396,15 +434,15 @@ function CrudToolbar({
   if (editing) {
     return (
       <div className="flex items-center gap-1 ml-auto">
-        <GlassIconButton icon={X} label="Cancel" compact onClick={onCancel} />
-        <GlassIconButton icon={Save} label="Save" tone="action" compact onClick={onSave} />
+        <CodexIconButton icon={X} label="Cancel" onClick={onCancel} />
+        <CodexIconButton icon={Save} label="Save" tone="action" onClick={onSave} />
       </div>
     )
   }
   return (
     <div className="flex items-center gap-1 ml-auto">
-      <GlassIconButton icon={Pencil} label="Edit" compact onClick={onEdit} />
-      {canDelete && <GlassIconButton icon={Trash2} label="Delete" tone="danger" compact onClick={onDelete} />}
+      <CodexIconButton icon={Pencil} label="Edit" onClick={onEdit} />
+      {canDelete && <CodexIconButton icon={Trash2} label="Delete" tone="danger" onClick={onDelete} />}
     </div>
   )
 }
@@ -423,7 +461,10 @@ function SkillCostBadge({ skill }: { skill: SkillEntry }) {
 
 function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} className={DASHED_ROW_CLASS}>
+    <button
+      onClick={onClick}
+      className="flex items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-gold-accent/35 text-gold-primary py-2.5 font-display text-sm bg-white transition-colors duration-150 hover:border-gold-primary hover:bg-gold-accent/5"
+    >
       <Plus size={14} /> {label}
     </button>
   )
@@ -454,13 +495,18 @@ interface CategoryAccent {
   activeTab: string // styling for active category subtab
 }
 
-// Unified classic antique light-gold / obsidian palette for all Codex categories
-const GOLD_CARD_STYLE = `${GLASS_SURFACE_LIST} bg-gradient-to-r from-[#121622] via-[#0e111a] to-[#0a0d14] border-[#c4a259]/30 rounded-xl p-3 sm:p-3.5 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#f0ca65]/70 hover:bg-[#161a28] hover:shadow-[0_4px_16px_rgba(240,202,101,0.18)] cursor-pointer group`
-const GOLD_ICON_BADGE = 'w-9 h-9 rounded-full bg-[#18130a] border border-[#c4a259]/40 flex items-center justify-center text-[#f0ca65] shrink-0 group-hover:scale-105 group-hover:border-[#f0ca65]/80 group-hover:shadow-[0_0_10px_rgba(240,202,101,0.25)] transition-all'
-const GOLD_KICKER = 'font-mono text-[9px] text-[#a8a18c] uppercase tracking-wider group-hover:text-[#fae5b5]/90'
-const GOLD_BADGE = 'rounded-lg bg-[#18130a] border border-[#c4a259]/40 text-[#fae5b5] px-2.5 py-0.5 text-[11px] font-mono shrink-0 group-hover:border-[#f0ca65]/80 group-hover:bg-[#f0ca65]/15 transition-all'
-const GOLD_TAG = 'rounded-full border border-[#c4a259]/35 bg-[#c4a259]/10 px-2 py-0.5 text-[9px] font-mono text-[#fae5b5]'
-const GOLD_ACTIVE_TAB = 'bg-[#f0ca65]/20 text-[#fae5b5] border-[#f0ca65]/70 shadow-[0_0_12px_rgba(240,202,101,0.25)]'
+// Unified vellum palette for all Codex categories — light parchment cards
+// with a plain gold hairline, matching Quick Play/Tale Weaving's own
+// content surfaces rather than the earlier dark-obsidian "RPG card" look.
+// Decorative glow/scale/gradient hover effects are dropped throughout per
+// direct request ("simple presentation of the info is best") — a border
+// and background tint on hover is enough to read as interactive.
+const GOLD_CARD_STYLE = 'bg-white border border-gold-accent/25 rounded-xl p-3 sm:p-3.5 flex flex-col gap-1.5 transition-colors duration-150 hover:border-gold-primary/50 hover:bg-gold-accent/5 cursor-pointer group'
+const GOLD_ICON_BADGE = 'w-9 h-9 rounded-full bg-[#faf8f4] border border-gold-accent/30 flex items-center justify-center text-gold-primary shrink-0'
+const GOLD_KICKER = 'font-mono text-[9px] text-ink-muted uppercase tracking-wider'
+const GOLD_BADGE = 'rounded-lg bg-[#faf8f4] border border-gold-accent/30 text-gold-primary px-2.5 py-0.5 text-[11px] font-mono shrink-0'
+const GOLD_TAG = 'rounded-full border border-gold-accent/30 bg-gold-accent/10 px-2 py-0.5 text-[9px] font-mono text-gold-primary'
+const GOLD_ACTIVE_TAB = 'bg-gold-accent/20 text-gold-primary border-gold-accent/60'
 
 const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
   npcs: {
@@ -469,7 +515,7 @@ const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
     iconBadge: GOLD_ICON_BADGE,
     kicker: GOLD_KICKER,
     badge: GOLD_BADGE,
-    sectionIcon: 'text-[#f0ca65]',
+    sectionIcon: 'text-gold-primary',
     tag: GOLD_TAG,
     activeTab: GOLD_ACTIVE_TAB,
   },
@@ -479,7 +525,7 @@ const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
     iconBadge: GOLD_ICON_BADGE,
     kicker: GOLD_KICKER,
     badge: GOLD_BADGE,
-    sectionIcon: 'text-[#f0ca65]',
+    sectionIcon: 'text-gold-primary',
     tag: GOLD_TAG,
     solid: 'bg-[#f0ca65]',
     activeTab: GOLD_ACTIVE_TAB,
@@ -490,7 +536,7 @@ const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
     iconBadge: GOLD_ICON_BADGE,
     kicker: GOLD_KICKER,
     badge: GOLD_BADGE,
-    sectionIcon: 'text-[#f0ca65]',
+    sectionIcon: 'text-gold-primary',
     tag: GOLD_TAG,
     activeTab: GOLD_ACTIVE_TAB,
   },
@@ -500,7 +546,7 @@ const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
     iconBadge: GOLD_ICON_BADGE,
     kicker: GOLD_KICKER,
     badge: GOLD_BADGE,
-    sectionIcon: 'text-[#f0ca65]',
+    sectionIcon: 'text-gold-primary',
     tag: GOLD_TAG,
     activeTab: GOLD_ACTIVE_TAB,
   },
@@ -510,7 +556,7 @@ const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
     iconBadge: GOLD_ICON_BADGE,
     kicker: GOLD_KICKER,
     badge: GOLD_BADGE,
-    sectionIcon: 'text-[#f0ca65]',
+    sectionIcon: 'text-gold-primary',
     tag: GOLD_TAG,
     activeTab: GOLD_ACTIVE_TAB,
   },
@@ -520,7 +566,7 @@ const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
     iconBadge: GOLD_ICON_BADGE,
     kicker: GOLD_KICKER,
     badge: GOLD_BADGE,
-    sectionIcon: 'text-[#f0ca65]',
+    sectionIcon: 'text-gold-primary',
     tag: GOLD_TAG,
     activeTab: GOLD_ACTIVE_TAB,
   },
@@ -530,7 +576,7 @@ const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
     iconBadge: GOLD_ICON_BADGE,
     kicker: GOLD_KICKER,
     badge: GOLD_BADGE,
-    sectionIcon: 'text-[#f0ca65]',
+    sectionIcon: 'text-gold-primary',
     tag: GOLD_TAG,
     solid: 'bg-[#f0ca65]',
     activeTab: GOLD_ACTIVE_TAB,
@@ -541,7 +587,7 @@ const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
     iconBadge: GOLD_ICON_BADGE,
     kicker: GOLD_KICKER,
     badge: GOLD_BADGE,
-    sectionIcon: 'text-[#f0ca65]',
+    sectionIcon: 'text-gold-primary',
     tag: GOLD_TAG,
     activeTab: GOLD_ACTIVE_TAB,
   },
@@ -551,7 +597,7 @@ const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
     iconBadge: GOLD_ICON_BADGE,
     kicker: GOLD_KICKER,
     badge: GOLD_BADGE,
-    sectionIcon: 'text-[#f0ca65]',
+    sectionIcon: 'text-gold-primary',
     tag: GOLD_TAG,
     activeTab: GOLD_ACTIVE_TAB,
   },
@@ -561,7 +607,7 @@ const CATEGORY_ACCENTS: Record<CoreCategoryId, CategoryAccent> = {
     iconBadge: GOLD_ICON_BADGE,
     kicker: GOLD_KICKER,
     badge: GOLD_BADGE,
-    sectionIcon: 'text-[#f0ca65]',
+    sectionIcon: 'text-gold-primary',
     tag: GOLD_TAG,
     solid: 'bg-[#f0ca65]',
     activeTab: GOLD_ACTIVE_TAB,
@@ -575,62 +621,65 @@ const NEUTRAL_ACCENT: CategoryAccent = {
   iconBadge: GOLD_ICON_BADGE,
   kicker: GOLD_KICKER,
   badge: GOLD_BADGE,
-  sectionIcon: 'text-[#f0ca65]',
+  sectionIcon: 'text-gold-primary',
   tag: GOLD_TAG,
   activeTab: GOLD_ACTIVE_TAB,
 }
 
-// Item rarity accents: tasteful RPG borders with subdued ambient glows
+// Item rarity accents — the one place a per-entry color still varies (a
+// real RPG loot-tier convention, kept as a semantic signal distinct from
+// the app's own gold accent), now as a light tint on the same white vellum
+// card rather than a distinct dark obsidian card per tier.
 const ITEM_RARITY_ACCENTS: Record<string, CategoryAccent> = {
   common: {
     icon: Backpack,
-    card: `${GLASS_SURFACE_LIST} bg-[#121622]/90 border-[#3b4256] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#9ca3af]/80 hover:bg-[#191c2c] cursor-pointer group`,
-    iconBadge: 'w-9 h-9 rounded-full bg-[#181d2a] border border-[#3b4256] flex items-center justify-center text-[#9ca3af] shrink-0 group-hover:scale-105 transition-all',
-    kicker: 'font-mono text-[9px] text-[#a8a18c] uppercase tracking-wider group-hover:text-[#d1d5db]',
-    badge: 'rounded-lg bg-[#181d2a] border border-[#3b4256] text-[#9ca3af] px-2.5 py-0.5 text-[11px] font-mono shrink-0 transition-all',
-    sectionIcon: 'text-[#9ca3af]',
-    tag: 'rounded-full border border-[#9ca3af]/35 bg-[#9ca3af]/10 px-2 py-0.5 text-[9px] font-mono text-[#d1d5db]',
-    activeTab: 'bg-[#9ca3af]/20 text-[#d1d5db] border-[#9ca3af]/60',
+    card: 'bg-white border border-ink-muted/25 rounded-xl p-3 flex flex-col gap-1.5 transition-colors duration-150 hover:border-ink-muted/50 hover:bg-ink-muted/5 cursor-pointer group',
+    iconBadge: 'w-9 h-9 rounded-full bg-[#f5f4f1] border border-ink-muted/30 flex items-center justify-center text-ink-muted shrink-0',
+    kicker: 'font-mono text-[9px] text-ink-muted uppercase tracking-wider',
+    badge: 'rounded-lg bg-[#f5f4f1] border border-ink-muted/30 text-ink-muted px-2.5 py-0.5 text-[11px] font-mono shrink-0',
+    sectionIcon: 'text-ink-muted',
+    tag: 'rounded-full border border-ink-muted/30 bg-ink-muted/10 px-2 py-0.5 text-[9px] font-mono text-ink-muted',
+    activeTab: 'bg-ink-muted/15 text-ink border-ink-muted/50',
   },
   uncommon: {
     icon: Backpack,
-    card: `${GLASS_SURFACE_LIST} bg-[#121622]/90 border-[#1f382a] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#4ade80]/70 hover:bg-[#191c2c] cursor-pointer group`,
-    iconBadge: 'w-9 h-9 rounded-full bg-[#102419] border border-[#274836] flex items-center justify-center text-[#4ade80] shrink-0 group-hover:scale-105 transition-all',
-    kicker: 'font-mono text-[9px] text-[#a8a18c] uppercase tracking-wider group-hover:text-[#86efac]',
-    badge: 'rounded-lg bg-[#102419] border border-[#274836] text-[#86efac] px-2.5 py-0.5 text-[11px] font-mono shrink-0 transition-all',
-    sectionIcon: 'text-[#4ade80]',
-    tag: 'rounded-full border border-[#4ade80]/35 bg-[#4ade80]/10 px-2 py-0.5 text-[9px] font-mono text-[#86efac]',
-    activeTab: 'bg-[#4ade80]/20 text-[#86efac] border-[#4ade80]/60',
+    card: 'bg-white border border-emerald/25 rounded-xl p-3 flex flex-col gap-1.5 transition-colors duration-150 hover:border-emerald/50 hover:bg-emerald-bg cursor-pointer group',
+    iconBadge: 'w-9 h-9 rounded-full bg-emerald-bg border border-emerald/30 flex items-center justify-center text-emerald shrink-0',
+    kicker: 'font-mono text-[9px] text-ink-muted uppercase tracking-wider',
+    badge: 'rounded-lg bg-emerald-bg border border-emerald/30 text-emerald px-2.5 py-0.5 text-[11px] font-mono shrink-0',
+    sectionIcon: 'text-emerald',
+    tag: 'rounded-full border border-emerald/30 bg-emerald-bg px-2 py-0.5 text-[9px] font-mono text-emerald',
+    activeTab: 'bg-emerald/15 text-emerald border-emerald/50',
   },
   rare: {
     icon: Backpack,
-    card: `${GLASS_SURFACE_LIST} bg-[#121622]/90 border-[#1c324b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#60a5fa]/70 hover:bg-[#191c2c] cursor-pointer group`,
-    iconBadge: 'w-9 h-9 rounded-full bg-[#0e2136] border border-[#224469] flex items-center justify-center text-[#60a5fa] shrink-0 group-hover:scale-105 transition-all',
-    kicker: 'font-mono text-[9px] text-[#a8a18c] uppercase tracking-wider group-hover:text-[#93c5fd]',
-    badge: 'rounded-lg bg-[#0e2136] border border-[#224469] text-[#93c5fd] px-2.5 py-0.5 text-[11px] font-mono shrink-0 transition-all',
-    sectionIcon: 'text-[#60a5fa]',
-    tag: 'rounded-full border border-[#60a5fa]/35 bg-[#60a5fa]/10 px-2 py-0.5 text-[9px] font-mono text-[#93c5fd]',
-    activeTab: 'bg-[#60a5fa]/20 text-[#93c5fd] border-[#60a5fa]/60',
+    card: 'bg-white border border-skill/25 rounded-xl p-3 flex flex-col gap-1.5 transition-colors duration-150 hover:border-skill/50 hover:bg-skill-bg cursor-pointer group',
+    iconBadge: 'w-9 h-9 rounded-full bg-skill-bg border border-skill/30 flex items-center justify-center text-skill shrink-0',
+    kicker: 'font-mono text-[9px] text-ink-muted uppercase tracking-wider',
+    badge: 'rounded-lg bg-skill-bg border border-skill/30 text-skill px-2.5 py-0.5 text-[11px] font-mono shrink-0',
+    sectionIcon: 'text-skill',
+    tag: 'rounded-full border border-skill/30 bg-skill-bg px-2 py-0.5 text-[9px] font-mono text-skill',
+    activeTab: 'bg-skill/15 text-skill border-skill/50',
   },
   epic: {
     icon: Backpack,
-    card: `${GLASS_SURFACE_LIST} bg-[#121622]/90 border-[#371f4b] rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#c084fc]/70 hover:bg-[#191c2c] cursor-pointer group`,
-    iconBadge: 'w-9 h-9 rounded-full bg-[#251336] border border-[#482869] flex items-center justify-center text-[#c084fc] shrink-0 group-hover:scale-105 transition-all',
-    kicker: 'font-mono text-[9px] text-[#a8a18c] uppercase tracking-wider group-hover:text-[#d8b4fe]',
-    badge: 'rounded-lg bg-[#251336] border border-[#482869] text-[#d8b4fe] px-2.5 py-0.5 text-[11px] font-mono shrink-0 transition-all',
-    sectionIcon: 'text-[#c084fc]',
-    tag: 'rounded-full border border-[#c084fc]/35 bg-[#c084fc]/10 px-2 py-0.5 text-[9px] font-mono text-[#d8b4fe]',
-    activeTab: 'bg-[#c084fc]/20 text-[#d8b4fe] border-[#c084fc]/60',
+    card: 'bg-white border border-violet-300 rounded-xl p-3 flex flex-col gap-1.5 transition-colors duration-150 hover:border-violet-400 hover:bg-violet-50 cursor-pointer group',
+    iconBadge: 'w-9 h-9 rounded-full bg-violet-50 border border-violet-300 flex items-center justify-center text-violet-700 shrink-0',
+    kicker: 'font-mono text-[9px] text-ink-muted uppercase tracking-wider',
+    badge: 'rounded-lg bg-violet-50 border border-violet-300 text-violet-700 px-2.5 py-0.5 text-[11px] font-mono shrink-0',
+    sectionIcon: 'text-violet-700',
+    tag: 'rounded-full border border-violet-300 bg-violet-50 px-2 py-0.5 text-[9px] font-mono text-violet-700',
+    activeTab: 'bg-violet-100 text-violet-700 border-violet-400',
   },
   legendary: {
     icon: Backpack,
-    card: `${GLASS_SURFACE_LIST} bg-[#121622]/90 border-[#c4a259]/50 rounded-xl p-3 flex flex-col gap-1.5 transition-all duration-200 hover:border-[#f0ca65]/90 hover:bg-[#191c2c] hover:shadow-[0_4px_20px_rgba(240,202,101,0.3)] cursor-pointer group`,
-    iconBadge: 'w-9 h-9 rounded-full bg-[#18130a] border border-[#c4a259]/50 flex items-center justify-center text-[#f0ca65] shrink-0 group-hover:scale-105 group-hover:border-[#f0ca65]/80 transition-all',
-    kicker: 'font-mono text-[9px] text-[#a8a18c] uppercase tracking-wider group-hover:text-[#fae5b5]',
-    badge: 'rounded-lg bg-[#18130a] border border-[#c4a259]/50 text-[#fae5b5] px-2.5 py-0.5 text-[11px] font-mono shrink-0 transition-all',
-    sectionIcon: 'text-[#f0ca65]',
-    tag: 'rounded-full border border-[#c4a259]/40 bg-[#c4a259]/15 px-2 py-0.5 text-[9px] font-mono text-[#fae5b5]',
-    activeTab: 'bg-[#f0ca65]/20 text-[#fae5b5] border-[#f0ca65]/60',
+    card: 'bg-white border border-gold-accent/50 rounded-xl p-3 flex flex-col gap-1.5 transition-colors duration-150 hover:border-gold-primary/70 hover:bg-gold-accent/10 cursor-pointer group',
+    iconBadge: 'w-9 h-9 rounded-full bg-[#faf8f4] border border-gold-accent/50 flex items-center justify-center text-gold-primary shrink-0',
+    kicker: 'font-mono text-[9px] text-ink-muted uppercase tracking-wider',
+    badge: 'rounded-lg bg-[#faf8f4] border border-gold-accent/50 text-gold-primary px-2.5 py-0.5 text-[11px] font-mono shrink-0',
+    sectionIcon: 'text-gold-primary',
+    tag: 'rounded-full border border-gold-accent/40 bg-gold-accent/15 px-2 py-0.5 text-[9px] font-mono text-gold-primary',
+    activeTab: 'bg-gold-accent/20 text-gold-primary border-gold-accent/60',
   },
 }
 
@@ -643,7 +692,7 @@ function itemAccentFor(rarity: string | undefined): CategoryAccent {
 // like a monster-manual stat block rather than another label/value row.
 function StatTile({ label, value, accent }: { label: string; value: string | number; accent: CategoryAccent }) {
   return (
-    <div className="flex-1 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-center">
+    <div className="flex-1 rounded-lg border border-gold-accent/20 bg-[#faf8f4] px-3 py-2 text-center">
       <div className={`font-display font-bold text-lg leading-tight ${accent.sectionIcon}`}>{value}</div>
       <div className="font-mono text-[9px] uppercase tracking-wider text-ink-muted mt-0.5">{label}</div>
     </div>
@@ -659,7 +708,7 @@ function ReputationMeter({ tier, accent }: { tier: number; accent: CategoryAccen
   return (
     <div className="flex gap-1 mt-1">
       {REP_TIER_STEPS.map((step) => (
-        <div key={step} className={`flex-1 h-2 rounded-full ${step <= clamped ? (accent.solid ?? 'bg-[#e8ca8a]') : 'bg-white/10'}`} />
+        <div key={step} className={`flex-1 h-2 rounded-full ${step <= clamped ? (accent.solid ?? 'bg-gold-accent') : 'bg-gold-accent/12'}`} />
       ))}
     </div>
   )
@@ -668,12 +717,12 @@ function ReputationMeter({ tier, accent }: { tier: number; accent: CategoryAccen
 // A quest'status as a colored ribbon — the checklist/tracker feel a quest
 // log needs, rather than plain status text sitting next to everything else.
 const QUEST_STATUS_META: Record<string, { label: string; icon: LucideIcon; className: string }> = {
-  completed: { label: 'Completed', icon: CheckCircle2, className: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40' },
-  failed: { label: 'Failed', icon: XCircle, className: 'bg-rose-500/15 text-rose-300 border-rose-500/40' },
-  advanced: { label: 'In Progress', icon: ArrowRight, className: 'bg-[#34d399]/15 text-[#6ee7b7] border-[#34d399]/40' },
+  completed: { label: 'Completed', icon: CheckCircle2, className: 'bg-emerald-bg text-emerald border-emerald/30' },
+  failed: { label: 'Failed', icon: XCircle, className: 'bg-rose-bg text-rose border-rose/30' },
+  advanced: { label: 'In Progress', icon: ArrowRight, className: 'bg-gold-accent/10 text-gold-primary border-gold-accent/35' },
 }
 function QuestStatusBadge({ status }: { status?: string }) {
-  const meta = QUEST_STATUS_META[status ?? ''] ?? { label: status || 'Active', icon: Target, className: 'bg-[#34d399]/15 text-[#6ee7b7] border-[#34d399]/40' }
+  const meta = QUEST_STATUS_META[status ?? ''] ?? { label: status || 'Active', icon: Target, className: 'bg-gold-accent/10 text-gold-primary border-gold-accent/35' }
   const Icon = meta.icon
   return (
     <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase tracking-wide shrink-0 ${meta.className}`}>
@@ -686,10 +735,10 @@ function QuestStatusBadge({ status }: { status?: string }) {
 // status: status tracks progress, type tracks who the quest belongs to
 // (the game world, a guild, or the player's own personal goals).
 const QUEST_TYPE_META: Record<string, { label: string; icon: LucideIcon; className: string }> = {
-  main: { label: 'Main', icon: Swords, className: 'bg-[#e8ca8a]/15 text-[#f5dfa0] border-[#e8ca8a]/40' },
-  side: { label: 'Side', icon: Users, className: 'bg-sky-500/15 text-sky-300 border-sky-500/40' },
-  ambition: { label: 'Ambition', icon: Star, className: 'bg-violet-500/15 text-violet-300 border-violet-500/40' },
-  secret_ambition: { label: 'Secret Ambition', icon: EyeOff, className: 'bg-rose-500/15 text-rose-300 border-rose-500/40' },
+  main: { label: 'Main', icon: Swords, className: 'bg-gold-accent/10 text-gold-primary border-gold-accent/35' },
+  side: { label: 'Side', icon: Users, className: 'bg-skill-bg text-skill border-skill/30' },
+  ambition: { label: 'Ambition', icon: Star, className: 'bg-violet-50 text-violet-700 border-violet-300' },
+  secret_ambition: { label: 'Secret Ambition', icon: EyeOff, className: 'bg-rose-bg text-rose border-rose/30' },
 }
 function QuestTypeBadge({ type }: { type?: string }) {
   const meta = type ? QUEST_TYPE_META[type] : undefined
@@ -704,9 +753,9 @@ function QuestTypeBadge({ type }: { type?: string }) {
 
 // §7 Projects — same colored-ribbon status convention as Quests above.
 const PROJECT_STATUS_META: Record<string, { label: string; icon: LucideIcon; className: string }> = {
-  completed: { label: 'Completed', icon: CheckCircle2, className: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40' },
-  stalled: { label: 'Stalled', icon: AlertTriangle, className: 'bg-amber-500/15 text-amber-300 border-amber-500/40' },
-  active: { label: 'Active', icon: Hammer, className: 'bg-[#2dd4bf]/15 text-[#5eead4] border-[#2dd4bf]/40' },
+  completed: { label: 'Completed', icon: CheckCircle2, className: 'bg-emerald-bg text-emerald border-emerald/30' },
+  stalled: { label: 'Stalled', icon: AlertTriangle, className: 'bg-amber-50 text-amber-700 border-amber-300' },
+  active: { label: 'Active', icon: Hammer, className: 'bg-skill-bg text-skill border-skill/30' },
 }
 function ProjectStatusBadge({ status }: { status?: string }) {
   const meta = PROJECT_STATUS_META[status ?? ''] ?? PROJECT_STATUS_META.active
@@ -743,7 +792,7 @@ function DeckEntryCard({
   return (
     <div
       onClick={onClick}
-      className={`${accent.card} p-3 sm:p-3.5 flex flex-col gap-2 rounded-xl transition-all duration-200 cursor-pointer active:scale-[0.99]`}
+      className={`${accent.card} p-3 sm:p-3.5 flex flex-col gap-2 rounded-xl transition-colors duration-150 cursor-pointer`}
     >
       {/* Title & Badge Row */}
       <div className="flex items-start justify-between gap-2.5">
@@ -752,7 +801,7 @@ function DeckEntryCard({
             <Icon size={15} />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="font-display font-bold text-xs sm:text-sm text-[#fae5b5] group-hover:text-[#fde68a] uppercase tracking-wider truncate">
+            <h3 className="font-display font-bold text-xs sm:text-sm text-ink uppercase tracking-wider truncate">
               {title}
             </h3>
             {kicker && (
@@ -770,7 +819,7 @@ function DeckEntryCard({
 
       {/* Main Description (Prominent, Compact, High Readability) */}
       {subtitle && (
-        <p className="font-narrative text-xs text-[#d2d6e4] group-hover:text-[#f1f3f9] line-clamp-2 leading-relaxed">
+        <p className="font-narrative text-xs text-ink-muted line-clamp-2 leading-relaxed">
           {subtitle}
         </p>
       )}
@@ -783,7 +832,7 @@ function DeckEntryCard({
             return (
               <span
                 key={idx}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#181d2a] border border-[#2c3349] text-[10px] font-mono text-[#a5adc6]"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#faf8f4] border border-gold-accent/20 text-[10px] font-mono text-ink-muted"
               >
                 {ChipIcon && <ChipIcon size={10} className={accent.sectionIcon} />}
                 <span className="truncate max-w-[140px]">{chip.label}</span>
@@ -826,54 +875,46 @@ function CodexArchiveRow({
       role="button"
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick() }}
-      className="group relative flex items-center gap-3.5 sm:gap-4 rounded-xl border border-[#c4a259]/30 hover:border-[#f0ca65]/80 bg-gradient-to-r from-[#121622] via-[#0e111a] to-[#0a0d14] hover:bg-[#161a28] p-2.5 sm:p-3 cursor-pointer transition-all duration-200 active:scale-[0.99] hover:shadow-[0_4px_20px_rgba(240,202,101,0.22)] overflow-hidden"
+      className="group flex items-center gap-3.5 sm:gap-4 rounded-xl border border-gold-accent/25 hover:border-gold-primary/50 bg-white hover:bg-gold-accent/5 p-2.5 sm:p-3 cursor-pointer transition-colors duration-150"
     >
       {/* Visual Artwork Thumbnail with Gold Frame & Icon Badge */}
-      <div className="w-13 h-13 sm:w-14 sm:h-14 shrink-0 rounded-lg border border-[#c4a259]/50 overflow-hidden relative shadow-md group-hover:border-[#f0ca65] group-hover:shadow-[0_0_12px_rgba(240,202,101,0.35)] transition-all bg-[#17130b]">
+      <div className="w-13 h-13 sm:w-14 sm:h-14 shrink-0 rounded-lg border border-gold-accent/30 overflow-hidden relative bg-[#faf8f4]">
         {artImage ? (
           <img
             src={artImage}
             alt=""
-            className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-300 filter brightness-95 contrast-105"
+            className="w-full h-full object-cover object-center"
             referrerPolicy="no-referrer"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-[#f0ca65]">
+          <div className="w-full h-full flex items-center justify-center text-gold-primary">
             <Icon size={22} />
           </div>
         )}
-        {/* Subtle Scrim & Floating Icon Pill */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-        <div className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-[#121622]/90 border border-[#f0ca65]/60 flex items-center justify-center text-[#f0ca65] shadow">
-          <Icon size={11} />
-        </div>
       </div>
 
       {/* Title & Subtitle */}
       <div className="min-w-0 flex-1">
-        <h3 className="font-display font-bold text-sm sm:text-base text-[#fae5b5] group-hover:text-white uppercase tracking-[0.14em] truncate transition-colors">
+        <h3 className="font-display font-bold text-sm sm:text-base text-ink uppercase tracking-[0.1em] truncate">
           {title}
         </h3>
-        <p className="font-narrative text-xs text-[#a8a18c] group-hover:text-[#dcd2be] truncate mt-0.5 leading-snug transition-colors">
+        <p className="font-narrative text-xs text-ink-muted truncate mt-0.5 leading-snug">
           {subtitle}
         </p>
       </div>
 
-      {/* Framed Gold Count Box & Arrow */}
+      {/* Count & Arrow */}
       <div className="flex items-center gap-2 shrink-0">
         <div
-          className={`w-10 sm:w-11 h-9 sm:h-10 rounded-md border flex items-center justify-center font-serif font-bold text-sm sm:text-base transition-all ${
+          className={`w-10 sm:w-11 h-9 sm:h-10 rounded-md border flex items-center justify-center font-mono font-bold text-sm sm:text-base transition-colors ${
             count > 0
-              ? 'border-[#c4a259]/50 bg-[#16130b] text-[#fae5b5] group-hover:border-[#f0ca65]/80 group-hover:text-[#fff4d1] group-hover:bg-[#f0ca65]/15 shadow-inner'
-              : 'border-[#2d3348] bg-[#141724]/60 text-[#5c6178]'
+              ? 'border-gold-accent/40 bg-[#faf8f4] text-gold-primary'
+              : 'border-gold-accent/15 bg-transparent text-ink-muted/50'
           }`}
         >
           {count}
         </div>
-        <ChevronRight
-          size={16}
-          className="text-[#72788e] group-hover:text-[#f0ca65] group-hover:translate-x-0.5 transition-all shrink-0"
-        />
+        <ChevronRight size={16} className="text-gold-primary/60 shrink-0" />
       </div>
     </div>
   )
@@ -908,18 +949,18 @@ function SubtabsBar({
             key={tab.id}
             onClick={() => onSelectTab(tab.id)}
             type="button"
-            className={`flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-mono font-medium whitespace-nowrap transition-all border cursor-pointer active:scale-95 ${
+            className={`flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-mono font-medium whitespace-nowrap transition-colors border cursor-pointer ${
               isActive
                 ? `${accent.activeTab} font-semibold`
-                : 'bg-[#141724]/90 border-[#262c3e] text-[#8e94a8] hover:text-[#fae5b5] hover:border-[#c4a259]/40 hover:bg-[#1a1f30]'
+                : 'bg-white border-gold-accent/20 text-ink-muted hover:text-ink hover:border-gold-accent/40 hover:bg-gold-accent/5'
             }`}
           >
-            {Icon && <Icon size={12} className={`shrink-0 ${isActive ? accent.sectionIcon : 'text-[#7e8498]'}`} />}
+            {Icon && <Icon size={12} className={`shrink-0 ${isActive ? accent.sectionIcon : 'text-ink-muted'}`} />}
             <span>{tab.label}</span>
             {tab.count !== undefined && (
               <span
                 className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono shrink-0 ${
-                  isActive ? 'bg-black/40 text-[#fae5b5]' : 'bg-[#1e2333] text-[#72788e]'
+                  isActive ? 'bg-black/10 text-ink' : 'bg-gold-accent/10 text-ink-muted'
                 }`}
               >
                 {tab.count}
@@ -958,29 +999,43 @@ function EntryHeroHeader({
   )
 }
 
-// A resting content card inside the detail view — bespoke tailored container
+// A collapsible section inside the detail view — the same accordion-divider
+// pattern established in Quick Play/Tale Weaving's own review screens
+// (AccordionSection), reused here so a detail view's several sections
+// (Portrait, Profile, Persona, ...) read as one simple list the player can
+// collapse down to what they actually want, rather than a stack of always-
+// open bordered cards. Defaults open so nothing already-visible content
+// hides on first load; only the toggle itself is new.
 function SectionCard({
-  accent, icon, title, badge, children,
+  accent, icon, title, badge, defaultOpen = true, children,
 }: {
   accent: CategoryAccent
   icon: LucideIcon
   title: string
   badge?: React.ReactNode
+  defaultOpen?: boolean
   children: React.ReactNode
 }) {
+  const [open, setOpen] = useState(defaultOpen)
   const Icon = icon
   return (
-    <div className="bg-[#141826]/90 border border-[#272d42] rounded-xl p-3.5 sm:p-4 flex flex-col gap-3 shadow-[0_2px_12px_rgba(0,0,0,0.3)]">
-      <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#252a3d]">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-lg bg-[#1a1f30] border border-[#2d344d] flex items-center justify-center shrink-0">
-            <Icon size={13} className={accent.sectionIcon} />
-          </div>
-          <span className="font-display text-xs font-semibold uppercase tracking-[0.14em] text-[#fae5b5]">{title}</span>
+    <div className="bg-white border border-gold-accent/20 rounded-xl overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between gap-2 px-3.5 py-2.5 text-left hover:bg-gold-accent/5 transition-colors"
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <Icon size={14} className={`${accent.sectionIcon} shrink-0`} />
+          <span className="font-display text-xs font-semibold uppercase tracking-[0.1em] text-ink truncate">{title}</span>
         </div>
-        {badge}
-      </div>
-      {children}
+        <div className="flex items-center gap-2 shrink-0">
+          {badge}
+          <ChevronRight size={14} className={`text-gold-primary transition-transform duration-150 ${open ? 'rotate-90' : ''}`} />
+        </div>
+      </button>
+      {open && <div className="px-3.5 pb-3.5 pt-1 border-t border-gold-accent/15 flex flex-col gap-3">{children}</div>}
     </div>
   )
 }
@@ -992,10 +1047,10 @@ function FieldRow({ label, value, icon }: { label: string; value: React.ReactNod
   return (
     <div className="flex flex-col gap-0.5">
       <div className="flex items-center gap-1.5">
-        {Icon && <Icon size={11} className="text-[#a0a5b8]" />}
-        <span className="font-display text-[10px] uppercase tracking-wider text-[#a0a5b8] font-semibold">{label}</span>
+        {Icon && <Icon size={11} className="text-ink-muted" />}
+        <span className="font-display text-[10px] uppercase tracking-wider text-ink-muted font-semibold">{label}</span>
       </div>
-      <div className="font-narrative text-xs text-[#f4efe4] leading-relaxed break-words">{value}</div>
+      <div className="font-narrative text-xs text-ink leading-relaxed break-words">{value}</div>
     </div>
   )
 }
@@ -1187,17 +1242,17 @@ function EntityImagePanel({
       )}
 
       {showPromptEdit ? (
-        <div className="flex flex-col gap-2 p-3 rounded-xl bg-black/80 border border-[#e8ca8a]/40 shadow-inner text-xs animate-fade-in">
-          <div className="flex items-center justify-between text-xs font-display text-[#e8ca8a]">
+        <div className="flex flex-col gap-2 p-3 rounded-xl bg-white border border-gold-accent/30 text-xs animate-fade-in">
+          <div className="flex items-center justify-between text-xs font-display text-gold-primary">
             <span className="flex items-center gap-1.5 font-semibold">
-              <Sparkles size={13} className="text-[#e8ca8a]" />
+              <Sparkles size={13} className="text-gold-primary" />
               Edit Image Generation Prompt
             </span>
             {customPrompt !== initialPrompt && (
               <button
                 type="button"
                 onClick={() => setCustomPrompt(initialPrompt)}
-                className="text-[11px] text-zinc-400 hover:text-amber-200 underline"
+                className="text-[11px] text-ink-muted hover:text-gold-primary underline"
               >
                 Reset to default
               </button>
@@ -1208,14 +1263,14 @@ function EntityImagePanel({
             onChange={(e) => setCustomPrompt(e.target.value)}
             rows={3}
             placeholder="Describe the image..."
-            className="w-full p-2.5 rounded-lg bg-zinc-950/90 border border-zinc-700/60 text-amber-100 text-xs font-narrative focus:outline-none focus:border-[#e8ca8a] resize-y"
+            className="w-full p-2.5 rounded-lg bg-[#faf8f4] border border-gold-accent/25 text-ink text-xs font-narrative focus:outline-none focus:border-gold-primary resize-y"
           />
           <div className="flex items-center gap-2 justify-end flex-wrap">
             <button
               type="button"
               onClick={() => setShowPromptEdit(false)}
               disabled={busy}
-              className="px-3 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
+              className="px-3 py-1.5 rounded-lg text-xs text-ink-muted hover:text-ink transition-colors"
             >
               Cancel
             </button>
@@ -1223,7 +1278,7 @@ function EntityImagePanel({
               type="button"
               onClick={() => handleGenerate(customPrompt, false)}
               disabled={busy || isCooldownActive || !customPrompt.trim()}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#e8ca8a]/25 border border-[#e8ca8a]/60 text-[#e8ca8a] text-xs font-display font-semibold hover:bg-[#e8ca8a]/40 transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gold-accent/15 border border-gold-accent/50 text-gold-primary text-xs font-display font-semibold hover:bg-gold-accent/25 transition-colors disabled:opacity-50"
             >
               {busy ? <RotateCw size={13} className="animate-spin" /> : isCooldownActive ? <Clock size={13} className="animate-pulse" /> : <Sparkles size={13} />}
               {busy ? 'Weaving Image...' : isCooldownActive ? `Cooldown (${cooldownRemaining}s)` : 'Confirm & Weave'}
@@ -1232,14 +1287,14 @@ function EntityImagePanel({
               type="button"
               onClick={() => handleGenerate(customPrompt, true)}
               disabled={busy || !customPrompt.trim()}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-[#f7e7ce] via-[#e8ca8a] to-[#d4af37] text-zinc-950 text-xs font-display font-bold border border-[#fff5e1] hover:brightness-110 shadow-[0_0_12px_rgba(247,231,206,0.35)] transition-all disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-[#f7e7ce] via-[#e8ca8a] to-[#d4af37] text-zinc-950 text-xs font-display font-bold border border-[#fff5e1] hover:brightness-110 transition-all disabled:opacity-50"
               title="Generate with premium paid tokens"
             >
               {busy ? <RotateCw size={13} className="animate-spin" /> : <Sparkles size={13} className="text-zinc-900" />}
               <span>{busy ? 'Weaving...' : 'Premium'}</span>
             </button>
           </div>
-          <p className="text-[10px] text-amber-200/80 font-mono text-right mt-0.5">
+          <p className="text-[10px] text-amber-700/80 font-mono text-right mt-0.5">
             ⚡ Warning: 'Premium' uses paid API tokens (Gemini_Prem_Key quota).
           </p>
         </div>
@@ -1250,7 +1305,7 @@ function EntityImagePanel({
               type="button"
               onClick={handleButtonClick}
               disabled={busy || isCooldownActive}
-              className="self-start flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#e8ca8a]/15 border border-[#e8ca8a]/40 text-[#e8ca8a] text-xs font-display font-semibold hover:bg-[#e8ca8a]/25 transition-colors disabled:opacity-50"
+              className="self-start flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold-accent/10 border border-gold-accent/40 text-gold-primary text-xs font-display font-semibold hover:bg-gold-accent/20 transition-colors disabled:opacity-50"
             >
               {busy ? <RotateCw size={13} className="animate-spin" /> : isCooldownActive ? <Clock size={13} className="animate-pulse" /> : url ? <RotateCw size={13} /> : <ImagePlus size={13} />}
               {busy ? 'Weaving image...' : isCooldownActive ? `Cooldown (${cooldownRemaining}s)` : url ? 'Retry' : 'Generate Image'}
@@ -1259,20 +1314,20 @@ function EntityImagePanel({
               type="button"
               onClick={handleButtonClick}
               disabled={busy}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#f7e7ce] via-[#e8ca8a] to-[#d4af37] text-zinc-950 text-xs font-display font-bold border border-[#fff5e1] hover:brightness-110 shadow-[0_0_12px_rgba(247,231,206,0.35)] transition-all disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#f7e7ce] via-[#e8ca8a] to-[#d4af37] text-zinc-950 text-xs font-display font-bold border border-[#fff5e1] hover:brightness-110 transition-all disabled:opacity-50"
               title="Generate using paid API tokens"
             >
               {busy ? <RotateCw size={13} className="animate-spin" /> : <Sparkles size={13} className="text-zinc-900" />}
               <span>{busy ? 'Weaving...' : 'Premium'}</span>
             </button>
             {modelUsed && !busy && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 text-xs font-mono animate-fade-in shadow-sm">
-                <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
-                <span>Generated using <strong className="text-emerald-200 font-semibold">{modelUsed}</strong></span>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-bg border border-emerald/30 text-emerald text-xs font-mono animate-fade-in">
+                <CheckCircle2 size={13} className="text-emerald shrink-0" />
+                <span>Generated using <strong className="text-emerald font-semibold">{modelUsed}</strong></span>
               </div>
             )}
           </div>
-          <p className="text-[10px] text-amber-200/70 font-mono">
+          <p className="text-[10px] text-amber-700/80 font-mono">
             ⚡ Note: 'Premium' generation uses paid API tokens.
           </p>
           {canonResolve && (
@@ -1284,19 +1339,19 @@ function EntityImagePanel({
       )}
 
       {isCooldownActive && !busy && (
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-950/70 border border-amber-500/40 text-amber-300 text-[11px] font-mono animate-fade-in shadow-sm">
-          <Clock size={12} className="text-amber-400 shrink-0 animate-pulse" />
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-50 border border-amber-300 text-amber-700 text-[11px] font-mono animate-fade-in">
+          <Clock size={12} className="text-amber-600 shrink-0 animate-pulse" />
           <span>Nanobanana 2 Cooldown: Retry available in <strong>{cooldownRemaining}s</strong></span>
         </div>
       )}
 
       {error && (
-        <div className="rounded-lg bg-red-950/50 border border-red-500/30 p-2 text-xs font-narrative flex flex-col gap-1 text-red-300">
-          <div className="flex items-center gap-1.5 font-semibold text-red-200">
-            <AlertCircle size={13} className="shrink-0 text-red-400" />
+        <div className="rounded-lg bg-rose-bg border border-rose/30 p-2 text-xs font-narrative flex flex-col gap-1 text-rose">
+          <div className="flex items-center gap-1.5 font-semibold text-rose">
+            <AlertCircle size={13} className="shrink-0 text-rose" />
             <span>Image Generation Failed</span>
           </div>
-          <p className="text-red-300/90 text-[11px] leading-snug">
+          <p className="text-rose/90 text-[11px] leading-snug">
             {error}
           </p>
         </div>
@@ -1790,10 +1845,10 @@ export default function Codex({
     }
 
     return (
-      <div className="w-full max-w-full min-w-0 mb-4 flex flex-col gap-2 p-2.5 sm:p-3 rounded-2xl border border-[#252b3e] bg-[#0f121d]/90 shadow-[0_2px_12px_rgba(0,0,0,0.4)] overflow-hidden">
+      <div className="w-full max-w-full min-w-0 mb-4 flex flex-col gap-2 p-2.5 sm:p-3 rounded-2xl border border-gold-accent/20 bg-white overflow-hidden">
         {/* Search Input */}
         <div className="relative flex-1">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7f869e] pointer-events-none">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none">
             <Search size={14} />
           </div>
           <input
@@ -1801,13 +1856,13 @@ export default function Codex({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search entries by name, traits, or description..."
-            className="w-full text-xs h-9 rounded-xl border border-[#272d42] bg-[#141826] pl-8 pr-8 py-1.5 text-[#f4efe4] placeholder:text-[#6a7187] focus:border-[#e8ca8a]/60 outline-none transition-colors"
+            className="w-full text-xs h-9 rounded-xl border border-gold-accent/25 bg-[#faf8f4] pl-8 pr-8 py-1.5 text-ink placeholder:text-ink-muted/50 focus:border-gold-primary outline-none transition-colors"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
               type="button"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#82889e] hover:text-[#f4efe4] text-xs cursor-pointer p-0.5"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink text-xs cursor-pointer p-0.5"
             >
               <X size={13} />
             </button>
@@ -2150,12 +2205,33 @@ export default function Codex({
     categories.find((c) => c.id === category)?.label ?? 'Codex'
 
   return (
-    // Dark ground, not the creation flow's artwork: the Codex is dense,
-    // heavily scrolled reference reading, where a picture behind the text
-    // would fight it.
+    // Dark ground for the outer shell (consistent app chrome), a light
+    // vellum surface for the actual content — the same split every other
+    // screen redesigned to the new theme uses (Quick Play, Tale Weaving,
+    // Chronicle's own reading column): Codex is dense, heavily scrolled
+    // reference reading, which reads as light parchment now, not another
+    // dark glass/obsidian surface.
     <LongTextEditorContext.Provider value={editLongText}>
-    <GlassScreen ground="dark" className="px-3 sm:px-4 pb-16 pt-2">
-      <GlassHeader title={title} onBack={back} className="!px-0 mb-3 sm:mb-4" />
+    <GlassScreen ground="dark" fill className="flex flex-col overflow-hidden">
+    <div className="relative z-10 flex flex-col h-full overflow-hidden overflow-y-auto parchment-surface !bg-[#fbf8f3] px-3 sm:px-4 pb-16 pt-2">
+      {/* Codex's own light header, not the shared GlassHeader/GlassIconButton —
+          those are hardcoded to the dark-chrome gold hex (`#e8ca8a`) and a
+          dark near-black fill, tuned for the app's cycling-artwork screens,
+          which .parchment-surface's token re-scoping doesn't reach (they're
+          arbitrary literal colors, not the `--color-*` utilities that scoping
+          overrides). Same pattern Quick Play/Tale Weaving's own headers
+          already use for exactly this reason. */}
+      <div className="shrink-0 flex items-center gap-3 pb-3 mb-3 sm:mb-4" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
+        <button
+          type="button"
+          onClick={back}
+          className="p-1.5 rounded-full border border-gold-accent/30 hover:bg-gold-accent/10 text-gold-primary shrink-0 transition-colors"
+          title="Back"
+        >
+          <ArrowLeft size={18} />
+        </button>
+        <h2 className="font-display font-bold text-lg text-ink truncate">{title}</h2>
+      </div>
 
       {searchFilterBar}
 
@@ -2277,7 +2353,7 @@ export default function Codex({
                         onClick={() =>
                           setDraft((d) => ({ ...d, beats: ((d.beats as TaleBeat[]).filter((_, idx) => idx !== i)) }))
                         }
-                        className="text-red-400 hover:text-red-300 p-1"
+                        className="text-rose/70 hover:text-rose p-1"
                       >
                         <Trash2 size={13} />
                       </button>
@@ -2307,7 +2383,7 @@ export default function Codex({
                             beats: (d.beats as TaleBeat[]).map((b, idx) => (idx === i ? { ...b, status: e.target.value as TaleBeat['status'] } : b)),
                           }))
                         }
-                        className={SELECT_CLASS}
+                        className={CODEX_SELECT_CLASS}
                       >
                         <option value="pending">Pending</option>
                         <option value="active">Active</option>
@@ -2363,7 +2439,7 @@ export default function Codex({
                         onClick={() =>
                           setDraft((d) => ({ ...d, events: (d.events as NarrativeEvent[]).filter((_, idx) => idx !== i) }))
                         }
-                        className="text-red-400 hover:text-red-300 p-1"
+                        className="text-rose/70 hover:text-rose p-1"
                       >
                         <Trash2 size={13} />
                       </button>
@@ -2393,7 +2469,7 @@ export default function Codex({
                             events: (d.events as NarrativeEvent[]).map((ev, idx) => (idx === i ? { ...ev, status: e.target.value as NarrativeEvent['status'] } : ev)),
                           }))
                         }
-                        className={SELECT_CLASS}
+                        className={CODEX_SELECT_CLASS}
                       >
                         <option value="dormant">Dormant</option>
                         <option value="active">Active</option>
@@ -2410,7 +2486,7 @@ export default function Codex({
                             events: (d.events as NarrativeEvent[]).map((ev, idx) => (idx === i ? { ...ev, trigger: e.target.value as RevealTrigger } : ev)),
                           }))
                         }
-                        className={SELECT_CLASS}
+                        className={CODEX_SELECT_CLASS}
                       >
                         <option value="manual">Manual (CRUD only)</option>
                         <option value="flag">World Flag</option>
@@ -2478,7 +2554,7 @@ export default function Codex({
                   <select
                     value={(draft.deathRule as DeathRule | undefined) ?? 'soft_fail'}
                     onChange={(e) => setDraft((d) => ({ ...d, deathRule: e.target.value as DeathRule }))}
-                    className={SELECT_CLASS}
+                    className={CODEX_SELECT_CLASS}
                   >
                     <option value="soft_fail">Soft Fail (recovery beat, no real death)</option>
                     <option value="permadeath">Permadeath (a real lose-ending)</option>
@@ -2520,7 +2596,7 @@ export default function Codex({
                 accent={NEUTRAL_ACCENT}
                 icon={User}
                 title="Character"
-                badge={<GlassIconButton icon={Pencil} label="Edit Character" compact onClick={() => startEdit('__character__', { classId: player.classId })} />}
+                badge={<CodexIconButton icon={Pencil} label="Edit Character" onClick={() => startEdit('__character__', { classId: player.classId })} />}
               >
                 <FieldRow label="Class" value={player.className} />
                 <FieldRow label="Level" value={String(player.level)} />
@@ -2542,7 +2618,7 @@ export default function Codex({
                 accent={NEUTRAL_ACCENT}
                 icon={Globe}
                 title="Realm"
-                badge={<GlassIconButton icon={Pencil} label="Edit Realm" compact onClick={() => startEdit('__world__', {
+                badge={<CodexIconButton icon={Pencil} label="Edit Realm" onClick={() => startEdit('__world__', {
                   name: world.name,
                   genreTone: world.genreTone,
                   conflict: world.conflict,
@@ -2566,7 +2642,7 @@ export default function Codex({
                     value={
                       <div className="flex flex-wrap gap-1.5 mt-1">
                         {flags.map((f) => (
-                          <span key={f} className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-[#e8ca8a]/15 text-[#e8ca8a]">
+                          <span key={f} className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-gold-accent/15 text-gold-primary">
                             {f}
                           </span>
                         ))}
@@ -2579,7 +2655,7 @@ export default function Codex({
                 accent={NEUTRAL_ACCENT}
                 icon={Flag}
                 title="Story Arc"
-                badge={<GlassIconButton icon={Pencil} label="Edit Story Arc" compact onClick={() => startEdit('__beats__', { beats })} />}
+                badge={<CodexIconButton icon={Pencil} label="Edit Story Arc" onClick={() => startEdit('__beats__', { beats })} />}
               >
                 {beats.length === 0 ? (
                   <p className="font-narrative italic text-xs text-ink-muted">
@@ -2600,10 +2676,9 @@ export default function Codex({
                 icon={Sparkles}
                 title="Narrative Events"
                 badge={
-                  <GlassIconButton
+                  <CodexIconButton
                     icon={Pencil}
                     label="Edit Narrative Events"
-                    compact
                     onClick={() => startEdit('__events__', { events: Object.values(narrativeEvents) })}
                   />
                 }
@@ -2627,10 +2702,9 @@ export default function Codex({
                 icon={Skull}
                 title="Tale Rules"
                 badge={
-                  <GlassIconButton
+                  <CodexIconButton
                     icon={Pencil}
                     label="Edit Tale Rules"
-                    compact
                     onClick={() =>
                       startEdit('__talerules__', {
                         deathRule: deathRule ?? 'soft_fail',
@@ -2659,7 +2733,7 @@ export default function Codex({
         <div className="flex flex-col gap-4">
           {crafting.length > 0 && (
             <div>
-              <p className="text-[11px] font-display text-[#fbbf24] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <p className="text-[11px] font-display text-amber-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                 <Clock size={12} />
                 <span>In Progress</span>
               </p>
@@ -2670,17 +2744,17 @@ export default function Codex({
                   return (
                     <div
                       key={job.jobId}
-                      className="rounded-xl border border-amber-500/30 bg-gradient-to-r from-[#181308]/90 to-[#0e1017]/90 px-3.5 py-2.5 flex items-center justify-between gap-3 shadow-md"
+                      className="rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 flex items-center justify-between gap-3"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-300 shrink-0">
+                        <div className="w-7 h-7 rounded-lg bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-700 shrink-0">
                           <Hammer size={14} />
                         </div>
-                        <span className="font-display font-semibold text-sm text-[#fae5b5] truncate">
+                        <span className="font-display font-semibold text-sm text-ink truncate">
                           {recipe?.name ?? job.recipeId}
                         </span>
                       </div>
-                      <span className="inline-flex items-center gap-1.5 font-mono text-xs px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 shrink-0">
+                      <span className="inline-flex items-center gap-1.5 font-mono text-xs px-2.5 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-700 shrink-0">
                         <Clock size={12} /> {remaining > 0 ? `${remaining}h left` : 'Ready'}
                       </span>
                     </div>
@@ -2700,19 +2774,19 @@ export default function Codex({
                 return (
                   <div
                     key={recipe.id}
-                    className="rounded-xl p-3.5 flex flex-col justify-between gap-2.5 border border-[#2b3145] bg-gradient-to-br from-[#141724]/90 to-[#0e1017]/90 hover:border-amber-400/60 transition-all shadow-md group"
+                    className="rounded-xl p-3.5 flex flex-col justify-between gap-2.5 border border-gold-accent/25 bg-white hover:border-amber-400 transition-colors group"
                   >
                     <div>
                       <div className="flex items-start justify-between gap-2">
-                        <h3 className="font-display font-bold text-sm text-[#fae5b5] group-hover:text-amber-200 uppercase tracking-wide">
+                        <h3 className="font-display font-bold text-sm text-ink uppercase tracking-wide">
                           {recipe.name}
                         </h3>
-                        <span className="inline-flex items-center gap-1 font-mono text-[10px] px-2 py-0.5 rounded-md bg-[#1a1f30] border border-[#2d354e] text-[#a5adc6] shrink-0">
-                          <Clock size={10} className="text-amber-400" /> {recipe.craftHours}h
+                        <span className="inline-flex items-center gap-1 font-mono text-[10px] px-2 py-0.5 rounded-md bg-[#faf8f4] border border-gold-accent/20 text-ink-muted shrink-0">
+                          <Clock size={10} className="text-amber-600" /> {recipe.craftHours}h
                         </span>
                       </div>
                       {recipe.stationRequired && (
-                        <p className="font-mono text-[10px] text-amber-300/80 mt-0.5">
+                        <p className="font-mono text-[10px] text-amber-700 mt-0.5">
                           Station: {recipe.stationRequired}
                         </p>
                       )}
@@ -2725,8 +2799,8 @@ export default function Codex({
                               key={i.id}
                               className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono border ${
                                 hasEnough
-                                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-                                  : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+                                  ? 'bg-emerald-bg border-emerald/30 text-emerald'
+                                  : 'bg-rose-bg border-rose/30 text-rose'
                               }`}
                             >
                               <span>{i.qty}× {i.id.replace(/_/g, ' ')}</span>
@@ -2739,7 +2813,7 @@ export default function Codex({
                     <button
                       onClick={() => onStartCraft(recipe.id)}
                       disabled={!affordable}
-                      className="mt-1 w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:bg-[#1a1f30] disabled:text-[#64748b] px-3 py-1.5 font-display text-xs font-bold uppercase tracking-wider text-black transition-colors disabled:border disabled:border-[#2d354e]"
+                      className="mt-1 w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:bg-[#f0eee9] disabled:text-ink-muted/50 px-3 py-1.5 font-display text-xs font-bold uppercase tracking-wider text-white transition-colors disabled:border disabled:border-gold-accent/15"
                     >
                       <Hammer size={12} /> Craft Item
                     </button>
@@ -2766,18 +2840,18 @@ export default function Codex({
         return (
           <div className="flex flex-col gap-4">
             {/* Current, still-open chapter — live timeline, builds one beat at a time as the story goes */}
-            <div className="rounded-xl p-4 border border-[#f0ca65]/35 bg-gradient-to-br from-[#161208]/90 via-[#10131e]/92 to-[#0a0c14]/95 shadow-lg flex flex-col gap-3 relative overflow-hidden">
-              <div className="flex items-center justify-between gap-2 border-b border-[#f0ca65]/20 pb-2">
+            <div className="rounded-xl p-4 border border-gold-accent/35 bg-[#faf8f4] flex flex-col gap-3 relative overflow-hidden">
+              <div className="flex items-center justify-between gap-2 border-b border-gold-accent/20 pb-2">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-[#f0ca65]/15 border border-[#f0ca65]/40 flex items-center justify-center text-[#f0ca65] shrink-0">
+                  <div className="w-7 h-7 rounded-lg bg-gold-accent/15 border border-gold-accent/40 flex items-center justify-center text-gold-primary shrink-0">
                     <BookOpen size={14} />
                   </div>
-                  <h3 className="font-display font-bold text-sm text-[#fae5b5] uppercase tracking-wide">
+                  <h3 className="font-display font-bold text-sm text-ink uppercase tracking-wide">
                     Current Chapter
                   </h3>
                 </div>
-                <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#f0ca65]/15 border border-[#f0ca65]/30 text-[#f0ca65] flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#f0ca65] animate-pulse" /> In Progress
+                <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-gold-accent/15 border border-gold-accent/30 text-gold-primary flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-gold-accent animate-pulse" /> In Progress
                 </span>
               </div>
               {currentChapterLog?.length ? (
@@ -2785,12 +2859,12 @@ export default function Codex({
                   {currentChapterLog.map((b, i) => (
                     <div key={i} className="flex gap-3">
                       <div className="flex flex-col items-center shrink-0 pt-0.5">
-                        <div className="w-2 h-2 rounded-full bg-[#f0ca65] shadow-[0_0_6px_rgba(240,202,101,0.6)]" />
-                        {i < currentChapterLog.length - 1 && <div className="w-px flex-1 bg-[#f0ca65]/25 mt-1" />}
+                        <div className="w-2 h-2 rounded-full bg-gold-accent" />
+                        {i < currentChapterLog.length - 1 && <div className="w-px flex-1 bg-gold-accent/25 mt-1" />}
                       </div>
                       <div className="pb-1 min-w-0">
-                        <p className="font-mono text-[10px] uppercase tracking-wide text-[#f0ca65]/70">{formatChapterBeatTimeCodex(b.time)}</p>
-                        <p className="font-narrative text-xs sm:text-sm text-[#f5ebd7]/90 leading-relaxed">{b.text}</p>
+                        <p className="font-mono text-[10px] uppercase tracking-wide text-gold-primary/70">{formatChapterBeatTimeCodex(b.time)}</p>
+                        <p className="font-narrative text-xs sm:text-sm text-ink leading-relaxed">{b.text}</p>
                       </div>
                     </div>
                   ))}
@@ -2800,24 +2874,24 @@ export default function Codex({
               )}
 
               {hasPending && (
-                <div className="border-t border-[#f0ca65]/20 pt-2.5 flex flex-col gap-1.5">
+                <div className="border-t border-gold-accent/20 pt-2.5 flex flex-col gap-1.5">
                   <span className="font-mono text-[10px] uppercase tracking-wide text-ink-muted/80">Pending</span>
                   {pendingBeats.map((b) => (
                     <div key={b.id} className="flex items-center gap-2 text-xs">
-                      <Compass size={12} className="text-[#f0ca65] shrink-0" />
-                      <span className="text-[#f5ebd7]/90 truncate">{b.title}</span>
+                      <Compass size={12} className="text-gold-primary shrink-0" />
+                      <span className="text-ink truncate">{b.title}</span>
                     </div>
                   ))}
                   {pendingQuests.map(([id, q]) => (
                     <div key={id} className="flex items-center gap-2 text-xs">
-                      <ScrollText size={12} className="text-[#f0ca65] shrink-0" />
-                      <span className="text-[#f5ebd7]/90 truncate">{q.name}</span>
+                      <ScrollText size={12} className="text-gold-primary shrink-0" />
+                      <span className="text-ink truncate">{q.name}</span>
                     </div>
                   ))}
                   {activeEvents.map(([id, e]) => (
                     <div key={id} className="flex items-center gap-2 text-xs">
-                      <Zap size={12} className="text-[#f0ca65] shrink-0" />
-                      <span className="text-[#f5ebd7]/90 truncate">{e.title}</span>
+                      <Zap size={12} className="text-gold-primary shrink-0" />
+                      <span className="text-ink truncate">{e.title}</span>
                     </div>
                   ))}
                 </div>
@@ -2830,18 +2904,18 @@ export default function Codex({
               [...chapters].reverse().map((c, i) => (
                 <div
                   key={i}
-                  className="rounded-xl p-4 border border-[#38bdf8]/30 bg-gradient-to-br from-[#0c1829]/90 via-[#0a1422]/90 to-[#070e17]/95 shadow-lg flex flex-col gap-2.5 relative overflow-hidden"
+                  className="rounded-xl p-4 border border-skill/25 bg-skill-bg flex flex-col gap-2.5 relative overflow-hidden"
                 >
-                  <div className="flex items-center justify-between gap-2 border-b border-sky-500/20 pb-2">
+                  <div className="flex items-center justify-between gap-2 border-b border-skill/20 pb-2">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-sky-500/20 border border-sky-400/40 flex items-center justify-center text-sky-300 shrink-0">
+                      <div className="w-7 h-7 rounded-lg bg-white border border-skill/30 flex items-center justify-center text-skill shrink-0">
                         <BookOpen size={14} />
                       </div>
-                      <h3 className="font-display font-bold text-sm text-[#bae6fd] uppercase tracking-wide">
+                      <h3 className="font-display font-bold text-sm text-ink uppercase tracking-wide">
                         Chapter {c.chapterNumber}
                       </h3>
                     </div>
-                    <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-sky-500/15 border border-sky-500/30 text-sky-300">
+                    <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-white border border-skill/30 text-skill">
                       Archived
                     </span>
                   </div>
@@ -2850,18 +2924,18 @@ export default function Codex({
                       {c.chapterBeats.map((b, j) => (
                         <div key={j} className="flex gap-3">
                           <div className="flex flex-col items-center shrink-0 pt-0.5">
-                            <div className="w-2 h-2 rounded-full bg-sky-400 shadow-[0_0_6px_rgba(56,189,248,0.5)]" />
-                            {j < c.chapterBeats!.length - 1 && <div className="w-px flex-1 bg-sky-400/25 mt-1" />}
+                            <div className="w-2 h-2 rounded-full bg-skill" />
+                            {j < c.chapterBeats!.length - 1 && <div className="w-px flex-1 bg-skill/25 mt-1" />}
                           </div>
                           <div className="pb-1 min-w-0">
-                            <p className="font-mono text-[10px] uppercase tracking-wide text-sky-300/70">{formatChapterBeatTimeCodex(b.time)}</p>
-                            <p className="font-narrative text-xs sm:text-sm text-[#d4e7f8] leading-relaxed">{b.text}</p>
+                            <p className="font-mono text-[10px] uppercase tracking-wide text-skill/70">{formatChapterBeatTimeCodex(b.time)}</p>
+                            <p className="font-narrative text-xs sm:text-sm text-ink leading-relaxed">{b.text}</p>
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="font-narrative text-xs sm:text-sm text-[#d4e7f8] leading-relaxed italic">
+                    <p className="font-narrative text-xs sm:text-sm text-ink leading-relaxed italic">
                       "{c.chapterSummary}"
                     </p>
                   )}
@@ -2930,7 +3004,7 @@ export default function Codex({
                 <select
                   value={draft.factionId ?? ''}
                   onChange={(e) => setDraft((d) => ({ ...d, factionId: e.target.value || null }))}
-                  className={SELECT_CLASS}
+                  className={CODEX_SELECT_CLASS}
                 >
                   <option value="">None</option>
                   {Object.entries(factions).map(([id, f]) => (
@@ -2943,7 +3017,7 @@ export default function Codex({
                 <select
                   value={draft.partyStatus ?? ''}
                   onChange={(e) => setDraft((d) => ({ ...d, partyStatus: e.target.value || undefined }))}
-                  className={SELECT_CLASS}
+                  className={CODEX_SELECT_CLASS}
                 >
                   <option value="">Never joined</option>
                   <option value="companion">Travelling companion</option>
@@ -2955,7 +3029,7 @@ export default function Codex({
                 <select
                   value={draft.kinship ?? ''}
                   onChange={(e) => setDraft((d) => ({ ...d, kinship: (e.target.value as KinshipType) || undefined }))}
-                  className={SELECT_CLASS}
+                  className={CODEX_SELECT_CLASS}
                 >
                   <option value="">None (Standard NPC)</option>
                   <option value="parent">Parent (Intimacy Gated)</option>
@@ -3149,7 +3223,7 @@ export default function Codex({
                 <select
                   value={draft.rivalId ?? ''}
                   onChange={(e) => setDraft((d) => ({ ...d, rivalId: e.target.value || null }))}
-                  className={SELECT_CLASS}
+                  className={CODEX_SELECT_CLASS}
                 >
                   <option value="">None</option>
                   {Object.entries(factions).filter(([id]) => id !== entryId).map(([id, f]) => (
@@ -3260,7 +3334,7 @@ export default function Codex({
                 <select
                   value={draft.locationType ?? ''}
                   onChange={(e) => setDraft((d) => ({ ...d, locationType: e.target.value }))}
-                  className={SELECT_CLASS}
+                  className={CODEX_SELECT_CLASS}
                 >
                   <option value="">(Select Type)</option>
                   {LOCATION_TYPES.map((t) => (
@@ -3274,7 +3348,7 @@ export default function Codex({
                 <select
                   value={draft.regionId ?? ''}
                   onChange={(e) => setDraft((d) => ({ ...d, regionId: e.target.value || undefined }))}
-                  className={SELECT_CLASS}
+                  className={CODEX_SELECT_CLASS}
                 >
                   <option value="">Unassigned</option>
                   {Object.entries(regions).map(([id, r]) => (
@@ -3294,7 +3368,7 @@ export default function Codex({
                 <select
                   value={draft.dangerLevel ?? ''}
                   onChange={(e) => setDraft((d) => ({ ...d, dangerLevel: e.target.value }))}
-                  className={SELECT_CLASS}
+                  className={CODEX_SELECT_CLASS}
                 >
                   <option value="">(Select Danger)</option>
                   {LOCATION_DANGER_LEVELS.map((d) => (
@@ -3307,7 +3381,7 @@ export default function Codex({
                 <select
                   value={draft.factionOwner ?? ''}
                   onChange={(e) => setDraft((d) => ({ ...d, factionOwner: e.target.value || null }))}
-                  className={SELECT_CLASS}
+                  className={CODEX_SELECT_CLASS}
                 >
                   <option value="">None (independent territory)</option>
                   {Object.entries(factions).map(([id, f]) => (
@@ -3547,7 +3621,7 @@ export default function Codex({
               />
               <SectionCard accent={CATEGORY_ACCENTS.lore} icon={ScrollText} title="Chronicle Archive">
                 <FieldRow label="Classification" value={[lore[entryId].category, lore[entryId].era].filter(Boolean).join(' · ')} />
-                <div className="mt-1 p-3.5 rounded-xl bg-[#0f121d]/80 border border-[#2b3046] font-narrative text-xs sm:text-sm text-[#f6eedb] italic leading-relaxed whitespace-pre-wrap">
+                <div className="mt-1 p-3.5 rounded-xl bg-[#faf8f4] border border-gold-accent/20 font-narrative text-xs sm:text-sm text-ink italic leading-relaxed whitespace-pre-wrap">
                   {lore[entryId].content || 'No text chronicled yet.'}
                 </div>
               </SectionCard>
@@ -3694,7 +3768,7 @@ export default function Codex({
                 <select
                   value={draft.threatTier ?? 'notable'}
                   onChange={(e) => setDraft((d) => ({ ...d, threatTier: e.target.value }))}
-                  className={`mt-1 ${SELECT_CLASS}`}
+                  className={`mt-1 ${CODEX_SELECT_CLASS}`}
                 >
                   {THREAT_TIERS.map((t) => (
                     <option key={t} value={t}>{t}</option>
@@ -3815,7 +3889,7 @@ export default function Codex({
                 <select
                   value={draft.status ?? 'active'}
                   onChange={(e) => setDraft((d) => ({ ...d, status: e.target.value }))}
-                  className={`mt-1 ${SELECT_CLASS}`}
+                  className={`mt-1 ${CODEX_SELECT_CLASS}`}
                 >
                   <option value="active">Active</option>
                   <option value="completed">Completed</option>
@@ -3874,12 +3948,12 @@ export default function Codex({
                         key={i}
                         type="button"
                         onClick={() => toggleProjectStage(entryId, i)}
-                        className="flex items-center gap-2 text-left rounded-lg px-2 py-1.5 hover:bg-white/5 transition-colors cursor-pointer"
+                        className="flex items-center gap-2 text-left rounded-lg px-2 py-1.5 hover:bg-gold-accent/5 transition-colors cursor-pointer"
                       >
                         {stage.done ? (
-                          <CheckCircle2 size={15} className="text-[#2dd4bf] shrink-0" />
+                          <CheckCircle2 size={15} className="text-emerald shrink-0" />
                         ) : (
-                          <span className="w-[15px] h-[15px] rounded-full border border-[#4a5170] shrink-0" />
+                          <span className="w-[15px] h-[15px] rounded-full border border-ink-muted/40 shrink-0" />
                         )}
                         <span className={`font-narrative text-xs ${stage.done ? 'text-ink-muted line-through' : 'text-ink'}`}>{stage.label}</span>
                       </button>
@@ -3960,7 +4034,7 @@ export default function Codex({
                 <select
                   value={draft.tier || ''}
                   onChange={(e) => setDraft((d) => ({ ...d, tier: e.target.value }))}
-                  className={`mt-1 ${SELECT_CLASS}`}
+                  className={`mt-1 ${CODEX_SELECT_CLASS}`}
                 >
                   <option value="">— unset —</option>
                   {COMPETENCY_TIERS.map((t) => (
@@ -3969,11 +4043,11 @@ export default function Codex({
                 </select>
               </label>
               <label className="block">
-                <span className="text-[11px] font-display uppercase tracking-[0.14em] text-[#f0d9a4]">Owning Class</span>
+                <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Owning Class</span>
                 <select
                   value={draft.classId ?? ''}
                   onChange={(e) => setDraft((d) => ({ ...d, classId: e.target.value }))}
-                  className={`mt-1 ${SELECT_CLASS}`}
+                  className={`mt-1 ${CODEX_SELECT_CLASS}`}
                 >
                   <option value="">— none —</option>
                   {PRESET_CLASSES.map((c) => (
@@ -3988,7 +4062,7 @@ export default function Codex({
                 <select
                   value={draft.effort ?? ''}
                   onChange={(e) => setDraft((d) => ({ ...d, effort: e.target.value }))}
-                  className={`mt-1 ${SELECT_CLASS}`}
+                  className={`mt-1 ${CODEX_SELECT_CLASS}`}
                 >
                   <option value="">— none —</option>
                   <option value="minor">Minor</option>
@@ -4037,7 +4111,7 @@ export default function Codex({
                 <SectionCard accent={CATEGORY_ACCENTS.skills} icon={ScrollText} title="Effect & Lore">
                   {skills[entryId].description && <FieldRow label="Mechanics" value={skills[entryId].description!} />}
                   {skills[entryId].flavorText && (
-                    <div className="mt-1 p-3 rounded-lg bg-[#0f121d]/70 border border-[#2b3046] font-narrative text-xs italic text-[#f6eedb]/90">
+                    <div className="mt-1 p-3 rounded-lg bg-[#faf8f4] border border-gold-accent/20 font-narrative text-xs italic text-ink">
                       "{skills[entryId].flavorText}"
                     </div>
                   )}
@@ -4163,7 +4237,7 @@ export default function Codex({
                     {equippedSlotFor(entryId) ? (
                       <button
                         onClick={() => onUnequipSlot(equippedSlotFor(entryId)!)}
-                        className="rounded-full px-4 py-1.5 font-display text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30"
+                        className="rounded-full px-4 py-1.5 font-display text-xs font-semibold bg-rose-bg text-rose border border-rose/30"
                       >
                         Unequip ({equippedSlotFor(entryId) === 'offhand' ? 'Off-Hand' : equippedSlotFor(entryId)})
                       </button>
@@ -4176,7 +4250,7 @@ export default function Codex({
                         <button onClick={() => onEquipItem(entryId, 'weapon')} className="rounded-full px-4 py-1.5 font-display text-xs font-semibold bg-[#e8ca8a] text-[#0e1017]">
                           Equip as Weapon
                         </button>
-                        <button onClick={() => onEquipItem(entryId, 'offhand')} className="rounded-full px-4 py-1.5 font-display text-xs font-semibold bg-[#e8ca8a]/20 text-[#e8ca8a] border border-[#e8ca8a]/30">
+                        <button onClick={() => onEquipItem(entryId, 'offhand')} className="rounded-full px-4 py-1.5 font-display text-xs font-semibold bg-gold-accent/15 text-gold-primary border border-gold-accent/40">
                           Equip as Off-Hand
                         </button>
                       </>
@@ -4190,7 +4264,7 @@ export default function Codex({
               </SectionCard>
               {items[entryId]?.loreText && (
                 <SectionCard accent={itemAccentFor(items[entryId]?.rarity)} icon={ScrollText} title="Inscription">
-                  <div className="p-3 rounded-lg bg-[#0f121d]/70 border border-[#2b3046] font-narrative text-xs italic text-[#f6eedb]/90">
+                  <div className="p-3 rounded-lg bg-[#faf8f4] border border-gold-accent/20 font-narrative text-xs italic text-ink">
                     "{items[entryId]!.loreText}"
                   </div>
                 </SectionCard>
@@ -4202,6 +4276,7 @@ export default function Codex({
       )}
 
       {confirmDialog}
+    </div>
     </GlassScreen>
     {longTextDialog}
     </LongTextEditorContext.Provider>

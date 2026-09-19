@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai"
+import type { ImageStyleKey } from "../types.ts"
 
 export type ImageAspectRatio =
   | "1:1"
@@ -176,12 +177,58 @@ exactly as established in canon: actual design, physical appearance, and definin
   }. Prioritize canon accuracy over invention in every detail canon actually establishes.`
 }
 
+// Settings > Gameplay > Image Generation — the art-direction sentence swapped
+// into every generated prompt below. 'painterly' is verbatim the original,
+// only style this app ever produced, and stays the default whenever a
+// caller doesn't pass a style (an existing player's saved prefs, or a
+// pre-existing call site) — see types.ts's ImageStyleKey/UiPrefs.imageStyle
+// comments for the on/off contract.
+export const IMAGE_STYLES: Record<ImageStyleKey, {
+  label: string
+  description: string
+  artDirection: string
+  mapAesthetic: string
+}> = {
+  painterly: {
+    label: 'Painterly Fantasy',
+    description: 'Concept-art style illustration — the original default look for all generated art.',
+    artDirection: 'Cinematic fantasy realism — painterly, richly detailed illustration with grounded lighting and materials. Not photorealistic, not a 3D game render, not a photo. Evocative concept-art quality.',
+    mapAesthetic: 'an elegant painterly illustrated map',
+  },
+  realism: {
+    label: 'Photorealistic',
+    description: 'Cinematic, camera-real rendering — like a still frame from a live-action film.',
+    artDirection: 'Photorealistic cinematic rendering — real-world lighting, materials, textures, and depth of field, as if captured on camera. Not painted, not illustrated, not stylized — treat this as a photographic still.',
+    mapAesthetic: 'a photorealistic aerial-photography-style map',
+  },
+  semi_realism: {
+    label: 'Semi-Realistic',
+    description: 'A middle ground — real proportions and lighting with a digital-painting finish.',
+    artDirection: 'Semi-realistic digital painting — grounded anatomy, proportion, and lighting rendered with a refined painterly finish; more polished than rough concept art, but stopping short of full photorealism.',
+    mapAesthetic: 'a semi-realistic illustrated map, polished but not photographic',
+  },
+  anime: {
+    label: 'Anime / Manga',
+    description: 'Japanese animation-inspired linework, shading, and color.',
+    artDirection: 'Anime/manga illustration style — clean linework, cel-shaded or soft-shaded coloring, expressive stylized proportions and features typical of Japanese animation art.',
+    mapAesthetic: 'an anime-style illustrated map',
+  },
+  comic: {
+    label: 'Comic Book',
+    description: 'Bold inked linework and flat, graphic-novel coloring.',
+    artDirection: 'Comic book / graphic novel illustration style — bold ink linework, dynamic shading, and flat-to-gradient coloring typical of comic art.',
+    mapAesthetic: 'a comic-book illustrated map',
+  },
+}
+
 export function buildLocationImagePrompt(
   name: string,
   description?: string,
   world?: WorldStyleData,
+  imageStyle?: ImageStyleKey,
 ): string {
   const style = worldDirective(world)
+  const art = IMAGE_STYLES[imageStyle ?? 'painterly']
 
   return `
 Create a single high-quality environmental illustration of the location "${name}".
@@ -200,9 +247,7 @@ Composition:
 - Avoid generic stock scenery.
 
 Art direction:
-Cinematic fantasy realism — painterly, richly detailed illustration with grounded lighting and
-materials. Not photorealistic, not a 3D game render, not a photo. Evocative concept-art quality,
-strong composition, cohesive color and lighting, detailed environment.${canonReferenceLine(world)}
+${art.artDirection} Strong composition, cohesive color and lighting, detailed environment.${canonReferenceLine(world)}
 
 Do not place readable text, labels, or logos in the artwork. No UI, captions, borders, or decorative interface elements.
 `.trim()
@@ -213,8 +258,10 @@ export function buildNpcPortraitPrompt(
   appearance?: string,
   role?: string,
   world?: WorldStyleData,
+  imageStyle?: ImageStyleKey,
 ): string {
   const style = worldDirective(world)
+  const art = IMAGE_STYLES[imageStyle ?? 'painterly']
 
   return `
 Create a single character portrait illustration of "${name}".
@@ -242,9 +289,7 @@ Character presentation:
   and power system.
 
 Art direction:
-Cinematic fantasy realism — painterly, richly detailed illustration with grounded lighting and
-materials. Not photorealistic, not a 3D game render, not a photo. Expressive face, strong
-silhouette.${canonReferenceLine(world)}
+${art.artDirection} Expressive face, strong silhouette.${canonReferenceLine(world)}
 
 Do not place readable text, labels, or logos in the artwork. No nameplates, UI, borders, or decorative interface elements.
 `.trim()
@@ -255,8 +300,10 @@ export function buildRegionMapPrompt(
   description: string | undefined,
   locationNames: string[],
   world?: WorldStyleData,
+  imageStyle?: ImageStyleKey,
 ): string {
   const style = worldDirective(world)
+  const art = IMAGE_STYLES[imageStyle ?? 'painterly']
 
   const locations = locationNames.length > 0
     ? locationNames.join(", ")
@@ -280,7 +327,7 @@ Map design:
 - Each required location should have a visually distinct landmark or geographic feature.
 - Keep the geography coherent and believable.
 - Make the map readable as an exploration map.
-- Use an elegant illustrated map aesthetic appropriate to the world.${canonReferenceLine(world)}
+- Use ${art.mapAesthetic} aesthetic appropriate to the world.${canonReferenceLine(world)}
 
 Important:
 Do not generate readable text labels.

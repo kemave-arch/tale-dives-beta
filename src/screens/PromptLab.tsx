@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { ArrowLeft, Copy, Image as ImageIcon, Sparkles, RotateCw, Globe, User, MapPin, Map, RefreshCw } from 'lucide-react'
-import type { ApiSettings, WorldData } from '../types.ts'
+import type { ApiSettings, ImageStyleKey, WorldData } from '../types.ts'
 import * as store from '../lib/store.ts'
 import { resolveCanonDescription } from '../lib/canonDescription.ts'
-import { buildLocationImagePrompt, buildNpcPortraitPrompt, buildRegionMapPrompt, generateImageBytes, type ImageAspectRatio } from '../lib/imageGeneration.ts'
+import { buildLocationImagePrompt, buildNpcPortraitPrompt, buildRegionMapPrompt, generateImageBytes, IMAGE_STYLES, type ImageAspectRatio } from '../lib/imageGeneration.ts'
 
 // Dev tool, not a player-facing screen: lets whoever is tuning the image
 // pipeline drive the exact real functions (resolveCanonDescription,
@@ -17,6 +17,7 @@ interface PromptLabProps {
   apiSettings: ApiSettings
   onBack: () => void
   activeWorld?: WorldData | null
+  imageStyle?: ImageStyleKey
 }
 
 type EntityKind = 'character' | 'location' | 'map'
@@ -117,8 +118,12 @@ function OutputPanel({ title, value, busy }: { title: string; value: string; bus
   )
 }
 
-export default function PromptLab({ apiSettings, onBack, activeWorld }: PromptLabProps) {
+export default function PromptLab({ apiSettings, onBack, activeWorld, imageStyle: sessionImageStyle }: PromptLabProps) {
   const [kind, setKind] = useState<EntityKind>('character')
+  // Own local override so the tool can test every style against the same
+  // entity without touching the real Settings > Gameplay preference —
+  // defaults to whatever the live session is actually set to.
+  const [imageStyle, setImageStyle] = useState<ImageStyleKey>(sessionImageStyle ?? 'painterly')
 
   // Resolve session world: activeWorld prop first, fallback to store's active campaign world
   const sessionWorld = activeWorld ?? (() => {
@@ -202,12 +207,12 @@ export default function PromptLab({ apiSettings, onBack, activeWorld }: PromptLa
     // to real novels/characters aren't refused and land far closer to canon
     // than a name-redacted description does.
     if (kind === 'character') {
-      setFinalPrompt(buildNpcPortraitPrompt(name, description, role, world))
+      setFinalPrompt(buildNpcPortraitPrompt(name, description, role, world, imageStyle))
     } else if (kind === 'location') {
-      setFinalPrompt(buildLocationImagePrompt(name, description, world))
+      setFinalPrompt(buildLocationImagePrompt(name, description, world, imageStyle))
     } else {
       const names = locationNames.split(',').map((n) => n.trim()).filter(Boolean)
-      setFinalPrompt(buildRegionMapPrompt(name, description, names, world))
+      setFinalPrompt(buildRegionMapPrompt(name, description, names, world, imageStyle))
     }
   }
 
@@ -301,6 +306,18 @@ export default function PromptLab({ apiSettings, onBack, activeWorld }: PromptLa
           {sourceTitle && !sourceScope && (
             <p className="text-[10px] text-amber-300/80 font-mono">ℹ No scope set — lore-accuracy mode is still active on sourceTitle alone; the model will default to a sensible boundary (e.g. avoid unpublished/future-book spoilers) instead of a scope you specify.</p>
           )}
+          <label className="flex flex-col gap-1.5 text-left w-full">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/90 font-semibold">Image Style</span>
+            <select
+              value={imageStyle}
+              onChange={(e) => setImageStyle(e.target.value as ImageStyleKey)}
+              className="w-full px-3 py-2 rounded-lg bg-[#0d1017] border border-gold-accent/30 text-xs text-ink outline-none focus:border-gold-primary font-narrative transition-colors"
+            >
+              {(Object.keys(IMAGE_STYLES) as ImageStyleKey[]).map((key) => (
+                <option key={key} value={key}>{IMAGE_STYLES[key].label}{key === 'painterly' ? ' (Default)' : ''}</option>
+              ))}
+            </select>
+          </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 border-t border-gold-accent/15">
             <Field label="Genre & Tone" value={genreTone} onChange={setGenreTone} placeholder="e.g. Dark gothic fantasy, gritty" />
             <Field label="Era & Technology" value={eraTechLevel} onChange={setEraTechLevel} placeholder="e.g. Late medieval, iron and timber" />

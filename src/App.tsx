@@ -2401,7 +2401,7 @@ export default function App() {
           })
         }}
         onOpenSettings={() => openSettings()}
-        onBackToTitle={() => goBack('title')}
+        onBackToTitle={() => navigateTo('title')}
         musicMuted={musicMuted}
         onToggleMusicMute={toggleMusicMute}
         musicPlaying={musicPlaying}
@@ -2441,6 +2441,7 @@ export default function App() {
     content = (
       <TaleWeaver
         apiSettings={apiSettings}
+        imageStyle={uiPrefs.imageStyle}
         onBack={() => goBack('storymode')}
         onBeginTale={beginInspiredTale}
       />
@@ -2525,6 +2526,7 @@ export default function App() {
     content = (
       <Codex
         apiSettings={apiSettings}
+        imageStyle={uiPrefs.imageStyle}
         world={game.world}
         player={game.player}
         log={game.log}
@@ -2578,6 +2580,7 @@ export default function App() {
     content = (
       <Codex
         apiSettings={apiSettings}
+        imageStyle={uiPrefs.imageStyle}
         world={game.world}
         player={game.player}
         log={game.log}
@@ -2846,7 +2849,7 @@ export default function App() {
 
       {promptLabOpen && (
        <Suspense fallback={null}>
-        <PromptLab apiSettings={apiSettings} activeWorld={game?.world} onBack={closePromptLab} />
+        <PromptLab apiSettings={apiSettings} activeWorld={game?.world} imageStyle={uiPrefs.imageStyle} onBack={closePromptLab} />
        </Suspense>
       )}
 

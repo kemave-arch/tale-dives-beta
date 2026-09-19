@@ -18,7 +18,7 @@ import { useConfirm } from '../lib/useConfirm.tsx'
 import { useLongTextEditor } from '../lib/useLongTextEditor.tsx'
 import { EQUIPPABLE_TYPES, LOCATION_DANGER_LEVELS, LOCATION_TYPES } from '../types.ts'
 import type {
-  ApiSettings, BestiaryEntry, ChapterBeat, CompetencyTier, CraftingJob, DeathRule, Dict, Discovery, EndingOutcome, EquipSlot, FactionEntry, ItemEntry, ItemType, KinshipType, LocationEntry, LogEntry, LoreEntry,
+  ApiSettings, BestiaryEntry, ChapterBeat, CompetencyTier, CraftingJob, DeathRule, Dict, Discovery, EndingOutcome, EquipSlot, FactionEntry, ImageStyleKey, ItemEntry, ItemType, KinshipType, LocationEntry, LogEntry, LoreEntry,
   NarrativeEvent, NpcEntry, Player, ProjectEntry, ProjectStage, QuestEntry, RegionEntry, RevealTrigger, SkillEntry, TaleBeat, ThreatTierToken, WorldData,
 } from '../types.ts'
 import { COMPETENCY_TIERS, THREAT_TIERS, tierToWord, wordToTier, displayThreatLabel } from '../lib/tiers.ts'
@@ -71,6 +71,7 @@ export type CategoryId =
 
 interface CodexProps {
   apiSettings: ApiSettings
+  imageStyle?: ImageStyleKey
   world: WorldData
   player: Player
   log: LogEntry[]
@@ -1403,6 +1404,7 @@ function TagsField({
 // hand-authored add/edit/delete. `entryId === NEW_ID` is an unsaved draft.
 export default function Codex({
   apiSettings,
+  imageStyle,
   world,
   player,
   log,
@@ -2440,6 +2442,7 @@ export default function Codex({
                     player.canonAppearance || player.physicalTrait,
                     player.className,
                     world,
+                    imageStyle,
                   )}
                   apiSettings={apiSettings}
                   onSaveKey={(key) => onUpdatePlayer({ portraitKey: key, portraitClassSnapshot: player.className })}
@@ -2885,6 +2888,7 @@ export default function Codex({
                       regions[effectiveMapRegionId].description,
                       Object.values(locations).filter((l) => l.regionId === effectiveMapRegionId).map((l) => l.name),
                       world,
+                      imageStyle,
                     )}
                     apiSettings={apiSettings}
                     onSaveKey={(key) => onUpdateRegion(effectiveMapRegionId, { mapImageKey: key })}
@@ -3305,6 +3309,7 @@ export default function Codex({
                     npcs[entryId].canonAppearance || npcs[entryId].appearance,
                     npcs[entryId].role,
                     world,
+                    imageStyle,
                   )}
                   apiSettings={apiSettings}
                   onSaveKey={(key) => onUpdateNpc(entryId, { portraitKey: key })}
@@ -3327,7 +3332,7 @@ export default function Codex({
                       // model directly — live testing showed direct references aren't
                       // refused and land far closer to actual canon than a redacted
                       // description does.
-                      return { canonText, prompt: buildNpcPortraitPrompt(npcs[entryId].name, canonText, npcs[entryId].role, world) }
+                      return { canonText, prompt: buildNpcPortraitPrompt(npcs[entryId].name, canonText, npcs[entryId].role, world, imageStyle) }
                     },
                     onResolved: (canonText) => onUpdateNpc(entryId, { canonAppearance: canonText }),
                   } : undefined}
@@ -3652,6 +3657,7 @@ export default function Codex({
                     locations[entryId].name,
                     locations[entryId].canonDescription || locations[entryId].description,
                     world,
+                    imageStyle,
                   )}
                   apiSettings={apiSettings}
                   onSaveKey={(key) => onUpdateLocation(entryId, { imageKey: key })}
@@ -3670,7 +3676,7 @@ export default function Codex({
                       })
                       // Same reasoning as the NPC portrait site: the real name and the
                       // source citation both reach the image model directly now.
-                      return { canonText, prompt: buildLocationImagePrompt(locations[entryId].name, canonText, world) }
+                      return { canonText, prompt: buildLocationImagePrompt(locations[entryId].name, canonText, world, imageStyle) }
                     },
                     onResolved: (canonText) => onUpdateLocation(entryId, { canonDescription: canonText }),
                   } : undefined}
@@ -3764,6 +3770,7 @@ export default function Codex({
                     regions[entryId].description,
                     Object.values(locations).filter((l) => l.regionId === entryId).map((l) => l.name),
                     world,
+                    imageStyle,
                   )}
                   apiSettings={apiSettings}
                   onSaveKey={(key) => onUpdateRegion(entryId, { mapImageKey: key })}

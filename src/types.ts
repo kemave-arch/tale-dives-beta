@@ -842,6 +842,13 @@ export interface ApiSettings {
   premiumApiKey?: string
 }
 
+// Settings > Gameplay > Image Generation — the art direction sent to the
+// image model for every generated portrait/location/map. 'painterly' is the
+// original, only style this app ever produced and stays the default for any
+// existing player who's never touched this control (see imageGeneration.ts's
+// IMAGE_STYLES for the actual prompt text each key resolves to).
+export type ImageStyleKey = 'painterly' | 'realism' | 'semi_realism' | 'anime' | 'comic'
+
 // The parchment/obsidian skin toggle was retired when the app collapsed to a
 // single dark-glass theme (see index.css) — a stale `skin` key may still sit in
 // older saved prefs, and is simply ignored on load.
@@ -852,6 +859,7 @@ export interface UiPrefs {
   autoCloudBackup?: boolean // Automatically save backup to Google Drive Slot 1 on chapter completion & milestones
   graphicsMode?: 'glass' | 'performance' // Graphics tab — 'performance' strips backdrop-filter blur app-wide (flat transparency, same colors) for weaker mobile GPUs
   showMusicBanners?: boolean // Toggle for Now Playing music track notification banner — default OFF
+  imageStyle?: ImageStyleKey // Gameplay tab > Image Generation — undefined reads as 'painterly', the original default
 }
 
 export interface InventoryChange {

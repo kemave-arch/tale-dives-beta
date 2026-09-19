@@ -8,7 +8,7 @@ import { GlassScreen } from '../lib/glassChrome.tsx'
 import { useConfirm } from '../lib/useConfirm.tsx'
 import { useImageLightbox } from '../lib/useImageLightbox.tsx'
 import { EditableCard, EditPencilButton } from '../lib/inlineEdit.tsx'
-import type { ApiSettings, NarrationMode, Pov, RevealTrigger, TaleDifficultyKey } from '../types.ts'
+import type { ApiSettings, ImageStyleKey, NarrationMode, Pov, RevealTrigger, TaleDifficultyKey } from '../types.ts'
 import { TALE_DIFFICULTIES } from '../api/turnContract.ts'
 import { COMPETENCY_TIERS } from '../lib/tiers.ts'
 import { getProvider } from '../api/providers/index.ts'
@@ -36,6 +36,7 @@ import { deleteImageBlob } from "../lib/imageStore.ts"
 
 interface TaleWeaverProps {
   apiSettings: ApiSettings
+  imageStyle?: ImageStyleKey
   onBack: () => void
   onBeginTale: (accumulated: TaleWeaverAccumulated) => void
 }
@@ -645,7 +646,7 @@ function TaleWeaverImageGenerator({
   )
 }
 
-export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWeaverProps) {
+export default function TaleWeaver({ apiSettings, imageStyle, onBack, onBeginTale }: TaleWeaverProps) {
   // A silent in-progress draft (lib/taleWeaverAutosave.ts) resumed here so an
   // accidental exit never costs the player their answers — distinct from the
   // named "Save Preset" library below, which is an explicit player action.
@@ -3343,6 +3344,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                         accumulated.protagonist.physicalTrait || accumulated.protagonist.background,
                         'Protagonist',
                         accumulated.world,
+                        imageStyle,
                       )}
                       caption={accumulated.protagonist.name || 'Hero'}
                       apiSettings={apiSettings}
@@ -3407,7 +3409,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                         />
                         <TaleWeaverImageGenerator
                           imageKey={l.imageKey}
-                          prompt={buildLocationImagePrompt(l.name, l.desc, accumulated.world)}
+                          prompt={buildLocationImagePrompt(l.name, l.desc, accumulated.world, imageStyle)}
                           caption={l.name}
                           apiSettings={apiSettings}
                           aspectRatio="9:16"
@@ -3450,6 +3452,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                             r.desc,
                             accumulated.locations.filter((loc) => loc.regionId === r.id).map((loc) => loc.name),
                             accumulated.world,
+                            imageStyle,
                           )}
                           caption={r.name}
                           apiSettings={apiSettings}
@@ -3567,7 +3570,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                         />
                         <TaleWeaverImageGenerator
                           imageKey={n.portraitKey}
-                          prompt={buildNpcPortraitPrompt(n.name, n.appearance, n.role, accumulated.world)}
+                          prompt={buildNpcPortraitPrompt(n.name, n.appearance, n.role, accumulated.world, imageStyle)}
                           caption={n.name}
                           apiSettings={apiSettings}
                           aspectRatio="1:1"

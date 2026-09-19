@@ -4,13 +4,14 @@ import {
   FolderOpen, FolderX, Maximize, Minimize, Trash2, Volume2, VolumeX, Music,
   CloudUpload, CloudDownload, Loader2, Check, RefreshCw, KeyRound, Bot, Server,
   Dice5, Layers, Monitor, Bug, UserCircle, History, AlertTriangle, LogOut, Gauge, FlaskConical,
-  Eye, Sparkles, Flame,
+  Eye, Sparkles, Flame, Image as ImageIcon,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { PROSE_DEPTHS, TALE_DIFFICULTIES } from '../api/turnContract.ts'
 import { allProviders, getProvider } from '../api/providers/index.ts'
 import { forgetSaveFolder, loadSaveFolder, pickSaveFolder, supportsFileSystemAccess } from '../lib/fsAccess.ts'
 import { downloadSchemaCsv } from '../lib/schemaExport.ts'
+import { IMAGE_STYLES } from '../lib/imageGeneration.ts'
 import {
   FIELD_CLASS, GlassButton, GlassIconButton, GlassSegmented, InfoTooltip, LABEL_CLASS, SELECT_CLASS,
 } from '../lib/glassChrome.tsx'
@@ -18,7 +19,7 @@ import {
   initGoogleAuth, signOutGoogle, listDriveBackups, signInWithGoogle, getGoogleAccessToken,
   type GoogleDriveFile, type User,
 } from '../lib/googleDrive.ts'
-import type { ApiSettings, Campaign, NarrationMode, Pov, TaleDifficultyKey, UiPrefs } from '../types.ts'
+import type { ApiSettings, Campaign, ImageStyleKey, NarrationMode, Pov, TaleDifficultyKey, UiPrefs } from '../types.ts'
 
 const TABS = [
   { id: 'model', label: 'AI Model', icon: Cpu },
@@ -109,6 +110,7 @@ export default function Settings({
   const [showMusicBanners, setShowMusicBanners] = useState<boolean>(uiPrefs.showMusicBanners ?? false)
   const [graphicsMode, setGraphicsMode] = useState<'glass' | 'performance'>(uiPrefs.graphicsMode ?? 'performance')
   const [introGazeDelay, setIntroGazeDelay] = useState<boolean>(uiPrefs.introGazeDelay ?? true)
+  const [imageStyle, setImageStyle] = useState<ImageStyleKey>(uiPrefs.imageStyle ?? 'painterly')
   const [proseDepthKey, setProseDepthKey] = useState<keyof typeof PROSE_DEPTHS>(() => {
     const stored = game?.proseDepth?.label
     // Migration: an existing save's stored label may literally be
@@ -324,7 +326,7 @@ export default function Settings({
   function save() {
     onSave({
       apiSettings: { provider, model, apiKey, temperature },
-      uiPrefs: { chromeOpacity, debugMode, showMusicBanners, introGazeDelay, autoCloudBackup, graphicsMode },
+      uiPrefs: { chromeOpacity, debugMode, showMusicBanners, introGazeDelay, autoCloudBackup, graphicsMode, imageStyle },
       proseDepthKey,
       pov,
       narrationMode,
@@ -527,31 +529,22 @@ export default function Settings({
                 )}
               </div>
 
-              <div>
-                <div className="flex items-baseline justify-between">
-                  <FieldLabel icon={Monitor} tip="How solid the header, HUD, and input bar glass look over the ambient background. Lower is more see-through; 100% is fully solid.">
-                    HUD Opacity
-                  </FieldLabel>
-                  <span className="font-mono text-xs font-semibold text-[#fae5b5]">{Math.round(chromeOpacity * 100)}%</span>
-                </div>
-                <input
-                  type="range"
-                  min="0.1"
-                  max="1"
-                  step="0.05"
-                  value={chromeOpacity}
-                  onChange={(e) => setChromeOpacity(Number(e.target.value))}
-                  className="w-full mt-2 accent-[#f0ca65] cursor-pointer"
-                />
-              </div>
-
-              <div>
-                <FieldLabel icon={isFullscreen ? Minimize : Maximize}>Display</FieldLabel>
-                <div className="mt-2">
-                  <GlassButton onClick={toggleFullscreen} icon={isFullscreen ? Minimize : Maximize} tone="default" className="w-full">
-                    {isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
-                  </GlassButton>
-                </div>
+              <div className="rounded-xl border border-gold-accent/25 bg-gold-accent/[0.04] p-3 flex flex-col gap-2">
+                <FieldLabel icon={ImageIcon} tip="The art style sent to the image model for every generated portrait, location, and region map. Painterly Fantasy is the original default — switching styles only affects art generated from now on, not images already saved.">
+                  Image Generation
+                </FieldLabel>
+                <select
+                  value={imageStyle}
+                  onChange={(e) => setImageStyle(e.target.value as ImageStyleKey)}
+                  className={SELECT_CLASS}
+                >
+                  {(Object.keys(IMAGE_STYLES) as ImageStyleKey[]).map((key) => (
+                    <option key={key} value={key}>
+                      {IMAGE_STYLES[key].label}{key === 'painterly' ? ' (Default)' : ''}
+                    </option>
+                  ))}
+                </select>
+                <p className="font-narrative italic text-xs text-[#d8c49e]">{IMAGE_STYLES[imageStyle].description}</p>
               </div>
 
               <div className="flex items-center justify-between gap-3 rounded-xl border border-gold-accent/25 bg-gold-accent/[0.04] p-3">
@@ -628,6 +621,33 @@ export default function Settings({
                     ? 'Blur is off everywhere — lighter on weaker GPUs.'
                     : 'Frosted glass on every surface — the full look, heavier to render.'}
                 </p>
+              </div>
+
+              <div>
+                <div className="flex items-baseline justify-between">
+                  <FieldLabel icon={Monitor} tip="How solid the header, HUD, and input bar glass look over the ambient background. Lower is more see-through; 100% is fully solid.">
+                    HUD Opacity
+                  </FieldLabel>
+                  <span className="font-mono text-xs font-semibold text-[#fae5b5]">{Math.round(chromeOpacity * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="1"
+                  step="0.05"
+                  value={chromeOpacity}
+                  onChange={(e) => setChromeOpacity(Number(e.target.value))}
+                  className="w-full mt-2 accent-[#f0ca65] cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <FieldLabel icon={isFullscreen ? Minimize : Maximize}>Display</FieldLabel>
+                <div className="mt-2">
+                  <GlassButton onClick={toggleFullscreen} icon={isFullscreen ? Minimize : Maximize} tone="default" className="w-full">
+                    {isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+                  </GlassButton>
+                </div>
               </div>
             </div>
           )}

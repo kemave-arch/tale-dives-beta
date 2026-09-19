@@ -6,8 +6,8 @@ import type { SettingsSavePayload } from './screens/Settings.tsx'
 import type { CategoryId } from './screens/Codex.tsx'
 import type { SeedNpcData } from './components/seedweaver/types.ts'
 // Everything below Title/MainMenu is code-split — mobile's first paint only
-// needs to parse those two, not the whole app (Codex, TaleDiveWeaver + its
-// 4 modals, Chronicle, etc. run well past 5,000 lines combined). Each only
+// needs to parse those two, not the whole app (Codex, TaleWeaver, Chronicle,
+// etc. run well past 5,000 lines combined). Each only
 // loads once the player actually navigates to it; the Suspense fallback
 // around `content` below covers the brief gap on that first visit.
 const Settings = lazy(() => import('./screens/Settings.tsx'))
@@ -23,7 +23,7 @@ const TaleWeaver = lazy(() => import('./screens/TaleWeaver.tsx'))
 const QuickPlay = lazy(() => import('./screens/QuickPlay.tsx'))
 const WeaverCalibrator = lazy(() => import('./components/seedweaver/WeaverCalibrator.tsx'))
 const PromptLab = lazy(() => import('./screens/PromptLab.tsx'))
-import { getClassById, findClassById } from './data/classes.ts'
+import { getClassById } from './data/classes.ts'
 import { FOURTH_WING_WORLD, VIOLET_SORRENGAIL } from './data/starterTemplates.ts'
 import { buildContextSlice } from './lib/jitContext.ts'
 import { applyTurn } from './lib/shadowReferee.ts'
@@ -873,13 +873,11 @@ export default function App() {
 
     const w = accumulated.world
     const p = accumulated.protagonist
-    // A class/archetype hint drafted alongside the protagonist (or typed
-    // manually) — getClassById already does the same lenient by-name match
-    // used for a player-typed or model-proposed class elsewhere, degrading
-    // an unrecognized name to a sensible synthesized class rather than
-    // failing, so a Tale Weaving protagonist stops always landing on
-    // PRESET_CLASSES[0] regardless of what the conversation established.
-    const cls = getClassById(p?.classHint || 'warrior')
+    // A freeform class/archetype hint drafted alongside the protagonist (or
+    // typed manually) — getClassById normalizes whatever string it's given,
+    // falling back to a neutral 'Adventurer' (not a biased archetype like
+    // 'warrior') when the conversation never established one.
+    const cls = getClassById(p?.classHint)
 
     const protagonistData: ProtagonistData = {
       name: p?.name?.trim() || 'The Protagonist',
@@ -905,7 +903,13 @@ export default function App() {
       classId: cls.id,
       className: cls.name,
       level: 1,
-      attrs: { STR: 3, INT: 3, AGI: 3 },
+      // Lore-accurate starting attributes proposed by the LLM alongside the
+      // protagonist's class (Tale Weaving's <protagonist> str/int/agi) — a
+      // fragile scribe-hopeful starts low STR/AGI, high INT, rather than
+      // every protagonist starting flat regardless of who they are.
+      // Per-attribute fallback to the same flat Adept default this always
+      // used, in case the model omitted one.
+      attrs: { STR: p?.attrs?.STR ?? 3, INT: p?.attrs?.INT ?? 3, AGI: p?.attrs?.AGI ?? 3 },
       conditions: [],
       copper: 10_000,
       locId: 'loc_start',
@@ -1584,22 +1588,19 @@ export default function App() {
       const chapterLevels = isChapterBoundary(turnNumber) ? 1 : 0
       const { player: leveledPlayer, leveled, breakthrough: milestoneBreakthrough } = applyLevelUps(
         nextPlayer,
-        getClassById(current.player.classId).weights,
         questLevels + chapterLevels,
       )
 
-      // §5.1b Class Evolution — the single class slot is replaced outright,
-      // never retroactively: this turn's own level-up (if any) above still
-      // used the *old* weight vector, and only points earned from the next
-      // level-up forward follow the new one. class_id is schema-constrained
-      // to a real Preset Class Dictionary entry, but findClassById is still
-      // checked directly rather than trusted, and a same-class "evolution"
-      // (already this class) is a no-op rather than a banner.
+      // §5.1b Class Evolution — the single class slot is replaced outright.
+      // class_id is a freeform string now (no fixed dictionary to validate
+      // against) — trusted the same way the LLM's other creative narration
+      // is, via getClassById's lenient normalization; a same-class
+      // "evolution" (already this class) is still a no-op rather than a banner.
       let evolvedPlayer = leveledPlayer
       let classEvolution: { className: string; reason?: string } | undefined
       if (turn.class_evolution) {
-        const newClass = findClassById(turn.class_evolution.class_id)
-        if (newClass && newClass.id !== current.player.classId) {
+        const newClass = getClassById(turn.class_evolution.class_id)
+        if (newClass.id !== current.player.classId) {
           evolvedPlayer = { ...leveledPlayer, classId: newClass.id, className: newClass.name }
           classEvolution = { className: newClass.name, reason: turn.class_evolution.reason }
         }
@@ -2018,8 +2019,8 @@ export default function App() {
   function evolveClass(classId: string) {
     setGame((g) => {
       if (!g) return g
-      const newClass = findClassById(classId)
-      if (!newClass || newClass.id === g.player.classId) return g
+      const newClass = getClassById(classId)
+      if (newClass.id === g.player.classId) return g
       return {
         ...g,
         player: { ...g.player, classId: newClass.id, className: newClass.name },

@@ -115,12 +115,17 @@ export const VIOLET_SORRENGAIL: ProtagonistData = {
   isDefault: true,
   gender: 'F',
   age: 20,
-  classId: 'apprentice_scribe',
+  classId: 'scribe',
   className: 'Scribe',
+  // Lore-accurate to who she actually is at the story's start (Attributes
+  // are the true 1-5 CompetencyTier scale — Untrained/Novice/Adept/Expert/
+  // Master): frail, hypermobile, relies on poison and precision over brute
+  // force (low STR); a low-center-of-gravity dagger finesse fighter (solid
+  // AGI, not superhuman); fiercely intelligent scribe (the clear standout).
   customAttributes: {
-    STR: 10,
-    INT: 18,
-    AGI: 14,
+    STR: 2, // Novice
+    INT: 5, // Master
+    AGI: 3, // Adept
   },
   startingSkills: [
     {

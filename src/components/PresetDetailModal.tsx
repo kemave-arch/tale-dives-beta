@@ -24,7 +24,6 @@ import {
   X,
   Zap,
 } from 'lucide-react'
-import { PRESET_CLASSES } from '../data/classes.ts'
 import { GLASS_SURFACE, GlassIconButton } from '../lib/glassChrome.tsx'
 import type { ProtagonistData, WorldData } from '../types.ts'
 
@@ -575,10 +574,7 @@ export function ProtagonistDetailModal({
     }
   }, [])
 
-  const className =
-    protagonist.className ||
-    PRESET_CLASSES.find((c) => c.id === protagonist.classId)?.name ||
-    protagonist.classId
+  const className = protagonist.className || protagonist.classId
 
   const demographics = [
     className,

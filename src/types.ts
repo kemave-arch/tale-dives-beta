@@ -51,12 +51,9 @@ export interface Attributes {
   AGI: CompetencyTier
 }
 
-export interface ClassWeights extends Attributes {}
-
 export interface ClassDef {
   id: string
   name: string
-  weights: ClassWeights
 }
 
 export interface GameTime {
@@ -452,7 +449,7 @@ export interface ProjectEntry {
 export interface SkillEntry {
   name: string
   description?: string
-  classId?: string // owning class, a Preset Class Dictionary id (§6.4D card shows its icon)
+  classId?: string // owning class — a freeform label, not a fixed dictionary id
   effort?: EffortTier // how taxing a cast visibly is, judged against the player's current Condition Tags — replaces mpCost/stCost
   skillType?: string // freeform, e.g. "Offensive"/"Defensive"/"Utility"/"Passive"
   tier?: CompetencyTier // mastery rank — formalizes the old freeform string field onto the same 5-word scale as Attributes
@@ -952,9 +949,9 @@ export interface NpcMemoryUpdate {
 }
 
 // §5.1b Class Evolution — the model may propose replacing the player's
-// single class slot outright on a rare, story-defining turn. `class_id`
-// is schema-constrained (an enum of the Preset Class Dictionary) so this
-// can never resolve to a class the client doesn't recognize.
+// single class slot outright on a rare, story-defining turn. `class_id` is
+// freeform (data/classes.ts's getClassById normalizes any string), trusted
+// the same way the model's other creative narration is.
 export interface ClassEvolutionUpdate {
   class_id: string
   reason?: string

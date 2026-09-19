@@ -20,8 +20,7 @@ export const THREAT_TIERS = ['trivial', 'minor', 'notable', 'dangerous', 'severe
 export type ThreatTierWord = (typeof THREAT_TIERS)[number]
 
 // A player-facing reskin of THREAT_TIERS is purely a client-side display
-// substitution (WorldData.tierSkin, set in the TaleDiveWeaver's Narrative
-// node) — the LLM only ever emits the canonical words above, never a reskin
+// substitution (WorldData.tierSkin) — the LLM only ever emits the canonical words above, never a reskin
 // label, so a custom label scheme can never reach the model or cause a
 // parse-drift bug. A couple of built-in flavor packs plus "Plain" (the
 // canonical words themselves, capitalized) cover the common cases; a fully
@@ -46,12 +45,10 @@ export function displayThreatLabel(canonical: string, labels?: string[]): string
 // rank (index+1) into whichever scale applies, not the word itself — the word
 // is purely an LLM/UI-facing representation, converted at the boundary. The
 // `CompetencyTier` type itself lives in types.ts (kept as a plain `number`,
-// not a `1|2|3|4|5` literal union: the existing point-buy attribute
-// allocators — NewGame.tsx, ProtagonistNodeModal.tsx — still hand out a wider 10-20-ish raw
-// range today, and rescaling those pickers to a true 1-5 tier UI is Phase 6
-// UI work, not this pass — see PROJECT_REVISION_NOTES for the call-out). The
-// real anti-drift enforcement lives here and at the XML parser boundary
-// (reqTierWord in xmlHelpers.ts), not in the static type of the field.
+// not a `1|2|3|4|5` literal union, purely so a future scale change doesn't
+// need a type migration). The real anti-drift enforcement lives here and at
+// the XML parser boundary (reqTierWord in xmlHelpers.ts), not in the static
+// type of the field.
 
 // Converts an internal rank (1-based) to its canonical word. Out-of-range
 // ranks clamp rather than throw — this direction only ever renders a value

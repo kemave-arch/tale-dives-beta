@@ -1,9 +1,9 @@
 import type { RecipeDef } from '../types.ts'
 
-// §5.8 Recipe Dictionary — a local static dictionary, same pattern as the
-// Preset Class Dictionary (data/classes.ts). A starter set covering a few
-// station flavors; the crafting engine itself doesn't care how many recipes
-// exist here, so more can be added freely without touching lib/crafting.ts.
+// §5.8 Recipe Dictionary — a local static dictionary. A starter set covering
+// a few station flavors; the crafting engine itself doesn't care how many
+// recipes exist here, so more can be added freely without touching
+// lib/crafting.ts.
 export const RECIPES: RecipeDef[] = [
   {
     id: 'recipe_steel_sword',

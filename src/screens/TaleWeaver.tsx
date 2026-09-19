@@ -9,6 +9,7 @@ import { useConfirm } from '../lib/useConfirm.tsx'
 import { EditableCard, EditPencilButton } from '../lib/inlineEdit.tsx'
 import type { ApiSettings, NarrationMode, Pov, RevealTrigger, TaleDifficultyKey } from '../types.ts'
 import { TALE_DIFFICULTIES } from '../api/turnContract.ts'
+import { COMPETENCY_TIERS } from '../lib/tiers.ts'
 import { getProvider } from '../api/providers/index.ts'
 import {
   TALE_WEAVER_PHASES, emptyAccumulated, runTaleWeaverPhase, mergeTaleWeaverDraft,
@@ -878,6 +879,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
       secret: '',
       opening: '',
       classHint: 'Warrior',
+      attrs: { STR: 3, INT: 3, AGI: 3 },
     }
     setAccumulated((prev) => ({ ...prev, protagonist: defaultProtag }))
     startEditing('protagonist', defaultProtag)
@@ -1396,6 +1398,26 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     />
                   </div>
                 </div>
+                <div className="flex flex-col gap-1.5 mt-2.5">
+                  <label className="font-mono text-[10px] uppercase text-gold-primary/70">Starting Attributes</label>
+                  <p className="text-[10px] text-ink-muted -mt-1">Lore-accurate to this character, not a balanced spread.</p>
+                  {(['STR', 'INT', 'AGI'] as const).map((attr) => (
+                    <div key={attr} className="flex items-center gap-2">
+                      <span className="font-mono text-[10px] uppercase text-ink-muted w-8">{attr}</span>
+                      <VellumSegmented
+                        className="flex-1"
+                        options={COMPETENCY_TIERS.map((t) => ({ id: t, label: t }))}
+                        value={COMPETENCY_TIERS[(editFormData.attrs?.[attr] ?? 3) - 1]}
+                        onChange={(word) =>
+                          setEditFormData({
+                            ...editFormData,
+                            attrs: { ...editFormData.attrs, [attr]: COMPETENCY_TIERS.indexOf(word) + 1 },
+                          })
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
               </CollapsibleSection>
               <CollapsibleSection label="Origin & Background" defaultOpen>
                 <div className="flex flex-col gap-1">
@@ -1444,6 +1466,13 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     </span>
                   )}
                 </div>
+                {p.attrs && (
+                  <p className="font-mono text-[9px] uppercase text-ink-muted mt-1">
+                    {(['STR', 'INT', 'AGI'] as const)
+                      .map((attr) => `${attr} ${COMPETENCY_TIERS[(p.attrs?.[attr] ?? 3) - 1]}`)
+                      .join(' · ')}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-1">
                 <button
@@ -3268,6 +3297,13 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                           </div>
                           {accumulated.protagonist!.background && (
                             <p className="font-narrative text-xs text-ink-muted whitespace-pre-wrap">{accumulated.protagonist!.background}</p>
+                          )}
+                          {accumulated.protagonist!.attrs && (
+                            <p className="font-mono text-[9px] uppercase text-ink-muted">
+                              {(['STR', 'INT', 'AGI'] as const)
+                                .map((attr) => `${attr} ${COMPETENCY_TIERS[(accumulated.protagonist!.attrs?.[attr] ?? 3) - 1]}`)
+                                .join(' · ')}
+                            </p>
                           )}
                         </div>
                       )}

@@ -10,7 +10,6 @@ import { GlassScreen } from '../lib/glassChrome.tsx'
 import { slugify } from '../lib/slug.ts'
 import { isHidden, validateDiscovery } from '../lib/discovery.ts'
 import { checkAffordability } from '../lib/skills.ts'
-import { PRESET_CLASSES } from '../data/classes.ts'
 import { RECIPES } from '../data/recipes.ts'
 import { canAffordRecipe } from '../lib/crafting.ts'
 import { hoursRemaining } from '../lib/gameTime.ts'
@@ -1459,15 +1458,14 @@ export default function Codex({
 
   const classNameFor = (id?: string) =>
     id
-      ? PRESET_CLASSES.find((c) => c.id === id)?.name ||
-        (id === player.classId && player.className
-          ? player.className
-          : id.includes('_')
-            ? id
-                .split('_')
-                .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-                .join(' ')
-            : id)
+      ? id === player.classId && player.className
+        ? player.className
+        : id.includes('_')
+          ? id
+              .split('_')
+              .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+              .join(' ')
+          : id
       : undefined
 
   function equippedSlotFor(itemId: string): EquipSlot | undefined {
@@ -2273,10 +2271,10 @@ export default function Codex({
                   canDelete={false}
                   onEdit={() => {}}
                   onSave={async () => {
-                    if (draft.classId && draft.classId !== player.classId) {
-                      const target = PRESET_CLASSES.find((c) => c.id === draft.classId)
-                      if (target && (await confirm(`Evolve into ${target.name}? Attribute points already earned keep their history — only points earned from here forward follow the new class.`))) {
-                        onEvolveClass(draft.classId)
+                    const nextName = ((draft.className ?? player.className) as string | undefined)?.trim()
+                    if (nextName && nextName.toLowerCase() !== player.className?.toLowerCase()) {
+                      if (await confirm(`Evolve into ${nextName}? Attribute points already earned keep their history — only points earned from here forward follow the new class.`)) {
+                        onEvolveClass(nextName)
                       }
                     }
                     setEditing(false)
@@ -2289,15 +2287,13 @@ export default function Codex({
               <DetailPanel>
                 <label className="block">
                   <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Class</span>
-                  <select
-                    value={draft.classId ?? player.classId}
-                    onChange={(e) => setDraft((d) => ({ ...d, classId: e.target.value }))}
+                  <input
+                    type="text"
+                    value={draft.className ?? player.className ?? ''}
+                    onChange={(e) => setDraft((d) => ({ ...d, className: e.target.value }))}
+                    placeholder="e.g. Warrior, Scribe, Dragon Rider"
                     className="mt-1 w-full rounded-lg border border-[#e8ca8a]/25 bg-[#e8ca8a]/[0.04] backdrop-blur-sm px-3 py-2 font-mono text-sm text-ink"
-                  >
-                    {PRESET_CLASSES.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
+                  />
                 </label>
                 <p className="font-narrative text-xs italic text-ink-muted">
                   §5.1b Class Evolution — the class slot is replaced outright, no blending. Attribute
@@ -4042,21 +4038,12 @@ export default function Codex({
                   ))}
                 </select>
               </label>
-              <label className="block">
-                <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Owning Class</span>
-                <select
-                  value={draft.classId ?? ''}
-                  onChange={(e) => setDraft((d) => ({ ...d, classId: e.target.value }))}
-                  className={`mt-1 ${CODEX_SELECT_CLASS}`}
-                >
-                  <option value="">— none —</option>
-                  {PRESET_CLASSES.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <TextField
+                label="Owning Class"
+                value={draft.classId ?? ''}
+                onChange={(v) => setDraft((d) => ({ ...d, classId: v }))}
+                placeholder="e.g. Warrior (optional)"
+              />
               <label className="block">
                 <span className="text-[11px] font-display text-ink-muted uppercase tracking-wide">Effort</span>
                 <select

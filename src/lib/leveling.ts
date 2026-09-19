@@ -1,4 +1,4 @@
-import type { ClassWeights, Player } from '../types.ts'
+import type { Player } from '../types.ts'
 
 // §5.1a Milestone Leveling — ties leveling to story progress the schema
 // already tracks (quest completion, chapter boundaries) rather than a
@@ -26,18 +26,21 @@ export interface LevelUpResult {
 }
 
 // Narrative-First Overhaul — no more derived HP/MP/ST pools to recompute on
-// level-up; a Milestone now bumps the class's own primary attribute (its
-// highest weight in the Preset Class Dictionary) up one CompetencyTier rung
-// per level, capped at Master. Still a milestone hook, not silent bookkeeping
-// — App.tsx logs it the same way class_evolution already narrates a beat.
-export function applyLevelUps(player: Player, weights: ClassWeights, levels: number): LevelUpResult {
+// level-up; a Milestone now bumps whichever of STR/INT/AGI is already the
+// character's highest (self-reinforcing growth — ties broken STR > INT >
+// AGI), up one CompetencyTier rung per level, capped at Master. Class no
+// longer carries a weight vector to derive a "primary attribute" from — a
+// freeform, lore-accurate class has no such vector to give. Still a
+// milestone hook, not silent bookkeeping — App.tsx logs it the same way
+// class_evolution already narrates a beat.
+export function applyLevelUps(player: Player, levels: number): LevelUpResult {
   if (levels <= 0) return { player, leveled: false }
 
   const attrKeys = ['STR', 'INT', 'AGI'] as const
-  const primaryAttr = attrKeys.reduce((a, b) => (weights[a] >= weights[b] ? a : b))
-
   const attrs = { ...player.attrs }
+  let primaryAttr: (typeof attrKeys)[number] = 'STR'
   for (let i = 0; i < levels; i++) {
+    primaryAttr = attrKeys.reduce((a, b) => (attrs[a] >= attrs[b] ? a : b))
     attrs[primaryAttr] = Math.min(MAX_COMPETENCY_TIER, attrs[primaryAttr] + 1)
   }
 

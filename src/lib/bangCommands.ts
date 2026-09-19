@@ -35,10 +35,10 @@ export const BANG_COMMANDS: { name: string; usage: string; description: string }
   { name: 'recall', usage: '!recall', description: 'Full Codex snapshot — also reminds the AI' },
   { name: 'conclude', usage: '!conclude', description: 'End this Tale now with a definitive win/lose/neutral conclusion (costs an API call)' },
   { name: 'minions', usage: '!minions', description: 'Your current summoned army' },
-  { name: 'corpses', usage: '!corpses', description: 'Harvestable slain-enemy essence (necromancer/Shadow Monarch)' },
-  { name: 'arise', usage: '!arise', description: 'Shadow Monarch — extract a shadow from a slain corpse' },
-  { name: 'raise_skeleton', usage: '!raise_skeleton', description: 'Necromancer — reanimate skeletal infantry (1 Bone Dust)' },
-  { name: 'summon', usage: '!summon', description: 'Summoner — call a planar familiar' },
+  { name: 'corpses', usage: '!corpses', description: 'Harvestable slain-enemy essence' },
+  { name: 'arise', usage: '!arise', description: 'Shadow Branch — extract a shadow from a slain corpse' },
+  { name: 'raise_skeleton', usage: '!raise_skeleton', description: 'Skeleton Branch — reanimate skeletal infantry (1 Bone Dust)' },
+  { name: 'summon', usage: '!summon', description: 'Familiar Branch — call a planar familiar' },
 ]
 
 const RECALL_ROW_CAP = 60

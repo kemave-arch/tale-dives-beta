@@ -20,7 +20,7 @@ import {
   X,
   Zap,
 } from 'lucide-react'
-import { PRESET_CLASSES } from '../data/classes.ts'
+import { getClassById } from '../data/classes.ts'
 import {
   FIELD_CLASS,
   GLASS_SURFACE,
@@ -66,63 +66,28 @@ const TABS = [
   { id: 'skills' as const, label: 'Skills', icon: Sword },
 ]
 
-const TOTAL_ASSIGNABLE_POINTS = 12
-const BASE_ATTR_VALUE = 10
+// Attributes live on the true 1-5 CompetencyTier scale everywhere else in
+// the engine — a small budget above a flat Adept (3) baseline, not the old
+// class-weighted 10-22ish raw point buy.
+const TOTAL_ASSIGNABLE_POINTS = 2
+const BASE_ATTR_VALUE = 3
+const MAX_ATTR_VALUE = 5
 
+// Class is a freeform label now (no fixed archetype dictionary) — this just
+// recovers a display name from whatever a template already has on it.
 function getInitialClassName(data?: ProtagonistData | null): string {
-  if (!data) return PRESET_CLASSES[0].name
+  if (!data) return ''
   if (data.className) return data.className
-  const found = PRESET_CLASSES.find((c) => c.id === data.classId)
-  if (found) return found.name
   if (data.classId) {
     return data.classId.includes('_')
       ? data.classId.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
       : data.classId
   }
-  return PRESET_CLASSES[0].name
+  return ''
 }
 
-// Suggested starter skills by class archetype. Narrative-First Overhaul:
-// mp/st costs became a qualitative `effort` tier, and `tier` (mastery rank)
-// is a CompetencyTier number now (2 = Novice) rather than a freeform string
-// — every starter ability is a fresh Novice-level pickup, so they all share
-// the same rank; `effort` is picked from the old cost's rough magnitude.
-const CLASS_STARTER_SKILLS: Record<string, SkillEntry[]> = {
-  warrior: [
-    { name: 'Power Strike', skillType: 'Active', tier: 2, effort: 'minor', description: 'A heavy martial strike with weapon force, dealing enhanced physical damage.' },
-    { name: 'Shield Block', skillType: 'Martial', tier: 2, effort: 'minor', description: 'Brace behind shield or guard, mitigating incoming physical impact.' },
-    { name: 'Battle Roar', skillType: 'Utility', tier: 2, effort: 'focused', description: 'Intimidating battle cry that bolsters resolve and rattles enemy focus.' },
-  ],
-  mage: [
-    { name: 'Arcane Bolt', skillType: 'Spell', tier: 2, effort: 'minor', description: 'Channels raw arcane energy into a concentrated piercing projectile.' },
-    { name: 'Mana Barrier', skillType: 'Spell', tier: 2, effort: 'focused', description: 'Erects a shimmering mana shield absorbing magical and physical harm.' },
-    { name: 'Elemental Spark', skillType: 'Utility', tier: 2, effort: 'minor', description: 'Conjures small controllable elemental fire or light for utility and ignition.' },
-  ],
-  assassin: [
-    { name: 'Shadow Step', skillType: 'Martial', tier: 2, effort: 'minor', description: 'Rapid, silent burst of movement through shadows to flank unaware targets.' },
-    { name: 'Backstab', skillType: 'Active', tier: 2, effort: 'focused', description: 'High-damage precision strike exploiting weak points and blind spots.' },
-    { name: 'Venom Coat', skillType: 'Utility', tier: 2, effort: 'minor', description: 'Coats blade in paralyzing or damaging venom for subsequent strikes.' },
-  ],
-  paladin: [
-    { name: 'Holy Smite', skillType: 'Spell', tier: 2, effort: 'focused', description: 'Infuses weapon strike with righteous radiance to punish dark beings.' },
-    { name: 'Divine Ward', skillType: 'Spell', tier: 2, effort: 'focused', description: 'Bestows protective sacred blessing upon self or a nearby ally.' },
-    { name: 'Lay on Hands', skillType: 'Utility', tier: 2, effort: 'taxing', description: 'Channels restoring divine energy to knit flesh and stabilize vitals.' },
-  ],
-  dragon_rider: [
-    { name: 'Bond Channel', skillType: 'Active', tier: 2, effort: 'minor', description: 'Channels empathic dragon bond to enhance reflex and sensory clarity.' },
-    { name: 'Dragon Dive', skillType: 'Martial', tier: 2, effort: 'taxing', description: 'Leaping descent strike carrying immense kinetic velocity.' },
-    { name: 'Searing Breath', skillType: 'Spell', tier: 2, effort: 'taxing', description: 'Invokes dragon-fire embers across a forward cone.' },
-  ],
-  dark_monarch: [
-    { name: 'Shadow Extraction', skillType: 'Active', tier: 3, effort: 'taxing', description: 'Extracts mana and lingering will from defeated foes into shadowy thralls.' },
-    { name: 'Monarch Step', skillType: 'Martial', tier: 2, effort: 'minor', description: 'Instantaneous stride across shadowy ground.' },
-    { name: 'Dagger Flurry', skillType: 'Active', tier: 2, effort: 'focused', description: 'Rapid succession of dual-dagger thrusts and slashes.' },
-  ],
-  necromancer: [
-    { name: 'Soul Drain', skillType: 'Spell', tier: 2, effort: 'focused', description: 'Siphons vitality from targets to replenish caster reserves.' },
-    { name: 'Grave Chill', skillType: 'Spell', tier: 2, effort: 'minor', description: 'Releases numbing frost that slows enemy movement and reactions.' },
-    { name: 'Bone Armor', skillType: 'Spell', tier: 2, effort: 'focused', description: 'Hardens calcified bone armor around body to blunt physical trauma.' },
-  ],
+function clampTier(n: number): number {
+  return Math.min(5, Math.max(1, Math.round(n)))
 }
 
 export default function NewGame({
@@ -153,7 +118,10 @@ export default function NewGame({
     return initial.gender
   })
   const [age, setAge] = useState(initial?.age !== undefined ? String(initial.age) : '')
-  const [classId, setClassId] = useState(initial?.classId ?? PRESET_CLASSES[0].id)
+  // Class is a single freeform text field now — no preset dictionary to pick
+  // a separate id from; an id is only ever derived from this at save time
+  // (see currentData below), via the same getClassById normalization the
+  // rest of the app uses.
   const [customClassName, setCustomClassName] = useState(() => getInitialClassName(initial))
   const [background, setBackground] = useState(initial?.background ?? '')
   const [personality, setPersonality] = useState(initial?.personality ?? '')
@@ -162,29 +130,25 @@ export default function NewGame({
   const [secret, setSecret] = useState(initial?.secret ?? '')
   const [opening, setOpening] = useState(initial?.opening ?? '')
 
-  // Attribute Point Buy System (STR / INT / AGI)
+  // Attribute Point Buy System (STR / INT / AGI) — flat Adept (3) baseline,
+  // a small budget to redistribute; defensively clamped in case `initial`
+  // carries an old save's off-scale raw value (the pre-tier-system point buy
+  // used to hand out 10-22ish numbers).
   const [attrs, setAttrs] = useState<Attributes>(() => {
-    if (initial?.customAttributes) return initial.customAttributes
-    // Default starting distribution: base 10 + class weighted distribution
-    const cls = PRESET_CLASSES.find((c) => c.id === initial?.classId) ?? PRESET_CLASSES[0]
-    return {
-      STR: Math.round(BASE_ATTR_VALUE + TOTAL_ASSIGNABLE_POINTS * cls.weights.STR),
-      INT: Math.round(BASE_ATTR_VALUE + TOTAL_ASSIGNABLE_POINTS * cls.weights.INT),
-      AGI: Math.round(BASE_ATTR_VALUE + TOTAL_ASSIGNABLE_POINTS * cls.weights.AGI),
+    if (initial?.customAttributes) {
+      return {
+        STR: clampTier(initial.customAttributes.STR),
+        INT: clampTier(initial.customAttributes.INT),
+        AGI: clampTier(initial.customAttributes.AGI),
+      }
     }
+    return { STR: BASE_ATTR_VALUE, INT: BASE_ATTR_VALUE, AGI: BASE_ATTR_VALUE }
   })
 
   // Starting Skills CRUD State
-  const [startingSkills, setStartingSkills] = useState<SkillEntry[]>(() => {
-    if (initial?.startingSkills && initial.startingSkills.length > 0) return initial.startingSkills.slice(0, 3)
-    const baseClassId = initial?.classId ?? 'warrior'
-    return CLASS_STARTER_SKILLS[baseClassId] || CLASS_STARTER_SKILLS['warrior']
-  })
-
-  // Custom Class Modal State
-  const [customModalOpen, setCustomModalOpen] = useState(false)
-  const [customDraftName, setCustomDraftName] = useState('')
-  const [customDraftArchetype, setCustomDraftArchetype] = useState(PRESET_CLASSES[0].id)
+  const [startingSkills, setStartingSkills] = useState<SkillEntry[]>(() =>
+    initial?.startingSkills && initial.startingSkills.length > 0 ? initial.startingSkills.slice(0, 3) : []
+  )
 
   // Skill Modal State
   const [skillModalOpen, setSkillModalOpen] = useState(false)
@@ -220,21 +184,8 @@ export default function NewGame({
 
     setAttrs((prev) => ({
       ...prev,
-      [key]: Math.max(BASE_ATTR_VALUE, prev[key] + delta),
+      [key]: Math.min(MAX_ATTR_VALUE, Math.max(BASE_ATTR_VALUE, prev[key] + delta)),
     }))
-  }
-
-  function autoDistributeForClass(targetClassId: string) {
-    const cls = PRESET_CLASSES.find((c) => c.id === targetClassId) ?? PRESET_CLASSES[0]
-    const strAdd = Math.round(TOTAL_ASSIGNABLE_POINTS * cls.weights.STR)
-    const intAdd = Math.round(TOTAL_ASSIGNABLE_POINTS * cls.weights.INT)
-    const agiAdd = TOTAL_ASSIGNABLE_POINTS - strAdd - intAdd
-
-    setAttrs({
-      STR: BASE_ATTR_VALUE + strAdd,
-      INT: BASE_ATTR_VALUE + intAdd,
-      AGI: BASE_ATTR_VALUE + Math.max(0, agiAdd),
-    })
   }
 
   function resetAttributes() {
@@ -243,31 +194,6 @@ export default function NewGame({
       INT: BASE_ATTR_VALUE,
       AGI: BASE_ATTR_VALUE,
     })
-  }
-
-  const activePreset = PRESET_CLASSES.find((c) => c.id === classId)
-  const isCustom = !activePreset || activePreset.name.toLowerCase() !== customClassName.trim().toLowerCase()
-
-  function openCustomClassModal() {
-    setCustomDraftName(isCustom ? customClassName : '')
-    setCustomDraftArchetype(classId && PRESET_CLASSES.some((c) => c.id === classId) ? classId : PRESET_CLASSES[0].id)
-    setCustomModalOpen(true)
-  }
-
-  function handleSelectClass(value: string) {
-    if (value === 'custom') {
-      openCustomClassModal()
-    } else {
-      const preset = PRESET_CLASSES.find((c) => c.id === value)
-      if (preset) {
-        setClassId(preset.id)
-        setCustomClassName(preset.name)
-        if (CLASS_STARTER_SKILLS[preset.id]) {
-          setStartingSkills(CLASS_STARTER_SKILLS[preset.id])
-        }
-        autoDistributeForClass(preset.id)
-      }
-    }
   }
 
   function openAddSkill() {
@@ -321,7 +247,6 @@ export default function NewGame({
     setName(t.name)
     setGender(t.gender ?? '')
     setAge(t.age !== undefined ? String(t.age) : '')
-    setClassId(t.classId)
     setCustomClassName(getInitialClassName(t))
     setBackground(t.background ?? '')
     setPersonality(t.personality ?? '')
@@ -332,16 +257,16 @@ export default function NewGame({
     setKeyItem(t.keyItem ?? '')
 
     if (t.customAttributes) {
-      setAttrs(t.customAttributes)
+      setAttrs({
+        STR: clampTier(t.customAttributes.STR),
+        INT: clampTier(t.customAttributes.INT),
+        AGI: clampTier(t.customAttributes.AGI),
+      })
     } else {
-      autoDistributeForClass(t.classId)
+      resetAttributes()
     }
 
-    if (t.startingSkills && t.startingSkills.length > 0) {
-      setStartingSkills(t.startingSkills)
-    } else if (CLASS_STARTER_SKILLS[t.classId]) {
-      setStartingSkills(CLASS_STARTER_SKILLS[t.classId])
-    }
+    setStartingSkills(t.startingSkills && t.startingSkills.length > 0 ? t.startingSkills : [])
 
     setViewMode('editor')
   }
@@ -351,8 +276,7 @@ export default function NewGame({
     setName('')
     setGender('')
     setAge('')
-    setClassId(PRESET_CLASSES[0].id)
-    setCustomClassName(PRESET_CLASSES[0].name)
+    setCustomClassName('')
     setBackground('')
     setPersonality('')
     setMotivation('')
@@ -361,21 +285,20 @@ export default function NewGame({
     setOpening('')
     setKeyItem('')
     resetAttributes()
-    setStartingSkills((CLASS_STARTER_SKILLS['warrior'] || []).slice(0, 3))
+    setStartingSkills([])
     setViewMode('editor')
   }
 
   function currentData(): ProtagonistData {
-    const matched = PRESET_CLASSES.find((c) => c.id === classId)
-    const finalClassId = classId || 'warrior'
-    const finalClassName = customClassName.trim() || (matched ? matched.name : 'Adventurer')
+    const cls = getClassById(customClassName)
+    const finalClassName = customClassName.trim() || cls.name
 
     return {
       id: templateId,
       name: name || 'The Wanderer',
       gender: gender.trim() || undefined,
       age: age.trim() ? Number(age) : undefined,
-      classId: finalClassId,
+      classId: cls.id,
       className: finalClassName,
       background,
       personality: personality.trim() || undefined,
@@ -415,7 +338,7 @@ export default function NewGame({
   const q = presetSearch.trim().toLowerCase()
   const matchedTemplates = q
     ? protagonistTemplates.filter((t) => {
-        const cName = t.className || PRESET_CLASSES.find((c) => c.id === t.classId)?.name || t.classId
+        const cName = t.className || t.classId
         return (
           t.name.toLowerCase().includes(q) ||
           cName.toLowerCase().includes(q) ||
@@ -545,7 +468,7 @@ export default function NewGame({
                     const isCurrent = templateId === t.id
                     const isSelected = selectedDeckId === t.id
                     const ts = getPresetTimestamp(t)
-                    const cName = t.className || PRESET_CLASSES.find((c) => c.id === t.classId)?.name || t.classId
+                    const cName = t.className || t.classId
                     const details = [t.gender, t.age !== undefined ? `Age ${t.age}` : null].filter(Boolean).join(' • ')
 
                     return (
@@ -700,34 +623,14 @@ export default function NewGame({
 
       <div className="flex gap-3 items-end">
         <div className="flex-1 min-w-0">
-          <GlassField label="Archetype / Class" hint="Choose a class preset or Custom Class">
-            <div className="flex gap-2">
-              <select
-                value={isCustom ? 'custom' : classId}
-                onChange={(e) => handleSelectClass(e.target.value)}
-                className={SELECT_CLASS + " cursor-pointer flex-1"}
-              >
-                {PRESET_CLASSES.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-                <option value="custom">
-                  {isCustom && customClassName.trim() ? `Custom (${customClassName.trim()})` : 'Custom Class...'}
-                </option>
-              </select>
-              {isCustom && (
-                <button
-                  type="button"
-                  onClick={openCustomClassModal}
-                  className="px-2.5 py-1.5 rounded-lg border border-[#e8ca8a]/30 bg-[#e8ca8a]/10 hover:bg-[#e8ca8a]/20 text-[#f5dfa0] text-xs font-display flex items-center gap-1 shrink-0"
-                  title="Edit Custom Class"
-                >
-                  <Edit2 size={13} />
-                  <span>Edit</span>
-                </button>
-              )}
-            </div>
+          <GlassField label="Archetype / Class" hint="Whatever fits this character — not picked from a fixed list">
+            <input
+              type="text"
+              value={customClassName}
+              onChange={(e) => setCustomClassName(e.target.value)}
+              placeholder="e.g. Warrior, Scribe, Dragon Rider"
+              className={FIELD_CLASS}
+            />
           </GlassField>
         </div>
         <div className="w-20 shrink-0">
@@ -767,9 +670,9 @@ export default function NewGame({
             </span>
             <button
               type="button"
-              onClick={() => autoDistributeForClass(classId)}
+              onClick={resetAttributes}
               className="p-1 text-[#e8ca8a]/60 hover:text-[#f5dfa0] rounded hover:bg-white/5 cursor-pointer"
-              title="Auto-Distribute for Class"
+              title="Reset to Baseline"
             >
               <RotateCcw size={16} />
             </button>
@@ -793,8 +696,7 @@ export default function NewGame({
               
               <div className="flex items-center gap-2">
                 <div className="flex flex-col items-center">
-                  <span className="font-mono font-bold text-lg text-[#f0ca65] leading-none">{attrs[attr]}</span>
-                  
+                  <span className="font-mono font-bold text-sm text-[#f0ca65] leading-none">{tierToWord(attrs[attr], COMPETENCY_TIERS)}</span>
                 </div>
                 <div className="flex flex-col gap-1">
                   <button
@@ -969,15 +871,6 @@ export default function NewGame({
             Initial abilities in your Codex ({startingSkills.length}/3).
           </span>
           <div className="flex items-center gap-3">
-            {CLASS_STARTER_SKILLS[classId] && (
-              <button
-                type="button"
-                onClick={() => setStartingSkills((CLASS_STARTER_SKILLS[classId] || []).slice(0, 3))}
-                className="font-mono text-[10px] text-[#f0ca65] hover:underline"
-              >
-                Suggest for {customClassName}
-              </button>
-            )}
             <button
               type="button"
               disabled={startingSkills.length >= 3}
@@ -998,7 +891,7 @@ export default function NewGame({
         {startingSkills.length === 0 ? (
           <div className="rounded-lg border border-dashed border-[#e8ca8a]/20 p-4 text-center">
             <p className="font-narrative italic text-xs text-[#e8ca8a]/70">
-              No starting skills selected. Tap &ldquo;Suggest for {customClassName}&rdquo; or &ldquo;Add Ability&rdquo; to customize.
+              No starting skills selected. Tap &ldquo;Add Ability&rdquo; to add one.
             </p>
           </div>
         ) : (
@@ -1160,82 +1053,6 @@ export default function NewGame({
           <GlassCTAButton onClick={handleContinue}>Continue</GlassCTAButton>
         </div>
       </div>
-
-      {/* Custom Class Setup Modal */}
-      {customModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto"
-          onClick={() => setCustomModalOpen(false)}
-        >
-          <div
-            className={`${GLASS_SURFACE} rounded-2xl w-full max-w-md flex flex-col p-4 sm:p-5 shadow-2xl bg-[#120e1b]/95 border-[#f0ca65]/40 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto mt-2 sm:mt-0`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between pb-3 border-b border-[#e8ca8a]/20">
-              <div className="flex items-center gap-2">
-                <Sparkles size={16} className="text-[#f0ca65]" />
-                <h3 className="font-display font-semibold text-sm uppercase tracking-[0.12em] text-[#fae5b5]">
-                  Custom Class Setup
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setCustomModalOpen(false)}
-                className="p-1 rounded-full text-[#e8ca8a]/60 hover:text-[#f5dfa0] hover:bg-white/10 transition-colors"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="flex flex-col gap-4 py-4">
-              <GlassField label="Custom Class Name" hint="e.g. Shadow Assassin, Star Knight">
-                <input
-                  autoFocus
-                  type="text"
-                  value={customDraftName}
-                  onChange={(e) => setCustomDraftName(e.target.value)}
-                  placeholder="e.g. Shadow Assassin, Spellblade, Star Knight..."
-                  className={FIELD_CLASS}
-                />
-              </GlassField>
-
-              <GlassField label="Base Archetype (Stat Curve)" hint="Select base archetype for vitals & attribute growth">
-                <select
-                  value={customDraftArchetype}
-                  onChange={(e) => setCustomDraftArchetype(e.target.value)}
-                  className={SELECT_CLASS}
-                >
-                  {PRESET_CLASSES.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </GlassField>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#e8ca8a]/20">
-              <GlassButton onClick={() => setCustomModalOpen(false)}>Cancel</GlassButton>
-              <GlassButton
-                tone="action"
-                onClick={() => {
-                  const finalName = customDraftName.trim() || 'Custom Hero'
-                  const archetypeId = customDraftArchetype
-                  setCustomClassName(finalName)
-                  setClassId(archetypeId)
-                  autoDistributeForClass(archetypeId)
-                  if (CLASS_STARTER_SKILLS[archetypeId]) {
-                    setStartingSkills(CLASS_STARTER_SKILLS[archetypeId])
-                  }
-                  setCustomModalOpen(false)
-                }}
-              >
-                Save Custom Class
-              </GlassButton>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Add / Edit Skill Modal */}
       {skillModalOpen && (

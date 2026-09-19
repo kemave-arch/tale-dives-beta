@@ -1,5 +1,20 @@
-import type { DeathRule, EndingOutcome, RevealTrigger } from '../types.ts'
+import type { Attributes, DeathRule, EndingOutcome, RevealTrigger } from '../types.ts'
 import { str, num, parseXmlBlock, sanitizeXmlForParsing, decodeXmlEntities } from './xmlHelpers.ts'
+import { COMPETENCY_TIERS, wordToTier } from './tiers.ts'
+
+// Lenient tier-word parse for a creation-time convenience hint (the
+// Protagonist phase's proposed starting attributes) — unlike a turn's own
+// anti-drift-guarded fields, a missing or unrecognized word here should just
+// fall through to App.tsx's own default, not fail the whole phase the way
+// wordToTier's strict throw is meant to for live turn parsing.
+function lenientTierWord(word: string | undefined): number | undefined {
+  if (!word) return undefined
+  try {
+    return wordToTier(word, COMPETENCY_TIERS)
+  } catch {
+    return undefined
+  }
+}
 
 // Codex Discovery (lib/discovery.ts's matchesReveal) auto-resolves flag/
 // location_visit/npc_met/quest_complete for a hidden Codex entry — but at
@@ -107,13 +122,16 @@ export interface TaleWeaverProtagonistDraft {
   opening?: string
   portraitKey?: string
   // Free-text class/archetype name (e.g. "Warrior", "Dragon Rider", or an
-  // original one fitting the world) — resolved leniently against the
-  // Preset Class Dictionary at Tale creation (data/classes.ts's
-  // getClassById already does this same lenient by-name matching for a
-  // player-typed or model-proposed class elsewhere), never a strict enum
-  // here, so the model is free to propose anything and an unrecognized name
-  // still degrades to a sensible synthesized class rather than failing.
+  // original one fitting the world) — normalized at Tale creation via
+  // data/classes.ts's getClassById, which always succeeds (no fixed
+  // dictionary to fail against), so the model is free to propose anything.
   classHint?: string
+  // Starting STR/INT/AGI, proposed by the model to fit the character's own
+  // lore-accurate archetype (a fragile scribe-hopeful starts low STR/AGI,
+  // high INT) rather than a generic RPG-class stat curve. Per-attribute —
+  // a missing or unrecognized tier word just falls through to App.tsx's own
+  // flat default, not a parse failure.
+  attrs?: Partial<Attributes>
 }
 
 export interface TaleWeaverSkill {
@@ -256,6 +274,11 @@ export function parseTaleWeaverResponse(raw: string): TaleWeaverDraft {
         secret: str(protagEl.getAttribute('secret')) || str(protagEl.getAttribute('hidden')),
         opening: str(protagEl.getAttribute('opening')) || str(protagEl.getAttribute('opening_scene')),
         classHint: str(protagEl.getAttribute('class')) || str(protagEl.getAttribute('archetype')),
+        attrs: {
+          STR: lenientTierWord(str(protagEl.getAttribute('str'))),
+          INT: lenientTierWord(str(protagEl.getAttribute('int'))),
+          AGI: lenientTierWord(str(protagEl.getAttribute('agi'))),
+        },
       }
     : undefined
 

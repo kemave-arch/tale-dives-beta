@@ -1,4 +1,3 @@
-import { PRESET_CLASSES } from '../data/classes.ts'
 import type { ProseDepthConfig, TaleDifficultyConfig, TaleDifficultyKey } from '../types.ts'
 
 // Gemini call contract — Blueprint §7.2 (System Instructions) and §7.3 (XML
@@ -61,7 +60,7 @@ MECHANICS & GROUNDING DEFENSE:
 4. Currency Storage: Deduct or reward currency in base copper via the turn's own "c" delta attribute.
 5. Condition Tags: A physical, magical, or mental state worth tracking beyond this one scene (Bleeding, Exhausted, Poisoned, Blessed, Stunned, Cursed, ...) is a Condition Tag ("cond"), added or removed by name — never a numeric pool, never invented mid-combat "HP." Use a plain, recognizable name; the client already knows how common ones like Bleeding or Exhausted resolve on their own, so you almost never need to say more than the name itself.
 5a. Breakthroughs: Only use "breakthrough" for a genuine PERMANENT attribute advancement (a blessing, a hard-won transformation) — never for ordinary damage/healing (a Condition Tag) or a temporary in-the-moment surge. Supply only the attribute and its new canonical tier word (Novice/Adept/Expert/Master — never a number, never "Untrained," since a breakthrough always moves forward); never compute or narrate a specific numeric stat yourself.
-6. Class Evolution: Only use "class_evolution" when the story has undeniably and permanently redefined the protagonist's role — a forced transformation, a binding oath, an irreversible awakening — never for ordinary skill growth, a single dramatic action, or a temporary disguise. This should be rare, at most once or twice in a whole campaign. "class_id" is constrained to a fixed enum — pick whichever listed option is the closest thematic match; do not omit "reason" (a short in-fiction justification).
+6. Class Evolution: Only use "class_evolution" when the story has undeniably and permanently redefined the protagonist's role — a forced transformation, a binding oath, an irreversible awakening — never for ordinary skill growth, a single dramatic action, or a temporary disguise. This should be rare, at most once or twice in a whole campaign. "class_id" is freeform — a short, lore-accurate archetype name fitting exactly what the story just made this character (not picked from any fixed list); do not omit "reason" (a short in-fiction justification).
 7. Faction Reputation: Use "fac_rep" only when the player's actions meaningfully shift standing with a named, already-established faction — a small nudge (±1) for a notable act, never a large jump, and never for a faction that hasn't been introduced. Gaining standing with one faction may cost standing with a bitter rival — the client applies that automatically; you never need to account for a rival's reaction yourself.
 8. Item Acquisition: Whenever the narration has the player receive, find, loot, craft, or buy an item, add it via "inv_add" in that SAME turn — id, name, type, and qty are all required; never narrate an item into the player's possession without it, and never invent an id for an item that isn't actually entering inventory. Only set "description" for something worth remembering later (a named weapon, a key item, a personal keepsake) — skip it for ordinary loot like raw materials or a common potion. Only set "traits" (freeform flavor words like "reach, heavy" — never a numeric bonus) when type is weapon, armor, or accessory, and only for a genuinely notable piece of gear, not routine loot — most weapons and armor the player finds should NOT have any.
 8a. Skills: Use "skill_learn" ONLY on a turn where the protagonist genuinely gains a new named ability — taught by a mentor, unlocked by a trial, awakened under pressure. Never for using a skill they already have, and never for an ordinary physical action. Give it an "effort" (minor/focused/taxing) only if one is narratively justified; the client treats an effortless skill as always available. When the context slice marks a skill strained by the protagonist's current condition, they may still attempt it — narrate the strain, backfire, or exhaustion of reaching past their limits rather than refusing the action.
@@ -267,7 +266,7 @@ export const TURN_SCHEMA = {
       description:
         'Extremely rare — only on a turn that permanently and undeniably redefines the protagonist\'s role. Omit entirely on every ordinary turn.',
       properties: {
-        class_id: { type: 'STRING', enum: PRESET_CLASSES.map((c) => c.id) },
+        class_id: { type: 'STRING' },
         reason: { type: 'STRING', description: 'Short in-fiction justification, <=20 words.' },
       },
       required: ['class_id'],
@@ -294,7 +293,7 @@ export const TURN_SCHEMA = {
           id: { type: 'STRING', description: 'snake_case identifier, e.g. shadow_step.' },
           name: { type: 'STRING', description: 'Display name, e.g. Shadow Step.' },
           description: { type: 'STRING', description: 'One sentence on what it does.' },
-          class_id: { type: 'STRING', enum: PRESET_CLASSES.map((c) => c.id) },
+          class_id: { type: 'STRING' },
           effort: { type: 'STRING', enum: ['minor', 'focused', 'taxing'] },
           tier: { type: 'STRING', enum: ['Untrained', 'Novice', 'Adept', 'Expert', 'Master'] },
         },

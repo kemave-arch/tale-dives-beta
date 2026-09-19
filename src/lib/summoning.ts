@@ -1,11 +1,14 @@
 import { compareGameTime } from './gameTime.ts'
-import type { BestiaryEntry, Campaign, Dict, Minion, SummonBranch } from '../types.ts'
+import type { BestiaryEntry, Campaign, Dict, Minion } from '../types.ts'
 
 // §5.3 Three-Branch Summoning & Minion Engine — 0 API tokens, entirely
 // client-resolved, same family as the read-only "!" bang commands but with
-// a real state-mutating side effect. Gated per-class: a player only has
-// access to the branch their active class (preset or Class Evolution
-// result, §5.1b) actually grants.
+// a real state-mutating side effect. No class gate: with class now a
+// freeform, lore-accurate label rather than a fixed archetype dictionary,
+// there's no reliable id to gate on — these commands always attempt, and
+// the LLM's own narrative adjudication (the same "no hidden checks"
+// discipline COMBAT/SOCIAL/etc. already follow) is trusted to keep the
+// result fictionally coherent for whoever the character actually is.
 //
 // Balance numbers below (minion hpMax) are invented defaults — the
 // blueprint specifies the mechanism (spend Bone Dust, ongoing upkeep) but
@@ -19,19 +22,6 @@ const SUMMON_FAMILIAR_MP_UPKEEP = 2
 const ARISE_MINION_HP = 30
 const SKELETON_MINION_HP = 20
 const FAMILIAR_MINION_HP = 15
-
-export function classBranch(classId: string): SummonBranch | null {
-  switch (classId) {
-    case 'dark_monarch':
-      return 'shadow'
-    case 'necromancer':
-      return 'skeleton'
-    case 'summoner':
-      return 'familiar'
-    default:
-      return null
-  }
-}
 
 export type SummonCommand = 'arise' | 'raise_skeleton' | 'summon'
 
@@ -51,11 +41,6 @@ export interface SummonOutcome {
 // now live directly on BestiaryEntry instead of a flat Campaign.corpses
 // tag stack). See the Project Revision Notes for the full scope-cut rationale.
 export function attemptSummon(command: SummonCommand, campaign: Campaign, newMinionId: string): SummonOutcome {
-  const expectedBranch: SummonBranch = command === 'arise' ? 'shadow' : command === 'raise_skeleton' ? 'skeleton' : 'familiar'
-  if (classBranch(campaign.player.classId) !== expectedBranch) {
-    return { ok: false, note: `Your class (${campaign.player.className}) doesn't grant this summoning branch.` }
-  }
-
   if (command === 'arise') {
     const candidates = Object.entries(campaign.bestiary ?? {}).filter(([, b]) => (b.corpseCount ?? 0) > 0)
     if (candidates.length === 0) {

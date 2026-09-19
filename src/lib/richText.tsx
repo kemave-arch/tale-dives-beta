@@ -6,6 +6,11 @@ import type { Dict, ItemEntry, ItemType, KeywordLink, LocationEntry } from '../t
 // LocationEntry.locationType), never something the model has to type out
 // itself, so it can never drift into narrative ambiguity (see
 // PROJECT_REVISION_NOTES.md) and never fails worse than "no icon shown."
+//
+// As of 2026-09, the resolved icon is deliberately not rendered in the
+// parchment display (user feedback: it broke immersion) — the lookup below
+// is kept intact and wired to a `data-icon` attribute on the rendered node
+// rather than deleted, so it can be reactivated without rework.
 const ITEM_TYPE_ICONS: Record<ItemType, string> = {
   weapon: '🗡️',
   armor: '🛡️',
@@ -162,14 +167,19 @@ function renderTags(
     if (match.index > lastIndex) nodes.push(text.slice(lastIndex, match.index))
     const term = match[1]
     const category = match[2] as KeywordLink['category']
+    // Resolved but not rendered — PROJECT_REVISION_NOTES.md: icon prefixes
+    // were pulled from the parchment display for immersion (2026-09), kept
+    // wired via data-icon rather than deleted so the lookup can be
+    // reactivated later without re-deriving it.
     const icon = category === 'loc' ? locationIcon(locationsByName?.get(term.toLowerCase())?.locationType) : null
     nodes.push(
       <span
         key={`${keyPrefix}-tag${key++}`}
+        data-icon={icon || undefined}
         onClick={onTapTerm ? () => onTapTerm(term, category) : undefined}
         className={`underline decoration-dotted decoration-gold-accent/50 underline-offset-2 ${onTapTerm ? 'cursor-pointer hover:text-gold-primary' : ''}`}
       >
-        {icon ? `${icon} ` : ''}{term}
+        {term}
       </span>,
     )
     lastIndex = match.index + match[0].length
@@ -250,11 +260,10 @@ export function renderNarrative(
       nodes.push(
         <em
           key={`i${key}`}
+          data-icon={itemIcon || locIcon || undefined}
           onClick={onTapTerm ? (e) => { e.stopPropagation(); onTapTerm(cleanItem, impliedCategory) } : undefined}
           className={`font-semibold italic text-gold-primary ${onTapTerm ? 'underline decoration-dotted decoration-gold-accent/50 underline-offset-2 cursor-pointer hover:text-gold-primary/80' : ''}`}
         >
-          {itemIcon ? `${itemIcon} ` : ''}
-          {locIcon ? `${locIcon} ` : ''}
           {renderTags(cleanItem, `i${key}`, onTapTerm, locationsByName)}
         </em>,
       )

@@ -7,7 +7,7 @@ import type { Player } from '../types.ts'
 // level as an open question; since quest_update doesn't currently carry a
 // Main/Side/Secret tier at all, every completion counts for now — a
 // deliberate simplification, revisit if quest tiers get tracked later.
-export const CHAPTER_TURN_INTERVAL = 15
+export const CHAPTER_TURN_INTERVAL = 30
 
 // Milestone rank ceiling — the top of the 5-word CompetencyTier scale
 // (lib/tiers.ts's COMPETENCY_TIERS: Untrained..Master). Kept as a literal

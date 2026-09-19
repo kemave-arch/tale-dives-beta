@@ -57,7 +57,7 @@ const GEN_LABELS: Record<GenKey, string> = {
   factions: 'Factions',
   protagonist: 'Protagonist',
   npcs: 'Cast of Characters',
-  lore: 'Lore & Secrets',
+  lore: 'Secrets',
   arc: 'Story Arc',
 }
 

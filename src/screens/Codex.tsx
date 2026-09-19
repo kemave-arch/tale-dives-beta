@@ -4,7 +4,7 @@ import {
   Globe, BookOpen, Users, ShieldCheck, Map, ScrollText, Target, Skull, Backpack,
   Pencil, Save, X, Trash2, Plus, Lock, User, Hammer, Clock, Sparkles, CheckCircle2, XCircle, ArrowRight, Ghost,
   Swords, Star, EyeOff, Search, MapPin, Heart, Coins, Gift, Zap, Compass, AlertTriangle, AlertCircle, Shield, Flame, Milestone, ListChecks,
-  ChevronRight, ChevronLeft, Flag, ImagePlus, RotateCw, ArrowLeft, Minus,
+  ChevronRight, ChevronLeft, ChevronDown, Flag, ImagePlus, RotateCw, ArrowLeft, Minus,
 } from 'lucide-react'
 import { GlassScreen } from '../lib/glassChrome.tsx'
 import { slugify } from '../lib/slug.ts'
@@ -845,6 +845,76 @@ function DeckEntryCard({
               #{t}
             </span>
           ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ArchivedChapterAccordion({ c, defaultOpen = false }: { c: LogEntry; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen)
+
+  return (
+    <div className="rounded-xl p-4 border border-skill/25 bg-skill-bg flex flex-col relative overflow-hidden transition-all">
+      <div
+        onClick={() => setOpen((prev) => !prev)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setOpen((prev) => !prev)
+          }
+        }}
+        className={`flex items-center justify-between gap-2 cursor-pointer select-none group ${
+          open ? 'border-b border-skill/20 pb-2.5 mb-2.5' : ''
+        }`}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-7 h-7 rounded-lg bg-white border border-skill/30 flex items-center justify-center text-skill shrink-0 group-hover:border-skill/50 transition-colors">
+            <BookOpen size={14} />
+          </div>
+          <h3 className="font-display font-bold text-sm text-ink uppercase tracking-wide group-hover:text-skill transition-colors truncate">
+            Chapter {c.chapterNumber}
+          </h3>
+          <ChevronDown
+            size={16}
+            className={`text-skill/70 shrink-0 transition-transform duration-200 ${
+              open ? 'rotate-180' : ''
+            }`}
+          />
+        </div>
+        <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-white border border-skill/30 text-skill shrink-0">
+          Archived
+        </span>
+      </div>
+
+      {open && (
+        <div className="pt-0.5">
+          {c.chapterBeats?.length ? (
+            <div className="flex flex-col gap-2.5 pl-1">
+              {c.chapterBeats.map((b, j) => (
+                <div key={j} className="flex gap-3">
+                  <div className="flex flex-col items-center shrink-0 pt-0.5">
+                    <div className="w-2 h-2 rounded-full bg-skill" />
+                    {j < c.chapterBeats!.length - 1 && <div className="w-px flex-1 bg-skill/25 mt-1" />}
+                  </div>
+                  <div className="pb-1 min-w-0">
+                    <p className="font-mono text-[10px] uppercase tracking-wide text-skill/70">
+                      {formatChapterBeatTimeCodex(b.time)}
+                    </p>
+                    <p className="font-narrative text-xs sm:text-sm text-ink leading-relaxed">{b.text}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : c.chapterSummary ? (
+            <p className="font-narrative text-xs sm:text-sm text-ink leading-relaxed italic">
+              "{c.chapterSummary}"
+            </p>
+          ) : (
+            <p className="font-narrative text-xs text-ink-muted italic">No summary recorded for this chapter.</p>
+          )}
         </div>
       )}
     </div>
@@ -3318,44 +3388,7 @@ export default function Codex({
               <p className="font-narrative italic text-sm text-ink-muted">No chapters archived yet.</p>
             ) : (
               [...chapters].reverse().map((c, i) => (
-                <div
-                  key={i}
-                  className="rounded-xl p-4 border border-skill/25 bg-skill-bg flex flex-col gap-2.5 relative overflow-hidden"
-                >
-                  <div className="flex items-center justify-between gap-2 border-b border-skill/20 pb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-white border border-skill/30 flex items-center justify-center text-skill shrink-0">
-                        <BookOpen size={14} />
-                      </div>
-                      <h3 className="font-display font-bold text-sm text-ink uppercase tracking-wide">
-                        Chapter {c.chapterNumber}
-                      </h3>
-                    </div>
-                    <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-white border border-skill/30 text-skill">
-                      Archived
-                    </span>
-                  </div>
-                  {c.chapterBeats?.length ? (
-                    <div className="flex flex-col gap-2.5 pl-1">
-                      {c.chapterBeats.map((b, j) => (
-                        <div key={j} className="flex gap-3">
-                          <div className="flex flex-col items-center shrink-0 pt-0.5">
-                            <div className="w-2 h-2 rounded-full bg-skill" />
-                            {j < c.chapterBeats!.length - 1 && <div className="w-px flex-1 bg-skill/25 mt-1" />}
-                          </div>
-                          <div className="pb-1 min-w-0">
-                            <p className="font-mono text-[10px] uppercase tracking-wide text-skill/70">{formatChapterBeatTimeCodex(b.time)}</p>
-                            <p className="font-narrative text-xs sm:text-sm text-ink leading-relaxed">{b.text}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="font-narrative text-xs sm:text-sm text-ink leading-relaxed italic">
-                      "{c.chapterSummary}"
-                    </p>
-                  )}
-                </div>
+                <ArchivedChapterAccordion key={c.chapterNumber ?? i} c={c} defaultOpen={false} />
               ))
             )}
           </div>

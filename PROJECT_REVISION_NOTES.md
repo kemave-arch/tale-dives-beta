@@ -58,6 +58,10 @@ Every dated session entry through 2026-09-12 has been moved to [`PROJECT_REVISIO
 
 ### New entries below, most recent first.
 
+- **2026-09-19** — Interactive Archived Chapter Accordion in Codex -> Chapters (`src/screens/Codex.tsx`): Created `ArchivedChapterAccordion` component for archived chapters in Codex. The chapter title header acts as a toggleable accordion with chevron indicator and full keyboard accessibility to expand and collapse chapter beat timeline / summary details. Verified typecheck and build pass cleanly.
+
+- **2026-09-19** — Renamed "Lore & Secrets" to "Secrets" across Tale Weaver overview and setup components, and wrapped the "Secrets" subsection in Tale Weaver with an interactive `OverviewAccordionSection` component. verified typecheck and build pass cleanly.
+
 - **Last updated:** 2026-09-19 — Player Portrait Generation with Class-Evolution Staleness Hint (`src/types.ts`, `src/App.tsx`, `src/screens/Codex.tsx`):
   - **The ask:** allow generating a portrait of the player character themselves, the same way NPCs already get one, and flag when a later Class Evolution might have made an existing portrait visually out of date — without forcing a regenerate.
   - **`Player` gained `portraitKey`/`canonAppearance`/`portraitClassSnapshot`** (same three-field shape `NpcEntry` already uses for its own portrait, `portraitClassSnapshot` new — the `className` recorded at the time the portrait was last saved). `ProtagonistData` gained `portraitKey` too, to carry a portrait generated during Tale Weaving through to the real `Player` object — previously a dead wire: Tale Weaver's Protagonist phase already lets you generate `accumulated.protagonist.portraitKey` (`TaleWeaverImageGenerator`, same component NPCs use there), but neither `Player` nor `ProtagonistData` had a field for it, so it was silently dropped the moment the actual Tale began. Both `App.tsx` `Player`-construction sites (`beginCampaign`/`beginInspiredTale`) now carry it through and stamp `portraitClassSnapshot` to the class at creation time.

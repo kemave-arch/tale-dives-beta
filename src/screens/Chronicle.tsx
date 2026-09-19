@@ -146,11 +146,11 @@ function ConditionBadge({
     <div className="flex items-center gap-1.5 flex-1 min-w-0" title={tags ? `${label}: ${tags}` : `${label}: no active conditions`}>
       <div className="flex items-center gap-1 shrink-0 max-w-[150px] sm:max-w-none">
         <Icon size={12} style={{ color: colorVar }} className="shrink-0" />
-        <span className="font-mono text-[10px] font-bold uppercase tracking-wider truncate" style={{ color: colorVar }}>
+        <span className="font-sans text-[10px] font-bold uppercase tracking-wider truncate" style={{ color: colorVar }}>
           {label}
         </span>
       </div>
-      <span className="shrink-0 font-mono text-[10px] font-semibold truncate" style={{ color: colorVar }}>
+      <span className="shrink-0 font-sans text-[10px] font-semibold truncate" style={{ color: colorVar }}>
         {vitalsStatus(list.length)}
         {tags ? ` — ${tags}` : ''}
       </span>
@@ -204,10 +204,10 @@ function DesktopLeftSidebar({
           <div className="min-w-0 flex-1">
             <h2 className="font-serif text-lg font-bold text-ink leading-tight truncate">{player.name || 'Hero'}</h2>
             <div className="flex items-center gap-2 mt-1">
-              <span className="font-display text-xs font-semibold text-gold-primary bg-[#ebdcb8]/40 px-2 py-0.5 rounded-md border border-[#dec48e] shrink-0">
+              <span className="font-sans text-xs font-semibold text-gold-primary bg-[#ebdcb8]/40 px-2 py-0.5 rounded-md border border-[#dec48e] shrink-0">
                 Lvl {player.level}
               </span>
-              <span className="font-serif text-xs text-ink-muted truncate">{player.className || 'Adventurer'}</span>
+              <span className="font-sans text-xs text-ink-muted truncate">{player.className || 'Adventurer'}</span>
             </div>
           </div>
         </div>
@@ -241,11 +241,11 @@ function DesktopLeftSidebar({
           <ConditionBadge icon={Heart} label="Vitals" conditions={player.conditions} colorVar="#b71c1c" />
         </div>
         {(player.locDisp || locationName) && (
-          <div className="pt-2 border-t border-[#ede7dd] flex items-center gap-2 text-xs text-ink-muted font-serif">
+          <div className="pt-2 border-t border-[#ede7dd] flex items-center gap-2 text-xs text-ink-muted font-sans">
             <MapIcon size={14} className="text-gold-primary shrink-0" />
-            <span className="truncate">
+            <span className="truncate font-sans">
               {player.locDisp || locationName}
-              {areaName && <span className="text-ink-muted"> — {areaName}</span>}
+              {areaName && <span className="text-ink-muted font-sans"> — {areaName}</span>}
             </span>
             {player.time && (
               <span className="ml-auto font-mono text-[11px] text-ink-muted shrink-0">
@@ -264,6 +264,7 @@ function DesktopLeftSidebar({
         {/* Weapon Slot */}
         <button
           onClick={() => onSlotClick?.('weapon')}
+          title="Click to equip or unequip Weapon"
           className="w-full flex items-center gap-3 p-2 rounded-lg bg-[#f5f0e6] border border-[#ede7dd] hover:border-[#dec48e] hover:bg-[#ebdcb8]/30 active:scale-[0.99] transition-all cursor-pointer text-left"
         >
           <div className="w-8 h-8 rounded-md bg-white border border-[#dec48e]/60 flex items-center justify-center text-gold-primary shrink-0">
@@ -271,7 +272,7 @@ function DesktopLeftSidebar({
           </div>
           <div className="min-w-0 flex-1">
             <span className="block font-mono text-[9px] uppercase tracking-wider text-ink-muted">Weapon</span>
-            <span className="font-serif text-xs font-medium text-ink truncate block">
+            <span className="font-sans text-xs font-medium text-ink truncate block">
               {equippedWeapon ? equippedWeapon.name : player.equipped?.weapon || 'Empty Hand'}
             </span>
           </div>
@@ -280,6 +281,7 @@ function DesktopLeftSidebar({
         {/* Off-Hand Slot — the second weapon-type slot (dual-wielding, or a weapon paired with a shield) */}
         <button
           onClick={() => onSlotClick?.('offhand')}
+          title="Click to equip or unequip Off-Hand item"
           className="w-full flex items-center gap-3 p-2 rounded-lg bg-[#f5f0e6] border border-[#ede7dd] hover:border-[#dec48e] hover:bg-[#ebdcb8]/30 active:scale-[0.99] transition-all cursor-pointer text-left"
         >
           <div className="w-8 h-8 rounded-md bg-white border border-[#dec48e]/60 flex items-center justify-center text-gold-primary shrink-0">
@@ -287,7 +289,7 @@ function DesktopLeftSidebar({
           </div>
           <div className="min-w-0 flex-1">
             <span className="block font-mono text-[9px] uppercase tracking-wider text-ink-muted">Off-Hand</span>
-            <span className="font-serif text-xs font-medium text-ink truncate block">
+            <span className="font-sans text-xs font-medium text-ink truncate block">
               {equippedOffhand ? equippedOffhand.name : player.equipped?.offhand || 'Empty Hand'}
             </span>
           </div>
@@ -296,6 +298,7 @@ function DesktopLeftSidebar({
         {/* Armor Slot */}
         <button
           onClick={() => onSlotClick?.('armor')}
+          title="Click to equip or unequip Armor"
           className="w-full flex items-center gap-3 p-2 rounded-lg bg-[#f5f0e6] border border-[#ede7dd] hover:border-[#dec48e] hover:bg-[#ebdcb8]/30 active:scale-[0.99] transition-all cursor-pointer text-left"
         >
           <div className="w-8 h-8 rounded-md bg-white border border-[#dec48e]/60 flex items-center justify-center text-gold-primary shrink-0">
@@ -303,7 +306,7 @@ function DesktopLeftSidebar({
           </div>
           <div className="min-w-0 flex-1">
             <span className="block font-mono text-[9px] uppercase tracking-wider text-ink-muted">Armor</span>
-            <span className="font-serif text-xs font-medium text-ink truncate block">
+            <span className="font-sans text-xs font-medium text-ink truncate block">
               {equippedArmor ? equippedArmor.name : player.equipped?.armor || 'No Armor'}
             </span>
           </div>
@@ -312,6 +315,7 @@ function DesktopLeftSidebar({
         {/* Accessory Slot */}
         <button
           onClick={() => onSlotClick?.('accessory')}
+          title="Click to equip or unequip Accessory"
           className="w-full flex items-center gap-3 p-2 rounded-lg bg-[#f5f0e6] border border-[#ede7dd] hover:border-[#dec48e] hover:bg-[#ebdcb8]/30 active:scale-[0.99] transition-all cursor-pointer text-left"
         >
           <div className="w-8 h-8 rounded-md bg-white border border-[#dec48e]/60 flex items-center justify-center text-gold-primary shrink-0">
@@ -319,7 +323,7 @@ function DesktopLeftSidebar({
           </div>
           <div className="min-w-0 flex-1">
             <span className="block font-mono text-[9px] uppercase tracking-wider text-ink-muted">Accessory</span>
-            <span className="font-serif text-xs font-medium text-ink truncate block">
+            <span className="font-sans text-xs font-medium text-ink truncate block">
               {equippedAccessory ? equippedAccessory.name : player.equipped?.accessory || 'None'}
             </span>
           </div>
@@ -1058,16 +1062,16 @@ const TurnBlock = memo(function TurnBlock({
         </div>
       ) : (
         (turnRefMatch || (entry.time && entry.locDisp)) && (
-          <div className="flex items-center justify-between gap-3 border-b border-[#ede7dd] pb-1.5">
-            <span className="font-mono text-[10px] font-semibold uppercase tracking-wide text-[#8d6b1d] truncate">
-              {entry.time && entry.locDisp
-                ? formatTimestamp(entry.time, entry.locDisp, locationRegionFor(entry.locDisp, locations))
-                : ''}
-            </span>
+          <div className="border-b border-[#ede7dd] pb-1.5 space-y-0.5">
             {turnRefMatch && (
-              <span className="font-sans text-[10px] tracking-[0.14em] uppercase text-[#9e968b] shrink-0">
+              <div className="font-sans text-[8px] tracking-[0.14em] uppercase text-[#9e968b]">
                 Turn {turnRefMatch[2]} &nbsp;·&nbsp; Chapter {turnRefMatch[1]}
-              </span>
+              </div>
+            )}
+            {entry.time && entry.locDisp && (
+              <div className="font-mono text-[10px] font-semibold uppercase tracking-wide text-[#8d6b1d] truncate">
+                {formatTimestamp(entry.time, entry.locDisp, locationRegionFor(entry.locDisp, locations))}
+              </div>
             )}
           </div>
         )
@@ -1087,7 +1091,7 @@ const TurnBlock = memo(function TurnBlock({
           <p className="font-narrative italic text-sm text-[#6c665e] leading-snug text-left whitespace-pre-wrap">{entry.action}</p>
         </div>
       )}
-      {((StateIcon && stateMeta) || entry.mood) && (
+      {Boolean(debugMode) && ((StateIcon && stateMeta) || entry.mood) && (
         <div className="flex items-center gap-3 flex-wrap">
           {StateIcon && stateMeta && (
             <span className="inline-flex items-center gap-1 text-[10px] font-display" style={{ color: stateMeta.accent }}>
@@ -1389,6 +1393,7 @@ export default function Chronicle({
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [equipMenuOpen, setEquipMenuOpen] = useState(false)
   const [equipSlotPicker, setEquipSlotPicker] = useState<EquipSlot | null>(null)
+  const [directSlotPick, setDirectSlotPick] = useState(false)
   // §7 Tap-to-inspect lightbox (extracted to lib/useImageLightbox.tsx, also
   // used by Tale Weaver's own generated images) — a full-screen enlarged
   // view for the hero location plate and any Codex-popup entity image.
@@ -1425,11 +1430,19 @@ export default function Chronicle({
 
   const drawerActions = useMemo(() => {
     const actions: { icon: LucideIcon; label: string; onClick: () => void }[] = [
-      { icon: ShieldCheck, label: 'Equip', onClick: () => setEquipMenuOpen(true) },
+      {
+        icon: ShieldCheck,
+        label: 'Equip',
+        onClick: () => {
+          setDirectSlotPick(false)
+          setEquipSlotPicker(null)
+          setEquipMenuOpen(true)
+        },
+      },
       { icon: Backpack, label: 'Items', onClick: () => onOpenCodexCategory('items') },
       { icon: Sparkles, label: 'Skills', onClick: () => onOpenCodexCategory('skills') },
       { icon: ScrollText, label: 'Quests', onClick: () => onOpenCodexCategory('quests') },
-      { icon: Skull, label: 'Monsters', onClick: () => onOpenCodexCategory('bestiary') },
+      { icon: Skull, label: 'Bestiary', onClick: () => onOpenCodexCategory('bestiary') },
       { icon: MapIcon, label: 'World', onClick: () => onOpenCodexCategory('locations') },
       { icon: Users, label: 'NPCs', onClick: () => onOpenCodexCategory('npcs') },
     ]
@@ -1782,8 +1795,9 @@ export default function Chronicle({
         locationName={locations[player.locId]?.name || player.locDisp || 'Unknown'}
         areaName={player.areaId ? locations[player.locId]?.areas?.find((a) => a.id === player.areaId)?.name : undefined}
         onSlotClick={(slot) => {
-          setEquipMenuOpen(true)
+          setDirectSlotPick(true)
           setEquipSlotPicker(slot)
+          setEquipMenuOpen(true)
         }}
       />
 
@@ -2060,7 +2074,7 @@ export default function Chronicle({
                 className="absolute bottom-full mb-3 left-0 right-0 p-3 sm:p-4 rounded-2xl bg-white border border-[#ede7dd] shadow-[0_12px_32px_rgba(0,0,0,0.1)] z-30"
               >
                 <div className="flex items-center justify-between mb-2.5 px-1 border-b border-[#ede7dd] pb-1.5">
-                  <span className="font-serif text-xs font-bold uppercase tracking-wider text-[#8d6b1d] flex items-center gap-1.5">
+                  <span className="font-sans text-xs font-bold uppercase tracking-wider text-[#8d6b1d] flex items-center gap-1.5">
                     <LayoutGrid size={14} /> Quick Menu
                   </span>
                   <button
@@ -2081,7 +2095,7 @@ export default function Chronicle({
                       className="group flex flex-col items-center justify-center p-2 rounded-xl bg-[#f5f0e6] border border-[#ede7dd] hover:border-[#dec48e] hover:bg-[#ebdcb8]/30 active:scale-95 text-[#1a1917] transition-all cursor-pointer aspect-square"
                     >
                       <act.icon size={20} className="text-[#8d6b1d] transition-colors mb-1 shrink-0" />
-                      <span className="font-serif text-[10px] font-medium text-[#6c665e] group-hover:text-[#1a1917] truncate w-full text-center">
+                      <span className="font-sans text-[10px] font-medium text-[#6c665e] group-hover:text-[#1a1917] truncate w-full text-center">
                         {act.label}
                       </span>
                     </button>
@@ -2442,6 +2456,7 @@ export default function Chronicle({
           onClick={() => {
             setEquipMenuOpen(false)
             setEquipSlotPicker(null)
+            setDirectSlotPick(false)
           }}
         >
           <div
@@ -2456,13 +2471,27 @@ export default function Chronicle({
                 equippedId={player.equipped?.[equipSlotPicker]}
                 onEquip={(id) => {
                   onEquipItem?.(id, equipSlotPicker)
+                  if (directSlotPick) {
+                    setEquipMenuOpen(false)
+                    setDirectSlotPick(false)
+                  }
                   setEquipSlotPicker(null)
                 }}
                 onUnequip={() => {
                   onUnequipSlot?.(equipSlotPicker)
+                  if (directSlotPick) {
+                    setEquipMenuOpen(false)
+                    setDirectSlotPick(false)
+                  }
                   setEquipSlotPicker(null)
                 }}
-                onBack={() => setEquipSlotPicker(null)}
+                onBack={() => {
+                  if (directSlotPick) {
+                    setEquipMenuOpen(false)
+                    setDirectSlotPick(false)
+                  }
+                  setEquipSlotPicker(null)
+                }}
               />
             ) : (
               <>

@@ -36,7 +36,7 @@ export const TALE_WEAVER_PHASES: TaleWeaverPhaseDef[] = [
   { id: 'regions', label: 'Regions & Locations', prompt: 'Describe the places this Tale moves through — broad regions and the specific locations within them.' },
   { id: 'factions', label: 'Factions', prompt: 'Describe the powers and groups that shape this world.' },
   { id: 'npcs', label: 'Cast of Characters', prompt: 'Describe who the protagonist already knows, or will soon meet.' },
-  { id: 'lore', label: 'Lore & Secrets', prompt: 'Describe the history, myths, or secrets woven into this world.' },
+  { id: 'lore', label: 'Secrets', prompt: 'Describe the history, myths, or secrets woven into this world.' },
   { id: 'arc', label: 'Story Arc', prompt: 'Describe the shape of the story you want — key story beats, possible complications or events, and death/end-game stakes.' },
 ]
 

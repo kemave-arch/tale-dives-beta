@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, type CSSProperties, type Dispatch, type SetStateAction } from 'react'
 import {
-  X, ChevronRight, ChevronLeft, Sparkles, Lock, Unlock,
+  X, ChevronRight, ChevronLeft, ChevronDown, Sparkles, Lock, Unlock,
   BookOpen, AlertCircle, Check, ArrowRight, ArrowLeft, Pencil, Plus, Save,
   ImagePlus, RotateCw, FolderOpen, Trash2, Bookmark, CheckCircle2, Clock, Search, Cpu, ZoomIn,
 } from 'lucide-react'
@@ -355,6 +355,53 @@ function CollapsibleSection({
         />
       </button>
       {open && <div className="space-y-2.5 pt-2">{children}</div>}
+    </div>
+  )
+}
+
+function OverviewAccordionSection({
+  title,
+  jumpPhase,
+  onJump,
+  defaultOpen = true,
+  children,
+}: {
+  title: string
+  jumpPhase?: number
+  onJump?: (phase: number) => void
+  defaultOpen?: boolean
+  children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div className="rounded-xl border border-gold-accent/25 bg-white p-3 flex flex-col gap-2 shadow-xs">
+      <div
+        className="flex items-center justify-between cursor-pointer select-none group"
+        onClick={() => setOpen((o) => !o)}
+      >
+        <div className="flex items-center gap-1.5 min-w-0">
+          <ChevronDown
+            size={14}
+            className={`text-gold-primary shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          />
+          <span className="font-mono text-[10px] uppercase font-bold text-gold-primary/80 group-hover:text-gold-primary truncate">
+            {title}
+          </span>
+        </div>
+        {onJump && jumpPhase !== undefined && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onJump(jumpPhase)
+            }}
+            className="font-mono text-[10px] text-gold-primary hover:underline flex items-center gap-1 shrink-0"
+          >
+            Jump <ArrowRight size={10} />
+          </button>
+        )}
+      </div>
+      {open && <div className="pt-1">{children}</div>}
     </div>
   )
 }
@@ -1457,7 +1504,7 @@ export default function TaleWeaver({ apiSettings, imageStyle, onBack, onBeginTal
                   />
                 </div>
               </CollapsibleSection>
-              <CollapsibleSection label="Hidden Secret">
+              <CollapsibleSection label="Secrets">
                 <div className="flex flex-col gap-1">
                   <input
                     type="text"
@@ -2270,13 +2317,13 @@ export default function TaleWeaver({ apiSettings, imageStyle, onBack, onBeginTal
         return (
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">Lore & Secrets</span>
+              <span className="font-mono text-[10px] uppercase tracking-wider text-gold-primary/70">Secrets</span>
               <button
                 type="button"
                 onClick={() => addCustomItem('lore')}
                 className="flex items-center gap-1 font-mono text-[10px] text-gold-primary hover:underline"
               >
-                <Plus size={12} /> Add Lore
+                <Plus size={12} /> Add Secret
               </button>
             </div>
             {!accumulated.lore.length ? (
@@ -2287,7 +2334,7 @@ export default function TaleWeaver({ apiSettings, imageStyle, onBack, onBeginTal
                   </div>
                   <div>
                     <p className="font-display font-semibold text-xs text-gold-primary">
-                      Lore & Secrets Pending
+                      Secrets Pending
                     </p>
                     <p className="font-narrative text-[11.5px] text-ink-muted">
                       Weave myths, ancient history, and hidden truths, or add an entry manually.
@@ -3590,23 +3637,16 @@ export default function TaleWeaver({ apiSettings, imageStyle, onBack, onBeginTal
                 )}
               </div>
 
-              {/* Lore */}
-              <div className="rounded-xl border border-gold-accent/25 bg-white p-3 flex flex-col gap-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-[10px] uppercase text-gold-primary/70">
-                    6. Lore & Secrets ({accumulated.lore.length})
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowOverview(false)
-                      handleJumpToPhase(5)
-                    }}
-                    className="font-mono text-[10px] text-gold-primary hover:underline flex items-center gap-1"
-                  >
-                    Jump <ArrowRight size={10} />
-                  </button>
-                </div>
+              {/* Secrets */}
+              <OverviewAccordionSection
+                title={`6. Secrets (${accumulated.lore.length})`}
+                jumpPhase={5}
+                onJump={(p) => {
+                  setShowOverview(false)
+                  handleJumpToPhase(p)
+                }}
+                defaultOpen={true}
+              >
                 {accumulated.lore.length > 0 ? (
                   <div className="flex flex-col gap-1.5">
                     {accumulated.lore.map((l, idx) => (
@@ -3638,7 +3678,7 @@ export default function TaleWeaver({ apiSettings, imageStyle, onBack, onBeginTal
                 ) : (
                   <p className="font-narrative text-xs italic text-ink-muted">Not yet woven</p>
                 )}
-              </div>
+              </OverviewAccordionSection>
 
               {/* Arc */}
               <div className="rounded-xl border border-gold-accent/25 bg-white p-3 flex flex-col gap-1.5">

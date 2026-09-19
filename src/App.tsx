@@ -627,6 +627,8 @@ export default function App() {
       motivation: protagonistData.motivation,
       physicalTrait: protagonistData.physicalTrait,
       secret: protagonistData.secret,
+      portraitKey: protagonistData.portraitKey,
+      portraitClassSnapshot: protagonistData.portraitKey ? cls.name : undefined,
       classId: cls.id,
       className: cls.name,
       level: 1,
@@ -892,6 +894,7 @@ export default function App() {
       physicalTrait: p?.physicalTrait,
       secret: p?.secret,
       opening: p?.opening?.trim() || 'The story begins.',
+      portraitKey: p?.portraitKey,
     }
 
     const player: Player = {
@@ -903,6 +906,8 @@ export default function App() {
       motivation: protagonistData.motivation,
       physicalTrait: protagonistData.physicalTrait,
       secret: protagonistData.secret,
+      portraitKey: protagonistData.portraitKey,
+      portraitClassSnapshot: protagonistData.portraitKey ? cls.name : undefined,
       classId: cls.id,
       className: cls.name,
       level: 1,
@@ -2033,6 +2038,14 @@ export default function App() {
     })
   }
 
+  // §7 Player Portrait — generic patch for the handful of player-owned
+  // image fields (portraitKey/canonAppearance/portraitClassSnapshot),
+  // mirroring the same onSaveKey pattern every other entity's
+  // EntityImagePanel already uses (onUpdateNpc/onUpdateLocation/...).
+  function updatePlayer(patch: Partial<Player>) {
+    setGame((g) => (g ? { ...g, player: { ...g.player, ...patch } } : g))
+  }
+
   // §5.3 Summoning — arise/raise_skeleton/summon are also "!" bang commands
   // (0 tokens, client-resolved) but, unlike the read-only dossiers in
   // bangCommands.ts, they mutate real state (bestiary corpseCount, inventory,
@@ -2551,6 +2564,7 @@ export default function App() {
         onUpdateTaleRules={updateTaleRules}
         onUpdateWorld={updateWorld}
         onEvolveClass={evolveClass}
+        onUpdatePlayer={updatePlayer}
         onStartCraft={startCraftingJob}
         onBack={() => {
           const action = pendingFirstAction
@@ -2603,6 +2617,7 @@ export default function App() {
         onUpdateTaleRules={updateTaleRules}
         onUpdateWorld={updateWorld}
         onEvolveClass={evolveClass}
+        onUpdatePlayer={updatePlayer}
         onStartCraft={startCraftingJob}
         initialCategory={codexTarget?.category}
         initialEntryId={codexTarget?.id}

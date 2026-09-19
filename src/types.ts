@@ -130,6 +130,9 @@ export interface Player {
   motivation?: string // core drive/want, e.g. "Prove she belongs, no matter the cost"
   physicalTrait?: string // a distinguishing feature or flaw
   secret?: string // something the narrator can quietly plant hooks around
+  portraitKey?: string // §7 image generation — same imageKey/portraitKey convention as NpcEntry/LocationEntry
+  canonAppearance?: string // resolved canon appearance description (lib/canonDescription.ts), same role as NpcEntry.canonAppearance
+  portraitClassSnapshot?: string // className at the time the portrait above was last (re)generated — lets the UI flag a stale portrait after a Class Evolution without forcing a regenerate
   classId: string
   className: string
   level: number
@@ -578,6 +581,7 @@ export interface ProtagonistData {
   physicalTrait?: string // a distinguishing feature or flaw
   secret?: string // something the narrator can quietly plant hooks around
   opening: string
+  portraitKey?: string // carried through from Tale Weaving's own protagonist portrait generation, if any
   customAttributes?: Attributes // Optional custom point-buy distributed STR, INT, AGI
   startingSkills?: SkillEntry[] // Optional custom starting abilities for Codex seeding
   keyItem?: string // Optional special item name the protagonist brings into the world — fleshed out into a real ItemEntry by world seeding

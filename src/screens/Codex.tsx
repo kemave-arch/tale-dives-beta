@@ -110,6 +110,7 @@ interface CodexProps {
   onUnequipSlot: (slot: EquipSlot) => void
   onUpdateWorld: (patch: Partial<WorldData>) => void
   onEvolveClass: (classId: string) => void
+  onUpdatePlayer: (patch: Partial<Player>) => void
   onStartCraft: (recipeId: string) => void
   initialCategory?: CategoryId | null
   initialEntryId?: string | null
@@ -1431,6 +1432,7 @@ export default function Codex({
   onUnequipSlot,
   onUpdateWorld,
   onEvolveClass,
+  onUpdatePlayer,
   onStartCraft,
   skills,
   onUpdateSkill,
@@ -2415,6 +2417,42 @@ export default function Codex({
                   {player.aliases && <p className="font-narrative italic text-xs text-ink-muted mt-0.5">{player.aliases}</p>}
                 </div>
               </div>
+              <SectionCard accent={NEUTRAL_ACCENT} icon={ImagePlus} title="Portrait">
+                {player.portraitKey && player.portraitClassSnapshot && player.portraitClassSnapshot !== player.className && (
+                  <p className="font-narrative italic text-xs text-amber-700 mb-2">
+                    Class evolved to {player.className} since this portrait was generated — consider regenerating for graphical accuracy.
+                  </p>
+                )}
+                <EntityImagePanel
+                  imageKey={player.portraitKey}
+                  prompt={buildNpcPortraitPrompt(
+                    player.name,
+                    player.canonAppearance || player.physicalTrait,
+                    player.className,
+                    world,
+                  )}
+                  apiSettings={apiSettings}
+                  onSaveKey={(key) => onUpdatePlayer({ portraitKey: key, portraitClassSnapshot: player.className })}
+                  aspectRatio="1:1"
+                  canonResolve={world?.sourceTitle && world?.sourceScope ? {
+                    hasExisting: Boolean(player.canonAppearance),
+                    resolve: async (developmentNote) => {
+                      const canonText = await resolveCanonDescription({
+                        apiSettings,
+                        kind: 'character',
+                        name: player.name,
+                        role: player.className,
+                        currentNotes: player.physicalTrait,
+                        existingDescription: player.canonAppearance,
+                        developmentNote,
+                        source: { title: world.sourceTitle, author: world.sourceAuthor, scope: world.sourceScope },
+                      })
+                      return { canonText, prompt: buildNpcPortraitPrompt(player.name, canonText, player.className, world) }
+                    },
+                    onResolved: (canonText) => onUpdatePlayer({ canonAppearance: canonText }),
+                  } : undefined}
+                />
+              </SectionCard>
               <SectionCard
                 accent={NEUTRAL_ACCENT}
                 icon={User}

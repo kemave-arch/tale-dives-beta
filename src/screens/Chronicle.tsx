@@ -179,12 +179,14 @@ function DesktopLeftSidebar({
   combat,
   locationName,
   areaName,
+  onSlotClick,
 }: {
   player: Player
   items?: Record<string, ItemEntry>
   combat?: CombatState
   locationName?: string
   areaName?: string
+  onSlotClick?: (slot: EquipSlot) => void
 }) {
   const equippedWeapon = player.equipped?.weapon ? items?.[player.equipped.weapon] : null
   const equippedOffhand = player.equipped?.offhand ? items?.[player.equipped.offhand] : null
@@ -260,7 +262,10 @@ function DesktopLeftSidebar({
           Equipped Gear
         </h3>
         {/* Weapon Slot */}
-        <div className="flex items-center gap-3 p-2 rounded-lg bg-[#f5f0e6] border border-[#ede7dd]">
+        <button
+          onClick={() => onSlotClick?.('weapon')}
+          className="w-full flex items-center gap-3 p-2 rounded-lg bg-[#f5f0e6] border border-[#ede7dd] hover:border-[#dec48e] hover:bg-[#ebdcb8]/30 active:scale-[0.99] transition-all cursor-pointer text-left"
+        >
           <div className="w-8 h-8 rounded-md bg-white border border-[#dec48e]/60 flex items-center justify-center text-gold-primary shrink-0">
             <Swords size={16} />
           </div>
@@ -270,10 +275,13 @@ function DesktopLeftSidebar({
               {equippedWeapon ? equippedWeapon.name : player.equipped?.weapon || 'Empty Hand'}
             </span>
           </div>
-        </div>
+        </button>
 
         {/* Off-Hand Slot — the second weapon-type slot (dual-wielding, or a weapon paired with a shield) */}
-        <div className="flex items-center gap-3 p-2 rounded-lg bg-[#f5f0e6] border border-[#ede7dd]">
+        <button
+          onClick={() => onSlotClick?.('offhand')}
+          className="w-full flex items-center gap-3 p-2 rounded-lg bg-[#f5f0e6] border border-[#ede7dd] hover:border-[#dec48e] hover:bg-[#ebdcb8]/30 active:scale-[0.99] transition-all cursor-pointer text-left"
+        >
           <div className="w-8 h-8 rounded-md bg-white border border-[#dec48e]/60 flex items-center justify-center text-gold-primary shrink-0">
             <Shield size={16} />
           </div>
@@ -283,10 +291,13 @@ function DesktopLeftSidebar({
               {equippedOffhand ? equippedOffhand.name : player.equipped?.offhand || 'Empty Hand'}
             </span>
           </div>
-        </div>
+        </button>
 
         {/* Armor Slot */}
-        <div className="flex items-center gap-3 p-2 rounded-lg bg-[#f5f0e6] border border-[#ede7dd]">
+        <button
+          onClick={() => onSlotClick?.('armor')}
+          className="w-full flex items-center gap-3 p-2 rounded-lg bg-[#f5f0e6] border border-[#ede7dd] hover:border-[#dec48e] hover:bg-[#ebdcb8]/30 active:scale-[0.99] transition-all cursor-pointer text-left"
+        >
           <div className="w-8 h-8 rounded-md bg-white border border-[#dec48e]/60 flex items-center justify-center text-gold-primary shrink-0">
             <ShieldCheck size={16} />
           </div>
@@ -296,10 +307,13 @@ function DesktopLeftSidebar({
               {equippedArmor ? equippedArmor.name : player.equipped?.armor || 'No Armor'}
             </span>
           </div>
-        </div>
+        </button>
 
         {/* Accessory Slot */}
-        <div className="flex items-center gap-3 p-2 rounded-lg bg-[#f5f0e6] border border-[#ede7dd]">
+        <button
+          onClick={() => onSlotClick?.('accessory')}
+          className="w-full flex items-center gap-3 p-2 rounded-lg bg-[#f5f0e6] border border-[#ede7dd] hover:border-[#dec48e] hover:bg-[#ebdcb8]/30 active:scale-[0.99] transition-all cursor-pointer text-left"
+        >
           <div className="w-8 h-8 rounded-md bg-white border border-[#dec48e]/60 flex items-center justify-center text-gold-primary shrink-0">
             <Sparkles size={16} />
           </div>
@@ -309,7 +323,7 @@ function DesktopLeftSidebar({
               {equippedAccessory ? equippedAccessory.name : player.equipped?.accessory || 'None'}
             </span>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* 4. Active Tactical Combat */}
@@ -1418,8 +1432,6 @@ export default function Chronicle({
       { icon: Skull, label: 'Monsters', onClick: () => onOpenCodexCategory('bestiary') },
       { icon: MapIcon, label: 'World', onClick: () => onOpenCodexCategory('locations') },
       { icon: Users, label: 'NPCs', onClick: () => onOpenCodexCategory('npcs') },
-      { icon: ShieldCheck, label: 'Factions', onClick: () => onOpenCodexCategory('factions') },
-      { icon: BookOpen, label: 'Lore', onClick: () => onOpenCodexCategory('lore') },
     ]
     if (crafting && crafting.length > 0) {
       actions.push({ icon: Hammer, label: 'Crafting', onClick: () => onOpenCodexCategory('crafting') })
@@ -1769,6 +1781,10 @@ export default function Chronicle({
         combat={combat}
         locationName={locations[player.locId]?.name || player.locDisp || 'Unknown'}
         areaName={player.areaId ? locations[player.locId]?.areas?.find((a) => a.id === player.areaId)?.name : undefined}
+        onSlotClick={(slot) => {
+          setEquipMenuOpen(true)
+          setEquipSlotPicker(slot)
+        }}
       />
 
       {/* Main Story Container */}

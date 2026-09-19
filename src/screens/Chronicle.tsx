@@ -1782,7 +1782,7 @@ export default function Chronicle({
           <div className="max-w-2xl sm:max-w-3xl mx-auto w-full space-y-4">
             {log.length === 0 && (
               <p className="font-narrative italic text-sm text-[#6c665e] text-center">
-                No turns yet. Type an action below to begin.
+                Prologue Initiating...
               </p>
             )}
             {hasEarlierTurns && (

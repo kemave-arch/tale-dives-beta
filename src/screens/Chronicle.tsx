@@ -1413,7 +1413,7 @@ export default function Chronicle({
     const actions: { icon: LucideIcon; label: string; onClick: () => void }[] = [
       { icon: ShieldCheck, label: 'Equip', onClick: () => setEquipMenuOpen(true) },
       { icon: Backpack, label: 'Items', onClick: () => onOpenCodexCategory('items') },
-      { icon: Sparkles, label: 'Spells', onClick: () => onOpenCodexCategory('skills') },
+      { icon: Sparkles, label: 'Skills', onClick: () => onOpenCodexCategory('skills') },
       { icon: ScrollText, label: 'Quests', onClick: () => onOpenCodexCategory('quests') },
       { icon: Skull, label: 'Monsters', onClick: () => onOpenCodexCategory('bestiary') },
       { icon: MapIcon, label: 'World', onClick: () => onOpenCodexCategory('locations') },

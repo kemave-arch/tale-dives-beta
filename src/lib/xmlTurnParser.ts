@@ -46,6 +46,38 @@ const EVENT_STATUSES = ['completed'] as const
 // not just documented as a prompt-side rule.
 const BREAKTHROUGH_TIERS = COMPETENCY_TIERS.filter((w) => w !== 'Untrained')
 
+// A live QC pass showed the model consistently emitting the "h" time-of-day
+// attribute in bare 24-hour form ("08:20", "20:45") despite the player-facing
+// clock always displaying 12-hour time — the client never converted it, so
+// "AM"/"PM" simply never appeared. Same "never trust the model's own
+// formatting" discipline as the "Day 1" d="" strip below: normalizes to a
+// canonical "H:MM AM/PM" string regardless of what the model actually sent
+// (bare 24-hour, already-correct 12-hour, sloppy casing/spacing on the
+// meridiem) rather than relying purely on the prompt instruction added
+// alongside this fix. Falls back to the raw string unchanged if it doesn't
+// parse as a recognizable clock time at all, so an odd value degrades
+// gracefully instead of throwing away the whole turn's sync block.
+function normalizeTimeOfDay(raw: string): string {
+  const match = raw.trim().match(/^(\d{1,2})(?::(\d{2}))?\s*([AaPp]\.?[Mm]\.?)?$/)
+  if (!match) return raw
+  const hourRaw = parseInt(match[1], 10)
+  if (Number.isNaN(hourRaw)) return raw
+  const minute = (match[2] ?? '00').padStart(2, '0')
+  const meridiemRaw = match[3]?.toUpperCase().replace(/\./g, '')
+  let hour = hourRaw
+  let meridiem: 'AM' | 'PM'
+  if (meridiemRaw === 'AM' || meridiemRaw === 'PM') {
+    meridiem = meridiemRaw
+    // Tolerate a stray 24-hour value even when an AM/PM suffix is attached.
+    hour = hour % 12 || 12
+  } else {
+    // No AM/PM given — treat as the model's own bare 24-hour convention.
+    meridiem = hour < 12 ? 'AM' : 'PM'
+    hour = hour % 12 || 12
+  }
+  return `${hour}:${minute} ${meridiem}`
+}
+
 export function parseXmlTurnResponse(raw: string): TurnResponse {
   const narMatch = raw.match(/<nar>([\s\S]*?)<\/nar>/)
   if (!narMatch) throw new XmlTurnParseError('No <nar> block found')
@@ -70,7 +102,7 @@ export function parseXmlTurnResponse(raw: string): TurnResponse {
   // parsing rather than silently discarding the whole turn over it.
   const dayRaw = turnEl.getAttribute('d')
   const dayNormalized = dayRaw?.replace(/^\s*day\s+/i, '').trim() ?? dayRaw
-  const time = { d: reqNum(dayNormalized, 'turn.d'), h: reqStr(turnEl.getAttribute('h'), 'turn.h') }
+  const time = { d: reqNum(dayNormalized, 'turn.d'), h: normalizeTimeOfDay(reqStr(turnEl.getAttribute('h'), 'turn.h')) }
   const loc_id = reqStr(turnEl.getAttribute('loc'), 'turn.loc')
   // loc_disp is now optional — omitted on an ordinary same-location turn;
   // App.tsx falls back to locations[loc_id].name when it's absent.

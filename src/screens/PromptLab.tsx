@@ -165,7 +165,11 @@ export default function PromptLab({ apiSettings, onBack, activeWorld }: PromptLa
   const [error, setError] = useState<string | null>(null)
 
   const world = { genreTone, eraTechLevel, powerSystem, sourceTitle, sourceAuthor, sourceScope }
-  const loreAccuracyActive = Boolean(sourceTitle.trim() && sourceScope.trim())
+  // Matches the real in-game gate (imageGeneration.ts's canonReferenceLine,
+  // Codex.tsx's canonResolve props): sourceTitle alone is the switch —
+  // sourceScope only narrows the spoiler boundary, it's never required for
+  // lore-accuracy mode to fire at all.
+  const loreAccuracyActive = Boolean(sourceTitle.trim())
 
   async function handleResolve() {
     setBusy('resolve')
@@ -295,7 +299,7 @@ export default function PromptLab({ apiSettings, onBack, activeWorld }: PromptLa
           </div>
           <Field label="Canon Scope Boundary" value={sourceScope} onChange={setSourceScope} placeholder="e.g. Prologue only, Book 1, through Chapter 12" />
           {sourceTitle && !sourceScope && (
-            <p className="text-[10px] text-amber-300/80 font-mono">⚠ No scope set — same as in-game, sourceTitle alone stays attribution-only and won't gate lore-accuracy mode.</p>
+            <p className="text-[10px] text-amber-300/80 font-mono">ℹ No scope set — lore-accuracy mode is still active on sourceTitle alone; the model will default to a sensible boundary (e.g. avoid unpublished/future-book spoilers) instead of a scope you specify.</p>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 border-t border-gold-accent/15">
             <Field label="Genre & Tone" value={genreTone} onChange={setGenreTone} placeholder="e.g. Dark gothic fantasy, gritty" />

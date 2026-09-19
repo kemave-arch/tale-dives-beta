@@ -2,10 +2,11 @@ import { useState, useRef, useEffect, type CSSProperties, type Dispatch, type Se
 import {
   X, ChevronRight, ChevronLeft, Sparkles, Lock, Unlock,
   BookOpen, AlertCircle, Check, ArrowRight, ArrowLeft, Pencil, Plus, Save,
-  ImagePlus, RotateCw, FolderOpen, Trash2, Bookmark, CheckCircle2, Clock, Search, Cpu,
+  ImagePlus, RotateCw, FolderOpen, Trash2, Bookmark, CheckCircle2, Clock, Search, Cpu, ZoomIn,
 } from 'lucide-react'
 import { GlassScreen } from '../lib/glassChrome.tsx'
 import { useConfirm } from '../lib/useConfirm.tsx'
+import { useImageLightbox } from '../lib/useImageLightbox.tsx'
 import { EditableCard, EditPencilButton } from '../lib/inlineEdit.tsx'
 import type { ApiSettings, NarrationMode, Pov, RevealTrigger, TaleDifficultyKey } from '../types.ts'
 import { TALE_DIFFICULTIES } from '../api/turnContract.ts'
@@ -364,6 +365,7 @@ function TaleWeaverImageGenerator({
   onSaveKey,
   aspectRatio = '16:9',
   label = 'Generate Image',
+  caption,
 }: {
   imageKey?: string
   prompt: string
@@ -371,7 +373,11 @@ function TaleWeaverImageGenerator({
   onSaveKey: (key: string) => void
   aspectRatio?: '1:1' | '16:9' | '9:16' | '4:3' | '3:2'
   label?: string
+  // Shown as the tap-to-inspect lightbox's title — falls back to `label`
+  // when the caller has no more specific name (e.g. a not-yet-named NPC).
+  caption?: string
 }) {
+  const { open: openLightbox, dialog: lightboxDialog } = useImageLightbox()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [modelUsed, setModelUsed] = useState<string | null>(null)
@@ -466,12 +472,22 @@ function TaleWeaverImageGenerator({
     <div className="flex flex-col gap-1.5 mt-1.5">
       {url && (
         <div className="relative rounded-lg overflow-hidden border border-gold-accent/30 bg-black/60 shadow-md flex justify-center items-center p-1 group">
-          <img
-            src={url}
-            alt=""
-            className={`w-full ${aspectRatio === '1:1' ? 'max-h-48 max-w-[192px] aspect-square object-contain' : 'max-h-56 object-contain'}`}
-          />
-          
+          <button
+            type="button"
+            onClick={() => openLightbox(url, caption || label)}
+            aria-label={`Inspect ${caption || label}`}
+            className="cursor-pointer"
+          >
+            <img
+              src={url}
+              alt=""
+              className={`w-full ${aspectRatio === '1:1' ? 'max-h-48 max-w-[192px] aspect-square object-contain' : 'max-h-56 object-contain'}`}
+            />
+          </button>
+          <span className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/50 text-[#e8ca8a] text-[10px] font-sans tracking-wide opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            <ZoomIn size={11} /> Inspect
+          </span>
+
           {localHistory.length > 1 && currentIndex >= 0 && (
             <>
               {currentIndex > 0 && (
@@ -624,6 +640,7 @@ function TaleWeaverImageGenerator({
           </p>
         </div>
       )}
+      {lightboxDialog}
     </div>
   )
 }
@@ -3327,6 +3344,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                         'Protagonist',
                         accumulated.world,
                       )}
+                      caption={accumulated.protagonist.name || 'Hero'}
                       apiSettings={apiSettings}
                       aspectRatio="1:1"
                       label="Illustrate Hero Portrait"
@@ -3390,6 +3408,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                         <TaleWeaverImageGenerator
                           imageKey={l.imageKey}
                           prompt={buildLocationImagePrompt(l.name, l.desc, accumulated.world)}
+                          caption={l.name}
                           apiSettings={apiSettings}
                           aspectRatio="9:16"
                           label="Illustrate Location"
@@ -3432,6 +3451,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                             accumulated.locations.filter((loc) => loc.regionId === r.id).map((loc) => loc.name),
                             accumulated.world,
                           )}
+                          caption={r.name}
                           apiSettings={apiSettings}
                           aspectRatio="4:3"
                           label="Illustrate Region Map"
@@ -3548,6 +3568,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                         <TaleWeaverImageGenerator
                           imageKey={n.portraitKey}
                           prompt={buildNpcPortraitPrompt(n.name, n.appearance, n.role, accumulated.world)}
+                          caption={n.name}
                           apiSettings={apiSettings}
                           aspectRatio="1:1"
                           label="Illustrate Character Portrait"

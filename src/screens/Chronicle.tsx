@@ -20,6 +20,7 @@ import type {
 } from '../types.ts'
 import { trustWord, presentNpcs } from '../lib/npcs.ts'
 import { useEntityImage } from '../lib/useEntityImage.ts'
+import { useImageLightbox } from '../lib/useImageLightbox.tsx'
 
 function traitsText(traits: ItemEntry['traits']): string | null {
   return traits?.length ? traits.join(', ') : null
@@ -187,20 +188,20 @@ function DesktopLeftSidebar({
   const equippedAccessory = player.equipped?.accessory ? items?.[player.equipped.accessory] : null
 
   return (
-    <aside className="hidden lg:flex lg:w-80 xl:w-96 shrink-0 flex-col gap-4 overflow-y-auto p-4 bg-[#f5f0e6] border-r border-[#ede7dd] text-[#1a1917] z-10 h-full">
+    <aside className="hidden lg:flex lg:w-80 xl:w-96 shrink-0 flex-col gap-4 overflow-y-auto p-4 bg-[#f5f0e6] border-r border-[#ede7dd] text-ink z-10 h-full">
       {/* 1. Character Overview */}
       <div className="bg-white border border-[#ede7dd] rounded-xl p-4 shadow-sm relative overflow-hidden">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-12 h-12 rounded-xl bg-[#ebdcb8]/50 border border-[#dec48e] flex items-center justify-center text-[#8d6b1d] shadow-inner font-serif text-lg font-bold shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-[#ebdcb8]/50 border border-[#dec48e] flex items-center justify-center text-gold-primary shadow-inner font-serif text-lg font-bold shrink-0">
             {player.name ? player.name.charAt(0).toUpperCase() : 'P'}
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="font-serif text-lg font-bold text-[#1a1917] leading-tight truncate">{player.name || 'Hero'}</h2>
+            <h2 className="font-serif text-lg font-bold text-ink leading-tight truncate">{player.name || 'Hero'}</h2>
             <div className="flex items-center gap-2 mt-1">
-              <span className="font-display text-xs font-semibold text-[#8d6b1d] bg-[#ebdcb8]/40 px-2 py-0.5 rounded-md border border-[#dec48e] shrink-0">
+              <span className="font-display text-xs font-semibold text-gold-primary bg-[#ebdcb8]/40 px-2 py-0.5 rounded-md border border-[#dec48e] shrink-0">
                 Lvl {player.level}
               </span>
-              <span className="font-serif text-xs text-[#6c665e] truncate">{player.className || 'Adventurer'}</span>
+              <span className="font-serif text-xs text-ink-muted truncate">{player.className || 'Adventurer'}</span>
             </div>
           </div>
         </div>
@@ -208,16 +209,16 @@ function DesktopLeftSidebar({
         {/* Attrs Grid */}
         <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-[#ede7dd]">
           <div className="bg-[#f5f0e6] border border-[#ede7dd] p-2 rounded-lg text-center">
-            <span className="block font-mono text-[10px] text-[#9e968b] font-bold uppercase">STR</span>
-            <span className="font-mono text-sm font-bold text-[#1a1917]">{player.attrs?.STR ?? 10}</span>
+            <span className="block font-mono text-[10px] text-ink-muted font-bold uppercase">STR</span>
+            <span className="font-mono text-sm font-bold text-ink">{player.attrs?.STR ?? 10}</span>
           </div>
           <div className="bg-[#f5f0e6] border border-[#ede7dd] p-2 rounded-lg text-center">
-            <span className="block font-mono text-[10px] text-[#9e968b] font-bold uppercase">INT</span>
-            <span className="font-mono text-sm font-bold text-[#1a1917]">{player.attrs?.INT ?? 10}</span>
+            <span className="block font-mono text-[10px] text-ink-muted font-bold uppercase">INT</span>
+            <span className="font-mono text-sm font-bold text-ink">{player.attrs?.INT ?? 10}</span>
           </div>
           <div className="bg-[#f5f0e6] border border-[#ede7dd] p-2 rounded-lg text-center">
-            <span className="block font-mono text-[10px] text-[#9e968b] font-bold uppercase">AGI</span>
-            <span className="font-mono text-sm font-bold text-[#1a1917]">{player.attrs?.AGI ?? 10}</span>
+            <span className="block font-mono text-[10px] text-ink-muted font-bold uppercase">AGI</span>
+            <span className="font-mono text-sm font-bold text-ink">{player.attrs?.AGI ?? 10}</span>
           </div>
         </div>
       </div>
@@ -225,7 +226,7 @@ function DesktopLeftSidebar({
       {/* 2. Stats & Pools HUD */}
       <div className="bg-white border border-[#ede7dd] rounded-xl p-4 shadow-sm space-y-3">
         <div className="flex items-center justify-between border-b border-[#ede7dd] pb-2">
-          <h3 className="font-serif text-xs font-bold text-[#8d6b1d] tracking-wider uppercase">
+          <h3 className="font-serif text-xs font-bold text-gold-primary tracking-wider uppercase">
             Vitals & Wealth
           </h3>
           <CurrencyBadge copper={player.copper} />
@@ -234,14 +235,14 @@ function DesktopLeftSidebar({
           <ConditionBadge icon={Heart} label="Vitals" conditions={player.conditions} colorVar="#b71c1c" />
         </div>
         {(player.locDisp || locationName) && (
-          <div className="pt-2 border-t border-[#ede7dd] flex items-center gap-2 text-xs text-[#6c665e] font-serif">
-            <MapIcon size={14} className="text-[#8d6b1d] shrink-0" />
+          <div className="pt-2 border-t border-[#ede7dd] flex items-center gap-2 text-xs text-ink-muted font-serif">
+            <MapIcon size={14} className="text-gold-primary shrink-0" />
             <span className="truncate">
               {player.locDisp || locationName}
-              {areaName && <span className="text-[#9e968b]"> — {areaName}</span>}
+              {areaName && <span className="text-ink-muted"> — {areaName}</span>}
             </span>
             {player.time && (
-              <span className="ml-auto font-mono text-[11px] text-[#9e968b] shrink-0">
+              <span className="ml-auto font-mono text-[11px] text-ink-muted shrink-0">
                 D{player.time.d} {player.time.h}
               </span>
             )}
@@ -251,17 +252,17 @@ function DesktopLeftSidebar({
 
       {/* 3. Equip Slots */}
       <div className="bg-white border border-[#ede7dd] rounded-xl p-4 shadow-sm space-y-2.5">
-        <h3 className="font-serif text-xs font-bold text-[#8d6b1d] tracking-wider uppercase border-b border-[#ede7dd] pb-2">
+        <h3 className="font-serif text-xs font-bold text-gold-primary tracking-wider uppercase border-b border-[#ede7dd] pb-2">
           Equipped Gear
         </h3>
         {/* Weapon Slot */}
         <div className="flex items-center gap-3 p-2 rounded-lg bg-[#f5f0e6] border border-[#ede7dd]">
-          <div className="w-8 h-8 rounded-md bg-white border border-[#dec48e]/60 flex items-center justify-center text-[#8d6b1d] shrink-0">
+          <div className="w-8 h-8 rounded-md bg-white border border-[#dec48e]/60 flex items-center justify-center text-gold-primary shrink-0">
             <Swords size={16} />
           </div>
           <div className="min-w-0 flex-1">
-            <span className="block font-mono text-[9px] uppercase tracking-wider text-[#9e968b]">Weapon</span>
-            <span className="font-serif text-xs font-medium text-[#1a1917] truncate block">
+            <span className="block font-mono text-[9px] uppercase tracking-wider text-ink-muted">Weapon</span>
+            <span className="font-serif text-xs font-medium text-ink truncate block">
               {equippedWeapon ? equippedWeapon.name : player.equipped?.weapon || 'Empty Hand'}
             </span>
           </div>
@@ -269,12 +270,12 @@ function DesktopLeftSidebar({
 
         {/* Off-Hand Slot — the second weapon-type slot (dual-wielding, or a weapon paired with a shield) */}
         <div className="flex items-center gap-3 p-2 rounded-lg bg-[#f5f0e6] border border-[#ede7dd]">
-          <div className="w-8 h-8 rounded-md bg-white border border-[#dec48e]/60 flex items-center justify-center text-[#8d6b1d] shrink-0">
+          <div className="w-8 h-8 rounded-md bg-white border border-[#dec48e]/60 flex items-center justify-center text-gold-primary shrink-0">
             <Shield size={16} />
           </div>
           <div className="min-w-0 flex-1">
-            <span className="block font-mono text-[9px] uppercase tracking-wider text-[#9e968b]">Off-Hand</span>
-            <span className="font-serif text-xs font-medium text-[#1a1917] truncate block">
+            <span className="block font-mono text-[9px] uppercase tracking-wider text-ink-muted">Off-Hand</span>
+            <span className="font-serif text-xs font-medium text-ink truncate block">
               {equippedOffhand ? equippedOffhand.name : player.equipped?.offhand || 'Empty Hand'}
             </span>
           </div>
@@ -282,12 +283,12 @@ function DesktopLeftSidebar({
 
         {/* Armor Slot */}
         <div className="flex items-center gap-3 p-2 rounded-lg bg-[#f5f0e6] border border-[#ede7dd]">
-          <div className="w-8 h-8 rounded-md bg-white border border-[#dec48e]/60 flex items-center justify-center text-[#8d6b1d] shrink-0">
+          <div className="w-8 h-8 rounded-md bg-white border border-[#dec48e]/60 flex items-center justify-center text-gold-primary shrink-0">
             <ShieldCheck size={16} />
           </div>
           <div className="min-w-0 flex-1">
-            <span className="block font-mono text-[9px] uppercase tracking-wider text-[#9e968b]">Armor</span>
-            <span className="font-serif text-xs font-medium text-[#1a1917] truncate block">
+            <span className="block font-mono text-[9px] uppercase tracking-wider text-ink-muted">Armor</span>
+            <span className="font-serif text-xs font-medium text-ink truncate block">
               {equippedArmor ? equippedArmor.name : player.equipped?.armor || 'No Armor'}
             </span>
           </div>
@@ -295,12 +296,12 @@ function DesktopLeftSidebar({
 
         {/* Accessory Slot */}
         <div className="flex items-center gap-3 p-2 rounded-lg bg-[#f5f0e6] border border-[#ede7dd]">
-          <div className="w-8 h-8 rounded-md bg-white border border-[#dec48e]/60 flex items-center justify-center text-[#8d6b1d] shrink-0">
+          <div className="w-8 h-8 rounded-md bg-white border border-[#dec48e]/60 flex items-center justify-center text-gold-primary shrink-0">
             <Sparkles size={16} />
           </div>
           <div className="min-w-0 flex-1">
-            <span className="block font-mono text-[9px] uppercase tracking-wider text-[#9e968b]">Accessory</span>
-            <span className="font-serif text-xs font-medium text-[#1a1917] truncate block">
+            <span className="block font-mono text-[9px] uppercase tracking-wider text-ink-muted">Accessory</span>
+            <span className="font-serif text-xs font-medium text-ink truncate block">
               {equippedAccessory ? equippedAccessory.name : player.equipped?.accessory || 'None'}
             </span>
           </div>
@@ -315,7 +316,7 @@ function DesktopLeftSidebar({
               <Swords size={14} className="text-[#b71c1c]" /> Tactical Encounter
             </span>
           </div>
-          <p className="font-serif text-sm font-bold text-[#1a1917] truncate">
+          <p className="font-serif text-sm font-bold text-ink truncate">
             {combat.enemyName?.toUpperCase() ?? 'HOSTILE'}
           </p>
           <ConditionBadge icon={Heart} label="Enemy" conditions={combat.enemyConditions} colorVar="#b71c1c" />
@@ -1246,10 +1247,10 @@ export default function Chronicle({
   const [navDragPos, setNavDragPos] = useState<{ y: number } | null>(null)
   const [navDragging, setNavDragging] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  // §7 Tap-to-inspect lightbox — a full-screen enlarged view for the hero
-  // location plate and any Codex-popup entity image. Pure display, no pan/
-  // zoom gesture; just a bigger look at art that's otherwise cropped small.
-  const [lightbox, setLightbox] = useState<{ url: string; caption: string } | null>(null)
+  // §7 Tap-to-inspect lightbox (extracted to lib/useImageLightbox.tsx, also
+  // used by Tale Weaver's own generated images) — a full-screen enlarged
+  // view for the hero location plate and any Codex-popup entity image.
+  const { open: openLightbox, dialog: lightboxDialog } = useImageLightbox()
   // §2 Phase E Chapter Milestone — a one-time "Story So Far" welcome-back
   // memo, shown when this screen is freshly entered (mount) and the most
   // recently closed chapter is newer than what's already been acknowledged.
@@ -1735,10 +1736,7 @@ export default function Chronicle({
           {currentLocationImageUrl && (
             <button
               onClick={() =>
-                setLightbox({
-                  url: currentLocationImageUrl,
-                  caption: player.locDisp || locations[player.locId]?.name || 'Current location',
-                })
+                openLightbox(currentLocationImageUrl, player.locDisp || locations[player.locId]?.name || 'Current location')
               }
               aria-label="Inspect location artwork"
               className="relative w-full h-[220px] sm:h-[280px] overflow-hidden block cursor-pointer group"
@@ -2127,7 +2125,7 @@ export default function Chronicle({
             {/* Entity Image preview if generated */}
             {popupImageUrl && (!('discovery' in popupEntry) || !isHidden(popupEntry)) && (
               <button
-                onClick={() => setLightbox({ url: popupImageUrl, caption: popupEntry.name })}
+                onClick={() => openLightbox(popupImageUrl, popupEntry.name)}
                 aria-label={`Inspect ${popupEntry.name} artwork`}
                 className="relative w-full h-44 sm:h-52 rounded-lg overflow-hidden border border-[#dec48e] bg-[#f5f0e6] shadow-sm my-3 block cursor-pointer group"
               >
@@ -2355,27 +2353,7 @@ export default function Chronicle({
       {/* §7 Tap-to-inspect lightbox — sits above every other overlay (popup
           card, Story So Far memo) since it can be triggered from inside
           either one. */}
-      {lightbox && (
-        <div
-          className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-black/85 p-4 sm:p-6"
-          onClick={() => setLightbox(null)}
-        >
-          <button
-            onClick={() => setLightbox(null)}
-            aria-label="Close artwork preview"
-            className="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
-          >
-            <X size={20} />
-          </button>
-          <img
-            src={lightbox.url}
-            alt={lightbox.caption}
-            className="max-h-[80vh] max-w-full object-contain rounded-lg"
-            onClick={(e) => e.stopPropagation()}
-          />
-          <p className="mt-4 font-display text-sm text-white/80 tracking-wide text-center">{lightbox.caption}</p>
-        </div>
-      )}
+      {lightboxDialog}
     </div>
   )
 }

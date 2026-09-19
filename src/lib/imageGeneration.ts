@@ -128,6 +128,12 @@ export type WorldStyleData = {
   sourceTitle?: string
   sourceAuthor?: string
   sourceScope?: string
+  // Same on/off gate the narrative Lore Accuracy Contract uses (see
+  // WorldData.sourceAccurate in types.ts) — undefined reads as on, only an
+  // explicit `false` suppresses it. A separate signal from sourceTitle so a
+  // player can name a work as loose flavor without committing to strict
+  // canon fidelity.
+  sourceAccurate?: boolean
 }
 
 function worldDirective(world?: WorldStyleData): string {
@@ -142,21 +148,32 @@ function worldDirective(world?: WorldStyleData): string {
   ].filter(Boolean).join('; ')
 }
 
-// Appended to every image prompt when the world names real source material
-// with a scope boundary set — see WorldStyleData's own comment above for why
-// this is a direct citation rather than a redacted paraphrase.
+// Appended to every image prompt when the world names real source material —
+// see WorldStyleData's own comment above for why this is a direct citation
+// rather than a redacted paraphrase. Gated on sourceTitle's own presence (+
+// sourceAccurate not explicitly false), matching the same contract the
+// narrative Lore Accuracy Contract uses (types.ts's WorldData.sourceTitle/
+// sourceAccurate comments) — sourceScope is optional and only refines the
+// boundary, never a precondition for the reference firing at all. Quick
+// Play's "Source Accurate" checkbox sets sourceTitle but never sourceScope,
+// so requiring both here silently dropped canon grounding from every image
+// generated in a Quick-Play-started Tale while text narration stayed
+// grounded — confirmed live: a "Peter Parker"/Spider-Man Quick Play Tale's
+// portrait prompt carried no Canon Reference block at all under the old
+// `sourceTitle && sourceScope` gate.
 function canonReferenceLine(world?: WorldStyleData): string {
-  if (!world?.sourceTitle?.trim() || !world?.sourceScope?.trim()) return ''
+  if (!world?.sourceTitle?.trim() || world?.sourceAccurate === false) return ''
   const attribution = world.sourceAuthor?.trim()
     ? `"${world.sourceTitle.trim()}" by ${world.sourceAuthor.trim()}`
     : `"${world.sourceTitle.trim()}"`
+  const scope = world.sourceScope?.trim()
   return `
 
 Canon Reference:
 This is the real, existing subject from ${attribution} — not an original reinterpretation. Depict it
-exactly as established in canon: actual design, physical appearance, and defining visual traits, as
-depicted up to: ${world.sourceScope.trim()}. Prioritize canon accuracy over invention in every detail
-canon actually establishes.`
+exactly as established in canon: actual design, physical appearance, and defining visual traits${
+    scope ? `, as depicted up to: ${scope}` : ''
+  }. Prioritize canon accuracy over invention in every detail canon actually establishes.`
 }
 
 export function buildLocationImagePrompt(

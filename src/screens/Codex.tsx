@@ -1020,21 +1020,29 @@ function SectionCard({
   const Icon = icon
   return (
     <div className="bg-white border border-gold-accent/20 rounded-xl overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        className="w-full flex items-center justify-between gap-2 px-3.5 py-2.5 text-left hover:bg-gold-accent/5 transition-colors"
-      >
-        <div className="flex items-center gap-2 min-w-0">
+      <div className="w-full flex items-center justify-between gap-2 px-3.5 py-2.5 hover:bg-gold-accent/5 transition-colors">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          className="flex items-center gap-2 min-w-0 flex-1 text-left"
+        >
           <Icon size={14} className={`${accent.sectionIcon} shrink-0`} />
           <span className="font-display text-xs font-semibold uppercase tracking-[0.1em] text-ink truncate">{title}</span>
-        </div>
+        </button>
         <div className="flex items-center gap-2 shrink-0">
           {badge}
-          <ChevronRight size={14} className={`text-gold-primary transition-transform duration-150 ${open ? 'rotate-90' : ''}`} />
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            aria-label={open ? 'Collapse' : 'Expand'}
+            className="p-0.5"
+          >
+            <ChevronRight size={14} className={`text-gold-primary transition-transform duration-150 ${open ? 'rotate-90' : ''}`} />
+          </button>
         </div>
-      </button>
+      </div>
       {open && <div className="px-3.5 pb-3.5 pt-1 border-t border-gold-accent/15 flex flex-col gap-3">{children}</div>}
     </div>
   )
@@ -1960,6 +1968,7 @@ export default function Codex({
   // group. Purely a navigation/grid-display grouping: each member keeps its
   // own separate CRUD, data, and internal filter-subtabs untouched.
   const CATEGORY_GROUPS: { id: string; label: string; description: string; icon: LucideIcon; members: CategoryId[] }[] = [
+    { id: 'player', label: 'Player Profile', description: 'Identity, Aliases, Class, Attributes & Skills', icon: User, members: ['campaign', 'skills'] },
     { id: 'world', label: 'World', description: 'Regions, Locations, Factions & the Map', icon: Globe, members: ['regions', 'locations', 'factions', 'map'] },
     { id: 'belongings', label: 'Belongings', description: 'Items, Crafting & Projects', icon: Backpack, members: ['items', 'crafting', 'projects'] },
   ]
@@ -1968,8 +1977,9 @@ export default function Codex({
 
   // Explicit declutter order for the top-level grid (Player Profile first
   // per the 2026-09-19 request, Realm folded into Lore, Regions/Locations/
-  // Factions and Items/Crafting/Projects each collapsed into one tile).
-  const gridTiles = (['campaign', 'chapters', 'story', 'npcs', 'world', 'lore', 'quests', 'skills', 'belongings', 'bestiary'] as const).map((key) => {
+  // Factions and Items/Crafting/Projects each collapsed into one tile,
+  // Skills folded into Player Profile alongside it).
+  const gridTiles = (['player', 'chapters', 'story', 'npcs', 'world', 'lore', 'quests', 'belongings', 'bestiary'] as const).map((key) => {
     const group = CATEGORY_GROUPS.find((g) => g.id === key)
     if (group) {
       const count = group.members.reduce((sum, id) => sum + (categories.find((c) => c.id === id)?.count ?? 0), 0)
@@ -2434,7 +2444,7 @@ export default function Codex({
                   apiSettings={apiSettings}
                   onSaveKey={(key) => onUpdatePlayer({ portraitKey: key, portraitClassSnapshot: player.className })}
                   aspectRatio="1:1"
-                  canonResolve={world?.sourceTitle && world?.sourceScope ? {
+                  canonResolve={world?.sourceTitle?.trim() && world?.sourceAccurate !== false ? {
                     hasExisting: Boolean(player.canonAppearance),
                     resolve: async (developmentNote) => {
                       const canonText = await resolveCanonDescription({
@@ -3299,7 +3309,7 @@ export default function Codex({
                   apiSettings={apiSettings}
                   onSaveKey={(key) => onUpdateNpc(entryId, { portraitKey: key })}
                   aspectRatio="1:1"
-                  canonResolve={world?.sourceTitle && world?.sourceScope ? {
+                  canonResolve={world?.sourceTitle?.trim() && world?.sourceAccurate !== false ? {
                     hasExisting: Boolean(npcs[entryId].canonAppearance),
                     resolve: async (developmentNote) => {
                       const canonText = await resolveCanonDescription({
@@ -3646,7 +3656,7 @@ export default function Codex({
                   apiSettings={apiSettings}
                   onSaveKey={(key) => onUpdateLocation(entryId, { imageKey: key })}
                   aspectRatio="9:16"
-                  canonResolve={world?.sourceTitle && world?.sourceScope ? {
+                  canonResolve={world?.sourceTitle?.trim() && world?.sourceAccurate !== false ? {
                     hasExisting: Boolean(locations[entryId].canonDescription),
                     resolve: async (developmentNote) => {
                       const canonText = await resolveCanonDescription({

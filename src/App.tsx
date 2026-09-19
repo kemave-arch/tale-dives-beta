@@ -281,6 +281,7 @@ export default function App() {
   const [worldSetupInitial, setWorldSetupInitial] = useState<WorldData | null>(null)
   const [newGameMode, setNewGameMode] = useState<CreationMode>('tale')
   const [newGameInitial, setNewGameInitial] = useState<ProtagonistData | null>(null)
+  const [quickPlaySeedWorld, setQuickPlaySeedWorld] = useState<WorldData | null>(null)
   const [codexTarget, setCodexTarget] = useState<{ category: CategoryId; id?: string } | null>(null)
 
   const [history, setHistory] = useState<HistoryTurn[]>([]) // Gemini `contents` sliding window (§3.1)
@@ -2276,6 +2277,16 @@ export default function App() {
     navigateTo('storymode')
   }
 
+  // Campaign browser's per-Tale "New Session" button — reuses that Tale's
+  // own starting World Foundation data (not a Library template) straight
+  // into Quick Play, landing on Question II (Hero) since Question I's own
+  // answer is unneeded. A brand new Campaign save results from Dive In,
+  // same as any other Quick Play tale — this never touches the source Tale.
+  function startNewSessionFromTale(tale: Campaign) {
+    setQuickPlaySeedWorld(tale.world)
+    navigateTo('quickplay')
+  }
+
   // ---- Screens ----
 
   let content: ReactNode
@@ -2298,6 +2309,13 @@ export default function App() {
         campaigns={campaigns}
         onResume={resumeCampaign}
         onNewSession={(worldId, protagonistId) => startNewStory(worldId, protagonistId)}
+        onNewSessionFromTale={startNewSessionFromTale}
+        onSaveWorldToVault={(tale) => {
+          const saved = upsertWorld(tale.world, tale.worldId ?? null)
+          if (!tale.worldId) {
+            setCampaigns((c) => (c[tale.id] ? { ...c, [tale.id]: { ...c[tale.id], worldId: saved.id ?? undefined } } : c))
+          }
+        }}
         onDeleteCampaign={async (id) => {
           if (!(await confirm('Delete this Tale? This cannot be undone.'))) return
           setCampaigns((c) => {
@@ -2450,8 +2468,9 @@ export default function App() {
     content = (
       <QuickPlay
         apiSettings={apiSettings}
-        onBack={() => goBack('storymode')}
-        onBeginTale={beginInspiredTale}
+        seedWorld={quickPlaySeedWorld ?? undefined}
+        onBack={() => { setQuickPlaySeedWorld(null); goBack('storymode') }}
+        onBeginTale={(accumulated) => { setQuickPlaySeedWorld(null); beginInspiredTale(accumulated) }}
       />
     )
   } else if (screen === 'worldsetup') {
@@ -2652,6 +2671,9 @@ export default function App() {
         bestiary={game.bestiary}
         skills={game.skills ?? {}}
         items={game.items ?? {}}
+        inventory={game.inventory}
+        onEquipItem={equipFromCodex}
+        onUnequipSlot={unequipFromCodex}
         crafting={game.crafting}
         apiSettings={apiSettings}
         proseDepth={game.proseDepth}

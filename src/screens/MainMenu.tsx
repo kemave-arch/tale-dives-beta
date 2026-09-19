@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import {
   BookOpen, Globe, UserCircle, Plus, Upload, Download, Trash2, Play, Sparkles, Star, Settings as SettingsIcon, Pencil,
-  LogOut, Volume2, VolumeX, Archive, Music2, Image as ImageIcon,
+  LogOut, Volume2, VolumeX, Archive, Music2, Image as ImageIcon, Library,
 } from 'lucide-react'
 import type { Campaign, Dict, ProtagonistData, WorldData } from '../types.ts'
 import type { TrackMetadata } from '../data/soundtrackManifest.ts'
@@ -34,6 +34,8 @@ interface MainMenuProps {
   campaigns: Dict<Campaign>
   onResume: (id: string) => void
   onNewSession: (worldId?: string, protagonistId?: string) => void
+  onNewSessionFromTale: (tale: Campaign) => void
+  onSaveWorldToVault: (tale: Campaign) => void
   onRenameCampaign: (id: string) => void
   onDeleteCampaign: (id: string) => void
   onExportCampaign: (id: string) => void
@@ -67,6 +69,8 @@ export default function MainMenu({
   campaigns,
   onResume,
   onNewSession,
+  onNewSessionFromTale,
+  onSaveWorldToVault,
   onRenameCampaign,
   onDeleteCampaign,
   onExportCampaign,
@@ -195,7 +199,8 @@ export default function MainMenu({
                       <div className="flex gap-1 shrink-0">
                         <GlassIconButton icon={Play} label="Resume" tone="action" onClick={() => onResume(tale.id)} />
                         <GlassIconButton icon={Pencil} label="Rename" onClick={() => onRenameCampaign(tale.id)} />
-                        <GlassIconButton icon={Sparkles} label="New Session" onClick={() => onNewSession(tale.worldId, tale.protagonistId)} />
+                        <GlassIconButton icon={Sparkles} label="New Session" onClick={() => onNewSessionFromTale(tale)} />
+                        <GlassIconButton icon={Library} label="Save World to Vault" onClick={() => onSaveWorldToVault(tale)} />
                         <GlassIconButton icon={Download} label="Export" onClick={() => onExportCampaign(tale.id)} />
                         <GlassIconButton icon={Trash2} label="Delete" tone="danger" onClick={() => onDeleteCampaign(tale.id)} />
                       </div>

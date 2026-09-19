@@ -6,7 +6,7 @@ import {
 import { GlassScreen } from '../lib/glassChrome.tsx'
 import { useConfirm } from '../lib/useConfirm.tsx'
 import { EditableCard, EditPencilButton, type EditField } from '../lib/inlineEdit.tsx'
-import type { ApiSettings } from '../types.ts'
+import type { ApiSettings, WorldData } from '../types.ts'
 import {
   TALE_WEAVER_PHASES, emptyAccumulated, runTaleWeaverPhase, mergeTaleWeaverDraft,
   type TaleWeaverAccumulated, type TaleWeaverPhaseDef,
@@ -38,6 +38,14 @@ interface QuickPlayProps {
   apiSettings: ApiSettings
   onBack: () => void
   onBeginTale: (accumulated: TaleWeaverAccumulated) => void
+  // "New Session" from an existing Tale in the campaign browser — reuses that
+  // Tale's own starting World Foundation data (not a Library-saved World
+  // template) so the player begins in the same world, and skips straight to
+  // Question II (Hero) since Question I's own answer is no longer needed.
+  // Regions/Factions are deliberately left ungenerated here (not carried
+  // over from the source Tale) — a fresh session should discover its own
+  // places during play, the same way any other new Tale does.
+  seedWorld?: WorldData
 }
 
 type GenKey = 'world' | 'regions' | 'factions' | 'protagonist' | 'npcs' | 'lore' | 'arc'
@@ -412,9 +420,29 @@ function SectionBody({
 }
 
 
-export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPlayProps) {
+// TaleWeaverWorldDraft and WorldData share the same field names for
+// everything Question I's own generation produces — a direct pick, no
+// remapping needed. narrationStyle/mode/tierSkin/flags aren't part of the
+// draft shape and are left for the new Tale to set fresh.
+function worldToDraft(world: WorldData): TaleWeaverAccumulated['world'] {
+  return {
+    name: world.name,
+    genreTone: world.genreTone,
+    conflict: world.conflict,
+    powerSystem: world.powerSystem,
+    eraTechLevel: world.eraTechLevel,
+    keyFactions: world.keyFactions,
+    background: world.background,
+    sourceTitle: world.sourceTitle,
+    sourceAuthor: world.sourceAuthor,
+    sourceScope: world.sourceScope,
+    sourceAccurate: world.sourceAccurate,
+  }
+}
+
+export default function QuickPlay({ apiSettings, onBack, onBeginTale, seedWorld }: QuickPlayProps) {
   const [initialAutosave] = useState(() => loadTaleWeaverAutosave('quickplay'))
-  const [step, setStep] = useState(initialAutosave?.step ?? 0)
+  const [step, setStep] = useState(initialAutosave?.step ?? (seedWorld ? 1 : 0))
   const [q1, setQ1] = useState(initialAutosave?.q1 ?? '')
   const [q2, setQ2] = useState(initialAutosave?.q2 ?? '')
   const [q3, setQ3] = useState(initialAutosave?.q3 ?? '')
@@ -428,8 +456,12 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
   // cast/places/chronology and a sensible spoiler boundary (defaults to the
   // first book/entry only for a multi-part source when Q1 doesn't say
   // otherwise) — no separate Author/Scope fields needed for Quick Play.
-  const [sourceAccurate, setSourceAccurate] = useState(initialAutosave?.sourceAccurate ?? true)
-  const [accumulated, setAccumulated] = useState<TaleWeaverAccumulated>(initialAutosave?.accumulated ?? emptyAccumulated())
+  const [sourceAccurate, setSourceAccurate] = useState(initialAutosave?.sourceAccurate ?? seedWorld?.sourceAccurate ?? true)
+  const [accumulated, setAccumulated] = useState<TaleWeaverAccumulated>(() => {
+    if (initialAutosave?.accumulated) return initialAutosave.accumulated
+    const base = emptyAccumulated()
+    return seedWorld ? { ...base, world: worldToDraft(seedWorld) } : base
+  })
   const [autosaveToast, setAutosaveToast] = useState<string | null>(
     initialAutosave && (hasAnyContent(initialAutosave.accumulated) || initialAutosave.q1 || initialAutosave.q2 || initialAutosave.q3)
       ? 'Resumed your in-progress draft.'
@@ -460,10 +492,20 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
   // A step whose keys already have content on mount/resume (or after
   // navigating back to an already-answered question) starts in 'review'
   // rather than re-asking the question.
-  const [stepPhase, setStepPhase] = useState<'input' | 'review'>(() => {
-    const keys = QUICK_PLAY_QUESTIONS[step]?.keys
-    return keys && keys.every((k) => hasGenContent(k, accumulated)) ? 'review' : 'input'
-  })
+  // Question I's own keys are ['world', 'regions', 'factions'] — a reused
+  // seedWorld only ever fills 'world' (regions/factions stay empty by
+  // design, see the seedWorld prop's own comment), so the ordinary "every
+  // key has content" check would never treat Question I as answered and
+  // send the player back to a blank prompt instead of a review of the
+  // world they're reusing. Special-cased to 'world' content alone here.
+  function questionAnswered(idx: number, acc: TaleWeaverAccumulated): boolean {
+    const keys = QUICK_PLAY_QUESTIONS[idx]?.keys
+    if (!keys) return false
+    if (idx === 0 && seedWorld) return hasGenContent('world', acc)
+    return keys.every((k) => hasGenContent(k, acc))
+  }
+
+  const [stepPhase, setStepPhase] = useState<'input' | 'review'>(() => questionAnswered(step, accumulated) ? 'review' : 'input')
 
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [showLoadModal, setShowLoadModal] = useState(false)
@@ -538,8 +580,7 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
   // Moving to a different question: land on 'review' if it's already fully
   // woven (revisiting an answered question), otherwise 'input'.
   function goToStep(idx: number) {
-    const keys = QUICK_PLAY_QUESTIONS[idx]?.keys
-    setStepPhase(keys && keys.every((k) => hasGenContent(k, accRef.current)) ? 'review' : 'input')
+    setStepPhase(questionAnswered(idx, accRef.current) ? 'review' : 'input')
     setStep(idx)
   }
 

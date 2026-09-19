@@ -1499,6 +1499,30 @@ export default function Codex({
   function mapReset() {
     setMapTransform({ x: 0, y: 0, scale: 1 })
   }
+  // translate(x,y) applies in screen-pixel space on top of scale (confirmed
+  // by the drag handler above, which adds raw pointer deltas with no /scale
+  // division) — so centering a pin at (mapX%, mapY%) of the unscaled image
+  // just needs its offset-from-center at the current scale, negated.
+  function centerMapOnLoc(loc: LocationEntry) {
+    const el = mapViewportRef.current
+    if (!el || loc.mapX === undefined || loc.mapY === undefined) return
+    const { clientWidth: W, clientHeight: H } = el
+    setMapTransform((t) => ({ ...t, x: (0.5 - loc.mapX! / 100) * W * t.scale, y: (0.5 - loc.mapY! / 100) * H * t.scale }))
+  }
+  // No structural quest<->location link exists (QuestEntry carries no
+  // location field) — a real-canon location name mentioned in an active
+  // quest's own description/note is a reasonable, low-risk heuristic for
+  // "this quest involves this place," matching the same freeform-text-match
+  // spirit richText.tsx's own keyword linking already uses elsewhere.
+  function questsForLocation(loc: LocationEntry): [string, QuestEntry][] {
+    const name = loc.name.trim().toLowerCase()
+    if (!name) return []
+    return Object.entries(quests).filter(([, q]) => {
+      if (q.status === 'completed' || q.status === 'failed') return false
+      const haystack = `${q.description ?? ''} ${q.note ?? ''}`.toLowerCase()
+      return haystack.includes(name)
+    })
+  }
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<Record<string, any>>({})
   const { confirm, dialog: confirmDialog } = useConfirm()
@@ -1532,9 +1556,31 @@ export default function Codex({
   const mapDragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number; dragging: boolean }>({
     startX: 0, startY: 0, baseX: 0, baseY: 0, dragging: false,
   })
+  // Hover shows an info card that follows the cursor; a click/tap "pins" it
+  // (stays put, doesn't disappear on mouse-out) so the player can expand its
+  // accordion sections. Only one pin/hover target at a time.
+  const [mapActiveLoc, setMapActiveLoc] = useState<{ id: string; pinned: boolean } | null>(null)
+  const mapViewportRef = useRef<HTMLDivElement>(null)
   const mapRegionIds = Object.keys(regions)
   const effectiveMapRegionId = mapRegionId && regions[mapRegionId] ? mapRegionId : mapRegionIds[0]
   const mapRegionImageUrl = useEntityImage(effectiveMapRegionId ? regions[effectiveMapRegionId]?.mapImageKey : undefined)
+  // The player's own current location, only as a map indicator when it
+  // actually belongs to the region currently being viewed.
+  const playerMapLoc = locations[player.locId]
+  const playerOnThisMap = playerMapLoc?.regionId === effectiveMapRegionId && playerMapLoc.mapX !== undefined && playerMapLoc.mapY !== undefined
+    ? playerMapLoc
+    : undefined
+
+  // On entering the map (or switching region), center on the player's own
+  // position if it's plottable — a rAF tick so the viewport ref has its
+  // real layout size (the aspect-ratio box is sized by CSS, not the image
+  // load, so one frame is enough).
+  useEffect(() => {
+    if (category !== 'map' || !effectiveMapRegionId || !playerOnThisMap) return
+    const id = requestAnimationFrame(() => centerMapOnLoc(playerOnThisMap))
+    return () => cancelAnimationFrame(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [category, effectiveMapRegionId])
 
   // Reset filters and scroll to top on category or entry navigation
   useEffect(() => {
@@ -2898,6 +2944,16 @@ export default function Codex({
               ) : effectiveMapRegionId && (
                 <>
                   <div className="shrink-0 flex items-center justify-end gap-1.5">
+                    {playerOnThisMap && (
+                      <button
+                        type="button"
+                        onClick={() => centerMapOnLoc(playerOnThisMap)}
+                        className="p-1.5 rounded-full border border-gold-accent/30 hover:bg-gold-accent/10 text-gold-primary transition-colors"
+                        title="Center on my position"
+                      >
+                        <Compass size={14} />
+                      </button>
+                    )}
                     <button type="button" onClick={() => mapZoomBy(-0.25)} className="p-1.5 rounded-full border border-gold-accent/30 hover:bg-gold-accent/10 text-gold-primary transition-colors" title="Zoom out">
                       <Minus size={14} />
                     </button>
@@ -2909,6 +2965,7 @@ export default function Codex({
                     </button>
                   </div>
                   <div
+                    ref={mapViewportRef}
                     className="relative w-full aspect-[4/3] rounded-2xl border border-gold-accent/20 bg-black/80 overflow-hidden touch-none select-none cursor-grab active:cursor-grabbing"
                     onPointerDown={mapPointerDown}
                     onPointerMove={mapPointerMove}
@@ -2929,25 +2986,154 @@ export default function Codex({
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-ink-muted/50 text-xs font-mono">Loading map…</div>
                       )}
+
+                      {/* Player position indicator — distinct from location
+                          pins (a pulsing sky-blue marker), not clickable. */}
+                      {playerOnThisMap && (
+                        <div
+                          className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none flex flex-col items-center gap-0.5 z-10"
+                          style={{ left: `${playerOnThisMap.mapX}%`, top: `${playerOnThisMap.mapY}%` }}
+                        >
+                          <span className="relative flex h-4 w-4">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-60" />
+                            <span className="relative inline-flex rounded-full h-4 w-4 bg-sky-500 border-2 border-white shadow-md" />
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded-full bg-sky-950/90 text-sky-100 text-[10px] font-mono whitespace-nowrap">
+                            You
+                          </span>
+                        </div>
+                      )}
+
                       {Object.entries(locations)
                         .filter(([, l]) => l.regionId === effectiveMapRegionId && l.mapX !== undefined && l.mapY !== undefined)
                         .map(([id, l]) => (
                           <button
                             key={id}
                             type="button"
-                            onClick={(e) => { e.stopPropagation(); switchGroupMember('locations'); setEntryId(id, true) }}
+                            onMouseEnter={() => setMapActiveLoc((cur) => (cur?.pinned ? cur : { id, pinned: false }))}
+                            onMouseLeave={() => setMapActiveLoc((cur) => (cur && cur.id === id && !cur.pinned ? null : cur))}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setMapActiveLoc({ id, pinned: true })
+                            }}
                             className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5 group"
                             style={{ left: `${l.mapX}%`, top: `${l.mapY}%` }}
-                            title={isHidden(l) ? '???' : l.name}
                           >
-                            <span className="w-4 h-4 rounded-full bg-gold-primary border-2 border-white shadow-md group-hover:scale-125 transition-transform" />
-                            <span className="px-1.5 py-0.5 rounded-full bg-black/70 text-white text-[10px] font-mono whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                            <span
+                              className={`w-4 h-4 rounded-full bg-gold-primary border-2 shadow-md transition-transform ${
+                                mapActiveLoc?.id === id ? 'scale-125 border-white' : 'group-hover:scale-125 border-white'
+                              }`}
+                            />
+                            <span className="px-1.5 py-0.5 rounded-full bg-[#5a1010]/90 text-[#fbe2e2] text-[10px] font-mono whitespace-nowrap pointer-events-none">
                               {isHidden(l) ? '???' : l.name}
                             </span>
                           </button>
                         ))}
                     </div>
                   </div>
+
+                  {mapActiveLoc && locations[mapActiveLoc.id] && (() => {
+                    const loc = locations[mapActiveLoc.id]
+                    const hidden = isHidden(loc)
+                    const related = hidden ? [] : questsForLocation(loc)
+                    return (
+                      <div className="rounded-2xl border border-[#5a1010]/30 bg-white shadow-md overflow-hidden">
+                        <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 bg-[#5a1010]/[0.06] border-b border-[#5a1010]/15">
+                          <span className="font-display text-sm font-semibold text-ink truncate flex items-center gap-1.5">
+                            {hidden && <Lock size={13} className="text-[#5a1010] shrink-0" />}
+                            {hidden ? '???' : loc.name}
+                          </span>
+                          {mapActiveLoc.pinned && (
+                            <button
+                              type="button"
+                              onClick={() => setMapActiveLoc(null)}
+                              aria-label="Close info card"
+                              className="text-ink-muted hover:text-ink p-1 rounded-md hover:bg-black/5 transition-colors shrink-0"
+                            >
+                              <X size={14} />
+                            </button>
+                          )}
+                        </div>
+                        <div className="p-3 flex flex-col gap-2.5">
+                          {hidden ? (
+                            <p className="font-narrative italic text-xs text-ink-muted">{loc.discovery?.teaser || 'Not yet discovered.'}</p>
+                          ) : (
+                            <>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-gold-accent/10 border border-gold-accent/25 font-mono text-[10px] text-ink-muted">
+                                  {loc.locationType || 'Location'}
+                                </span>
+                                {loc.dangerLevel && (
+                                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-gold-accent/10 border border-gold-accent/25 font-mono text-[10px] text-ink-muted">
+                                    Danger: {loc.dangerLevel}
+                                  </span>
+                                )}
+                                {related.length > 0 && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#5a1010]/10 border border-[#5a1010]/25 font-mono text-[10px] text-[#5a1010]">
+                                    <ScrollText size={10} /> {related.length} quest{related.length > 1 ? 's' : ''}
+                                  </span>
+                                )}
+                              </div>
+
+                              {!mapActiveLoc.pinned ? (
+                                // Hover-only preview: compact, no accordions.
+                                <>
+                                  {loc.description && <p className="font-narrative text-xs text-ink leading-relaxed line-clamp-2">{loc.description}</p>}
+                                  {related.length > 0 && (
+                                    <div className="flex flex-col gap-1">
+                                      {related.slice(0, 3).map(([qid, q]) => (
+                                        <div key={qid} className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-gold-accent/[0.05] border border-gold-accent/15">
+                                          <span className="font-display text-[11px] font-semibold text-ink truncate flex-1">{q.name}</span>
+                                          <QuestStatusBadge status={q.status} />
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  <p className="font-mono text-[9px] text-ink-muted/70 italic">Click the pin to pin this card open and expand details.</p>
+                                </>
+                              ) : (
+                                // Pinned: expandable accordions per category.
+                                <div className="flex flex-col gap-2">
+                                  <SectionCard accent={CATEGORY_ACCENTS.locations} icon={MapPin} title="Details" defaultOpen>
+                                    <FieldRow label="Region" value={loc.region} />
+                                    {loc.notableFeatures && <FieldRow label="Notable Features" value={loc.notableFeatures} />}
+                                    {loc.inhabitants && <FieldRow label="Inhabitants" value={loc.inhabitants} />}
+                                    {loc.description && <FieldRow label="Description" value={loc.description} />}
+                                  </SectionCard>
+                                  {related.length > 0 && (
+                                    <SectionCard accent={CATEGORY_ACCENTS.quests} icon={ScrollText} title={`Related Quests (${related.length})`}>
+                                      <div className="flex flex-col gap-1.5">
+                                        {related.map(([qid, q]) => (
+                                          <button
+                                            key={qid}
+                                            type="button"
+                                            onClick={() => { setCategory('quests', true); setEntryId(qid, true) }}
+                                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gold-accent/[0.05] border border-gold-accent/15 hover:border-gold-accent/40 hover:bg-gold-accent/10 transition-colors text-left"
+                                          >
+                                            <span className="font-display text-xs font-semibold text-ink truncate flex-1">{q.name}</span>
+                                            <QuestTypeBadge type={q.type} />
+                                            <QuestStatusBadge status={q.status} />
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </SectionCard>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => { switchGroupMember('locations'); setEntryId(mapActiveLoc.id, true) }}
+                                    className="rounded-full px-4 py-2 font-display text-xs font-semibold bg-[#e8ca8a] text-[#0e1017] self-start"
+                                  >
+                                    Open Full Entry
+                                  </button>
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })()}
+
                   <p className="font-narrative italic text-xs text-ink-muted">
                     Drag to pan, scroll or use +/- to zoom. Pins mark locations with map coordinates set — add Map X/Y to a location under World → Locations to plot it here.
                   </p>

@@ -15,9 +15,10 @@ import { BANG_COMMANDS } from '../lib/bangCommands.ts'
 import { isHidden } from '../lib/discovery.ts'
 import type { CategoryId } from './Codex.tsx'
 import type {
-  ApiSettings, BestiaryEntry, Campaign, CombatState, CraftingJob, EndingOutcome, FactionEntry, GameTime, KeywordLink, LocationEntry, LogEntry, LoreEntry, NpcEntry, Player,
+  ApiSettings, BestiaryEntry, Campaign, CombatState, CraftingJob, EndingOutcome, EquipSlot, FactionEntry, GameTime, KeywordLink, LocationEntry, LogEntry, LoreEntry, NpcEntry, Player,
   ProseDepthConfig, QuestEntry, RegionEntry, SkillEntry, SlashCommand, ItemEntry,
 } from '../types.ts'
+import { EQUIP_SLOT_ITEM_TYPE } from '../types.ts'
 import { trustWord, presentNpcs } from '../lib/npcs.ts'
 import { useEntityImage } from '../lib/useEntityImage.ts'
 import { useImageLightbox } from '../lib/useImageLightbox.tsx'
@@ -85,6 +86,9 @@ interface ChronicleProps {
   bestiary: Record<string, BestiaryEntry>
   skills: Record<string, SkillEntry>
   items?: Record<string, ItemEntry>
+  inventory?: Record<string, number>
+  onEquipItem?: (id: string, slot?: EquipSlot) => void
+  onUnequipSlot?: (slot: EquipSlot) => void
   crafting?: CraftingJob[]
   apiSettings?: ApiSettings
   proseDepth?: ProseDepthConfig
@@ -326,6 +330,104 @@ function DesktopLeftSidebar({
   )
 }
 
+// Mobile Quick Menu > Equip — the 4 equip slots, shared by the slot-list
+// view and (via EQUIP_SLOT_META) the filtered item-picker sub-view.
+const EQUIP_SLOT_META: { slot: EquipSlot; label: string; icon: LucideIcon; empty: string }[] = [
+  { slot: 'weapon', label: 'Weapon', icon: Swords, empty: 'Empty Hand' },
+  { slot: 'offhand', label: 'Off-Hand', icon: Shield, empty: 'Empty Hand' },
+  { slot: 'armor', label: 'Armor', icon: ShieldCheck, empty: 'No Armor' },
+  { slot: 'accessory', label: 'Accessory', icon: Sparkles, empty: 'None' },
+]
+
+// A slot's filtered picker — only items the player actually owns (qty > 0)
+// whose ItemType matches what that slot accepts (EQUIP_SLOT_ITEM_TYPE, same
+// mapping Codex.tsx's own Equip buttons use), so a Weapon slot never offers
+// to equip armor.
+function EquipSlotPicker({
+  slot,
+  items,
+  inventory,
+  equippedId,
+  onEquip,
+  onUnequip,
+  onBack,
+}: {
+  slot: EquipSlot
+  items: Record<string, ItemEntry>
+  inventory: Record<string, number>
+  equippedId?: string
+  onEquip: (id: string) => void
+  onUnequip: () => void
+  onBack: () => void
+}) {
+  const wantType = EQUIP_SLOT_ITEM_TYPE[slot]
+  const meta = EQUIP_SLOT_META.find((m) => m.slot === slot)!
+  const candidates = Object.entries(items).filter(
+    ([id, item]) => item.type === wantType && (inventory[id] ?? 0) > 0,
+  )
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-3 pr-1">
+        <h3 className="font-serif text-lg font-normal text-[#1a1917] tracking-wide flex items-center gap-2">
+          <meta.icon size={18} className="text-[#8d6b1d] shrink-0" />
+          <span>{meta.label}</span>
+        </h3>
+        <button
+          onClick={onBack}
+          aria-label="Back"
+          className="text-[#9e968b] hover:text-[#1a1917] transition-colors p-1.5 -mr-1.5 rounded-md hover:bg-[#f5f0e6] cursor-pointer"
+        >
+          <X size={18} />
+        </button>
+      </div>
+      <div className="h-[1.5px] bg-gradient-to-r from-[#dec48e] via-[#dec48e]/70 to-transparent" />
+
+      {equippedId && items[equippedId] && (
+        <div className="flex items-center justify-between gap-3 p-2.5 rounded-lg bg-[#ebdcb8]/30 border border-[#dec48e]/60">
+          <div className="min-w-0">
+            <span className="block font-mono text-[9px] uppercase tracking-wider text-[#8d6b1d]">Currently Equipped</span>
+            <span className="font-serif text-sm font-medium text-[#1a1917] truncate block">{items[equippedId].name}</span>
+          </div>
+          <button
+            onClick={onUnequip}
+            className="shrink-0 rounded-full px-3 py-1.5 font-sans text-xs font-semibold bg-rose-bg text-rose border border-rose/30"
+          >
+            Unequip
+          </button>
+        </div>
+      )}
+
+      {candidates.length === 0 ? (
+        <p className="font-serif text-sm italic text-[#6c665e] py-3 text-center">
+          No {meta.label.toLowerCase()}-type items in your inventory yet.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-1.5 max-h-[45vh] overflow-y-auto pr-0.5">
+          {candidates.map(([id, item]) => (
+            <button
+              key={id}
+              onClick={() => onEquip(id)}
+              disabled={id === equippedId}
+              className="flex items-center justify-between gap-3 p-2.5 rounded-lg bg-[#f5f0e6] border border-[#ede7dd] hover:border-[#dec48e] hover:bg-[#ebdcb8]/30 disabled:opacity-50 disabled:pointer-events-none text-left transition-all cursor-pointer"
+            >
+              <div className="min-w-0">
+                <span className="font-serif text-sm font-medium text-[#1a1917] truncate block">{item.name}</span>
+                {(item.rarity || traitsText(item.traits)) && (
+                  <span className="font-mono text-[10px] text-[#6c665e] truncate block">
+                    {[item.rarity, traitsText(item.traits)].filter(Boolean).join(' · ')}
+                  </span>
+                )}
+              </div>
+              <span className="shrink-0 font-mono text-[10px] text-[#8d6b1d]">x{inventory[id]}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // §6.6 Bang Commands — in-game-styled framing per category (icon + a dossier
 // title), no raw "!command" console text, so the paused-roleplay moment
 // still reads as part of the game's own UI rather than a debug console.
@@ -352,8 +454,19 @@ function bangDisplay(command: string): { icon: LucideIcon; label: string } {
   return BANG_DISPLAY[command.toLowerCase()] ?? { icon: HelpCircle, label: 'Unclear Reference' }
 }
 
-function formatTimestamp(time: GameTime, locDisp: string): string {
-  return `D-${String(time.d).padStart(2, '0')} ${time.h} | ${locDisp.toUpperCase()}`
+function formatTimestamp(time: GameTime, locDisp: string, region?: string): string {
+  const place = region && region.trim() && region.trim() !== locDisp ? `${region} - ${locDisp}` : locDisp
+  return `Day ${time.d}, ${time.h} - ${place}`
+}
+
+// A turn's own LogEntry only stores locDisp (the location's display name),
+// not which region it was in at the time — resolved here by name-matching
+// against the Codex's current location records, same "good enough, no new
+// per-turn field needed" spirit as the rest of this timestamp line.
+function locationRegionFor(locDisp: string, locations?: Record<string, LocationEntry>): string | undefined {
+  if (!locations) return undefined
+  const match = Object.values(locations).find((l) => l.name === locDisp)
+  return match?.region
 }
 
 // §2 Phase E Chapter Milestone, incremental redesign — a beat's timestamp in
@@ -648,8 +761,22 @@ interface RecapRow {
   content: ReactNode
 }
 
+// First 1-2 sentences of the turn's own narration — a plain-text excerpt
+// (strip [[Term]]/[Skill] bracket markup so it reads clean), not a fresh
+// LLM summarization call. Always available whenever `nar` is, so an
+// ordinary turn with no mechanical deltas still has something to recap.
+function narExcerpt(nar: string, maxLen = 180): string {
+  const plain = nar.replace(/\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g, '$1').replace(/\[([^\]]+)\]/g, '$1').trim()
+  const sentenceEnd = plain.slice(0, maxLen + 40).search(/[.!?](\s|$)/)
+  if (sentenceEnd >= 0 && sentenceEnd <= maxLen + 40) return plain.slice(0, sentenceEnd + 1)
+  return plain.length > maxLen ? `${plain.slice(0, maxLen).trimEnd()}…` : plain
+}
+
 function buildRecapRows(entry: LogEntry, onTapTerm: TapTermHandler): RecapRow[] {
   const rows: RecapRow[] = []
+  if (entry.nar && !entry.isPrologue) {
+    rows.push({ icon: BookOpen, label: 'What Happened', content: narExcerpt(entry.nar) })
+  }
   if (entry.levelUp) {
     rows.push({ icon: Star, label: 'Level Up', content: `Level ${entry.levelUp}` })
   }
@@ -918,18 +1045,14 @@ const TurnBlock = memo(function TurnBlock({
       ) : (
         (turnRefMatch || (entry.time && entry.locDisp)) && (
           <div className="flex items-center justify-between gap-3 border-b border-[#ede7dd] pb-1.5">
-            {turnRefMatch ? (
-              <span className="font-sans text-[10px] tracking-[0.14em] uppercase text-[#9e968b]">
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wide text-[#8d6b1d] truncate">
+              {entry.time && entry.locDisp
+                ? formatTimestamp(entry.time, entry.locDisp, locationRegionFor(entry.locDisp, locations))
+                : ''}
+            </span>
+            {turnRefMatch && (
+              <span className="font-sans text-[10px] tracking-[0.14em] uppercase text-[#9e968b] shrink-0">
                 Turn {turnRefMatch[2]} &nbsp;·&nbsp; Chapter {turnRefMatch[1]}
-              </span>
-            ) : (
-              <span className="font-mono text-[10px] font-semibold uppercase tracking-wide text-[#8d6b1d]">
-                {entry.time && entry.locDisp ? formatTimestamp(entry.time, entry.locDisp) : ''}
-              </span>
-            )}
-            {entry.locDisp && (
-              <span className="font-mono text-[10px] text-[#8d6b1d] shrink-0 truncate max-w-[45%] text-right">
-                {entry.locDisp}
               </span>
             )}
           </div>
@@ -1210,6 +1333,9 @@ export default function Chronicle({
   bestiary,
   skills,
   items,
+  inventory = {},
+  onEquipItem,
+  onUnequipSlot,
   crafting,
   apiSettings,
   proseDepth,
@@ -1247,6 +1373,8 @@ export default function Chronicle({
   const [navDragPos, setNavDragPos] = useState<{ y: number } | null>(null)
   const [navDragging, setNavDragging] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [equipMenuOpen, setEquipMenuOpen] = useState(false)
+  const [equipSlotPicker, setEquipSlotPicker] = useState<EquipSlot | null>(null)
   // §7 Tap-to-inspect lightbox (extracted to lib/useImageLightbox.tsx, also
   // used by Tale Weaver's own generated images) — a full-screen enlarged
   // view for the hero location plate and any Codex-popup entity image.
@@ -1283,6 +1411,7 @@ export default function Chronicle({
 
   const drawerActions = useMemo(() => {
     const actions: { icon: LucideIcon; label: string; onClick: () => void }[] = [
+      { icon: ShieldCheck, label: 'Equip', onClick: () => setEquipMenuOpen(true) },
       { icon: Backpack, label: 'Items', onClick: () => onOpenCodexCategory('items') },
       { icon: Sparkles, label: 'Spells', onClick: () => onOpenCodexCategory('skills') },
       { icon: ScrollText, label: 'Quests', onClick: () => onOpenCodexCategory('quests') },
@@ -1916,7 +2045,7 @@ export default function Chronicle({
               >
                 <div className="flex items-center justify-between mb-2.5 px-1 border-b border-[#ede7dd] pb-1.5">
                   <span className="font-serif text-xs font-bold uppercase tracking-wider text-[#8d6b1d] flex items-center gap-1.5">
-                    <LayoutGrid size={14} /> Codex
+                    <LayoutGrid size={14} /> Quick Menu
                   </span>
                   <button
                     onClick={() => setDrawerOpen(false)}
@@ -2000,8 +2129,8 @@ export default function Chronicle({
             {/* Drawer Menu Button */}
             <button
               onClick={() => setDrawerOpen((v) => !v)}
-              aria-label={drawerOpen ? 'Close navigation drawer' : 'Open navigation drawer'}
-              title="Quick Codex Navigation Drawer"
+              aria-label={drawerOpen ? 'Close Quick Menu' : 'Open Quick Menu'}
+              title="Quick Menu"
               className={`shrink-0 w-8 h-8 rounded-xl inline-flex items-center justify-center transition-all border cursor-pointer ${
                 drawerOpen
                   ? 'bg-[#b08830] text-white border-[#b08830]'
@@ -2284,6 +2413,110 @@ export default function Chronicle({
               <span>Open in Codex</span>
               <ExternalLink size={13} />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Menu > Equip — a mobile-friendly equivalent of the desktop
+          sidebar's Equipped Gear card, but interactive: tapping a slot opens
+          a filtered picker of owned items that fit it. */}
+      {equipMenuOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-6"
+          onClick={() => {
+            setEquipMenuOpen(false)
+            setEquipSlotPicker(null)
+          }}
+        >
+          <div
+            className="relative bg-[#fbf8f3] border border-[#dec48e] shadow-[0_20px_50px_rgba(0,0,0,0.25)] rounded-t-2xl sm:rounded-xl p-5 w-full sm:max-w-sm max-h-[85vh] overflow-y-auto text-left"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {equipSlotPicker ? (
+              <EquipSlotPicker
+                slot={equipSlotPicker}
+                items={items ?? {}}
+                inventory={inventory}
+                equippedId={player.equipped?.[equipSlotPicker]}
+                onEquip={(id) => {
+                  onEquipItem?.(id, equipSlotPicker)
+                  setEquipSlotPicker(null)
+                }}
+                onUnequip={() => {
+                  onUnequipSlot?.(equipSlotPicker)
+                  setEquipSlotPicker(null)
+                }}
+                onBack={() => setEquipSlotPicker(null)}
+              />
+            ) : (
+              <>
+                <div className="flex items-start justify-between gap-3 pr-1">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-11 h-11 rounded-xl bg-[#ebdcb8]/50 border border-[#dec48e] flex items-center justify-center text-[#8d6b1d] shrink-0 font-serif text-base font-bold">
+                      {player.name ? player.name.charAt(0).toUpperCase() : 'P'}
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-serif text-lg font-normal text-[#1a1917] tracking-wide truncate">{player.name || 'Hero'}</h3>
+                      <p className="font-mono text-[10px] text-[#6c665e] truncate">
+                        Lvl {player.level} · {player.className || 'Adventurer'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setEquipMenuOpen(false)
+                      setEquipSlotPicker(null)
+                    }}
+                    aria-label="Close"
+                    className="text-[#9e968b] hover:text-[#1a1917] transition-colors p-1.5 -mr-1.5 -mt-1 rounded-md hover:bg-[#f5f0e6] cursor-pointer shrink-0"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 mt-3">
+                  <div className="bg-[#f5f0e6] border border-[#ede7dd] p-2 rounded-lg text-center">
+                    <span className="block font-mono text-[9px] text-[#6c665e] font-bold uppercase">STR</span>
+                    <span className="font-mono text-sm font-bold text-[#1a1917]">{player.attrs?.STR ?? 3}</span>
+                  </div>
+                  <div className="bg-[#f5f0e6] border border-[#ede7dd] p-2 rounded-lg text-center">
+                    <span className="block font-mono text-[9px] text-[#6c665e] font-bold uppercase">INT</span>
+                    <span className="font-mono text-sm font-bold text-[#1a1917]">{player.attrs?.INT ?? 3}</span>
+                  </div>
+                  <div className="bg-[#f5f0e6] border border-[#ede7dd] p-2 rounded-lg text-center">
+                    <span className="block font-mono text-[9px] text-[#6c665e] font-bold uppercase">AGI</span>
+                    <span className="font-mono text-sm font-bold text-[#1a1917]">{player.attrs?.AGI ?? 3}</span>
+                  </div>
+                </div>
+
+                <div className="h-[1.5px] my-3 bg-gradient-to-r from-[#dec48e] via-[#dec48e]/70 to-transparent" />
+
+                <div className="flex flex-col gap-2">
+                  {EQUIP_SLOT_META.map(({ slot, label, icon: Icon, empty }) => {
+                    const equippedId = player.equipped?.[slot]
+                    const equippedItem = equippedId ? items?.[equippedId] : undefined
+                    return (
+                      <button
+                        key={slot}
+                        onClick={() => setEquipSlotPicker(slot)}
+                        className="flex items-center gap-3 p-2.5 rounded-lg bg-[#f5f0e6] border border-[#ede7dd] hover:border-[#dec48e] hover:bg-[#ebdcb8]/30 active:scale-[0.99] transition-all cursor-pointer text-left"
+                      >
+                        <div className="w-9 h-9 rounded-md bg-white border border-[#dec48e]/60 flex items-center justify-center text-[#8d6b1d] shrink-0">
+                          <Icon size={17} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="block font-mono text-[9px] uppercase tracking-wider text-[#6c665e]">{label}</span>
+                          <span className="font-serif text-sm font-medium text-[#1a1917] truncate block">
+                            {equippedItem ? equippedItem.name : equippedId || empty}
+                          </span>
+                        </div>
+                        <ChevronsDown size={14} className="text-[#9e968b] shrink-0 -rotate-90" />
+                      </button>
+                    )
+                  })}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

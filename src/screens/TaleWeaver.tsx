@@ -1361,6 +1361,16 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     />
                   </div>
                   <div className="flex flex-col gap-1">
+                    <label className="font-mono text-[10px] uppercase text-gold-primary/70">Aliases / Titles (optional)</label>
+                    <input
+                      type="text"
+                      value={editFormData.aliases || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, aliases: e.target.value })}
+                      placeholder="e.g. the Shadowblade, Ashveil's Ghost"
+                      className="px-2.5 py-2 rounded-md bg-white border border-gold-accent/25 text-xs font-semibold text-ink shadow-xs outline-none focus:border-gold-primary focus:ring-1 focus:ring-gold-primary transition-all"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
                     <label className="font-mono text-[10px] uppercase text-gold-primary/70">Demeanor & Traits</label>
                     <input
                       type="text"
@@ -3283,6 +3293,7 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                     <EditableCard
                       fields={[
                         { key: 'name', label: 'Name', value: accumulated.protagonist.name ?? '' },
+                        { key: 'aliases', label: 'Aliases / Titles', value: accumulated.protagonist.aliases ?? '' },
                         { key: 'classHint', label: 'Class / Archetype', value: accumulated.protagonist.classHint ?? '' },
                         { key: 'background', label: 'Background', value: accumulated.protagonist.background ?? '', multiline: true },
                       ]}

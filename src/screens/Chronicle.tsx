@@ -2070,7 +2070,7 @@ export default function Chronicle({
                     return
                   }
                 }
-                if (e.key === 'Enter' && !e.shiftKey && !isTouchOrSmallScreen()) {
+                if (e.key === 'Enter' && ((!e.shiftKey && !isTouchOrSmallScreen()) || e.ctrlKey || e.metaKey)) {
                   e.preventDefault()
                   send()
                 }

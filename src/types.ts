@@ -122,6 +122,7 @@ export interface Minion {
 
 export interface Player {
   name: string
+  aliases?: string // titles/nicknames the world knows this character by, e.g. "the Shadowblade, Ashveil's Ghost"
   gender?: string // free-short-text (e.g. "she/her", "male"), 0 context cost when unset
   age?: number
   background?: string // origin/family history — copied from ProtagonistData at creation so it survives history-window flushes (jitContext.ts), not just told once on Turn 1
@@ -566,6 +567,7 @@ export interface WorldData {
 export interface ProtagonistData {
   id?: string | null
   name: string
+  aliases?: string // titles/nicknames, same as Player.aliases
   gender?: string
   age?: number
   classId: string

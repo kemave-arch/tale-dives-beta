@@ -619,6 +619,7 @@ export default function App() {
 
     const player: Player = {
       name: protagonistData.name,
+      aliases: protagonistData.aliases,
       gender: protagonistData.gender,
       age: protagonistData.age,
       background: protagonistData.background,
@@ -881,6 +882,7 @@ export default function App() {
 
     const protagonistData: ProtagonistData = {
       name: p?.name?.trim() || 'The Protagonist',
+      aliases: p?.aliases?.trim() || undefined,
       gender: p?.gender,
       classId: cls.id,
       className: cls.name,
@@ -894,6 +896,7 @@ export default function App() {
 
     const player: Player = {
       name: protagonistData.name,
+      aliases: protagonistData.aliases,
       gender: protagonistData.gender,
       background: protagonistData.background,
       personality: protagonistData.personality,

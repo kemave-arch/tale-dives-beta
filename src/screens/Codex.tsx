@@ -4,7 +4,7 @@ import {
   Globe, BookOpen, Users, ShieldCheck, Map, ScrollText, Target, Skull, Backpack,
   Pencil, Save, X, Trash2, Plus, Lock, User, Hammer, Clock, Sparkles, CheckCircle2, XCircle, ArrowRight, Ghost,
   Swords, Star, EyeOff, Search, MapPin, Heart, Coins, Gift, Zap, Compass, AlertTriangle, AlertCircle, Shield, Flame, Milestone, ListChecks,
-  ChevronRight, ChevronLeft, Flag, ImagePlus, RotateCw, ArrowLeft,
+  ChevronRight, ChevronLeft, Flag, ImagePlus, RotateCw, ArrowLeft, Minus,
 } from 'lucide-react'
 import { GlassScreen } from '../lib/glassChrome.tsx'
 import { slugify } from '../lib/slug.ts'
@@ -67,7 +67,7 @@ function formatChapterBeatTimeCodex(time: ChapterBeat['time']): string {
 }
 
 export type CategoryId =
-  | 'campaign' | 'crafting' | 'chapters' | 'npcs' | 'factions' | 'locations' | 'regions' | 'lore' | 'quests' | 'bestiary' | 'items' | 'skills' | 'projects'
+  | 'campaign' | 'crafting' | 'chapters' | 'npcs' | 'factions' | 'locations' | 'regions' | 'lore' | 'quests' | 'bestiary' | 'items' | 'skills' | 'projects' | 'map' | 'story'
 
 interface CodexProps {
   apiSettings: ApiSettings
@@ -1451,6 +1451,42 @@ export default function Codex({
     if (fromUser) openedWithTargetRef.current = false
     setEntryIdState(id)
   }
+
+  // Switching between members of a declutter group (e.g. Locations ->
+  // Factions inside the World tile) — clears any open entry/edit state so a
+  // stale entryId from the previous member doesn't leave the new member's
+  // detail view stuck blank.
+  const switchGroupMember = (id: CategoryId) => {
+    setEditing(false)
+    setDraft({})
+    setEntryId(null)
+    setCategory(id, true)
+  }
+
+  // Map view pan/zoom — plain pointer-event drag + wheel zoom on a CSS
+  // transform, no charting/canvas library needed for a handful of pins.
+  function mapPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+    mapDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: mapTransform.x, baseY: mapTransform.y, dragging: true }
+  }
+  function mapPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    const d = mapDragRef.current
+    if (!d.dragging) return
+    setMapTransform((t) => ({ ...t, x: d.baseX + (e.clientX - d.startX), y: d.baseY + (e.clientY - d.startY) }))
+  }
+  function mapPointerUp() {
+    mapDragRef.current.dragging = false
+  }
+  function mapWheel(e: React.WheelEvent<HTMLDivElement>) {
+    e.preventDefault()
+    setMapTransform((t) => ({ ...t, scale: Math.min(3, Math.max(1, t.scale + (e.deltaY < 0 ? 0.15 : -0.15))) }))
+  }
+  function mapZoomBy(delta: number) {
+    setMapTransform((t) => ({ ...t, scale: Math.min(3, Math.max(1, t.scale + delta)) }))
+  }
+  function mapReset() {
+    setMapTransform({ x: 0, y: 0, scale: 1 })
+  }
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<Record<string, any>>({})
   const { confirm, dialog: confirmDialog } = useConfirm()
@@ -1475,6 +1511,18 @@ export default function Codex({
   // Search & Subtab Navigation State
   const [searchQuery, setSearchQuery] = useState('')
   const [activeSubtab, setActiveSubtab] = useState('all')
+
+  // Map view (2026-09-19) — pannable/zoomable region map with location
+  // pins, reusing the same generated mapImageKey the Regions tab's own
+  // EntityImagePanel already writes. Pan/zoom state resets per region.
+  const [mapRegionId, setMapRegionId] = useState<string | null>(null)
+  const [mapTransform, setMapTransform] = useState({ x: 0, y: 0, scale: 1 })
+  const mapDragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number; dragging: boolean }>({
+    startX: 0, startY: 0, baseX: 0, baseY: 0, dragging: false,
+  })
+  const mapRegionIds = Object.keys(regions)
+  const effectiveMapRegionId = mapRegionId && regions[mapRegionId] ? mapRegionId : mapRegionIds[0]
+  const mapRegionImageUrl = useEntityImage(effectiveMapRegionId ? regions[effectiveMapRegionId]?.mapImageKey : undefined)
 
   // Reset filters and scroll to top on category or entry navigation
   useEffect(() => {
@@ -1838,12 +1886,13 @@ export default function Codex({
   const searchFilterBar = useMemo(() => {
     if (!category || entryId || editing) return null
 
-    if (category === 'campaign' || category === 'crafting' || category === 'chapters') {
+    if (category === 'campaign' || category === 'crafting' || category === 'chapters' || category === 'map' || category === 'story') {
       return null
     }
+    // (kept grouped with the other single-page categories above)
 
     return (
-      <div className="w-full max-w-full min-w-0 mb-4 flex flex-col gap-2 p-2.5 sm:p-3 rounded-2xl border border-gold-accent/20 bg-white overflow-hidden">
+      <div className="w-full max-w-full min-w-0 mb-4 shrink-0 flex flex-col gap-2 p-2.5 sm:p-3 rounded-2xl border border-gold-accent/20 bg-white overflow-hidden">
         {/* Search Input */}
         <div className="relative flex-1">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none">
@@ -1882,15 +1931,19 @@ export default function Codex({
 
   const chapters = log.filter((e) => e.chapterBeats?.length || e.chapterSummary)
 
-  // Ordered matching classic RPG Codex hierarchy: Realm -> Chapters -> NPCs -> Factions -> Locations -> Lore -> Skills -> Items -> Quests -> Crafting -> Projects -> Bestiary
+  // Full flat metadata for every real CategoryId — label/description/icon/
+  // count. Used for header-title lookup and per-category accents, and as
+  // the source data the declutter grid below groups into fewer top-level
+  // tiles (2026-09-19 Codex declutter pass).
   const categories: { id: CategoryId; label: string; description: string; icon: LucideIcon; count: number }[] = [
-    { id: 'campaign', label: 'Realm', description: 'Cosmology, Setting, Tone & Arcs', icon: Globe, count: 1 },
+    { id: 'campaign', label: 'Player Profile', description: 'Identity, Aliases, Class & Attributes', icon: User, count: 1 },
     { id: 'chapters', label: 'Chapters', description: 'Chronological Records & Turning Points', icon: BookOpen, count: chapters.length },
+    { id: 'story', label: 'Chronicles', description: 'Pre-Authored Arc, Narrative Events & Tale Rules', icon: Flag, count: beats.length + Object.keys(narrativeEvents).length },
     { id: 'npcs', label: 'NPCs', description: 'NPCs, Companions & Trust Ratings', icon: Users, count: Object.keys(npcs).length },
     { id: 'factions', label: 'Factions', description: 'Political Cabals, Guilds & Territory', icon: ShieldCheck, count: Object.keys(factions).length },
     { id: 'locations', label: 'Locations', description: 'Regions, Danger Levels & Map Conditions', icon: Map, count: Object.keys(locations).length },
     { id: 'regions', label: 'Regions', description: 'Named Areas Grouping Locations on the Map', icon: Compass, count: Object.keys(regions).length },
-    { id: 'lore', label: 'Lore', description: 'Historical Legends, Secrets & Magic', icon: ScrollText, count: Object.keys(lore).length },
+    { id: 'lore', label: 'Lore', description: 'The Realm, Historical Legends, Secrets & Magic', icon: ScrollText, count: Object.keys(lore).length },
     { id: 'skills', label: 'Skills', description: 'Combat Spells, Techniques & Abilities', icon: Sparkles, count: Object.keys(skills).length },
     { id: 'items', label: 'Items', description: 'Equipment, Artifacts & Quest Items', icon: Backpack, count: Object.keys(inventory).length },
     { id: 'quests', label: 'Quests', description: 'Main, Side & Secret Objectives', icon: Target, count: Object.keys(quests).length },
@@ -1898,6 +1951,30 @@ export default function Codex({
     { id: 'projects', label: 'Projects', description: 'Endeavors, Builds & Settlements', icon: Milestone, count: Object.keys(projects).length },
     { id: 'bestiary', label: 'Bestiary', description: 'Adversaries & Field Threats', icon: Skull, count: Object.keys(bestiary).length },
   ]
+
+  // Declutter groups — several full categories collapse into a single grid
+  // tile; opening it lands on the first member and shows a small switcher
+  // (reusing SubtabsBar) to flip between the rest without leaving the
+  // group. Purely a navigation/grid-display grouping: each member keeps its
+  // own separate CRUD, data, and internal filter-subtabs untouched.
+  const CATEGORY_GROUPS: { id: string; label: string; description: string; icon: LucideIcon; members: CategoryId[] }[] = [
+    { id: 'world', label: 'World', description: 'Regions, Locations, Factions & the Map', icon: Globe, members: ['regions', 'locations', 'factions', 'map'] },
+    { id: 'belongings', label: 'Belongings', description: 'Items, Crafting & Projects', icon: Backpack, members: ['items', 'crafting', 'projects'] },
+  ]
+  const activeGroup = category ? CATEGORY_GROUPS.find((g) => g.members.includes(category)) : undefined
+  const MAP_TILE = { label: 'Map', icon: Map }
+
+  // Explicit declutter order for the top-level grid (Player Profile first
+  // per the 2026-09-19 request, Realm folded into Lore, Regions/Locations/
+  // Factions and Items/Crafting/Projects each collapsed into one tile).
+  const gridTiles = (['campaign', 'chapters', 'story', 'npcs', 'world', 'lore', 'quests', 'skills', 'belongings', 'bestiary'] as const).map((key) => {
+    const group = CATEGORY_GROUPS.find((g) => g.id === key)
+    if (group) {
+      const count = group.members.reduce((sum, id) => sum + (categories.find((c) => c.id === id)?.count ?? 0), 0)
+      return { id: group.members[0] as CategoryId, label: group.label, description: group.description, icon: group.icon, count }
+    }
+    return categories.find((c) => c.id === key)!
+  })
 
   function back() {
     if (editing) return cancelEdit()
@@ -2200,6 +2277,7 @@ export default function Codex({
     entryId && category === 'skills' ? (skills[entryId] && isHidden(skills[entryId]) ? '???' : skills[entryId]?.name) :
     entryId && category === 'items' ? (items[entryId]?.name ?? entryId.replace(/_/g, ' ')) :
     entryId && category === 'projects' ? (projects[entryId] && isHidden(projects[entryId]) ? '???' : projects[entryId]?.name) :
+    category === 'map' ? 'Map' :
     categories.find((c) => c.id === category)?.label ?? 'Codex'
 
   return (
@@ -2231,6 +2309,34 @@ export default function Codex({
         <h2 className="font-display font-bold text-lg text-ink truncate">{title}</h2>
       </div>
 
+      {/* Declutter group switcher — shown in place of the back-button-only
+          header context whenever the open category belongs to a group
+          (World, Belongings), letting you flip between its members without
+          returning to the main grid first. */}
+      {activeGroup && !entryId && !editing && (
+        <div className="shrink-0 -mt-1 mb-3 flex flex-wrap items-center gap-1.5">
+          {activeGroup.members.map((id) => {
+            const meta = id === 'map' ? MAP_TILE : categories.find((c) => c.id === id)!
+            const isActive = category === id
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => switchGroupMember(id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono font-semibold border transition-colors ${
+                  isActive
+                    ? 'bg-gold-primary/15 border-gold-primary/50 text-gold-primary'
+                    : 'bg-white border-gold-accent/20 text-ink-muted hover:text-ink hover:border-gold-accent/40'
+                }`}
+              >
+                <meta.icon size={13} />
+                {meta.label}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       {searchFilterBar}
 
       {/* Level 1 — Category List. High-end fantasy RPG cards with per-category
@@ -2238,7 +2344,7 @@ export default function Codex({
           interactive feedback. */}
       {!category && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          {categories.map(({ id, label, description, icon: Icon, count }) => (
+          {gridTiles.map(({ id, label, description, icon: Icon, count }) => (
             <CodexArchiveRow
               key={id}
               categoryId={id}
@@ -2252,15 +2358,11 @@ export default function Codex({
         </div>
       )}
 
-      {/* Campaign — merges the old separate Character and Realm categories
-          into one screen (2026-09-07): both are single-record, no grid, and
-          neither is CRUD-deletable, same as before. Since editing/draft is
-          one shared piece of state for the whole component, the two sub-
-          records discriminate on `entryId` ('__character__' vs '__world__')
-          while editing — exactly the sentinel ids each already used when
-          they were separate categories — so only the section actually being
-          edited swaps into its form; the other stays out of view rather than
-          needing a second independent editing flag. */}
+      {/* Player Profile (2026-09-19, was the old combined Realm/Campaign
+          category id 'campaign' kept for compat) — single-record, no grid,
+          not CRUD-deletable. Realm moved to Lore and Story Arc/Narrative
+          Events/Tale Rules moved to the new Chronicles category below;
+          this screen is purely the player's own identity now. */}
       {category === 'campaign' && (
         <>
           {editing && entryId === '__character__' ? (
@@ -2302,22 +2404,51 @@ export default function Codex({
                 </p>
               </DetailPanel>
             </>
-          ) : editing && entryId === '__world__' ? (
-            <>
-              <div className="flex justify-end mb-3">
-                <CrudToolbar editing canDelete={false} onEdit={() => {}} onSave={saveWorld} onCancel={cancelEdit} onDelete={() => {}} />
+          ) : (
+            <div className="flex flex-col gap-3">
+              <div className={`${GOLD_CARD_STYLE.split(' cursor-pointer')[0]} !p-4 flex items-start gap-3`}>
+                <div className={GOLD_ICON_BADGE}>
+                  <User size={18} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2 className="font-display font-bold text-base text-ink truncate">{player.name}</h2>
+                  {player.aliases && <p className="font-narrative italic text-xs text-ink-muted mt-0.5">{player.aliases}</p>}
+                </div>
               </div>
-              <DetailPanel>
-                <TextField label="World Name" value={draft.name ?? ''} onChange={(v) => setDraft((d) => ({ ...d, name: v }))} />
-                <TextField label="Genre & Tone" value={draft.genreTone ?? ''} onChange={(v) => setDraft((d) => ({ ...d, genreTone: v }))} textarea />
-                <TextField label="Core Regional Conflict" value={draft.conflict ?? ''} onChange={(v) => setDraft((d) => ({ ...d, conflict: v }))} textarea />
-                <TextField label="Power System" value={draft.powerSystem ?? ''} onChange={(v) => setDraft((d) => ({ ...d, powerSystem: v }))} textarea />
-                <TextField label="Era / Tech Level" value={draft.eraTechLevel ?? ''} onChange={(v) => setDraft((d) => ({ ...d, eraTechLevel: v }))} />
-                <TextField label="Key Factions" value={draft.keyFactions ?? ''} onChange={(v) => setDraft((d) => ({ ...d, keyFactions: v }))} />
-                <TextField label="World Background" value={draft.background ?? ''} onChange={(v) => setDraft((d) => ({ ...d, background: v }))} textarea />
-              </DetailPanel>
-            </>
-          ) : editing && entryId === '__beats__' ? (
+              <SectionCard
+                accent={NEUTRAL_ACCENT}
+                icon={User}
+                title="Character"
+                badge={<CodexIconButton icon={Pencil} label="Edit Character" onClick={() => startEdit('__character__', { classId: player.classId })} />}
+              >
+                <FieldRow label="Class" value={player.className} />
+                <FieldRow label="Level" value={String(player.level)} />
+                <FieldRow
+                  label="Attributes"
+                  value={`STR ${tierToWord(player.attrs.STR, COMPETENCY_TIERS)} · INT ${tierToWord(player.attrs.INT, COMPETENCY_TIERS)} · AGI ${tierToWord(player.attrs.AGI, COMPETENCY_TIERS)}`}
+                />
+                <FieldRow label="Conditions" value={player.conditions?.length ? player.conditions.map((c) => c.label).join(', ') : 'None'} />
+                {/* Set at creation only (WorldSetup/NewGame) — not editable here,
+                    same as Background always was, so the reader can see their
+                    own established identity at a glance without a second form. */}
+                {player.aliases && <FieldRow label="Aliases" value={player.aliases} />}
+                {player.background && <FieldRow label="Background" value={player.background} />}
+                {player.personality && <FieldRow label="Personality" value={player.personality} />}
+                {player.motivation && <FieldRow label="Motivation" value={player.motivation} />}
+                {player.physicalTrait && <FieldRow label="Physical Trait" value={player.physicalTrait} />}
+                {player.secret && <FieldRow label="Secret" value={player.secret} />}
+              </SectionCard>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Chronicles — Story Arc, Narrative Events, Tale Rules (2026-09-19:
+          split out of the old Player Profile/Campaign category into its own
+          tab, since these are tale-structure records, not player identity). */}
+      {category === 'story' && (
+        <>
+          {editing && entryId === '__beats__' ? (
             <>
               <div className="flex justify-end mb-3">
                 <CrudToolbar
@@ -2590,65 +2721,6 @@ export default function Codex({
             <div className="flex flex-col gap-3">
               <SectionCard
                 accent={NEUTRAL_ACCENT}
-                icon={User}
-                title="Character"
-                badge={<CodexIconButton icon={Pencil} label="Edit Character" onClick={() => startEdit('__character__', { classId: player.classId })} />}
-              >
-                <FieldRow label="Class" value={player.className} />
-                <FieldRow label="Level" value={String(player.level)} />
-                <FieldRow
-                  label="Attributes"
-                  value={`STR ${tierToWord(player.attrs.STR, COMPETENCY_TIERS)} · INT ${tierToWord(player.attrs.INT, COMPETENCY_TIERS)} · AGI ${tierToWord(player.attrs.AGI, COMPETENCY_TIERS)}`}
-                />
-                <FieldRow label="Conditions" value={player.conditions?.length ? player.conditions.map((c) => c.label).join(', ') : 'None'} />
-                {/* Set at creation only (WorldSetup/NewGame) — not editable here,
-                    same as Background always was, so the reader can see their
-                    own established identity at a glance without a second form. */}
-                {player.background && <FieldRow label="Background" value={player.background} />}
-                {player.personality && <FieldRow label="Personality" value={player.personality} />}
-                {player.motivation && <FieldRow label="Motivation" value={player.motivation} />}
-                {player.physicalTrait && <FieldRow label="Physical Trait" value={player.physicalTrait} />}
-                {player.secret && <FieldRow label="Secret" value={player.secret} />}
-              </SectionCard>
-              <SectionCard
-                accent={NEUTRAL_ACCENT}
-                icon={Globe}
-                title="Realm"
-                badge={<CodexIconButton icon={Pencil} label="Edit Realm" onClick={() => startEdit('__world__', {
-                  name: world.name,
-                  genreTone: world.genreTone,
-                  conflict: world.conflict,
-                  background: world.background,
-                  powerSystem: world.powerSystem,
-                  eraTechLevel: world.eraTechLevel,
-                  keyFactions: world.keyFactions,
-                })} />}
-              >
-                <FieldRow label="World" value={world.name} />
-                {world.genreTone && <FieldRow label="Genre & Tone" value={world.genreTone} />}
-                {world.conflict && <FieldRow label="Core Regional Conflict" value={world.conflict} />}
-                {world.powerSystem && <FieldRow label="Power System" value={world.powerSystem} />}
-                {world.eraTechLevel && <FieldRow label="Era / Tech Level" value={world.eraTechLevel} />}
-                {world.keyFactions && <FieldRow label="Key Factions" value={world.keyFactions} />}
-                {world.background && <FieldRow label="World Background" value={world.background} />}
-                <FieldRow label="Narration Style" value={world.narrationStyle} />
-                {flags.length > 0 && (
-                  <FieldRow
-                    label="World Flags"
-                    value={
-                      <div className="flex flex-wrap gap-1.5 mt-1">
-                        {flags.map((f) => (
-                          <span key={f} className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-gold-accent/15 text-gold-primary">
-                            {f}
-                          </span>
-                        ))}
-                      </div>
-                    }
-                  />
-                )}
-              </SectionCard>
-              <SectionCard
-                accent={NEUTRAL_ACCENT}
                 icon={Flag}
                 title="Story Arc"
                 badge={<CodexIconButton icon={Pencil} label="Edit Story Arc" onClick={() => startEdit('__beats__', { beats })} />}
@@ -2722,6 +2794,116 @@ export default function Codex({
             </div>
           )}
         </>
+      )}
+
+      {/* Map — a pannable/zoomable region map (image-generated via the same
+          EntityImagePanel/buildRegionMapPrompt pipeline the Regions tab
+          already uses to write mapImageKey) with location pins plotted
+          from LocationEntry.mapX/mapY. Tapping a pin jumps straight to
+          that location's own detail view. */}
+      {category === 'map' && (
+        <div className="flex flex-col gap-3">
+          {mapRegionIds.length === 0 ? (
+            <p className="font-narrative italic text-sm text-ink-muted">No regions charted yet — add one under World to start mapping it.</p>
+          ) : (
+            <>
+              {mapRegionIds.length > 1 && (
+                <div className="shrink-0 flex flex-wrap items-center gap-1.5">
+                  {mapRegionIds.map((id) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => { setMapRegionId(id); mapReset() }}
+                      className={`px-3 py-1.5 rounded-full text-xs font-mono font-semibold border transition-colors ${
+                        effectiveMapRegionId === id
+                          ? 'bg-gold-primary/15 border-gold-primary/50 text-gold-primary'
+                          : 'bg-white border-gold-accent/20 text-ink-muted hover:text-ink hover:border-gold-accent/40'
+                      }`}
+                    >
+                      {regions[id].name}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {effectiveMapRegionId && !regions[effectiveMapRegionId]?.mapImageKey ? (
+                <SectionCard accent={CATEGORY_ACCENTS.regions} icon={ImagePlus} title={`Generate Map — ${regions[effectiveMapRegionId].name}`}>
+                  <p className="font-narrative italic text-xs text-ink-muted mb-2">
+                    No map image yet for this region — generate one to start plotting pins.
+                  </p>
+                  <EntityImagePanel
+                    imageKey={regions[effectiveMapRegionId].mapImageKey}
+                    prompt={buildRegionMapPrompt(
+                      regions[effectiveMapRegionId].name,
+                      regions[effectiveMapRegionId].description,
+                      Object.values(locations).filter((l) => l.regionId === effectiveMapRegionId).map((l) => l.name),
+                      world,
+                    )}
+                    apiSettings={apiSettings}
+                    onSaveKey={(key) => onUpdateRegion(effectiveMapRegionId, { mapImageKey: key })}
+                    aspectRatio="4:3"
+                  />
+                </SectionCard>
+              ) : effectiveMapRegionId && (
+                <>
+                  <div className="shrink-0 flex items-center justify-end gap-1.5">
+                    <button type="button" onClick={() => mapZoomBy(-0.25)} className="p-1.5 rounded-full border border-gold-accent/30 hover:bg-gold-accent/10 text-gold-primary transition-colors" title="Zoom out">
+                      <Minus size={14} />
+                    </button>
+                    <button type="button" onClick={() => mapZoomBy(0.25)} className="p-1.5 rounded-full border border-gold-accent/30 hover:bg-gold-accent/10 text-gold-primary transition-colors" title="Zoom in">
+                      <Plus size={14} />
+                    </button>
+                    <button type="button" onClick={mapReset} className="px-2.5 py-1.5 rounded-full border border-gold-accent/30 hover:bg-gold-accent/10 text-gold-primary text-xs font-mono transition-colors" title="Reset view">
+                      Reset
+                    </button>
+                  </div>
+                  <div
+                    className="relative w-full aspect-[4/3] rounded-2xl border border-gold-accent/20 bg-black/80 overflow-hidden touch-none select-none cursor-grab active:cursor-grabbing"
+                    onPointerDown={mapPointerDown}
+                    onPointerMove={mapPointerMove}
+                    onPointerUp={mapPointerUp}
+                    onPointerLeave={mapPointerUp}
+                    onWheel={mapWheel}
+                  >
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        transform: `translate(${mapTransform.x}px, ${mapTransform.y}px) scale(${mapTransform.scale})`,
+                        transformOrigin: 'center center',
+                        transition: mapDragRef.current.dragging ? 'none' : 'transform 0.15s ease-out',
+                      }}
+                    >
+                      {mapRegionImageUrl ? (
+                        <img src={mapRegionImageUrl} alt={`${regions[effectiveMapRegionId].name} map`} className="w-full h-full object-contain pointer-events-none" draggable={false} />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-ink-muted/50 text-xs font-mono">Loading map…</div>
+                      )}
+                      {Object.entries(locations)
+                        .filter(([, l]) => l.regionId === effectiveMapRegionId && l.mapX !== undefined && l.mapY !== undefined)
+                        .map(([id, l]) => (
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); switchGroupMember('locations'); setEntryId(id, true) }}
+                            className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5 group"
+                            style={{ left: `${l.mapX}%`, top: `${l.mapY}%` }}
+                            title={isHidden(l) ? '???' : l.name}
+                          >
+                            <span className="w-4 h-4 rounded-full bg-gold-primary border-2 border-white shadow-md group-hover:scale-125 transition-transform" />
+                            <span className="px-1.5 py-0.5 rounded-full bg-black/70 text-white text-[10px] font-mono whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                              {isHidden(l) ? '???' : l.name}
+                            </span>
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                  <p className="font-narrative italic text-xs text-ink-muted">
+                    Drag to pan, scroll or use +/- to zoom. Pins mark locations with map coordinates set — add Map X/Y to a location under World → Locations to plot it here.
+                  </p>
+                </>
+              )}
+            </>
+          )}
+        </div>
       )}
 
       {/* Workbenches & Recipes — §5.8 Crafting */}
@@ -3558,9 +3740,49 @@ export default function Codex({
         </>
       )}
 
-      {/* Lore */}
+      {/* Lore — the Realm card (2026-09-19: moved out of the old separate
+          Realm/Campaign category) sits pinned above the lore entries grid,
+          since it's campaign-level World data, not a lore entry of its own. */}
       {category === 'lore' && !entryId && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="flex flex-col gap-3">
+          <SectionCard
+            accent={NEUTRAL_ACCENT}
+            icon={Globe}
+            title="Realm"
+            badge={<CodexIconButton icon={Pencil} label="Edit Realm" onClick={() => startEdit('__world__', {
+              name: world.name,
+              genreTone: world.genreTone,
+              conflict: world.conflict,
+              background: world.background,
+              powerSystem: world.powerSystem,
+              eraTechLevel: world.eraTechLevel,
+              keyFactions: world.keyFactions,
+            })} />}
+          >
+            <FieldRow label="World" value={world.name} />
+            {world.genreTone && <FieldRow label="Genre & Tone" value={world.genreTone} />}
+            {world.conflict && <FieldRow label="Core Regional Conflict" value={world.conflict} />}
+            {world.powerSystem && <FieldRow label="Power System" value={world.powerSystem} />}
+            {world.eraTechLevel && <FieldRow label="Era / Tech Level" value={world.eraTechLevel} />}
+            {world.keyFactions && <FieldRow label="Key Factions" value={world.keyFactions} />}
+            {world.background && <FieldRow label="World Background" value={world.background} />}
+            <FieldRow label="Narration Style" value={world.narrationStyle} />
+            {flags.length > 0 && (
+              <FieldRow
+                label="World Flags"
+                value={
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {flags.map((f) => (
+                      <span key={f} className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-gold-accent/15 text-gold-primary">
+                        {f}
+                      </span>
+                    ))}
+                  </div>
+                }
+              />
+            )}
+          </SectionCard>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AddButton label="Add Lore" onClick={() => startCreate({ name: '', category: '' })} />
           {filteredLore.map(([id, l]) => {
             const hidden = isHidden(l)
@@ -3589,9 +3811,26 @@ export default function Codex({
           ) : filteredLore.length === 0 ? (
             <p className="font-narrative italic text-sm text-ink-muted col-span-full">No lore entries match current filters.</p>
           ) : null}
+          </div>
         </div>
       )}
-      {category === 'lore' && entryId && (editing || lore[entryId]) && (
+      {category === 'lore' && entryId === '__world__' && (
+        <>
+          <div className="flex justify-end mb-3">
+            <CrudToolbar editing canDelete={false} onEdit={() => {}} onSave={saveWorld} onCancel={cancelEdit} onDelete={() => {}} />
+          </div>
+          <DetailPanel>
+            <TextField label="World Name" value={draft.name ?? ''} onChange={(v) => setDraft((d) => ({ ...d, name: v }))} />
+            <TextField label="Genre & Tone" value={draft.genreTone ?? ''} onChange={(v) => setDraft((d) => ({ ...d, genreTone: v }))} textarea />
+            <TextField label="Core Regional Conflict" value={draft.conflict ?? ''} onChange={(v) => setDraft((d) => ({ ...d, conflict: v }))} textarea />
+            <TextField label="Power System" value={draft.powerSystem ?? ''} onChange={(v) => setDraft((d) => ({ ...d, powerSystem: v }))} textarea />
+            <TextField label="Era / Tech Level" value={draft.eraTechLevel ?? ''} onChange={(v) => setDraft((d) => ({ ...d, eraTechLevel: v }))} />
+            <TextField label="Key Factions" value={draft.keyFactions ?? ''} onChange={(v) => setDraft((d) => ({ ...d, keyFactions: v }))} />
+            <TextField label="World Background" value={draft.background ?? ''} onChange={(v) => setDraft((d) => ({ ...d, background: v }))} textarea />
+          </DetailPanel>
+        </>
+      )}
+      {category === 'lore' && entryId && entryId !== '__world__' && (editing || lore[entryId]) && (
         <>
           <div className="flex justify-end mb-3">
             <CrudToolbar editing={editing} canDelete={entryId !== NEW_ID} onEdit={() => startEdit(entryId, lore[entryId])} onSave={saveLore} onCancel={cancelEdit} onDelete={() => deleteEntry('lore')} />

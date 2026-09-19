@@ -110,6 +110,10 @@ export interface TaleWeaverWorldDraft {
 
 export interface TaleWeaverProtagonistDraft {
   name?: string
+  // Titles/nicknames/other names the world knows this character by (e.g.
+  // "the Shadowblade, Ashveil's Ghost") — freeform, optional, never a second
+  // identity of its own.
+  aliases?: string
   // Male/female, model-inferred from the protagonist described — used purely
   // to pick the matching Dive-In/setup wallpaper art (lib/setupBgResolver.ts),
   // never narrated or treated as a story trait.
@@ -266,6 +270,7 @@ export function parseTaleWeaverResponse(raw: string): TaleWeaverDraft {
   const protagonist: TaleWeaverProtagonistDraft | undefined = protagEl
     ? {
         name: str(protagEl.getAttribute('name')),
+        aliases: str(protagEl.getAttribute('aliases')) || str(protagEl.getAttribute('titles')),
         gender: str(protagEl.getAttribute('gender')),
         background: str(protagEl.getAttribute('background')) || str(protagEl.getAttribute('backstory')),
         personality: str(protagEl.getAttribute('personality')) || str(protagEl.getAttribute('traits')),

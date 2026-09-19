@@ -1155,20 +1155,31 @@ export default function App() {
     }
 
     // Same Diving transition Original Mode's beginCampaign gets (matching
-    // gender-art DiveLoadingScreen) before landing on the Seeding Review —
-    // there's no real async work to cover here (unlike beginCampaign's own
-    // seedCampaign() call), so a short artificial hold is what actually makes
-    // the screen visible rather than an instant flash. The dummy abort
-    // controller only exists to satisfy the 'diveloading' screen's own
-    // safety-net effect (which otherwise bounces straight to the main menu
-    // when nothing is in flight) and to give Cancel something to no-op on.
+    // gender-art DiveLoadingScreen) — there's no real async work to cover
+    // here (unlike beginCampaign's own seedCampaign() call), so a short
+    // artificial hold is what actually makes the screen visible rather than
+    // an instant flash. The dummy abort controller only exists to satisfy
+    // the 'diveloading' screen's own safety-net effect (which otherwise
+    // bounces straight to the main menu when nothing is in flight) and to
+    // give Cancel something to no-op on.
+    //
+    // Skips the Seeding Review (Codex) screen entirely, per explicit
+    // request — both Quick Play and Inspired Mode's own Tale Initiation
+    // Overview / Tale Overview modal (screens/QuickPlay.tsx, TaleWeaver.tsx)
+    // already give the player a full look at everything woven, with direct
+    // edit buttons, right before Dive In fires. A second full-Codex review
+    // immediately after was redundant. Goes straight to Chronicle and fires
+    // the Prologue turn — the same two calls seedingreview's own onBack used
+    // to make, using the campaign/firstAction built just above directly
+    // rather than reading them back out of not-yet-committed React state.
     setLoadingGender(protagonistData.gender)
     const diveHold = new AbortController()
     diveAbortRef.current = diveHold
     navigateTo('diveloading')
     setTimeout(() => {
       if (diveAbortRef.current === diveHold) diveAbortRef.current = null
-      navigateTo('seedingreview')
+      navigateTo('chronicle', true)
+      sendAction(firstAction, false, campaign, [])
     }, 1600)
   }
 

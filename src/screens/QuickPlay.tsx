@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import { GlassScreen } from '../lib/glassChrome.tsx'
 import { useConfirm } from '../lib/useConfirm.tsx'
+import { EditableCard, EditPencilButton, type EditField } from '../lib/inlineEdit.tsx'
 import type { ApiSettings } from '../types.ts'
 import {
   TALE_WEAVER_PHASES, emptyAccumulated, runTaleWeaverPhase, mergeTaleWeaverDraft,
@@ -199,14 +200,19 @@ function EmptyNote({ status, error }: { status: GenStatus; error?: string }) {
 // per-question review panel and the final Tale Initiation Overview, so
 // fixing "long text gets truncated" (dropping every line-clamp below) only
 // has to happen once and both surfaces stay in sync.
+type EditableCategory = 'regions' | 'locations' | 'factions' | 'npcs' | 'lore' | 'beats'
+
 function SectionBody({
-  genKey, accumulated, status, error, onRemove,
+  genKey, accumulated, status, error, onRemove, onUpdateWorld, onUpdateProtagonist, onUpdateEntry,
 }: {
   genKey: GenKey
   accumulated: TaleWeaverAccumulated
   status: GenStatus
   error?: string
-  onRemove: (category: 'regions' | 'locations' | 'factions' | 'npcs' | 'lore' | 'beats', id: string) => void
+  onRemove: (category: EditableCategory, id: string) => void
+  onUpdateWorld: (fields: Record<string, string>) => void
+  onUpdateProtagonist: (fields: Record<string, string>) => void
+  onUpdateEntry: (category: EditableCategory, id: string, fields: Record<string, string>) => void
 }) {
   const w = accumulated.world
   const p = accumulated.protagonist
@@ -214,32 +220,59 @@ function SectionBody({
   switch (genKey) {
     case 'world':
       return w?.name || w?.background ? (
-        <div className="flex flex-col gap-1">
-          <p className="font-display font-bold text-sm text-ink">{w.name || 'Untitled World'}</p>
-          <p className="font-narrative text-xs text-ink-muted leading-relaxed">
-            {[w.genreTone, w.eraTechLevel].filter(Boolean).join(' · ')}
-          </p>
-          {w.background && <p className="font-narrative text-xs text-ink leading-relaxed whitespace-pre-wrap">{w.background}</p>}
-          {w.sourceTitle && (
-            <span className="inline-flex items-center gap-1 self-start mt-0.5 font-mono text-[10px] uppercase tracking-wide text-gold-accent/80 border border-gold-accent/30 rounded-full px-2 py-0.5">
-              <BookMarked size={10} /> Source Accurate
-            </span>
+        <EditableCard
+          fields={[
+            { key: 'name', label: 'World Name', value: w.name ?? '' },
+            { key: 'genreTone', label: 'Genre & Tone', value: w.genreTone ?? '' },
+            { key: 'eraTechLevel', label: 'Era / Tech Level', value: w.eraTechLevel ?? '' },
+            { key: 'background', label: 'Background', value: w.background ?? '', multiline: true },
+          ]}
+          onSave={onUpdateWorld}
+          renderView={(openEdit) => (
+            <div className="flex flex-col gap-1">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-display font-bold text-sm text-ink">{w.name || 'Untitled World'}</p>
+                <EditPencilButton onClick={openEdit} />
+              </div>
+              <p className="font-narrative text-xs text-ink-muted leading-relaxed">
+                {[w.genreTone, w.eraTechLevel].filter(Boolean).join(' · ')}
+              </p>
+              {w.background && <p className="font-narrative text-xs text-ink leading-relaxed whitespace-pre-wrap">{w.background}</p>}
+              {w.sourceTitle && (
+                <span className="inline-flex items-center gap-1 self-start mt-0.5 font-mono text-[10px] uppercase tracking-wide text-gold-accent/80 border border-gold-accent/30 rounded-full px-2 py-0.5">
+                  <BookMarked size={10} /> Source Accurate
+                </span>
+              )}
+            </div>
           )}
-        </div>
+        />
       ) : (
         <EmptyNote status={status} error={error} />
       )
     case 'protagonist':
       return p?.name ? (
-        <div className="flex flex-col gap-1">
-          <p className="font-display font-bold text-sm text-ink">{p.name}{p.classHint ? ` — ${p.classHint}` : ''}</p>
-          {p.background && <p className="font-narrative text-xs text-ink-muted leading-relaxed whitespace-pre-wrap">{p.background}</p>}
-          {accumulated.skills.length > 0 && (
-            <p className="font-mono text-[10px] text-gold-accent/80 uppercase tracking-wide">
-              Skills: {accumulated.skills.map((s) => s.name).join(', ')}
-            </p>
+        <EditableCard
+          fields={[
+            { key: 'name', label: 'Name', value: p.name ?? '' },
+            { key: 'classHint', label: 'Class / Archetype', value: p.classHint ?? '' },
+            { key: 'background', label: 'Background', value: p.background ?? '', multiline: true },
+          ]}
+          onSave={onUpdateProtagonist}
+          renderView={(openEdit) => (
+            <div className="flex flex-col gap-1">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-display font-bold text-sm text-ink">{p.name}{p.classHint ? ` — ${p.classHint}` : ''}</p>
+                <EditPencilButton onClick={openEdit} />
+              </div>
+              {p.background && <p className="font-narrative text-xs text-ink-muted leading-relaxed whitespace-pre-wrap">{p.background}</p>}
+              {accumulated.skills.length > 0 && (
+                <p className="font-mono text-[10px] text-gold-accent/80 uppercase tracking-wide">
+                  Skills: {accumulated.skills.map((s) => s.name).join(', ')}
+                </p>
+              )}
+            </div>
           )}
-        </div>
+        />
       ) : (
         <EmptyNote status={status} error={error} />
       )
@@ -247,10 +280,32 @@ function SectionBody({
       return accumulated.regions.length || accumulated.locations.length ? (
         <div className="flex flex-col gap-1.5">
           {accumulated.regions.map((r) => (
-            <EntryRow key={r.id} name={r.name} desc={r.desc} onRemove={() => onRemove('regions', r.id)} />
+            <EntryRow
+              key={r.id}
+              name={r.name}
+              desc={r.desc}
+              onRemove={() => onRemove('regions', r.id)}
+              editFields={[
+                { key: 'name', label: 'Region Name', value: r.name },
+                { key: 'desc', label: 'Description', value: r.desc ?? '', multiline: true },
+              ]}
+              onEditSave={(fields) => onUpdateEntry('regions', r.id, fields)}
+            />
           ))}
           {accumulated.locations.map((l) => (
-            <EntryRow key={l.id} name={l.name} desc={l.desc} sub={l.locationType} onRemove={() => onRemove('locations', l.id)} />
+            <EntryRow
+              key={l.id}
+              name={l.name}
+              desc={l.desc}
+              sub={l.locationType}
+              onRemove={() => onRemove('locations', l.id)}
+              editFields={[
+                { key: 'name', label: 'Location Name', value: l.name },
+                { key: 'locationType', label: 'Type', value: l.locationType ?? '' },
+                { key: 'desc', label: 'Description', value: l.desc ?? '', multiline: true },
+              ]}
+              onEditSave={(fields) => onUpdateEntry('locations', l.id, fields)}
+            />
           ))}
         </div>
       ) : (
@@ -260,7 +315,19 @@ function SectionBody({
       return accumulated.factions.length ? (
         <div className="flex flex-col gap-1.5">
           {accumulated.factions.map((f) => (
-            <EntryRow key={f.id} name={f.name} desc={f.desc} sub={f.attitude} onRemove={() => onRemove('factions', f.id)} />
+            <EntryRow
+              key={f.id}
+              name={f.name}
+              desc={f.desc}
+              sub={f.attitude}
+              onRemove={() => onRemove('factions', f.id)}
+              editFields={[
+                { key: 'name', label: 'Faction Name', value: f.name },
+                { key: 'attitude', label: 'Attitude', value: f.attitude ?? '' },
+                { key: 'desc', label: 'Description', value: f.desc ?? '', multiline: true },
+              ]}
+              onEditSave={(fields) => onUpdateEntry('factions', f.id, fields)}
+            />
           ))}
         </div>
       ) : (
@@ -270,7 +337,19 @@ function SectionBody({
       return accumulated.npcs.length ? (
         <div className="flex flex-col gap-1.5">
           {accumulated.npcs.map((n) => (
-            <EntryRow key={n.id} name={n.name} desc={n.personality} sub={n.role} onRemove={() => onRemove('npcs', n.id)} />
+            <EntryRow
+              key={n.id}
+              name={n.name}
+              desc={n.personality}
+              sub={n.role}
+              onRemove={() => onRemove('npcs', n.id)}
+              editFields={[
+                { key: 'name', label: 'Name', value: n.name },
+                { key: 'role', label: 'Role', value: n.role ?? '' },
+                { key: 'personality', label: 'Personality', value: n.personality ?? '', multiline: true },
+              ]}
+              onEditSave={(fields) => onUpdateEntry('npcs', n.id, fields)}
+            />
           ))}
         </div>
       ) : (
@@ -280,7 +359,19 @@ function SectionBody({
       return accumulated.lore.length ? (
         <div className="flex flex-col gap-1.5">
           {accumulated.lore.map((l) => (
-            <EntryRow key={l.id} name={l.name} desc={l.content} sub={l.category} onRemove={() => onRemove('lore', l.id)} />
+            <EntryRow
+              key={l.id}
+              name={l.name}
+              desc={l.content}
+              sub={l.category}
+              onRemove={() => onRemove('lore', l.id)}
+              editFields={[
+                { key: 'name', label: 'Name', value: l.name },
+                { key: 'category', label: 'Category', value: l.category ?? '' },
+                { key: 'content', label: 'Content', value: l.content ?? '', multiline: true },
+              ]}
+              onEditSave={(fields) => onUpdateEntry('lore', l.id, fields)}
+            />
           ))}
         </div>
       ) : (
@@ -290,7 +381,17 @@ function SectionBody({
       return accumulated.beats.length || accumulated.deathRule || accumulated.endGameRules ? (
         <div className="flex flex-col gap-1.5">
           {accumulated.beats.map((b) => (
-            <EntryRow key={b.id} name={b.title} desc={b.summary} onRemove={() => onRemove('beats', b.id)} />
+            <EntryRow
+              key={b.id}
+              name={b.title}
+              desc={b.summary}
+              onRemove={() => onRemove('beats', b.id)}
+              editFields={[
+                { key: 'title', label: 'Beat Title', value: b.title },
+                { key: 'summary', label: 'Summary', value: b.summary ?? '', multiline: true },
+              ]}
+              onEditSave={(fields) => onUpdateEntry('beats', b.id, fields)}
+            />
           ))}
           <div className="pt-1.5 mt-1 border-t border-gold-accent/15 flex flex-wrap gap-1.5">
             <span className="font-mono text-[10px] uppercase tracking-wide text-gold-accent/80 border border-gold-accent/30 rounded-full px-2 py-0.5">
@@ -446,6 +547,25 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
     mergeAndSet((prev) => ({ ...prev, [category]: (prev[category] as { id: string }[]).filter((e) => e.id !== id) }))
   }
 
+  // Direct hand-editing of a woven section's own text — the counterpart to
+  // Retry (reroll) and Remove (delete): lets the player fix a name, trim a
+  // paragraph, or correct a detail the model got wrong without spending
+  // another API call or losing everything else in that section.
+  function updateWorld(fields: Record<string, string>) {
+    mergeAndSet((prev) => ({ ...prev, world: prev.world ? { ...prev.world, ...fields } : prev.world }))
+  }
+
+  function updateProtagonist(fields: Record<string, string>) {
+    mergeAndSet((prev) => ({ ...prev, protagonist: prev.protagonist ? { ...prev.protagonist, ...fields } : prev.protagonist }))
+  }
+
+  function updateEntry(category: 'regions' | 'locations' | 'factions' | 'npcs' | 'lore' | 'beats', id: string, fields: Record<string, string>) {
+    mergeAndSet((prev) => ({
+      ...prev,
+      [category]: (prev[category] as { id: string }[]).map((e) => (e.id === id ? { ...e, ...fields } : e)),
+    }))
+  }
+
   async function handleSafeExit() {
     const hasDraftText = q1.trim() || q2.trim() || q3.trim()
     if (hasAnyContent(accumulated) || hasDraftText) {
@@ -563,6 +683,9 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
               genStatus={genStatus}
               genError={genError}
               onRemove={removeEntry}
+              onUpdateWorld={updateWorld}
+              onUpdateProtagonist={updateProtagonist}
+              onUpdateEntry={updateEntry}
               onRetry={retryKey}
               onBack={() => setStepPhase('input')}
               onContinue={() => goToStep(step + 1)}
@@ -582,6 +705,9 @@ export default function QuickPlay({ apiSettings, onBack, onBeginTale }: QuickPla
               genError={genError}
               anyRunning={anyRunning}
               onRemove={removeEntry}
+              onUpdateWorld={updateWorld}
+              onUpdateProtagonist={updateProtagonist}
+              onUpdateEntry={updateEntry}
               onRetry={retryKey}
               onReturn={() => setStep(3)}
               onDiveIn={handleDiveIn}
@@ -737,14 +863,17 @@ function QuestionScreen({
 // the player can never advance mid-weave; a slipped section gets its own
 // Retry instead of forcing the whole question to be re-answered.
 function QuestionReviewPanel({
-  questionNumber, keys, accumulated, genStatus, genError, onRemove, onRetry, onBack, onContinue, continueLabel,
+  questionNumber, keys, accumulated, genStatus, genError, onRemove, onUpdateWorld, onUpdateProtagonist, onUpdateEntry, onRetry, onBack, onContinue, continueLabel,
 }: {
   questionNumber: number
   keys: GenKey[]
   accumulated: TaleWeaverAccumulated
   genStatus: Record<GenKey, GenStatus>
   genError: Partial<Record<GenKey, string>>
-  onRemove: (category: 'regions' | 'locations' | 'factions' | 'npcs' | 'lore' | 'beats', id: string) => void
+  onRemove: (category: EditableCategory, id: string) => void
+  onUpdateWorld: (fields: Record<string, string>) => void
+  onUpdateProtagonist: (fields: Record<string, string>) => void
+  onUpdateEntry: (category: EditableCategory, id: string, fields: Record<string, string>) => void
   onRetry: (key: GenKey) => void
   onBack: () => void
   onContinue: () => void
@@ -777,7 +906,16 @@ function QuestionReviewPanel({
             defaultOpen
             onRetry={() => onRetry(key)}
           >
-            <SectionBody genKey={key} accumulated={accumulated} status={genStatus[key]} error={genError[key]} onRemove={onRemove} />
+            <SectionBody
+              genKey={key}
+              accumulated={accumulated}
+              status={genStatus[key]}
+              error={genError[key]}
+              onRemove={onRemove}
+              onUpdateWorld={onUpdateWorld}
+              onUpdateProtagonist={onUpdateProtagonist}
+              onUpdateEntry={onUpdateEntry}
+            />
           </AccordionSection>
         ))}
       </div>
@@ -851,13 +989,16 @@ function NarrativeSettingsStep({
 }
 
 function TaleInitiationOverview({
-  accumulated, genStatus, genError, anyRunning, onRemove, onRetry, onReturn, onDiveIn,
+  accumulated, genStatus, genError, anyRunning, onRemove, onUpdateWorld, onUpdateProtagonist, onUpdateEntry, onRetry, onReturn, onDiveIn,
 }: {
   accumulated: TaleWeaverAccumulated
   genStatus: Record<GenKey, GenStatus>
   genError: Partial<Record<GenKey, string>>
   anyRunning: boolean
-  onRemove: (category: 'regions' | 'locations' | 'factions' | 'npcs' | 'lore' | 'beats', id: string) => void
+  onRemove: (category: EditableCategory, id: string) => void
+  onUpdateWorld: (fields: Record<string, string>) => void
+  onUpdateProtagonist: (fields: Record<string, string>) => void
+  onUpdateEntry: (category: EditableCategory, id: string, fields: Record<string, string>) => void
   onRetry: (key: GenKey) => void
   onReturn: () => void
   onDiveIn: () => void
@@ -882,7 +1023,16 @@ function TaleInitiationOverview({
             defaultOpen={key === 'world'}
             onRetry={() => onRetry(key)}
           >
-            <SectionBody genKey={key} accumulated={accumulated} status={genStatus[key]} error={genError[key]} onRemove={onRemove} />
+            <SectionBody
+              genKey={key}
+              accumulated={accumulated}
+              status={genStatus[key]}
+              error={genError[key]}
+              onRemove={onRemove}
+              onUpdateWorld={onUpdateWorld}
+              onUpdateProtagonist={onUpdateProtagonist}
+              onUpdateEntry={onUpdateEntry}
+            />
           </AccordionSection>
         ))}
       </div>
@@ -912,18 +1062,39 @@ function TaleInitiationOverview({
   )
 }
 
-function EntryRow({ name, desc, sub, onRemove }: { name: string; desc?: string; sub?: string; onRemove: () => void }) {
+function EntryRow({
+  name, desc, sub, onRemove, editFields, onEditSave,
+}: {
+  name: string
+  desc?: string
+  sub?: string
+  onRemove: () => void
+  // When given, a pencil button opens an inline form for exactly these
+  // fields (in the entry's own real field names) — Save calls onEditSave
+  // with the edited values.
+  editFields?: EditField[]
+  onEditSave?: (values: Record<string, string>) => void
+}) {
   return (
-    <div className="flex items-start justify-between gap-2 rounded-md bg-[#faf8f4] border border-gold-accent/15 px-2.5 py-1.5">
-      <div className="min-w-0">
-        <p className="font-display font-semibold text-xs text-ink truncate">
-          {name}{sub ? <span className="font-narrative italic font-normal text-ink-muted"> — {sub}</span> : null}
-        </p>
-        {desc && <p className="font-narrative text-[11px] text-ink-muted leading-snug whitespace-pre-wrap">{desc}</p>}
-      </div>
-      <button type="button" onClick={onRemove} className="p-1 rounded text-ink-muted/60 hover:text-rose shrink-0" title="Remove">
-        <Trash2 size={12} />
-      </button>
-    </div>
+    <EditableCard
+      fields={editFields ?? []}
+      onSave={(values) => onEditSave?.(values)}
+      renderView={(openEdit) => (
+        <div className="flex items-start justify-between gap-2 rounded-md bg-[#faf8f4] border border-gold-accent/15 px-2.5 py-1.5">
+          <div className="min-w-0">
+            <p className="font-display font-semibold text-xs text-ink truncate">
+              {name}{sub ? <span className="font-narrative italic font-normal text-ink-muted"> — {sub}</span> : null}
+            </p>
+            {desc && <p className="font-narrative text-[11px] text-ink-muted leading-snug whitespace-pre-wrap">{desc}</p>}
+          </div>
+          <div className="flex items-center gap-0.5 shrink-0">
+            {editFields && <EditPencilButton onClick={openEdit} />}
+            <button type="button" onClick={onRemove} className="p-1 rounded text-ink-muted/60 hover:text-rose shrink-0" title="Remove">
+              <Trash2 size={12} />
+            </button>
+          </div>
+        </div>
+      )}
+    />
   )
 }

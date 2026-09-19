@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { GlassScreen } from '../lib/glassChrome.tsx'
 import { useConfirm } from '../lib/useConfirm.tsx'
+import { EditableCard, EditPencilButton } from '../lib/inlineEdit.tsx'
 import type { ApiSettings, NarrationMode, Pov, RevealTrigger, TaleDifficultyKey } from '../types.ts'
 import { TALE_DIFFICULTIES } from '../api/turnContract.ts'
 import { getProvider } from '../api/providers/index.ts'
@@ -3207,10 +3208,27 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                   </button>
                 </div>
                 {accumulated.world ? (
-                  <div>
-                    <p className="font-display font-semibold text-sm text-gold-primary">{accumulated.world.name}</p>
-                    <p className="font-narrative text-xs text-ink-muted">{accumulated.world.genreTone}</p>
-                  </div>
+                  <EditableCard
+                    fields={[
+                      { key: 'name', label: 'World Name', value: accumulated.world.name ?? '' },
+                      { key: 'genreTone', label: 'Genre & Tone', value: accumulated.world.genreTone ?? '' },
+                      { key: 'eraTechLevel', label: 'Era / Tech Level', value: accumulated.world.eraTechLevel ?? '' },
+                      { key: 'background', label: 'Background', value: accumulated.world.background ?? '', multiline: true },
+                    ]}
+                    onSave={(fields) => setAccumulated((prev) => ({ ...prev, world: prev.world ? { ...prev.world, ...fields } : prev.world }))}
+                    renderView={(openEdit) => (
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="font-display font-semibold text-sm text-gold-primary">{accumulated.world!.name}</p>
+                          <EditPencilButton onClick={openEdit} />
+                        </div>
+                        <p className="font-narrative text-xs text-ink-muted">{accumulated.world!.genreTone}</p>
+                        {accumulated.world!.background && (
+                          <p className="font-narrative text-xs text-ink-muted whitespace-pre-wrap">{accumulated.world!.background}</p>
+                        )}
+                      </div>
+                    )}
+                  />
                 ) : (
                   <p className="font-narrative text-xs italic text-ink-muted">Not yet woven</p>
                 )}
@@ -3233,10 +3251,27 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 </div>
                 {accumulated.protagonist ? (
                   <div>
-                    <p className="font-display font-semibold text-sm text-gold-primary">{accumulated.protagonist.name}</p>
-                    {accumulated.protagonist.background && (
-                      <p className="font-narrative text-xs text-ink-muted">{accumulated.protagonist.background}</p>
-                    )}
+                    <EditableCard
+                      fields={[
+                        { key: 'name', label: 'Name', value: accumulated.protagonist.name ?? '' },
+                        { key: 'classHint', label: 'Class / Archetype', value: accumulated.protagonist.classHint ?? '' },
+                        { key: 'background', label: 'Background', value: accumulated.protagonist.background ?? '', multiline: true },
+                      ]}
+                      onSave={(fields) => setAccumulated((prev) => ({ ...prev, protagonist: prev.protagonist ? { ...prev.protagonist, ...fields } : prev.protagonist }))}
+                      renderView={(openEdit) => (
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="font-display font-semibold text-sm text-gold-primary">
+                              {accumulated.protagonist!.name}{accumulated.protagonist!.classHint ? ` — ${accumulated.protagonist!.classHint}` : ''}
+                            </p>
+                            <EditPencilButton onClick={openEdit} />
+                          </div>
+                          {accumulated.protagonist!.background && (
+                            <p className="font-narrative text-xs text-ink-muted whitespace-pre-wrap">{accumulated.protagonist!.background}</p>
+                          )}
+                        </div>
+                      )}
+                    />
                     <TaleWeaverImageGenerator
                       imageKey={accumulated.protagonist.portraitKey}
                       prompt={buildNpcPortraitPrompt(
@@ -3282,11 +3317,29 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                   <div className="flex flex-col gap-2.5">
                     {accumulated.locations.map((l, idx) => (
                       <div key={l.id} className="rounded-lg bg-[#f5f0e6] border border-gold-accent/20 p-2 flex flex-col gap-1">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-display font-semibold text-gold-primary">{l.name}</span>
-                          <span className="font-mono text-[10px] text-ink-muted">{l.locationType || 'Landmark'}</span>
-                        </div>
-                        {l.desc && <p className="font-narrative text-[11px] text-ink-muted line-clamp-2">{l.desc}</p>}
+                        <EditableCard
+                          fields={[
+                            { key: 'name', label: 'Location Name', value: l.name },
+                            { key: 'locationType', label: 'Type', value: l.locationType ?? '' },
+                            { key: 'desc', label: 'Description', value: l.desc ?? '', multiline: true },
+                          ]}
+                          onSave={(fields) => setAccumulated((prev) => ({
+                            ...prev,
+                            locations: prev.locations.map((loc, i) => (i === idx ? { ...loc, ...fields } : loc)),
+                          }))}
+                          renderView={(openEdit) => (
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-display font-semibold text-gold-primary">{l.name}</span>
+                                <div className="flex items-center gap-1">
+                                  <span className="font-mono text-[10px] text-ink-muted">{l.locationType || 'Landmark'}</span>
+                                  <EditPencilButton onClick={openEdit} />
+                                </div>
+                              </div>
+                              {l.desc && <p className="font-narrative text-[11px] text-ink-muted line-clamp-2">{l.desc}</p>}
+                            </div>
+                          )}
+                        />
                         <TaleWeaverImageGenerator
                           imageKey={l.imageKey}
                           prompt={buildLocationImagePrompt(l.name, l.desc, accumulated.world)}
@@ -3305,10 +3358,25 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
 
                     {accumulated.regions.map((r, idx) => (
                       <div key={r.id} className="rounded-lg bg-[#f5f0e6] border border-gold-accent/20 p-2 flex flex-col gap-1">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-display font-semibold text-gold-primary">Region: {r.name}</span>
-                        </div>
-                        {r.desc && <p className="font-narrative text-[11px] text-ink-muted line-clamp-2">{r.desc}</p>}
+                        <EditableCard
+                          fields={[
+                            { key: 'name', label: 'Region Name', value: r.name },
+                            { key: 'desc', label: 'Description', value: r.desc ?? '', multiline: true },
+                          ]}
+                          onSave={(fields) => setAccumulated((prev) => ({
+                            ...prev,
+                            regions: prev.regions.map((reg, i) => (i === idx ? { ...reg, ...fields } : reg)),
+                          }))}
+                          renderView={(openEdit) => (
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-display font-semibold text-gold-primary">Region: {r.name}</span>
+                                <EditPencilButton onClick={openEdit} />
+                              </div>
+                              {r.desc && <p className="font-narrative text-[11px] text-ink-muted line-clamp-2">{r.desc}</p>}
+                            </div>
+                          )}
+                        />
                         <TaleWeaverImageGenerator
                           imageKey={r.mapImageKey}
                           prompt={buildRegionMapPrompt(
@@ -3353,11 +3421,31 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                   </button>
                 </div>
                 {accumulated.factions.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5">
-                    {accumulated.factions.map((f) => (
-                      <span key={f.id} className="font-narrative text-xs px-2 py-0.5 rounded bg-[#f5f0e6] border border-gold-accent/20 text-ink">
-                        {f.name} {f.attitude && `(${f.attitude})`}
-                      </span>
+                  <div className="flex flex-col gap-1.5">
+                    {accumulated.factions.map((f, idx) => (
+                      <EditableCard
+                        key={f.id}
+                        fields={[
+                          { key: 'name', label: 'Faction Name', value: f.name },
+                          { key: 'attitude', label: 'Attitude', value: f.attitude ?? '' },
+                          { key: 'desc', label: 'Description', value: f.desc ?? '', multiline: true },
+                        ]}
+                        onSave={(fields) => setAccumulated((prev) => ({
+                          ...prev,
+                          factions: prev.factions.map((fac, i) => (i === idx ? { ...fac, ...fields } : fac)),
+                        }))}
+                        renderView={(openEdit) => (
+                          <div className="rounded-lg bg-[#f5f0e6] border border-gold-accent/20 px-2.5 py-1.5 flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="font-narrative text-xs text-ink">
+                                {f.name} {f.attitude && <span className="text-ink-muted">({f.attitude})</span>}
+                              </p>
+                              {f.desc && <p className="font-narrative text-[11px] text-ink-muted line-clamp-2">{f.desc}</p>}
+                            </div>
+                            <EditPencilButton onClick={openEdit} />
+                          </div>
+                        )}
+                      />
                     ))}
                   </div>
                 ) : (
@@ -3386,11 +3474,30 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                   <div className="flex flex-col gap-2">
                     {accumulated.npcs.map((n, idx) => (
                       <div key={n.id} className="rounded-lg bg-[#f5f0e6] border border-gold-accent/20 p-2 flex flex-col gap-1">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-display font-semibold text-gold-primary">{n.name}</span>
-                          {n.role && <span className="font-mono text-[10px] text-ink-muted">{n.role}</span>}
-                        </div>
-                        {n.appearance && <p className="font-narrative text-[11px] text-ink-muted line-clamp-2">{n.appearance}</p>}
+                        <EditableCard
+                          fields={[
+                            { key: 'name', label: 'Name', value: n.name },
+                            { key: 'role', label: 'Role', value: n.role ?? '' },
+                            { key: 'appearance', label: 'Appearance', value: n.appearance ?? '', multiline: true },
+                            { key: 'personality', label: 'Personality', value: n.personality ?? '', multiline: true },
+                          ]}
+                          onSave={(fields) => setAccumulated((prev) => ({
+                            ...prev,
+                            npcs: prev.npcs.map((npc, i) => (i === idx ? { ...npc, ...fields } : npc)),
+                          }))}
+                          renderView={(openEdit) => (
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-display font-semibold text-gold-primary">{n.name}</span>
+                                <div className="flex items-center gap-1">
+                                  {n.role && <span className="font-mono text-[10px] text-ink-muted">{n.role}</span>}
+                                  <EditPencilButton onClick={openEdit} />
+                                </div>
+                              </div>
+                              {n.appearance && <p className="font-narrative text-[11px] text-ink-muted line-clamp-2">{n.appearance}</p>}
+                            </div>
+                          )}
+                        />
                         <TaleWeaverImageGenerator
                           imageKey={n.portraitKey}
                           prompt={buildNpcPortraitPrompt(n.name, n.appearance, n.role, accumulated.world)}
@@ -3430,11 +3537,31 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                   </button>
                 </div>
                 {accumulated.lore.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5">
-                    {accumulated.lore.map((l) => (
-                      <span key={l.id} className="font-narrative text-xs px-2 py-0.5 rounded bg-[#f5f0e6] border border-gold-accent/20 text-ink">
-                        {l.name}
-                      </span>
+                  <div className="flex flex-col gap-1.5">
+                    {accumulated.lore.map((l, idx) => (
+                      <EditableCard
+                        key={l.id}
+                        fields={[
+                          { key: 'name', label: 'Name', value: l.name },
+                          { key: 'category', label: 'Category', value: l.category ?? '' },
+                          { key: 'content', label: 'Content', value: l.content ?? '', multiline: true },
+                        ]}
+                        onSave={(fields) => setAccumulated((prev) => ({
+                          ...prev,
+                          lore: prev.lore.map((lo, i) => (i === idx ? { ...lo, ...fields } : lo)),
+                        }))}
+                        renderView={(openEdit) => (
+                          <div className="rounded-lg bg-[#f5f0e6] border border-gold-accent/20 px-2.5 py-1.5 flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="font-narrative text-xs text-ink">
+                                {l.name} {l.category && <span className="text-ink-muted">({l.category})</span>}
+                              </p>
+                              {l.content && <p className="font-narrative text-[11px] text-ink-muted line-clamp-2">{l.content}</p>}
+                            </div>
+                            <EditPencilButton onClick={openEdit} />
+                          </div>
+                        )}
+                      />
                     ))}
                   </div>
                 ) : (
@@ -3462,9 +3589,25 @@ export default function TaleWeaver({ apiSettings, onBack, onBeginTale }: TaleWea
                 {accumulated.beats.length > 0 ? (
                   <div className="flex flex-col gap-1">
                     {accumulated.beats.map((b, i) => (
-                      <p key={b.id} className="font-narrative text-xs text-ink">
-                        <span className="text-gold-primary font-mono">{i + 1}.</span> {b.title}
-                      </p>
+                      <EditableCard
+                        key={b.id}
+                        fields={[
+                          { key: 'title', label: 'Beat Title', value: b.title },
+                          { key: 'summary', label: 'Summary', value: b.summary ?? '', multiline: true },
+                        ]}
+                        onSave={(fields) => setAccumulated((prev) => ({
+                          ...prev,
+                          beats: prev.beats.map((beat, bi) => (bi === i ? { ...beat, ...fields } : beat)),
+                        }))}
+                        renderView={(openEdit) => (
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="font-narrative text-xs text-ink">
+                              <span className="text-gold-primary font-mono">{i + 1}.</span> {b.title}
+                            </p>
+                            <EditPencilButton onClick={openEdit} />
+                          </div>
+                        )}
+                      />
                     ))}
                   </div>
                 ) : (
